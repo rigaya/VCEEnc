@@ -61,6 +61,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>C:\Program Files (x86)\AMD APP\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -81,6 +82,7 @@
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>C:\Program Files (x86)\AMD APP\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
