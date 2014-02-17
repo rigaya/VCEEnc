@@ -1,0 +1,4 @@
+﻿LIBRARY "VCEEnc.auo"
+
+EXPORTS
+    GetOutputPluginTable
