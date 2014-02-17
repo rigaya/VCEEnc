@@ -167,16 +167,18 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
 
 	AUO_RESULT ret = AUO_RESULT_SUCCESS;
 	int *jitter = NULL;
+	BOOL pause = FALSE;
 	vce_handle_t *vce = NULL;
 	if (conf->vid.afs && is_interlaced(conf->vid.vce_ext_prm.pic_struct)) {
 		ret |= AUO_RESULT_ERROR; error_afs_interlace_stg();
 	} else if (NULL == (jitter = (int *)calloc(oip->n + 1, sizeof(int)))) {
 		ret |= AUO_RESULT_ERROR; error_malloc_tc();
-	} else if (set_auo_vce_g_data(oip, conf, pe, jitter)
+	} else if (set_auo_vce_g_data(oip, conf, pe, jitter, &pause)
 		|| NULL == (vce = vce_init(&conf->vce, (bool*)&pe->aud_parallel.abort, auo_vce_print_mes, auo_vce_read, NULL, NULL, pe->temp_filename, &conf->vid.vce_ext_prm, oip->n))) {
 			ret |= AUO_RESULT_ERROR;
 	} else {
 		if (conf->vid.afs) write_log_auo_line(LOG_INFO, "自動フィールドシフト  on");
+		enable_enc_control(&pause, pe->afs_init, FALSE, timeGetTime(), oip->n);
 		ret |= vce_run(vce) ? AUO_RESULT_SUCCESS : AUO_RESULT_ERROR;
 		flush_audio_log();
 		write_log_auo_enc_time("VCE エンコード", timeGetTime() - tm_vce);
@@ -186,6 +188,7 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
 		if (!ret && conf->vid.afs)
 			write_log_auo_line_fmt(LOG_INFO, "drop %d / %d frames", pe->drop_count, oip->n);
 		ret |= (pe->aud_parallel.abort) ? AUO_RESULT_ABORT : AUO_RESULT_SUCCESS;
+		disable_enc_control();
 		vce_close(vce);
 	}
 	set_window_title(AUO_FULL_NAME, PROGRESSBAR_DISABLED);

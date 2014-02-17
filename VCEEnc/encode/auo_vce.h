@@ -19,7 +19,7 @@
 
 #include "VCECore.h"
 
-DWORD set_auo_vce_g_data(const OUTPUT_INFO *_oip, CONF_GUIEX *conf, PRM_ENC *_pe, int *jitter);
+DWORD set_auo_vce_g_data(const OUTPUT_INFO *_oip, CONF_GUIEX *conf, PRM_ENC *_pe, int *jitter, BOOL *pause);
 void clear_auo_vce_g_data();
 
 bool auo_vce_read(FILE *fr, uint32 uiHeight, uint32 uiWidth, uint32 alignedSurfaceWidth, int8 *pBitstreamData);

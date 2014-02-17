@@ -96,13 +96,15 @@ static CONF_GUIEX *g_conf = NULL;
 static PRM_ENC *g_pe = NULL;
 static int g_frames = 0;
 static int *g_jitter = NULL;
+static BOOL *g_pause = FALSE;
 
-DWORD set_auo_vce_g_data(const OUTPUT_INFO *_oip, CONF_GUIEX *conf, PRM_ENC *_pe, int *jitter) {
+DWORD set_auo_vce_g_data(const OUTPUT_INFO *_oip, CONF_GUIEX *conf, PRM_ENC *_pe, int *jitter, BOOL *_pause) {
 	g_oip = _oip;
 	g_conf = conf;
 	g_pe =_pe;
 	g_frames = 0;
 	g_jitter = jitter;
+	g_pause = _pause;
 
 	BOOL interlaced = (is_interlaced(conf->vid.vce_ext_prm.pic_struct)) ? TRUE : FALSE;
 	BOOL ssse3_available = check_ssse3() != FALSE;
@@ -125,6 +127,7 @@ void clear_auo_vce_g_data() {
 	g_pe = NULL;
 	g_frames = 0;
 	g_jitter = NULL;
+	g_pause = NULL;
 }
 
 #pragma warning( push )
@@ -140,6 +143,13 @@ bool auo_vce_read(FILE *fr, uint32 uiHeight, uint32 uiWidth, uint32 alignedSurfa
 		g_oip->func_rest_time_disp(i_frame, g_oip->n);
 		release_audio_parallel_events(g_pe);
 		return false;
+	}
+
+	while (*g_pause) {
+		Sleep(LOG_UPDATE_INTERVAL);
+		if (FALSE != (g_pe->aud_parallel.abort = g_oip->func_is_abort()))
+			return false;
+		log_process_events();
 	}
 
 	void *frame;
