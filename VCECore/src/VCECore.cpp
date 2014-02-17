@@ -18,7 +18,7 @@
 #define clamp(x, low, high) (((x) <= (high)) ? (((x) >= (low)) ? (x) : (low)) : (high))
 #endif
 
-static func_vce_mes vce_print_mes = NULL;
+func_vce_mes vce_print_mes = NULL;
 
 typedef BOOL (WINAPI *LPFN_GLPI)(PSYSTEM_LOGICAL_PROCESSOR_INFORMATION, PDWORD);
 
@@ -161,7 +161,7 @@ void init_vce_prm(OvConfigCtrl *cnf) {
 		cnf->rateControl.encRateControlTargetBitRate =  4000 * 1000;
 		cnf->rateControl.encRateControlPeakBitRate   =  8000 * 1000;
 		cnf->rateControl.encVBVBufferSize = cnf->rateControl.encRateControlPeakBitRate / 2;
-		cnf->rateControl.encGOPSize = -1;
+		cnf->rateControl.encGOPSize = CL_UINT_MAX;
 		cnf->rateControl.encQP_I = 24;
 		cnf->rateControl.encQP_P = 26;
 		cnf->rateControl.encQP_B = 0;
@@ -182,6 +182,8 @@ void init_vce_prm(OvConfigCtrl *cnf) {
 	}
 }
 
+#pragma warning (push)
+#pragma warning (disable: 4100)
 int vce_mes(FILE *fp, int log_level, double progress, const char *fmt, ... ) {
     // retrieve the variable arguments
     va_list args;
@@ -197,6 +199,7 @@ int vce_mes(FILE *fp, int log_level, double progress, const char *fmt, ... ) {
     free(buffer);
 	return ret;
 }
+#pragma warning (pop)
 
 int vce_print(FILE *fp, int log_level, const char *format, ... ) {
     // retrieve the variable arguments
@@ -266,7 +269,7 @@ void vce_close(vce_handle_t *vce_hnd) {
 	if (vce_hnd) {
 		if (vce_hnd->fp_read) { fclose(vce_hnd->fp_read); vce_hnd->fp_read = NULL; }
 		if (vce_hnd->fp_write) { fclose(vce_hnd->fp_write); vce_hnd->fp_write = NULL; }
-		cl_device_id clDeviceID = reinterpret_cast<cl_device_id>(vce_hnd->deviceId);
+		//cl_device_id clDeviceID = reinterpret_cast<cl_device_id>(vce_hnd->deviceId);
 		//displayFps(&vce_hnd->perfCounter, clDeviceID);
 		encodeClose(&vce_hnd->encodeHandle);
 		encodeDestroy(vce_hnd->oveContext);

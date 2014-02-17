@@ -166,7 +166,10 @@
     <ClCompile Include="encode\auo_vce.cpp" />
     <ClCompile Include="encode\auo_video.cpp" />
     <ClCompile Include="encode\convert.cpp" />
-    <ClCompile Include="encode\convert_avx.cpp" />
+    <ClCompile Include="encode\convert_avx.cpp">
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AdvancedVectorExtensions</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AdvancedVectorExtensions</EnableEnhancedInstructionSet>
+    </ClCompile>
     <ClCompile Include="encode\fawcheck.cpp" />
     <ClCompile Include="prm\auo_conf.cpp" />
     <ClCompile Include="prm\auo_settings.cpp" />
