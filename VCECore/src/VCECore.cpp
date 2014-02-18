@@ -469,7 +469,7 @@ uint32 get_vce_features() {
 		return features;
 
 	OVDeviceHandle deviceHandle;
-	if (getDevice(&deviceHandle))
+	if (!getDevice(&deviceHandle))
 		return features;
 
 	uint32 deviceId = deviceHandle.deviceInfo[0].device_id;
