@@ -462,6 +462,45 @@ bool check_if_vce_available() {
 	return ret;
 }
 
+uint32 get_vce_features() {
+	uint32 features = 0x00;
+	
+	if (!check_if_vce_dll_available())
+		return features;
+
+	OVDeviceHandle deviceHandle;
+	if (getDevice(&deviceHandle))
+		return features;
+
+	uint32 deviceId = deviceHandle.deviceInfo[0].device_id;
+	
+	OVE_ENCODE_CAPS cap_info;
+	OVE_ENCODE_CAPS_H264 cap_h264;
+	cap_info.caps.encode_cap_full = &cap_h264;
+
+	OPContextHandle oveContext;
+	if (   encodeCreate(&oveContext, deviceId, &deviceHandle)
+		&& getDeviceCap(oveContext, deviceId, &cap_info)) {
+
+		features |= VCE_H264_AVAILABLE;
+	
+		const int count_profile_level = min(cap_h264.num_Profile_level, OVE_MAX_NUM_PROFILE_LEVELS_H264);
+		for (int i = 0; i < count_profile_level; i++) {
+			if (100 == cap_h264.supported_profile_level[i].profile) {
+				features |= VCE_FEATURE_HIGH_PROFILE;
+				break;
+			}
+		}
+		if (OVE_ENCODE_TASK_PRIORITY_LEVEL2 <= cap_h264.supported_task_priority)
+			features |= VCE_FEATURE_LOW_LATENCY;
+
+		encodeDestroy(oveContext);
+	}
+	delete [] deviceHandle.deviceInfo;
+
+	return features;
+}
+
 vce_handle_t *vce_init(const OvConfigCtrl *_configCtrl,
 			 bool *_abort,
 			 func_vce_mes _print_mes,

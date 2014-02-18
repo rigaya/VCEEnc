@@ -12,6 +12,14 @@ enum {
 	VCE_LOG_ERROR
 };
 
+enum {
+	VCE_H264_AVAILABLE       = 0x00000001,
+	VCE_FEATURE_HIGH_PROFILE = 0x00000002,
+	VCE_FEATURE_LOW_LATENCY  = 0x00000004,
+};
+
+uint32 get_vce_features();
+
 typedef int (*func_vce_mes)(FILE *fp, int log_level, double progress, const char *fmt, ... );
 typedef bool (*func_vce_read)(FILE *fr, uint32 uiHeight, uint32 uiWidth, 
                uint32 alignedSurfaceWidth, int8 *pBitstreamData);
@@ -104,5 +112,6 @@ void vce_close(vce_handle_t *vce_hnd);
 int vce_run(vce_handle_t *vce_hnd);
 
 bool check_if_vce_available();
+uint32 get_vce_features();
 
 #endif //__VCE_CORE_H__
