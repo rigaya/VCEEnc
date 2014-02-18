@@ -15,7 +15,7 @@ typedef struct {
 const CX_DESC list_avc_profile[] = {
 	{ "Baseline", 66 },
 	{ "Main",     77 },
-	//{ "High",     100 },
+	{ "High",     100 },
 	{ NULL, NULL }
 };
 
