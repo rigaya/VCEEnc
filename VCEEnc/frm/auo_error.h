@@ -1,5 +1,5 @@
 ﻿//  -----------------------------------------------------------------------------------------
-//    VCEEnc by rigaya
+//    拡張 x264 出力(GUI) Ex  v1.xx/2.xx by rigaya
 //  -----------------------------------------------------------------------------------------
 //   ソースコードについて
 //   ・無保証です。
@@ -15,9 +15,11 @@ void warning_no_temp_root(const char *dir);
 void warning_no_aud_temp_root(const char *dir);
 void error_filename_too_long();
 void error_nothing_to_output();
+void info_afs_audio_delay_confliction();
 void error_invalid_resolution(BOOL width, int mul, int w, int h);
 void error_log_line_cache();
 void error_no_exe_file(const char *name, const char *path);
+void error_mp4_muxer_unmatch_of_ini_and_exe(BOOL exe_file_is_lsmash);
 void warning_auto_afs_disable();
 void error_afs_setup(BOOL afs, BOOL auto_afs_disable);
 void error_run_process(const char *exe_name, int rp_ret);

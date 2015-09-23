@@ -1,5 +1,5 @@
 ﻿//  -----------------------------------------------------------------------------------------
-//    VCEEnc by rigaya
+//    拡張 x264 出力(GUI) Ex  v1.xx/2.xx by rigaya
 //  -----------------------------------------------------------------------------------------
 //   ソースコードについて
 //   ・無保証です。
@@ -17,46 +17,46 @@ using namespace System::Collections::Generic;
 
 namespace VCEEnc {
 
-	ref class LocalSettings 
-	{
-	public:
-		List<String^>^ audEncName;
-		List<String^>^ audEncExeName;
-		List<String^>^ audEncPath;
-		String^ MP4MuxerExeName;
-		String^ MP4MuxerPath;
-		String^ MKVMuxerExeName;
-		String^ MKVMuxerPath;
-		String^ TC2MP4ExeName;
-		String^ TC2MP4Path;
-		String^ MPGMuxerExeName;
-		String^ MPGMuxerPath;
-		String^ MP4RawExeName;
-		String^ MP4RawPath;
-		String^ CustomTmpDir;
-		String^ CustomAudTmpDir;
-		String^ CustomMP4TmpDir;
-		String^ LastAppDir;
-		String^ LastBatDir;
+    ref class LocalSettings 
+    {
+    public:
+        List<String^>^ audEncName;
+        List<String^>^ audEncExeName;
+        List<String^>^ audEncPath;
+        String^ MP4MuxerExeName;
+        String^ MP4MuxerPath;
+        String^ MKVMuxerExeName;
+        String^ MKVMuxerPath;
+        String^ TC2MP4ExeName;
+        String^ TC2MP4Path;
+        String^ MPGMuxerExeName;
+        String^ MPGMuxerPath;
+        String^ MP4RawExeName;
+        String^ MP4RawPath;
+        String^ CustomTmpDir;
+        String^ CustomAudTmpDir;
+        String^ CustomMP4TmpDir;
+        String^ LastAppDir;
+        String^ LastBatDir;
 
-		LocalSettings() {
-			audEncName = gcnew List<String^>();
-			audEncExeName = gcnew List<String^>();
-			audEncPath = gcnew List<String^>();
-		}
-		~LocalSettings() {
-			delete audEncName;
-			delete audEncExeName;
-			delete audEncPath;
-		}
-	};
+        LocalSettings() {
+            audEncName = gcnew List<String^>();
+            audEncExeName = gcnew List<String^>();
+            audEncPath = gcnew List<String^>();
+        }
+        ~LocalSettings() {
+            delete audEncName;
+            delete audEncExeName;
+            delete audEncPath;
+        }
+    };
 
-	value struct ExeControls
-	{
-		String^ Name;
-		String^ Path;
-		const char* args;
-	};
+    value struct ExeControls
+    {
+        String^ Name;
+        String^ Path;
+        const char* args;
+    };
 };
 
 const int fcgTBQualityTimerLatency = 600;
@@ -67,41 +67,48 @@ const int fcgCXAudioEncModeLargeWidth = 237;
 
 
 static const WCHAR * const list_aspect_ratio[] = {
-	L"SAR(PAR, 画素比)で指定",
-	L"DAR(画面比)で指定",
-	NULL
+    L"SAR(PAR, 画素比)で指定",
+    L"DAR(画面比)で指定",
+    NULL
 };
 
 static const WCHAR * const list_tempdir[] = {
-	L"出力先と同じフォルダ (デフォルト)",
-	L"システムの一時フォルダ",
-	L"カスタム",
-	NULL
+    L"出力先と同じフォルダ (デフォルト)",
+    L"システムの一時フォルダ",
+    L"カスタム",
+    NULL
 };
 
 static const WCHAR * const list_audtempdir[] = {
-	L"変更しない",
-	L"カスタム",
-	NULL
+    L"変更しない",
+    L"カスタム",
+    NULL
 };
 
 static const WCHAR * const list_mp4boxtempdir[] = {
-	L"指定しない",
-	L"カスタム",
-	NULL
+    L"指定しない",
+    L"カスタム",
+    NULL
 };
 
 const WCHAR * const audio_enc_timing_desc[] = {
-	L"後",
-	L"前",
-	L"同時",
-	NULL
+    L"後",
+    L"前",
+    //L"同時", //うまく動作しないため、無効化
+    NULL
+};
+
+const CX_DESC list_log_level_jp[] ={
+    { "通常",                  VCE_LOG_INFO },
+    { "音声/muxのログも表示 ", VCE_LOG_MORE },
+    { "デバッグ用出力も表示 ", VCE_LOG_DEBUG },
+    { NULL, NULL }
 };
 
 //メモ表示用 RGB
 const int StgNotesColor[][3] = {
-	{  80,  72,  92 },
-	{ 120, 120, 120 }
+    {  80,  72,  92 },
+    { 120, 120, 120 }
 };
 
 const WCHAR * const DefaultStgNotes = L"メモ...";

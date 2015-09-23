@@ -1,5 +1,5 @@
 ﻿//  -----------------------------------------------------------------------------------------
-//    拡張 x264 出力(GUI) Ex  v1.xx by rigaya
+//    拡張 x264 出力(GUI) Ex  v1.xx/2.xx by rigaya
 //  -----------------------------------------------------------------------------------------
 //   ソースコードについて
 //   ・無保証です。
@@ -11,12 +11,12 @@
 #define _FAWCHECK_H_
 
 enum {
-	NON_FAW  = 0,
-	FAW_FULL = 1,
-	FAW_HALF = 2,
-	FAW_MIX  = 3,
-	FAWCHECK_ERROR_OTHER     = -1,
-	FAWCHECK_ERROR_TOO_SHORT = -2,
+    NON_FAW  = 0,
+    FAW_FULL = 1,
+    FAW_HALF = 2,
+    FAW_MIX  = 3,
+    FAWCHECK_ERROR_OTHER     = -1,
+    FAWCHECK_ERROR_TOO_SHORT = -2,
 };
 
 static const char *const FAW_TYPE_NAME[] = { "non-FAW", "full size", "half size", "half size mix" };

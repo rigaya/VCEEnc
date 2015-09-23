@@ -93,20 +93,24 @@
     <ClCompile Include="frm\auo_frm.cpp">
       <Filter>ソース ファイル\frm</Filter>
     </ClCompile>
-    <ClCompile Include="frm\auo_win7_taskbar.cpp">
-      <Filter>ソース ファイル\frm</Filter>
-    </ClCompile>
     <ClCompile Include="frm\frmConfig.cpp">
       <Filter>フォーム</Filter>
     </ClCompile>
     <ClCompile Include="frm\frmLog.cpp">
       <Filter>フォーム</Filter>
     </ClCompile>
+    <ClCompile Include="encode\exe_version.cpp">
+      <Filter>ソース ファイル\encode</Filter>
+    </ClCompile>
+    <ClCompile Include="prm\cpu_info.cpp">
+      <Filter>ソース ファイル\prm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="VCEEnc.def">
       <Filter>ソース ファイル</Filter>
     </None>
+    <None Include="VCEEnc.ini" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="auo.h">
@@ -204,6 +208,12 @@
     </ClInclude>
     <ClInclude Include="frm\frmSetLogColor.h">
       <Filter>フォーム</Filter>
+    </ClInclude>
+    <ClInclude Include="encode\exe_version.h">
+      <Filter>ヘッダー ファイル\encode</Filter>
+    </ClInclude>
+    <ClInclude Include="prm\cpu_info.h">
+      <Filter>ヘッダー ファイル\prm</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

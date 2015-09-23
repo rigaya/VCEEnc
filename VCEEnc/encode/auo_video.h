@@ -22,17 +22,17 @@ static const int CF_RGB  = 2;
 static const int DROP_FRAME_FLAG = INT_MAX;
 
 typedef struct {
-	DWORD FOURCC;   //FOURCC
-	DWORD size;  //1ピクセルあたりバイト数
+    DWORD FOURCC;   //FOURCC
+    DWORD size;  //1ピクセルあたりバイト数
 } COLORFORMAT_DATA;
 
 static const COLORFORMAT_DATA COLORFORMATS[] = {
-	{ MAKEFOURCC('Y', 'U', 'Y', '2'), 2 }, //YUY2
-	{ MAKEFOURCC('Y', 'C', '4', '8'), 6 }, //YC48
-	{ NULL,                           3 }  //RGB
+    { MAKEFOURCC('Y', 'U', 'Y', '2'), 2 }, //YUY2
+    { MAKEFOURCC('Y', 'C', '4', '8'), 6 }, //YC48
+    { NULL,                           3 }  //RGB
 };
 
-BOOL setup_afsvideo(const OUTPUT_INFO *oip, CONF_GUIEX *conf, PRM_ENC *pe, BOOL auto_afs_disable);
+BOOL setup_afsvideo(const OUTPUT_INFO *oip, const SYSTEM_DATA *sys_dat, CONF_GUIEX *conf, PRM_ENC *pe);
 void close_afsvideo(PRM_ENC *pe);
 
 AUO_RESULT video_output(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_ENC *pe, const SYSTEM_DATA *sys_dat);

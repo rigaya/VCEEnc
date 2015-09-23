@@ -1,5 +1,5 @@
 ﻿//  -----------------------------------------------------------------------------------------
-//    拡張 x264 出力(GUI) Ex  v1.xx by rigaya
+//    拡張 x264 出力(GUI) Ex  v1.xx/2.xx by rigaya
 //  -----------------------------------------------------------------------------------------
 //   ソースコードについて
 //   ・無保証です。
@@ -16,6 +16,8 @@
 #include "auo_system.h"
 
 void *get_audio_data(const OUTPUT_INFO *oip, PRM_ENC *pe, int start, int length, int *readed);
+
+void auo_faw_check(CONF_AUDIO *aud, const OUTPUT_INFO *oip, PRM_ENC *pe, const guiEx_settings *ex_stg);
 
 AUO_RESULT audio_output(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_ENC *pe, const SYSTEM_DATA *sys_dat); //音声処理を実行
 AUO_RESULT audio_output_parallel(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_ENC *pe, const SYSTEM_DATA *sys_dat);

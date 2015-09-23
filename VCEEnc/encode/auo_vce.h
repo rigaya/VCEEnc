@@ -17,12 +17,57 @@
 #include "auo_conf.h"
 #include "auo_system.h"
 
+#include "VCEUtil.h"
+#include "VCEInput.h"
 #include "VCECore.h"
 
-DWORD set_auo_vce_g_data(const OUTPUT_INFO *_oip, CONF_GUIEX *conf, PRM_ENC *_pe, int *jitter, BOOL *pause);
-void clear_auo_vce_g_data();
+struct VCEInputAuoParam {
+    const OUTPUT_INFO *oip;
+    const SYSTEM_DATA *sys_dat;
+    CONF_GUIEX *conf;
+    PRM_ENC *pe;
+    int *jitter;
+};
 
-bool auo_vce_read(FILE *fr, uint32 uiHeight, uint32 uiWidth, uint32 alignedSurfaceWidth, int8 *pBitstreamData);
-int auo_vce_print_mes(FILE *fp, int log_level, double progress, const char *format, ... );
+class AuoLog : public VCELog {
+public:
+    AuoLog(const TCHAR *pLogFile, int log_level) : VCELog(pLogFile, log_level), m_printBuf() { };
+    virtual ~AuoLog();
+    virtual void operator()(int log_level, const TCHAR *format, ...) override;
+private:
+    vector<TCHAR> m_printBuf;
+};
+
+class AuoStatus : public VCEStatus {
+public:
+    AuoStatus();
+    virtual ~AuoStatus();
+protected:
+    virtual void UpdateDisplay(const char *mes, int drop_frames) override;
+    virtual void WriteLine(const TCHAR *mes) override;
+
+    vector<char> m_lineBuf;
+};
+
+class VCEInputAuo : public VCEInput {
+public:
+    VCEInputAuo();
+    virtual ~VCEInputAuo();
+
+    virtual AMF_RESULT init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pStatus, VCEInputInfo *pInfo, amf::AMFContextPtr pContext) override;
+
+    virtual AMF_RESULT SubmitInput(amf::AMFData* pData) override;
+    virtual AMF_RESULT QueryOutput(amf::AMFData** ppData) override;
+    virtual AMF_RESULT Terminate() override;
+private:
+    VCEInputAuoParam m_param;
+};
+
+class VCECoreAuo : public VCECore {
+public:
+    VCECoreAuo();
+    virtual ~VCECoreAuo();
+    virtual AMF_RESULT initInput(VCEParam *prm) override;
+};
 
 #endif //_AUO_VCE_H_

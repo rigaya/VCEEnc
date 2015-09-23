@@ -17,21 +17,22 @@
 const int LOG_UPDATE_INTERVAL = 50;
 
 enum {
-	LOG_INFO    = 0,
-	LOG_WARNING = 1,
-	LOG_ERROR   = 2,
+    LOG_MORE    = -1,
+    LOG_INFO    = 0,
+    LOG_WARNING = 1,
+    LOG_ERROR   = 2,
 };
 
 enum {
-	PROGRESSBAR_DISABLED   = 0,
-	PROGRESSBAR_CONTINUOUS = 1,
-	PROGRESSBAR_MARQUEE    = 2,
+    PROGRESSBAR_DISABLED   = 0,
+    PROGRESSBAR_CONTINUOUS = 1,
+    PROGRESSBAR_MARQUEE    = 2,
 };
 
 typedef struct {
-	int max_line; //格納できる最大の行数
-	int idx;      //現在の行数
-	char **lines; //格納している一行
+    int max_line; //格納できる最大の行数
+    int idx;      //現在の行数
+    char **lines; //格納している一行
 } LOG_CACHE;
 
 //設定ウィンドウ
@@ -45,11 +46,11 @@ void set_window_title_enc_mes(const char *chr, int total_drop, int frame_n);
 void set_task_name(const char *chr);
 void set_log_progress(double progress);
 void set_log_title_and_progress(const char * chr, double progress);
-void write_log_auo_line(int log_type_index, const char *chr);
-void write_log_line(int log_type_index, const char *chr);
+void write_log_auo_line(int log_type_index, const char *chr, bool from_utf8 = false);
+void write_log_line(int log_type_index, const char *chr, bool from_utf8 = false);
 void flush_audio_log();
-void enable_enc_control(BOOL *enc_pause, BOOL afs, BOOL add_progress, DWORD start_time, int _total_frame);
-void disable_enc_control();
+//void enable_x264_control(BOOL *enc_pause, BOOL afs, BOOL add_progress, DWORD *start_time, int _total_frame);
+//void disable_x264_control();
 void set_prevent_log_close(BOOL prevent);
 void auto_save_log_file(const char *log_filepath);
 void log_process_events();
