@@ -152,10 +152,6 @@ void open_log_window(const char *savefile, const SYSTEM_DATA *sys_dat, int curre
     
     show_log_window(sys_dat->aviutl_dir, sys_dat->exstg->s_local.disable_visual_styles);
     write_log_line(LOG_INFO, mes);
-    
-    char cpu_info[256];
-    getCPUInfo(cpu_info);
-    write_log_auo_line_fmt(LOG_INFO, "%s %s / %s (%s) / %s", AUO_NAME_WITHOUT_EXT, AUO_VERSION_STR, getOSVersion(), is_64bit_os() ? "x64" : "x86", cpu_info);
 }
 
 static void set_tmpdir(PRM_ENC *pe, int tmp_dir_index, const char *savefile, const SYSTEM_DATA *sys_dat) {
