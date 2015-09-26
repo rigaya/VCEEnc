@@ -75,13 +75,42 @@ static int write_log_enc_mes_line(char *const mes, LOG_CACHE *cache_line) {
         if (p != mes)
             for (char *const prefix_adjust = p - prefix_len; p > prefix_adjust; p--)
                 *(p-1) = ' ';
-        (cache_line) ? add_line_to_cache(cache_line, p) : write_log_line(mes_type, p);
+        (cache_line) ? add_line_to_cache(cache_line, p) : write_log_line(mes_type, p, true);
         p=q+1;
     } while (flag_continue);
     return mes_len;
 }
 
-void write_log_enc_mes(char *const msg, DWORD *log_len, int total_drop, int current_frames, LOG_CACHE *cache_line) {
+void set_reconstructed_title_mes(const char *mes, int total_drop, int current_frames) {
+    double progress = 0, fps = 0, bitrate = 0;
+    int i_frame = 0, total_frame = 0;
+    int remain_time[3] = { 0 }, elapsed_time[3] = { 0 };
+    char buffer[1024] = { 0 };
+    int length = 0;
+    const char *ptr = buffer;
+    if ('[' == mes[0]
+        && 11 >= sscanf_s(mes, "[%lf%%] %d/%d %lf %lf %d:%d:%d %d:%d:%d %n",
+            &progress, &i_frame, &total_frame, &fps, &bitrate,
+            &remain_time[0], &remain_time[1], &remain_time[2],
+            &elapsed_time[0], &elapsed_time[1], &elapsed_time[2],
+            &length)) {
+        const char *qtr = mes + length;
+        while (' ' == *qtr) qtr++;
+        while (' ' != *qtr && '\0' != *qtr) qtr++;
+        while (' ' == *qtr) qtr++;
+        while (' ' != *qtr && '\0' != *qtr) qtr++;
+        while (' ' == *qtr) qtr++;
+        sprintf_s(buffer, _countof(buffer), "[%3.1lf%%] %d/%d frames, %.2lf fps, %.2lf kb/s, eta %d:%02d:%02d, %s %s",
+            progress, i_frame, total_frame, fps, bitrate, elapsed_time[0], elapsed_time[1], elapsed_time[2], ('\0' != *qtr) ? "est.size" : "", qtr);
+    } else if (3 == sscanf_s(mes, "%d %lf %lf", &i_frame, &fps, &bitrate)) {
+        sprintf_s(buffer, _countof(buffer), "%d frames, %.2lf fps, %.2lf kb/s", i_frame, fps, bitrate);
+    } else {
+        ptr = mes;
+    }
+    set_window_title_enc_mes(ptr, total_drop, current_frames);
+}
+
+void write_log_enc_mes(char *const msg, DWORD *log_len, int total_drop, int current_frames) {
     char *a, *b, *mes = msg;
     char * const fin = mes + *log_len; //null文字の位置
     *fin = '\0';
@@ -89,7 +118,7 @@ void write_log_enc_mes(char *const msg, DWORD *log_len, int total_drop, int curr
         if ((b = strrchr(mes, '\r', a - mes - 2)) != NULL)
             mes = b + 1;
         *a = '\0';
-        write_log_enc_mes_line(mes, cache_line);
+        write_log_enc_mes_line(mes, NULL);
         mes = a + 1;
     }
     if ((a = strrchr(mes, '\r', fin - mes - 1)) != NULL) {
@@ -99,11 +128,15 @@ void write_log_enc_mes(char *const msg, DWORD *log_len, int total_drop, int curr
         *(b+1) = '\0';
         if ((b = strrchr(mes, '\r', b - mes - 2)) != NULL)
             mes = b + 1;
-        set_window_title_enc_mes(mes, total_drop, current_frames);
+        if (NULL == strstr(mes, "frames")) {
+            set_reconstructed_title_mes(mes, total_drop, current_frames);
+        } else {
+            set_window_title_enc_mes(mes, total_drop, current_frames);
+        }
         mes = a + 1;
     }
     if (mes == msg && *log_len)
-        mes += write_log_enc_mes_line(mes, cache_line);
+        mes += write_log_enc_mes_line(mes, NULL);
     memmove(msg, mes, ((*log_len = fin - mes) + 1) * sizeof(msg[0]));
 }
 
@@ -141,10 +174,12 @@ void write_log_exe_mes(char *const msg, DWORD *log_len, const char *exename, LOG
         *(b+1) = '\0';
         if ((b = strrchr(mes, '\r', b - mes - 2)) != NULL)
             mes = b + 1;
-        if (buffer_len == 0) buffer_len = *log_len + strlen(exename) + 3;
-        if (buffer != NULL || NULL != (buffer = (char*)malloc(buffer_len * sizeof(buffer[0])))) {
-            sprintf_s(buffer, buffer_len, "%s: %s", exename, mes);
-            set_window_title(buffer);
+        if (exename) {
+            if (buffer_len == 0) buffer_len = *log_len + strlen(exename) + 3;
+            if (buffer != NULL || NULL != (buffer = (char*)malloc(buffer_len * sizeof(buffer[0])))) {
+                sprintf_s(buffer, buffer_len, "%s: %s", exename, mes);
+                set_window_title(buffer);
+            }
         }
         mes = a + 1;
     }
