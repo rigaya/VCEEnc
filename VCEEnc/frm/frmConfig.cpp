@@ -854,8 +854,8 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
         fcgCBRunBatAfter->Checked          =(cnf->oth.run_bat & RUN_BAT_AFTER_PROCESS) != 0;
         fcgCBWaitForBatBefore->Checked     =(cnf->oth.dont_wait_bat_fin & RUN_BAT_BEFORE_PROCESS) == 0;
         fcgCBWaitForBatAfter->Checked      =(cnf->oth.dont_wait_bat_fin & RUN_BAT_AFTER_PROCESS) == 0;
-        fcgTXBatBeforePath->Text           = String(cnf->oth.batfiles[RUN_BAT_BEFORE_PROCESS]).ToString();
-        fcgTXBatAfterPath->Text            = String(cnf->oth.batfiles[RUN_BAT_AFTER_PROCESS]).ToString();
+        fcgTXBatBeforePath->Text           = String(cnf->oth.batfile.before_process).ToString();
+        fcgTXBatAfterPath->Text            = String(cnf->oth.batfile.after_process).ToString();
 
         SetfcgTSLSettingsNotes(cnf->oth.notes);
 

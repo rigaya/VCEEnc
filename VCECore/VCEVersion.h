@@ -9,9 +9,9 @@
 
 #pragma once
 
-#define VER_FILEVERSION             0,1,2,0
-#define VER_STR_FILEVERSION          "1.02"
-#define VER_STR_FILEVERSION_TCHAR _T("1.02")
+#define VER_FILEVERSION             0,1,3,0
+#define VER_STR_FILEVERSION          "1.03"
+#define VER_STR_FILEVERSION_TCHAR _T("1.03")
 
 #define VCE_AMD_APP_SDK "3.0"
 
