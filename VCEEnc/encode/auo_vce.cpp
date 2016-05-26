@@ -101,7 +101,24 @@ AuoLog::~AuoLog() {
     m_printBuf.clear();
 }
 
-void AuoLog::operator()(int log_level, const TCHAR *format, ...) {
+#pragma warning(push)
+#pragma warning(disable:4100)
+void AuoLog::write_log(int log_level, const TCHAR *mes, bool file_only) {
+    int len = _tcslen(mes) + 1;
+    std::vector<TCHAR> buffer(len * 2 + 64, 0);
+    memcpy(buffer.data(), mes, sizeof(buffer[0]) * len);
+    TCHAR *buffer_line = buffer.data() + len;
+    TCHAR *q = NULL;
+    for (TCHAR *p = buffer.data(); (p = _tcstok_s(p, _T("\n"), &q)) != NULL; ) {
+        static const TCHAR *const LOG_STRING[] ={ _T("trace"),  _T("debug"), _T("info"), _T("info"), _T("warn"), _T("error") };
+        _stprintf_s(buffer_line, len + 64, "qsv [%s]: %s", LOG_STRING[clamp(log_level, VCE_LOG_TRACE, VCE_LOG_ERROR) - VCE_LOG_TRACE], p);
+        write_log_line(log_level, buffer_line);
+        p = NULL;
+    }
+}
+#pragma warning(pop)
+
+void AuoLog::write(int log_level, const TCHAR *format, ...) {
     if (log_level < m_nLogLevel) {
         return;
     }
@@ -113,18 +130,9 @@ void AuoLog::operator()(int log_level, const TCHAR *format, ...) {
     if (m_printBuf.size() < len * 2 + 64) {
         m_printBuf.resize(len * 2 + 256, _T('\0'));
     }
-    TCHAR *buffer_line = m_printBuf.data() + len;
 
     _vstprintf_s(m_printBuf.data(), len, format, args);
-    //_ftprintf(fp, buffer);
-
-    TCHAR *q = NULL;
-    for (TCHAR *p = m_printBuf.data(); (p = _tcstok_s(p, _T("\n"), &q)) != NULL; ) {
-        static const TCHAR *const LOG_STRING[] = { _T("trace"),  _T("debug"), _T("info"), _T("info"), _T("warn"), _T("error") };
-        _stprintf_s(buffer_line, len + 64, "vce [%s]: %s", LOG_STRING[clamp(log_level, VCE_LOG_TRACE, VCE_LOG_ERROR) - VCE_LOG_TRACE], p);
-        write_log_line(log_level, buffer_line);
-        p = NULL;
-    }
+    write_log(log_level, m_printBuf.data());
 }
 
 AuoStatus::AuoStatus() : m_lineBuf() {
@@ -135,8 +143,12 @@ AuoStatus::~AuoStatus() {
     m_lineBuf.clear();
 }
 
-void AuoStatus::UpdateDisplay(const char *mes, int drop_frames) {
-    set_log_title_and_progress(mes, (m_sData.nProcessedFramesNum + drop_frames) / (double)m_nTotalOutFrames);
+void AuoStatus::UpdateDisplay(const char *mes, int drop_frames, double progressPercent) {
+    set_log_title_and_progress(mes, progressPercent * 0.01);
+}
+
+AMF_RESULT AuoStatus::UpdateDisplay(int drop_frames, double progressPercent) {
+    return VCEStatus::UpdateDisplay(drop_frames, progressPercent);
 }
 
 void AuoStatus::WriteLine(const TCHAR *mes) {
@@ -161,12 +173,12 @@ VCEInputAuo::~VCEInputAuo() {
 
 
 AMF_RESULT VCEInputAuo::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pStatus, VCEInputInfo *pInfo, amf::AMFContextPtr pContext) {
-    m_pVCELog = pLog;
-    m_pStatus = pStatus;
+    m_pPrintMes = pLog;
+    m_pEncSatusInfo = pStatus;
     m_pContext = pContext;
 
-    m_inputInfo = *pInfo;
-    m_param = *(VCEInputAuoParam *)m_inputInfo.pPrivateParam;
+    m_inputFrameInfo = *pInfo;
+    m_param = *(VCEInputAuoParam *)m_inputFrameInfo.pPrivateParam;
 
     setup_afsvideo(m_param.oip, m_param.sys_dat, m_param.conf, m_param.pe);
 
@@ -176,7 +188,7 @@ AMF_RESULT VCEInputAuo::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pSta
     }
     tstring mes = strsprintf(_T("auo: %s->%s[%s], %dx%d%s, %d/%d fps"),
         VCE_CSP_NAMES[m_pConvertCsp->csp_from], VCE_CSP_NAMES[m_pConvertCsp->csp_to], get_simd_str(m_pConvertCsp->simd),
-        m_inputInfo.srcWidth, m_inputInfo.srcHeight, m_inputInfo.interlaced ? _T("i") : _T("p"), m_inputInfo.fps.num, m_inputInfo.fps.den);
+        m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcHeight, m_inputFrameInfo.interlaced ? _T("i") : _T("p"), m_inputFrameInfo.fps.num, m_inputFrameInfo.fps.den);
     AddMessage(VCE_LOG_DEBUG, _T("%s\n"), mes.c_str());
     m_strInputInfo += mes;
     return AMF_OK;
@@ -192,16 +204,16 @@ AMF_RESULT VCEInputAuo::SubmitInput(amf::AMFData* pData) {
 AMF_RESULT VCEInputAuo::QueryOutput(amf::AMFData** ppData) {
     AMF_RESULT res = AMF_OK;
     amf::AMFSurfacePtr pSurface;
-    res = m_pContext->AllocSurface(amf::AMF_MEMORY_HOST, m_inputInfo.format,
-        m_inputInfo.srcWidth - m_inputInfo.crop.left - m_inputInfo.crop.right,
-        m_inputInfo.srcHeight - m_inputInfo.crop.bottom - m_inputInfo.crop.up,
+    res = m_pContext->AllocSurface(amf::AMF_MEMORY_HOST, m_inputFrameInfo.format,
+        m_inputFrameInfo.srcWidth - m_inputFrameInfo.crop.left - m_inputFrameInfo.crop.right,
+        m_inputFrameInfo.srcHeight - m_inputFrameInfo.crop.bottom - m_inputFrameInfo.crop.up,
         &pSurface);
     if (res != AMF_OK) {
         AddMessage(VCE_LOG_ERROR, _T("AMFContext::AllocSurface(amf::AMF_MEMORY_HOST) failed.\n"));
         return res;
     }
 
-    int i_frame = m_pStatus->m_inputFrames + m_param.pe->drop_count;
+    int i_frame = m_pEncSatusInfo->m_nInputFrames + m_param.pe->drop_count;
 
     if (i_frame >= m_param.oip->n || m_param.pe->aud_parallel.abort) {
         //m_param.oip->func_rest_time_disp(i_frame, m_param.oip->n);
@@ -243,22 +255,13 @@ AMF_RESULT VCEInputAuo::QueryOutput(amf::AMFData** ppData) {
     dst_ptr[0] = (uint8_t *)plane->GetNative();
     dst_ptr[1] = (uint8_t *)dst_ptr[0] + dst_height * dst_stride;
     int crop[4] = { 0 };
-    m_pConvertCsp->func[!!m_inputInfo.interlaced](dst_ptr, &frame, m_inputInfo.srcWidth, m_inputInfo.srcWidth * 2, 0, dst_stride, m_inputInfo.srcHeight, dst_height, crop);
+    m_pConvertCsp->func[!!m_inputFrameInfo.interlaced](dst_ptr, &frame, m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcWidth * 2, 0, dst_stride, m_inputFrameInfo.srcHeight, dst_height, crop);
 
-    m_pStatus->m_inputFrames++;
-    if (!(m_pStatus->m_inputFrames & 7))
+    m_pEncSatusInfo->m_nInputFrames++;
+    if (!(m_pEncSatusInfo->m_nInputFrames & 7))
         aud_parallel_task(m_param.oip, m_param.pe);
 
-    uint32_t tm = timeGetTime();
-    //pSurface->Data.TimeStamp = m_pEncSatusInfo->m_nInputFrames * (mfxU64)m_pEncSatusInfo->m_nOutputFPSScale;
-    if (tm - m_tmLastUpdate > UPDATE_INTERVAL) {
-        m_tmLastUpdate = tm;
-        m_param.oip->func_rest_time_disp(i_frame, m_param.oip->n);
-        m_param.oip->func_update_preview();
-
-        m_pStatus->UpdateDisplay(tm, m_param.pe->drop_count);
-    }
-
+    m_pEncSatusInfo->UpdateDisplay(m_param.pe->drop_count);
     *ppData = pSurface.Detach();
     return AMF_OK;
 }
@@ -267,8 +270,8 @@ AMF_RESULT VCEInputAuo::Terminate() {
     if (m_param.pe) {
         close_afsvideo(m_param.pe);
     }
-    m_pVCELog.reset();
-    m_pStatus.reset();
+    m_pPrintMes.reset();
+    m_pEncSatusInfo.reset();
     m_message.clear();
     m_pContext = nullptr;
     return AMF_OK;
@@ -285,17 +288,17 @@ VCECoreAuo::~VCECoreAuo() {
 
 }
 
-AMF_RESULT VCECoreAuo::initInput(VCEParam *prm) {
-    m_pVCELog.reset(new AuoLog(prm->pStrLog, prm->nLogLevel));
+AMF_RESULT VCECoreAuo::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo) {
+    m_pVCELog.reset(new AuoLog(pParams->pStrLog, pParams->nLogLevel));
     m_pStatus.reset(new AuoStatus());
-    m_pInput.reset(new VCEInputAuo());
+    m_pFileReader.reset(new VCEInputAuo());
 
-    auto ret = m_pInput->init(m_pVCELog, m_pStatus, &m_inputInfo, m_pContext);
+    auto ret = m_pFileReader->init(m_pVCELog, m_pStatus, &m_inputInfo, m_pContext);
     if (ret != AMF_OK) {
-        PrintMes(VCE_LOG_ERROR, _T("Error: %s\n"), m_pInput->getMessage().c_str());
+        PrintMes(VCE_LOG_ERROR, _T("Error: %s\n"), m_pFileReader->getMessage().c_str());
         return ret;
     }
-    m_inputInfo = m_pInput->GetInputInfo();
+    m_inputInfo = m_pFileReader->GetInputFrameInfo();
     m_pStatus->init(m_pVCELog, m_inputInfo.fps, m_inputInfo.frames);
     return ret;
 }

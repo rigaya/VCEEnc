@@ -57,7 +57,7 @@ public:
     virtual ~VCECore();
 
     AMF_RESULT init(VCEParam *prm, VCEInputInfo *inputInfo);
-    virtual AMF_RESULT initInput(VCEParam *prm);
+    virtual AMF_RESULT initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo);
     AMF_RESULT initOutput(VCEParam *prm);
     AMF_RESULT run();
     void Terminate();
@@ -87,12 +87,15 @@ protected:
     bool QueryEncoderCaps(amf::AMFCapabilityManagerPtr& capsManager);
 
     virtual AMF_RESULT checkParam(VCEParam *prm);
+    virtual AMF_RESULT initDevice(VCEParam *prm);
+    virtual AMF_RESULT initDecoder(VCEParam *prm);
+    virtual AMF_RESULT initConverter(VCEParam *prm);
     virtual AMF_RESULT initEncoder(VCEParam *prm);
 
     shared_ptr<VCELog> m_pVCELog;
     bool m_bTimerPeriodTuning;
 
-    shared_ptr<VCEInput> m_pInput;
+    shared_ptr<VCEInput> m_pFileReader;
     shared_ptr<VCEOutput> m_pOutput;
     shared_ptr<VCEStatus> m_pStatus;
 
@@ -102,13 +105,14 @@ protected:
 
     AMFDataStreamPtr m_pStreamOut;
 
+    sTrimParam *m_pTrimParam;
+
+    amf::AMFComponentPtr m_pDecoder;
     amf::AMFComponentPtr m_pEncoder;
+    amf::AMFComponentPtr m_pConverter;
 
     DeviceDX9 m_deviceDX9;
     DeviceDX11 m_deviceDX11;
 
     ParametersStorage m_Params;
 };
-
-bool check_if_vce_available();
-bool check_if_vce_available(tstring& mes);

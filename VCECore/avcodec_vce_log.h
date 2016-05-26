@@ -24,31 +24,18 @@
 // THE SOFTWARE.
 //
 // ------------------------------------------------------------------------------------------
+#ifndef _AVCODEC_VCE_LOG_H_
+#define _AVCODEC_VCE_LOG_H_
 
-#pragma once
+#include "VCEVersion.h"
 
-#define VER_FILEVERSION             0,2,0,0
-#define VER_STR_FILEVERSION          "2.00"
-#define VER_STR_FILEVERSION_TCHAR _T("2.00")
+#if ENABLE_AVCODEC_VCE_READER
 
-#define VCE_AMD_APP_SDK "3.0"
+#include "avcodec_vce.h"
 
-#define ENABLE_OPENCL 0
+void av_vce_log_set(std::shared_ptr<VCELog>& pQSVLog);
+void av_vce_log_free();
 
-#define CHECK_PERFORMANCE 1
+#endif //ENABLE_AVCODEC_QSV_READER
 
-#ifdef _M_IX86
-#define BUILD_ARCH_STR _T("x86")
-#else
-#define BUILD_ARCH_STR _T("x64")
-#endif
-
-#if defined(VCE_AUO) && defined(NDEBUG)
-#define ENABLE_VAPOURSYNTH_READER 0
-#define ENABLE_AVISYNTH_READER 0
-#define ENABLE_AVCODEC_VCE_READER 0
-#else
-#define ENABLE_VAPOURSYNTH_READER 1
-#define ENABLE_AVISYNTH_READER 1
-#define ENABLE_AVCODEC_VCE_READER 1
-#endif
+#endif //_AVCODEC_VCE_LOG_H_

@@ -25,30 +25,44 @@
 //
 // ------------------------------------------------------------------------------------------
 
-#pragma once
+#ifndef __GPUZ_INFO_H__
+#define __GPUZ_INFO_H__
 
-#define VER_FILEVERSION             0,2,0,0
-#define VER_STR_FILEVERSION          "2.00"
-#define VER_STR_FILEVERSION_TCHAR _T("2.00")
+#if (defined(_WIN32) || defined(_WIN64))
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
+#include <tchar.h>
 
-#define VCE_AMD_APP_SDK "3.0"
+#define SHMEM_NAME _T("GPUZShMem")
+#define MAX_RECORDS 128
 
-#define ENABLE_OPENCL 0
+#pragma pack(push, 1)
+struct GPUZ_RECORD {
+    WCHAR key[256];
+    WCHAR value[256];
+};
 
-#define CHECK_PERFORMANCE 1
+struct GPUZ_SENSOR_RECORD {
+    WCHAR name[256];
+    WCHAR unit[8];
+    UINT32 digits;
+    double value;
+};
 
-#ifdef _M_IX86
-#define BUILD_ARCH_STR _T("x86")
-#else
-#define BUILD_ARCH_STR _T("x64")
-#endif
+struct GPUZ_SH_MEM {
+    UINT32 version;
+    volatile LONG busy;
+    UINT32 lastUpdate;
+    GPUZ_RECORD data[MAX_RECORDS];
+    GPUZ_SENSOR_RECORD sensors[MAX_RECORDS];
+};
+#pragma pack(pop)
 
-#if defined(VCE_AUO) && defined(NDEBUG)
-#define ENABLE_VAPOURSYNTH_READER 0
-#define ENABLE_AVISYNTH_READER 0
-#define ENABLE_AVCODEC_VCE_READER 0
-#else
-#define ENABLE_VAPOURSYNTH_READER 1
-#define ENABLE_AVISYNTH_READER 1
-#define ENABLE_AVCODEC_VCE_READER 1
-#endif
+int get_gpuz_info(GPUZ_SH_MEM *data);
+double gpu_core_clock(GPUZ_SH_MEM *data);
+double gpu_load(GPUZ_SH_MEM *data);
+
+#endif //#if (defined(_WIN32) || defined(_WIN64))
+
+#endif //__GPUZ_INFO_H__

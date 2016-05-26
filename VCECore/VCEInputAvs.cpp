@@ -67,11 +67,11 @@ AMF_RESULT VCEInputAvs::load_avisynth() {
 }
 
 AMF_RESULT VCEInputAvs::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pStatus, VCEInputInfo *pInfo, amf::AMFContextPtr pContext) {
-    m_pVCELog = pLog;
-    m_pStatus = pStatus;
+    m_pPrintMes = pLog;
+    m_pEncSatusInfo = pStatus;
     m_pContext = pContext;
     
-    m_inputInfo = *pInfo;
+    m_inputFrameInfo = *pInfo;
     VCEInputAvsParam *pAvsParam = (VCEInputAvsParam *)pInfo->pPrivateParam;
 
     if (AMF_OK != load_avisynth()) {
@@ -139,11 +139,11 @@ AMF_RESULT VCEInputAvs::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pSta
     }
 
     int fps_gcd = vce_gcd(m_sAVSinfo->fps_numerator, m_sAVSinfo->fps_denominator);
-    m_inputInfo.srcWidth = m_sAVSinfo->width;
-    m_inputInfo.srcHeight = m_sAVSinfo->height;
-    m_inputInfo.fps.num = m_sAVSinfo->fps_numerator / fps_gcd;
-    m_inputInfo.fps.den = m_sAVSinfo->fps_denominator / fps_gcd;
-    m_inputInfo.frames = m_sAVSinfo->num_frames;
+    m_inputFrameInfo.srcWidth = m_sAVSinfo->width;
+    m_inputFrameInfo.srcHeight = m_sAVSinfo->height;
+    m_inputFrameInfo.fps.num = m_sAVSinfo->fps_numerator / fps_gcd;
+    m_inputFrameInfo.fps.den = m_sAVSinfo->fps_denominator / fps_gcd;
+    m_inputFrameInfo.frames = m_sAVSinfo->num_frames;
 
     tstring avisynth_version;
     AVS_Value val_version = m_sAvisynth.invoke(m_sAVSenv, "VersionNumber", avs_new_value_array(NULL, 0), NULL);
@@ -155,7 +155,7 @@ AMF_RESULT VCEInputAvs::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pSta
     tstring mes = strsprintf(_T("Avisynth %s %s->%s[%s], %dx%d%s, %d/%d fps"),
         avisynth_version.c_str(),
         VCE_CSP_NAMES[m_pConvertCsp->csp_from], VCE_CSP_NAMES[m_pConvertCsp->csp_to], get_simd_str(m_pConvertCsp->simd),
-        m_inputInfo.srcWidth, m_inputInfo.srcHeight, m_inputInfo.interlaced ? _T("i") : _T("p"), m_inputInfo.fps.num, m_inputInfo.fps.den);
+        m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcHeight, m_inputFrameInfo.interlaced ? _T("i") : _T("p"), m_inputFrameInfo.fps.num, m_inputFrameInfo.fps.den);
 
     AddMessage(VCE_LOG_DEBUG, _T("%s\n"), mes.c_str());
     m_strInputInfo += mes;
@@ -175,30 +175,30 @@ AMF_RESULT VCEInputAvs::Terminate() {
     m_sAVSclip = nullptr;
     m_sAVSinfo = nullptr;
 
-    m_pVCELog.reset();
-    m_pStatus.reset();
+    m_pPrintMes.reset();
+    m_pEncSatusInfo.reset();
     m_message.clear();
     m_pContext = nullptr;
     return AMF_OK;
 }
 
-AMF_RESULT VCEInputAvs::QueryOutput(amf::AMFData** ppData) {
+AMF_RESULT VCEInputAvs::QueryOutput(amf::AMFData **ppData) {
     AMF_RESULT res = AMF_OK;
     amf::AMFSurfacePtr pSurface;
-    res = m_pContext->AllocSurface(amf::AMF_MEMORY_HOST, m_inputInfo.format,
-        m_inputInfo.srcWidth - m_inputInfo.crop.left - m_inputInfo.crop.right,
-        m_inputInfo.srcHeight - m_inputInfo.crop.bottom - m_inputInfo.crop.up,
+    res = m_pContext->AllocSurface(amf::AMF_MEMORY_HOST, m_inputFrameInfo.format,
+        m_inputFrameInfo.srcWidth - m_inputFrameInfo.crop.left - m_inputFrameInfo.crop.right,
+        m_inputFrameInfo.srcHeight - m_inputFrameInfo.crop.bottom - m_inputFrameInfo.crop.up,
         &pSurface);
     if (res != AMF_OK) {
         AddMessage(VCE_LOG_ERROR, _T("AMFContext::AllocSurface(amf::AMF_MEMORY_HOST) failed.\n"));
         return res;
     }
 
-    if (m_pStatus->m_inputFrames >= (uint32_t)m_inputInfo.frames) {
+    if (m_pEncSatusInfo->m_nInputFrames >= (uint32_t)m_inputFrameInfo.frames) {
         return AMF_EOF;
     }
 
-    AVS_VideoFrame *frame = m_sAvisynth.get_frame(m_sAVSclip, m_pStatus->m_inputFrames);
+    AVS_VideoFrame *frame = m_sAvisynth.get_frame(m_sAVSclip, m_pEncSatusInfo->m_nInputFrames);
     if (frame == NULL) {
         return AMF_EOF;
     }
@@ -211,16 +211,11 @@ AMF_RESULT VCEInputAvs::QueryOutput(amf::AMFData** ppData) {
     void *dst_ptr[2];
     dst_ptr[0] = (uint8_t *)plane->GetNative();
     dst_ptr[1] = (uint8_t *)dst_ptr[0] + dst_height * dst_stride;
-    m_pConvertCsp->func[!!m_inputInfo.interlaced](dst_ptr, src_ptr, m_inputInfo.srcWidth, avs_get_pitch_p(frame, AVS_PLANAR_Y), avs_get_pitch_p(frame, AVS_PLANAR_U), dst_stride, m_inputInfo.srcHeight, dst_height, m_inputInfo.crop.c);
-    m_pStatus->m_inputFrames++;
+    m_pConvertCsp->func[!!m_inputFrameInfo.interlaced](dst_ptr, src_ptr, m_inputFrameInfo.srcWidth, avs_get_pitch_p(frame, AVS_PLANAR_Y), avs_get_pitch_p(frame, AVS_PLANAR_U), dst_stride, m_inputFrameInfo.srcHeight, dst_height, m_inputFrameInfo.crop.c);
+    m_pEncSatusInfo->m_nInputFrames++;
 
     m_sAvisynth.release_video_frame(frame);
-
-    uint32_t tm = timeGetTime();
-    if (tm - m_tmLastUpdate > 800) {
-        m_tmLastUpdate = tm;
-        m_pStatus->UpdateDisplay(tm, 0);
-    }
+    m_pEncSatusInfo->UpdateDisplay(0);
 
     *ppData = pSurface.Detach();
     return AMF_OK;

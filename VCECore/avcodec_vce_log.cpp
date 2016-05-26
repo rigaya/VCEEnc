@@ -25,30 +25,42 @@
 //
 // ------------------------------------------------------------------------------------------
 
-#pragma once
+#include <memory>
+#include "VCEVersion.h"
 
-#define VER_FILEVERSION             0,2,0,0
-#define VER_STR_FILEVERSION          "2.00"
-#define VER_STR_FILEVERSION_TCHAR _T("2.00")
+#if ENABLE_AVCODEC_VCE_READER
+#include <atomic>
+#include "VCELog.h"
+#include "avcodec_vce_log.h"
 
-#define VCE_AMD_APP_SDK "3.0"
+static std::weak_ptr<VCELog> g_pVCELog;
+static int print_prefix = 1;
+static std::atomic<bool> g_bSetCustomLog(false);
 
-#define ENABLE_OPENCL 0
+static void av_vce_log_callback(void *ptr, int level, const char *fmt, va_list vl) {
+    if (auto pVCELog = g_pVCELog.lock()) {
+        const int vce_log_level = log_level_av2vce(level);
+        if (vce_log_level >= pVCELog->getLogLevel() && pVCELog->logFileAvail()) {
+            char mes[4096];
+            av_log_format_line(ptr, level, fmt, vl, mes, sizeof(mes), &print_prefix);
+            pVCELog->write_log(vce_log_level, char_to_tstring(mes, CP_UTF8).c_str(), true);
+        }
+    }
+    av_log_default_callback(ptr, level, fmt, vl);
+}
 
-#define CHECK_PERFORMANCE 1
+void av_vce_log_set(std::shared_ptr<VCELog>& pQSVLog) {
+    g_pVCELog = pQSVLog;
+    g_bSetCustomLog = true;
+    av_log_set_callback(av_vce_log_callback);
+}
 
-#ifdef _M_IX86
-#define BUILD_ARCH_STR _T("x86")
-#else
-#define BUILD_ARCH_STR _T("x64")
-#endif
+void av_vce_log_free() {
+    if (g_bSetCustomLog) {
+        g_bSetCustomLog = false;
+        av_log_set_callback(av_log_default_callback);
+        g_pVCELog.reset();
+    }
+}
 
-#if defined(VCE_AUO) && defined(NDEBUG)
-#define ENABLE_VAPOURSYNTH_READER 0
-#define ENABLE_AVISYNTH_READER 0
-#define ENABLE_AVCODEC_VCE_READER 0
-#else
-#define ENABLE_VAPOURSYNTH_READER 1
-#define ENABLE_AVISYNTH_READER 1
-#define ENABLE_AVCODEC_VCE_READER 1
-#endif
+#endif //ENABLE_AVCODEC_VCE_READER

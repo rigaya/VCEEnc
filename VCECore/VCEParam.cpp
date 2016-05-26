@@ -24,9 +24,6 @@
 // THE SOFTWARE.
 //
 // ------------------------------------------------------------------------------------------
-
-#pragma once
-
 #include "VideoEncoderVCE.h"
 #include "VCEUtil.h"
 #include "VCEParam.h"

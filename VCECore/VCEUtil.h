@@ -49,15 +49,106 @@ using std::unique_ptr;
 using std::vector;
 
 #ifndef MIN3
-#define MIN3(a,b,c) (min((a), min((b), (c))))
+#define MIN3(a,b,c) ((std::min)((a), (std::min)((b), (c))))
 #endif
 #ifndef MAX3
-#define MAX3(a,b,c) (max((a), max((b), (c))))
+#define MAX3(a,b,c) ((std::max)((a), (std::max)((b), (c))))
 #endif
 
 #ifndef clamp
 #define clamp(x, low, high) (((x) <= (high)) ? (((x) >= (low)) ? (x) : (low)) : (high))
 #endif
+
+#define ALIGN(x,align) (((x)+((align)-1))&(~((align)-1)))
+#define ALIGN16(x) (((x)+15)&(~15))
+#define ALIGN32(x) (((x)+31)&(~31))
+
+template<typename T, size_t size>
+std::vector<T> make_vector(T(&ptr)[size]) {
+    return std::vector<T>(ptr, ptr + size);
+}
+template<typename T, size_t size>
+std::vector<T> make_vector(const T(&ptr)[size]) {
+    return std::vector<T>(ptr, ptr + size);
+}
+template<typename T0, typename T1>
+std::vector<T0> make_vector(const T0 *ptr, T1 size) {
+    static_assert(std::is_integral<T1>::value == true, "T1 should be integral");
+    return (ptr && size) ? std::vector<T0>(ptr, ptr + size) : std::vector<T0>();
+}
+template<typename T0, typename T1>
+std::vector<T0> make_vector(T0 *ptr, T1 size) {
+    static_assert(std::is_integral<T1>::value == true, "T1 should be integral");
+    return (ptr && size) ? std::vector<T0>(ptr, ptr + size) : std::vector<T0>();
+}
+template<typename T, typename ...Args>
+constexpr std::array<T, sizeof...(Args)> make_array(Args&&... args) {
+    return std::array<T, sizeof...(Args)>{ static_cast<Args&&>(args)... };
+}
+template<typename T, std::size_t N>
+constexpr std::size_t array_size(const std::array<T, N>&) {
+    return N;
+}
+template<typename T, std::size_t N>
+constexpr std::size_t array_size(T(&)[N]) {
+    return N;
+}
+template<typename T>
+void vector_cat(vector<T>& v1, const vector<T>& v2) {
+    if (v2.size()) {
+        v1.insert(v1.end(), v2.begin(), v2.end());
+    }
+}
+template<typename T>
+static void vce_free(T& ptr) {
+    static_assert(std::is_pointer<T>::value == true, "T should be pointer");
+    if (ptr) {
+        free(ptr);
+        ptr = nullptr;
+    }
+}
+
+struct aligned_malloc_deleter {
+    void operator()(void* ptr) const {
+        _aligned_free(ptr);
+    }
+};
+
+struct malloc_deleter {
+    void operator()(void* ptr) const {
+        free(ptr);
+    }
+};
+
+struct fp_deleter {
+    void operator()(FILE* fp) const {
+        if (fp) {
+            fflush(fp);
+            fclose(fp);
+        }
+    }
+};
+
+struct handle_deleter {
+    void operator()(HANDLE handle) const {
+        if (handle) {
+#if defined(_WIN32) || defined(_WIN64)
+            CloseHandle(handle);
+#endif //#if defined(_WIN32) || defined(_WIN64)
+        }
+    }
+};
+
+template<typename T>
+static inline T vce_gcd(T a, T b) {
+    static_assert(std::is_integral<T>::value, "vce_gcd is defined only for integer.");
+    if (a == 0) return b;
+    if (b == 0) return a;
+    T c;
+    while ((c = a % b) != 0)
+        a = b, b = c;
+    return b;
+}
 
 #if UNICODE
 #define to_tstring to_wstring
@@ -82,40 +173,41 @@ std::wstring char_to_wstring(const char *str, DWORD codepage = CP_THREAD_ACP);
 std::wstring char_to_wstring(const std::string& str, DWORD codepage = CP_THREAD_ACP);
 std::wstring tchar_to_wstring(const TCHAR *str, DWORD codepage = CP_THREAD_ACP);
 std::wstring tchar_to_wstring(const tstring& str, DWORD codepage = CP_THREAD_ACP);
-tstring wchar_to_tstring(const wchar_t *str, DWORD codepage = CP_THREAD_ACP);
-tstring wchar_to_tstring(const std::wstring& str, DWORD codepage = CP_THREAD_ACP);
+unsigned int wstring_to_tstring(const WCHAR *wstr, tstring& tstr, uint32_t codepage = CP_THREAD_ACP);
+tstring wstring_to_tstring(const WCHAR *wstr, uint32_t codepage = CP_THREAD_ACP);
+tstring wstring_to_tstring(const std::wstring& wstr, uint32_t codepage = CP_THREAD_ACP);
 std::string strsprintf(const char* format, ...);
 std::wstring strsprintf(const WCHAR* format, ...);
-std::vector<tstring> split(const tstring &str, const tstring &delim);
-std::vector<std::string> split(const std::string &str, const std::string &delim);
+std::vector<std::wstring> split(const std::wstring &str, const std::wstring &delim, bool bTrim = false);
+std::vector<std::string> split(const std::string &str, const std::string &delim, bool bTrim = false);
+std::string lstrip(const std::string& string, const char* trim = " \t\v\r\n");
+std::string rstrip(const std::string& string, const char* trim = " \t\v\r\n");
+std::string trim(const std::string& string, const char* trim = " \t\v\r\n");
+std::wstring lstrip(const std::wstring& string, const WCHAR* trim = L" \t\v\r\n");
+std::wstring rstrip(const std::wstring& string, const WCHAR* trim = L" \t\v\r\n");
+std::wstring trim(const std::wstring& string, const WCHAR* trim = L" \t\v\r\n");
 std::string str_replace(std::string str, const std::string& from, const std::string& to);
 std::wstring str_replace(std::wstring str, const std::wstring& from, const std::wstring& to);
 std::string GetFullPath(const char *path);
 std::wstring GetFullPath(const WCHAR *path);
+bool vce_get_filesize(const char *filepath, uint64_t *filesize);
+bool vce_get_filesize(const WCHAR *filepath, UINT64 *filesize);
+std::pair<int, std::string> PathRemoveFileSpecFixed(const std::string& path);
+bool CreateDirectoryRecursive(const char *dir);
 
-template<typename T>
-static inline T vce_gcd(T a, T b) {
-    static_assert(std::is_integral<T>::value, "vce_gcd is defined only for integer.");
-    if (a == 0) return b;
-    if (b == 0) return a;
-    T c;
-    while ((c = a % b) != 0)
-        a = b, b = c;
-    return b;
+static const int VCE_TIMEBASE = 90000;
+
+tstring print_time(double time);
+
+static inline uint16_t readUB16(const void *ptr) {
+    uint16_t i = *(uint16_t *)ptr;
+    return (i >> 8) | (i << 8);
 }
 
-struct aligned_malloc_deleter {
-    void operator()(void* ptr) const {
-        _aligned_free(ptr);
-    }
-};
-struct file_deleter {
-    void operator()(FILE* fp) const {
-        if (fp) {
-            fclose(fp);
-        }
-    }
-};
+static inline uint32_t readUB32(const void *ptr) {
+    uint32_t i = *(uint32_t *)ptr;
+    return (i >> 24) | ((i & 0xff0000) >> 8) | ((i & 0xff00) << 8) | ((i & 0xff) << 24);
+}
 
 static inline uint32_t check_range_unsigned(uint32_t value, uint32_t min, uint32_t max) {
     return (value - min) <= (max - min);
@@ -147,10 +239,30 @@ static std::basic_string<type> repeatStr(std::basic_string<type> str, int count)
 
 bool check_ext(const TCHAR *filename, const std::vector<const char*>& ext_list);
 
-const TCHAR *getOSVersion();
+tstring getOSVersion(OSVERSIONINFOEXW *osinfo = nullptr);
 BOOL is_64bit_os();
 
 int getCPUInfo(TCHAR *buffer, size_t nSize);
 int getGPUInfo(const char *VendorName, TCHAR *buffer, unsigned int buffer_size, bool driver_version_only = false);
 
 int vce_print_stderr(int log_level, const TCHAR *mes, HANDLE handle);
+
+struct sBitstream {
+    uint8_t *Data;
+    uint32_t DataOffset;
+    uint32_t DataLength;
+    uint32_t MaxLength;
+    uint64_t TimeStamp;
+    uint64_t DecodedTimeStamp;
+};
+
+int bitstreamInit(sBitstream *pBitstream, uint32_t nSize);
+int bitstreamCopy(sBitstream *pBitstreamCopy, const sBitstream *pBitstream);
+int bitstreamExtend(sBitstream *pBitstream, uint32_t nSize);
+int bitstreamAppend(sBitstream *pBitstream, const uint8_t *data, uint32_t size);
+void bitstreamClear(sBitstream *pBitstream);
+
+const TCHAR *CodecIdToStr(uint32_t codecId);
+
+bool check_if_vce_available();
+bool check_if_vce_available(tstring& mes);

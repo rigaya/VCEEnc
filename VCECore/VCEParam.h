@@ -43,8 +43,129 @@ enum {
     VCE_INPUT_Y4M,
     VCE_INPUT_AVS,
     VCE_INPUT_VPY,
-    VCE_INPUT_VPY_MT
+    VCE_INPUT_VPY_MT,
+    VCE_INPUT_AVCODEC_VCE,
 };
+
+enum {
+    VCE_CODEC_NONE = 0,
+    VCE_CODEC_H264,
+    VCE_CODEC_MPEG2,
+    VCE_CODEC_VC1,
+    VCE_CODEC_WMV3
+};
+
+enum {
+    VCE_RESAMPLER_SWR,
+    VCE_RESAMPLER_SOXR,
+};
+
+static const int VCE_OUTPUT_THREAD_AUTO = -1;
+static const int VCE_AUDIO_THREAD_AUTO = -1;
+static const int VCE_INPUT_THREAD_AUTO = -1;
+
+typedef struct {
+    int start, fin;
+} sTrim;
+
+typedef struct {
+    std::vector<sTrim> list;
+    int offset;
+} sTrimParam;
+
+typedef  std::vector<std::pair<tstring, tstring>> muxOptList;
+
+static const int TRIM_MAX = INT_MAX;
+static const int TRIM_OVERREAD_FRAMES = 128;
+
+static bool inline frame_inside_range(int frame, const std::vector<sTrim>& trimList) {
+    if (trimList.size() == 0)
+        return true;
+    if (frame < 0)
+        return false;
+    for (auto trim : trimList) {
+        if (trim.start <= frame && frame <= trim.fin) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool inline rearrange_trim_list(int frame, int offset, std::vector<sTrim>& trimList) {
+    if (trimList.size() == 0)
+        return true;
+    if (frame < 0)
+        return false;
+    for (uint32_t i = 0; i < trimList.size(); i++) {
+        if (trimList[i].start >= frame) {
+            trimList[i].start = clamp(trimList[i].start + offset, 0, TRIM_MAX);
+        }
+        if (trimList[i].fin && trimList[i].fin >= frame) {
+            trimList[i].fin = (int)clamp((int64_t)trimList[i].fin + offset, 0, (int64_t)TRIM_MAX);
+        }
+    }
+    return false;
+}
+
+enum AVSync : uint32_t {
+    VCE_AVSYNC_THROUGH   = 0x00,
+    VCE_AVSYNC_INIT      = 0x01,
+    VCE_AVSYNC_CHECK_PTS = 0x02,
+    VCE_AVSYNC_VFR       = 0x02,
+    VCE_AVSYNC_FORCE_CFR = 0x04 | VCE_AVSYNC_CHECK_PTS,
+};
+
+enum {
+    VCEENC_MUX_NONE     = 0x00,
+    VCEENC_MUX_VIDEO    = 0x01,
+    VCEENC_MUX_AUDIO    = 0x02,
+    VCEENC_MUX_SUBTITLE = 0x04,
+};
+
+enum {
+    VCE_VPP_SUB_SIMPLE = 0,
+    VCE_VPP_SUB_COMPLEX,
+};
+
+static const uint32_t MAX_SPLIT_CHANNELS = 32;
+static const uint64_t VCE_CHANNEL_AUTO = UINT64_MAX;
+
+template <uint32_t size>
+static bool bSplitChannelsEnabled(uint64_t (&pnStreamChannels)[size]) {
+    bool bEnabled = false;
+    for (uint32_t i = 0; i < size; i++) {
+        bEnabled |= pnStreamChannels[i] != 0;
+    }
+    return bEnabled;
+}
+
+template <uint32_t size>
+static void setSplitChannelAuto(uint64_t (&pnStreamChannels)[size]) {
+    for (uint32_t i = 0; i < size; i++) {
+        pnStreamChannels[i] = ((uint64_t)1) << i;
+    }
+}
+
+template <uint32_t size>
+static bool isSplitChannelAuto(uint64_t (&pnStreamChannels)[size]) {
+    bool isAuto = true;
+    for (uint32_t i = 0; isAuto && i < size; i++) {
+        isAuto &= (pnStreamChannels[i] == (((uint64_t)1) << i));
+    }
+    return isAuto;
+}
+
+typedef struct sAudioSelect {
+    int    nAudioSelect;      //選択した音声トラックのリスト 1,2,...(1から連番で指定)
+    TCHAR *pAVAudioEncodeCodec; //音声エンコードのコーデック
+    int    nAVAudioEncodeBitrate; //音声エンコードに選択した音声トラックのビットレート
+    int    nAudioSamplingRate;    //サンプリング周波数
+    TCHAR *pAudioExtractFilename; //抽出する音声のファイル名のリスト
+    TCHAR *pAudioExtractFormat; //抽出する音声ファイルのフォーマット
+    TCHAR *pAudioFilter; //音声フィルタ
+    uint64_t pnStreamChannelSelect[MAX_SPLIT_CHANNELS]; //入力音声の使用するチャンネル
+    uint64_t pnStreamChannelOut[MAX_SPLIT_CHANNELS];    //出力音声のチャンネル
+} sAudioSelect;
 
 enum : uint8_t {
     VCE_MOTION_EST_FULL   = 0x00,
@@ -178,6 +299,18 @@ const CX_DESC list_interlaced[] = {
     { NULL, NULL }
 };
 
+const CX_DESC list_avsync[] = {
+    { _T("through"),  VCE_AVSYNC_THROUGH   },
+    { _T("forcecfr"), VCE_AVSYNC_FORCE_CFR },
+    { NULL, 0 }
+};
+
+const CX_DESC list_resampler[] = {
+    { _T("swr"),  VCE_RESAMPLER_SWR  },
+    { _T("soxr"), VCE_RESAMPLER_SOXR },
+    { NULL, 0 }
+};
+
 static int get_cx_index(const CX_DESC * list, int v) {
     for (int i = 0; list[i].desc; i++)
         if (list[i].value == v)
@@ -209,14 +342,16 @@ typedef union {
         int left, up, right, bottom;
     };
     int c[4];
-} InputCrop;
+} sInputCrop;
 
 typedef struct {
     int srcWidth, srcHeight;
     int dstWidth, dstHeight;
     int frames;
     VCERational fps;
-    InputCrop crop;
+    int AspectRatioW;
+    int AspectRatioH;
+    sInputCrop crop;
     int interlaced;
     amf::AMF_SURFACE_FORMAT format;
     void *pPrivateParam;
@@ -266,6 +401,39 @@ typedef struct {
     const TCHAR *pInputFile;
     const TCHAR *pOutputFile;
     const TCHAR *pStrLog;
+
+    int     nVideoTrack;
+    int     nVideoStreamId;
+    int     bCopyChapter;
+
+    int     nSubtitleSelectCount;
+    int    *pSubtitleSelect;
+    int     nOutputThread;
+    int     nAudioThread;
+    int     nAudioResampler;
+
+    int            nAudioSelectCount;
+    sAudioSelect **ppAudioSelectList;
+
+    int         nAudioSourceCount;
+    TCHAR      **ppAudioSourceList;
+
+    TCHAR     *pAVMuxOutputFormat;
+
+    int        nTrimCount;
+    sTrim     *pTrimList;
+    int        nAVMux; //VCEENC_MUX_xxx
+    int        nAVDemuxAnalyzeSec;
+
+    muxOptList *pMuxOpt;
+    TCHAR      *pChapterFile;
+    uint32_t    nAudioIgnoreDecodeError;
+    AVSync      nAVSyncMode;     //avsyncの方法 (VCE_AVSYNC_xxx)
+    uint32_t    nProcSpeedLimit; //プリデコードする場合の処理速度制限 (0で制限なし)
+    int         nInputThread;
+    int         bAudioIgnoreNoTrackError;
+    float       fSeekSec; //指定された秒数分先頭を飛ばす
+    TCHAR      *pFramePosListLog;
 } VCEParam;
 
 bool is_interlaced(VCEParam *prm);

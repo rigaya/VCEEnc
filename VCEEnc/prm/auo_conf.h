@@ -30,7 +30,6 @@
 
 #include <Windows.h>
 #include "auo.h"
-#include "VCECore.h"
 #include "VCEParam.h"
 
 const int CONF_INITIALIZED = 1;

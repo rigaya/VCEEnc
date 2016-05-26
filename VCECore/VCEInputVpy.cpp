@@ -124,7 +124,7 @@ void VCEInputVpy::setFrameToAsyncBuffer(int n, const VSFrameRef* f) {
     m_pAsyncBuffer[n & (ASYNC_BUFFER_SIZE-1)] = f;
     SetEvent(m_hAsyncEventFrameSetFin[n & (ASYNC_BUFFER_SIZE-1)]);
 
-    if (m_nAsyncFrames < m_inputInfo.frames && !m_bAbortAsync) {
+    if (m_nAsyncFrames < m_inputFrameInfo.frames && !m_bAbortAsync) {
         m_sVSapi->getFrameAsync(m_nAsyncFrames, m_sVSnode, frameDoneCallback, this);
         m_nAsyncFrames++;
     }
@@ -148,11 +148,11 @@ int VCEInputVpy::getRevInfo(const char *vsVersionString) {
 }
 
 AMF_RESULT VCEInputVpy::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pStatus, VCEInputInfo *pInfo, amf::AMFContextPtr pContext) {
-    m_pVCELog = pLog;
-    m_pStatus = pStatus;
+    m_pPrintMes = pLog;
+    m_pEncSatusInfo = pStatus;
     m_pContext = pContext;
     
-    m_inputInfo = *pInfo;
+    m_inputFrameInfo = *pInfo;
     VCEInputVpyParam *pVpyParam = (VCEInputVpyParam *)pInfo->pPrivateParam;
 
     m_bVpyMT = pVpyParam->bVpyMt;
@@ -235,11 +235,11 @@ AMF_RESULT VCEInputVpy::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pSta
     }
     const auto fps_gcd = vce_gcd(vsvideoinfo->fpsNum, vsvideoinfo->fpsDen);
 
-    m_inputInfo.srcWidth = vsvideoinfo->width;
-    m_inputInfo.srcHeight = vsvideoinfo->height;
-    m_inputInfo.fps.num = (int)(vsvideoinfo->fpsNum / fps_gcd);
-    m_inputInfo.fps.den = (int)(vsvideoinfo->fpsDen / fps_gcd);
-    m_inputInfo.frames = vsvideoinfo->numFrames;
+    m_inputFrameInfo.srcWidth = vsvideoinfo->width;
+    m_inputFrameInfo.srcHeight = vsvideoinfo->height;
+    m_inputFrameInfo.fps.num = (int)(vsvideoinfo->fpsNum / fps_gcd);
+    m_inputFrameInfo.fps.den = (int)(vsvideoinfo->fpsDen / fps_gcd);
+    m_inputFrameInfo.frames = vsvideoinfo->numFrames;
     m_nAsyncFrames = vsvideoinfo->numFrames;
     m_nAsyncFrames = (std::min)(m_nAsyncFrames, vscoreinfo->numThreads);
     m_nAsyncFrames = (std::min)(m_nAsyncFrames, ASYNC_BUFFER_SIZE-1);
@@ -260,7 +260,7 @@ AMF_RESULT VCEInputVpy::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pSta
     tstring mes = strsprintf(_T("VapourSynth%s%s %s->%s[%s], %dx%d%s, %d/%d fps"),
         (m_bVpyMT) ? _T("MT") : _T(""), rev_info.c_str(),
         VCE_CSP_NAMES[m_pConvertCsp->csp_from], VCE_CSP_NAMES[m_pConvertCsp->csp_to], get_simd_str(m_pConvertCsp->simd),
-        m_inputInfo.srcWidth, m_inputInfo.srcHeight, m_inputInfo.interlaced ? _T("i") : _T("p"), m_inputInfo.fps.num, m_inputInfo.fps.den);
+        m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcHeight, m_inputFrameInfo.interlaced ? _T("i") : _T("p"), m_inputFrameInfo.fps.num, m_inputFrameInfo.fps.den);
 
     AddMessage(VCE_LOG_DEBUG, _T("%s\n"), mes.c_str());
     m_strInputInfo += mes;
@@ -287,8 +287,8 @@ AMF_RESULT VCEInputVpy::Terminate() {
     m_sVSnode = nullptr;
     m_nAsyncFrames = 0;
 
-    m_pVCELog.reset();
-    m_pStatus.reset();
+    m_pPrintMes.reset();
+    m_pEncSatusInfo.reset();
     m_message.clear();
     m_pContext = nullptr;
     return AMF_OK;
@@ -297,19 +297,19 @@ AMF_RESULT VCEInputVpy::Terminate() {
 AMF_RESULT VCEInputVpy::QueryOutput(amf::AMFData** ppData) {
     AMF_RESULT res = AMF_OK;
     amf::AMFSurfacePtr pSurface;
-    res = m_pContext->AllocSurface(amf::AMF_MEMORY_HOST, m_inputInfo.format,
-        m_inputInfo.srcWidth - m_inputInfo.crop.left - m_inputInfo.crop.right,
-        m_inputInfo.srcHeight - m_inputInfo.crop.bottom - m_inputInfo.crop.up,
+    res = m_pContext->AllocSurface(amf::AMF_MEMORY_HOST, m_inputFrameInfo.format,
+        m_inputFrameInfo.srcWidth - m_inputFrameInfo.crop.left - m_inputFrameInfo.crop.right,
+        m_inputFrameInfo.srcHeight - m_inputFrameInfo.crop.bottom - m_inputFrameInfo.crop.up,
         &pSurface);
     if (res != AMF_OK) {
         AddMessage(VCE_LOG_ERROR, _T("AMFContext::AllocSurface(amf::AMF_MEMORY_HOST) failed.\n"));
         return res;
     }
 
-    if (m_pStatus->m_inputFrames >= (uint32_t)m_inputInfo.frames)
+    if (m_pEncSatusInfo->m_nInputFrames >= (uint32_t)m_inputFrameInfo.frames)
         return AMF_EOF;
 
-    const VSFrameRef *src_frame = getFrameFromAsyncBuffer(m_pStatus->m_inputFrames);
+    const VSFrameRef *src_frame = getFrameFromAsyncBuffer(m_pEncSatusInfo->m_nInputFrames);
     if (nullptr == src_frame) {
         return AMF_EOF;
     }
@@ -321,17 +321,12 @@ AMF_RESULT VCEInputVpy::QueryOutput(amf::AMFData** ppData) {
     void *dst_ptr[2];
     dst_ptr[0] = (uint8_t *)plane->GetNative();
     dst_ptr[1] = (uint8_t *)dst_ptr[0] + dst_height * dst_stride;
-    m_pConvertCsp->func[!!m_inputInfo.interlaced](dst_ptr, src_ptr, m_inputInfo.srcWidth, m_sVSapi->getStride(src_frame, 0), m_sVSapi->getStride(src_frame, 1), dst_stride, m_inputInfo.srcHeight, dst_height, m_inputInfo.crop.c);
-    m_pStatus->m_inputFrames++;
-    m_nCopyOfInputFrames = m_pStatus->m_inputFrames;
+    m_pConvertCsp->func[!!m_inputFrameInfo.interlaced](dst_ptr, src_ptr, m_inputFrameInfo.srcWidth, m_sVSapi->getStride(src_frame, 0), m_sVSapi->getStride(src_frame, 1), dst_stride, m_inputFrameInfo.srcHeight, dst_height, m_inputFrameInfo.crop.c);
+    m_pEncSatusInfo->m_nInputFrames++;
+    m_nCopyOfInputFrames = m_pEncSatusInfo->m_nInputFrames;
 
     m_sVSapi->freeFrame(src_frame);
-
-    uint32_t tm = timeGetTime();
-    if (tm - m_tmLastUpdate > 800) {
-        m_tmLastUpdate = tm;
-        m_pStatus->UpdateDisplay(tm, 0);
-    }
+    m_pEncSatusInfo->UpdateDisplay(0);
 
     *ppData = pSurface.Detach();
     return AMF_OK;

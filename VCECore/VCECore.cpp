@@ -25,12 +25,15 @@
 //
 // ------------------------------------------------------------------------------------------
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <Windows.h>
 #include <io.h>
 #include <fcntl.h>
 #include <cmath>
 #include <tchar.h>
 #include <process.h>
+#include <mmsystem.h>
 #pragma comment(lib, "winmm.lib") 
 
 #include <iostream>
@@ -42,7 +45,10 @@
 #include "VCEInputRaw.h"
 #include "VCEInputAvs.h"
 #include "VCEInputVpy.h"
+#include "avcodec_reader.h"
 #include "EncoderParams.h"
+
+#include "VideoConverter.h"
 
 const wchar_t* VCECore::PARAM_NAME_INPUT = L"INPUT";
 const wchar_t* VCECore::PARAM_NAME_INPUT_WIDTH = L"WIDTH";
@@ -58,6 +64,8 @@ const wchar_t* VCECore::PARAM_NAME_ADAPTERID = L"ADAPTERID";
 const wchar_t* VCECore::PARAM_NAME_CAPABILITY = L"DISPLAYCAPABILITY";
 
 #define ENCODER_SUBMIT_TIME     L"EncoderSubmitTime"  // private property to track submit tyme
+
+static const amf::AMF_SURFACE_FORMAT formatOut = amf::AMF_SURFACE_NV12;
 
 class VCECore::PipelineElementAMFComponent : public PipelineElement {
 public:
@@ -339,7 +347,7 @@ void VCECore::PrintMes(int log_level, const TCHAR *format, ...) {
     _vstprintf_s(buffer.data(), len, format, args);
     va_end(args);
 
-    (*m_pVCELog)(log_level, buffer.data());
+    m_pVCELog->write(log_level, buffer.data());
 }
 
 
@@ -349,13 +357,16 @@ void VCECore::PrintMes(int log_level, const TCHAR *format, ...) {
 VCECore::VCECore() :
     m_pVCELog(),
     m_bTimerPeriodTuning(true),
-    m_pInput(),
+    m_pFileReader(),
     m_pOutput(),
     m_pStatus(),
     m_inputInfo(),
     m_pContext(),
     m_pStreamOut(),
+    m_pTrimParam(nullptr),
+    m_pDecoder(),
     m_pEncoder(),
+    m_pConverter(),
     m_deviceDX9(),
     m_deviceDX11(),
     m_Params() {
@@ -377,9 +388,21 @@ void VCECore::Terminate() {
 
     m_pStreamOut = NULL;
 
+    m_pTrimParam = nullptr;
+
     if (m_pEncoder != nullptr) {
         m_pEncoder->Terminate();
         m_pEncoder = nullptr;
+    }
+
+    if (m_pConverter != nullptr) {
+        m_pConverter->Terminate();
+        m_pConverter = nullptr;
+    }
+
+    if (m_pDecoder != nullptr) {
+        m_pDecoder->Terminate();
+        m_pDecoder = nullptr;
     }
 
     if (m_pContext != nullptr) {
@@ -390,30 +413,44 @@ void VCECore::Terminate() {
     m_deviceDX9.Terminate();
     m_deviceDX11.Terminate();
 
-    m_pInput.reset();
+    m_pFileReader.reset();
     m_pOutput.reset();
     m_pStatus.reset();
     m_pVCELog.reset();
 }
 
-AMF_RESULT VCECore::initInput(VCEParam *prm) {
+AMF_RESULT VCECore::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo) {
 #if !VCE_AUO
-    m_pVCELog.reset(new VCELog(prm->pStrLog, prm->nLogLevel));
-    m_pStatus.reset(new VCEStatus());
+    m_pVCELog.reset(new VCELog(pParams->pStrLog, pParams->nLogLevel));
+    if (!m_pStatus) {
+        m_pStatus = std::make_shared<VCEStatus>();
+    }
 
-    if (prm->nInputType == VCE_INPUT_NONE) {
-        if (check_ext(prm->pInputFile, { ".y4m" })) {
-            prm->nInputType = VCE_INPUT_Y4M;
+    int sourceAudioTrackIdStart = 1;    //トラック番号は1スタート
+    int sourceSubtitleTrackIdStart = 1; //トラック番号は1スタート
+    if (pParams->nInputType == VCE_INPUT_NONE) {
+        if (check_ext(pParams->pInputFile, { ".y4m" })) {
+            pParams->nInputType = VCE_INPUT_Y4M;
 #if ENABLE_AVISYNTH_READER
-        } else if (check_ext(prm->pInputFile, { ".avs" })) {
-            prm->nInputType = VCE_INPUT_AVS;
+        } else if (check_ext(pParams->pInputFile, { ".avs" })) {
+            pParams->nInputType = VCE_INPUT_AVS;
 #endif
 #if ENABLE_VAPOURSYNTH_READER
-        } else if (check_ext(prm->pInputFile, { ".vpy" })) {
-            prm->nInputType = VCE_INPUT_VPY;
+        } else if (check_ext(pParams->pInputFile, { ".vpy" })) {
+            pParams->nInputType = VCE_INPUT_VPY;
 #endif
+#if ENABLE_AVCODEC_VCE_READER
+        } else if (usingAVProtocols(tchar_to_string(pParams->pInputFile, CP_UTF8), 0)
+            || check_ext(pParams->pInputFile, { ".mp4", ".m4v", ".mkv", ".mov",
+                    ".mts", ".m2ts", ".ts", ".264", ".h264", ".x264", ".avc", ".avc1",
+                    ".265", ".h265", ".hevc",
+                    ".mpg", ".mpeg", "m2v", ".vob", ".vro", ".flv", ".ogm",
+                    ".webm", ".vp8", ".vp9",
+                    ".wmv" })) {
+            pParams->nInputType = VCE_INPUT_AVCODEC_VCE;
+#endif //ENABLE_AVCODEC_VCE_READER
         } else {
-            prm->nInputType = VCE_INPUT_RAW;
+            pParams->nInputType = VCE_INPUT_RAW;
         }
     }
 
@@ -424,36 +461,133 @@ AMF_RESULT VCECore::initInput(VCEParam *prm) {
 #if ENABLE_VAPOURSYNTH_READER
     VCEInputVpyParam vpyParam = { 0 };
 #endif
-    if (prm->nInputType == VCE_INPUT_Y4M || prm->nInputType == VCE_INPUT_RAW) {
-        rawParam.y4m = prm->nInputType == VCE_INPUT_Y4M;
-        rawParam.srcFile = prm->pInputFile;
+#if ENABLE_AVCODEC_VCE_READER
+    AvcodecReaderPrm avcodecReaderPrm = { 0 };
+#endif
+    if (pParams->nInputType == VCE_INPUT_Y4M || pParams->nInputType == VCE_INPUT_RAW) {
+        rawParam.y4m = pParams->nInputType == VCE_INPUT_Y4M;
+        rawParam.srcFile = pParams->pInputFile;
         m_inputInfo.pPrivateParam = &rawParam;
-        m_pInput.reset(new VCEInputRaw());
+        m_pFileReader.reset(new VCEInputRaw());
 #if ENABLE_AVISYNTH_READER
-    } else if (prm->nInputType == VCE_INPUT_AVS) {
-        avsParam.srcFile = prm->pInputFile;
+    } else if (pParams->nInputType == VCE_INPUT_AVS) {
+        avsParam.srcFile = pParams->pInputFile;
         m_inputInfo.pPrivateParam = &avsParam;
-        m_pInput.reset(new VCEInputAvs());
+        m_pFileReader.reset(new VCEInputAvs());
 #endif
 #if ENABLE_VAPOURSYNTH_READER
-    } else if (prm->nInputType == VCE_INPUT_VPY || prm->nInputType == VCE_INPUT_VPY_MT) {
-        vpyParam.srcFile = prm->pInputFile;
-        vpyParam.bVpyMt = prm->nInputType == VCE_INPUT_VPY_MT;
+    } else if (pParams->nInputType == VCE_INPUT_VPY || pParams->nInputType == VCE_INPUT_VPY_MT) {
+        vpyParam.srcFile = pParams->pInputFile;
+        vpyParam.bVpyMt = pParams->nInputType == VCE_INPUT_VPY_MT;
         m_inputInfo.pPrivateParam = &vpyParam;
-        m_pInput.reset(new VCEInputVpy());
+        m_pFileReader.reset(new VCEInputVpy());
 #endif
+#if ENABLE_AVCODEC_VCE_READER
+    } else if (pParams->nInputType == VCE_INPUT_AVCODEC_VCE) {
+        avcodecReaderPrm.srcFile = pParams->pInputFile;
+        avcodecReaderPrm.bReadVideo = true;
+        avcodecReaderPrm.nVideoTrack = (int8_t)pParams->nVideoTrack;
+        avcodecReaderPrm.nVideoStreamId = pParams->nVideoStreamId;
+        avcodecReaderPrm.bReadChapter = !!pParams->bCopyChapter;
+        avcodecReaderPrm.bReadSubtitle = !!pParams->nSubtitleSelectCount;
+        avcodecReaderPrm.pTrimList = pParams->pTrimList;
+        avcodecReaderPrm.nTrimCount = (uint16_t)pParams->nTrimCount;
+        avcodecReaderPrm.nReadAudio |= pParams->nAudioSelectCount > 0; 
+        avcodecReaderPrm.nAnalyzeSec = (uint16_t)pParams->nAVDemuxAnalyzeSec;
+        avcodecReaderPrm.nVideoAvgFramerate = std::make_pair(pInputInfo->fps.num, pInputInfo->fps.den);
+        avcodecReaderPrm.nAudioTrackStart = (int)sourceAudioTrackIdStart;
+        avcodecReaderPrm.ppAudioSelect = pParams->ppAudioSelectList;
+        avcodecReaderPrm.nAudioSelectCount = pParams->nAudioSelectCount;
+        //avcodecReaderPrm.bReadSubtitle = prm->nSubtitleSelectCount + prm->vpp.subburn.nTrack > 0;
+        //avcodecReaderPrm.pSubtitleSelect = (prm->vpp.subburn.nTrack) ? &prm->vpp.subburn.nTrack : prm->pSubtitleSelect;
+        //avcodecReaderPrm.nSubtitleSelectCount = (prm->vpp.subburn.nTrack) ? 1 : prm->nSubtitleSelectCount;
+        avcodecReaderPrm.pSubtitleSelect = pParams->pSubtitleSelect;
+        avcodecReaderPrm.nSubtitleSelectCount = pParams->nSubtitleSelectCount;
+        avcodecReaderPrm.nProcSpeedLimit = pParams->nProcSpeedLimit;
+        avcodecReaderPrm.fSeekSec = pParams->fSeekSec;
+        avcodecReaderPrm.pFramePosListLog = pParams->pFramePosListLog;
+        avcodecReaderPrm.nInputThread = (int8_t)pParams->nInputThread;
+        avcodecReaderPrm.bAudioIgnoreNoTrackError = (int8_t)pParams->bAudioIgnoreNoTrackError;
+        avcodecReaderPrm.pQueueInfo = nullptr;
+        m_inputInfo.pPrivateParam = &avcodecReaderPrm;
+        m_pFileReader.reset(new CAvcodecReader());
+        PrintMes(VCE_LOG_DEBUG, _T("Input: avqsv reader selected.\n"));
+#endif
+    } else {
+        PrintMes(VCE_LOG_ERROR, _T("Unknown reader selected\n"));
+        return AMF_NOT_SUPPORTED;
     }
-    auto ret = m_pInput->init(m_pVCELog, m_pStatus, &m_inputInfo, m_pContext);
+    auto ret = m_pFileReader->init(m_pVCELog, m_pStatus, &m_inputInfo, m_pContext);
     if (ret != AMF_OK) {
-        PrintMes(VCE_LOG_ERROR, _T("Error: %s\n"), m_pInput->getMessage().c_str());
+        PrintMes(VCE_LOG_ERROR, _T("Error: %s\n"), m_pFileReader->getMessage().c_str());
         return ret;
     }
+    PrintMes(VCE_LOG_DEBUG, _T("Input: reader initialization successful.\n"));
+    sourceAudioTrackIdStart    += m_pFileReader->GetAudioTrackCount();
+    sourceSubtitleTrackIdStart += m_pFileReader->GetSubtitleTrackCount();
+
+#if 0
+    if (pParams->nAudioSourceCount && pParams->ppAudioSourceList) {
+        mfxFrameInfo videoInfo = { 0 };
+        m_pFileReader->GetInputFrameInfo(&videoInfo);
+
+        for (int i = 0; i < pParams->nAudioSourceCount; i++) {
+            AvcodecReaderPrm avcodecReaderPrm = { 0 };
+            avcodecReaderPrm.memType = pParams->memType;
+            avcodecReaderPrm.bReadVideo = false;
+            avcodecReaderPrm.nReadAudio |= pParams->nAudioSelectCount > 0;
+            avcodecReaderPrm.nAnalyzeSec = pParams->nAVDemuxAnalyzeSec;
+            avcodecReaderPrm.pTrimList = pParams->pTrimList;
+            avcodecReaderPrm.nTrimCount = pParams->nTrimCount;
+            avcodecReaderPrm.nVideoAvgFramerate = std::make_pair(videoInfo.FrameRateExtN, videoInfo.FrameRateExtD);
+            avcodecReaderPrm.nAudioTrackStart = sourceAudioTrackIdStart;
+            avcodecReaderPrm.nSubtitleTrackStart = sourceSubtitleTrackIdStart;
+            avcodecReaderPrm.ppAudioSelect = pParams->ppAudioSelectList;
+            avcodecReaderPrm.nAudioSelectCount = pParams->nAudioSelectCount;
+            avcodecReaderPrm.nProcSpeedLimit = pParams->nProcSpeedLimit;
+            avcodecReaderPrm.fSeekSec = pParams->fSeekSec;
+            avcodecReaderPrm.bAudioIgnoreNoTrackError = pParams->bAudioIgnoreNoTrackError;
+            avcodecReaderPrm.nInputThread = 0;
+            avcodecReaderPrm.pQueueInfo = nullptr;
+
+            unique_ptr<CQSVInput> audioReader(new CAvcodecReader());
+            audioReader->SetQSVLogPtr(m_pQSVLog);
+            sts = audioReader->Init(pParams->ppAudioSourceList[i], 0, &avcodecReaderPrm, nullptr, nullptr, nullptr);
+            if (sts < MFX_ERR_NONE) {
+                PrintMes(QSV_LOG_ERROR, audioReader->GetInputMessage());
+                return sts;
+            }
+            sourceAudioTrackIdStart += audioReader->GetAudioTrackCount();
+            sourceSubtitleTrackIdStart += audioReader->GetSubtitleTrackCount();
+            m_AudioReaders.push_back(std::move(audioReader));
+        }
+    }
 #endif
+
+    if (!m_pFileReader->getInputCodec()
+        && pParams->pTrimList && pParams->nTrimCount > 0) {
+        //avqsvリーダー以外は、trimは自分ではセットされないので、ここでセットする
+        sTrimParam trimParam;
+        trimParam.list = make_vector(pParams->pTrimList, pParams->nTrimCount);
+        trimParam.offset = 0;
+        m_pFileReader->SetTrimParam(trimParam);
+    }
+    //trim情報をリーダーから取得する
+    auto trimParam = m_pFileReader->GetTrimParam();
+    m_pTrimParam = (trimParam->list.size()) ? trimParam : nullptr;
+    if (m_pTrimParam) {
+        PrintMes(VCE_LOG_DEBUG, _T("Input: trim options\n"));
+        for (int i = 0; i < (int)m_pTrimParam->list.size(); i++) {
+            PrintMes(VCE_LOG_DEBUG, _T("%d-%d "), m_pTrimParam->list[i].start, m_pTrimParam->list[i].fin);
+        }
+        PrintMes(VCE_LOG_DEBUG, _T(" (offset: %d)\n"), m_pTrimParam->offset);
+    }
+#endif //#if !VCE_AUO
     return AMF_OK;
 }
 
 AMF_RESULT VCECore::checkParam(VCEParam *prm) {
-    auto srcInfo = m_pInput->GetInputInfo();
+    auto srcInfo = m_pFileReader->GetInputFrameInfo();
     if (m_inputInfo.fps.num <= 0 || m_inputInfo.fps.den <= 0) {
         m_inputInfo.fps = srcInfo.fps;
     }
@@ -571,8 +705,9 @@ AMF_RESULT VCECore::initOutput(VCEParam *prm) {
     return ret;
 }
 
-AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
+AMF_RESULT VCECore::initDevice(VCEParam *prm) {
     AMF_RESULT res = AMF_OK;
+
     if (prm->memoryTypeIn == amf::AMF_MEMORY_DX9) {
         if (AMF_OK != (res = m_deviceDX9.Init(true, prm->nAdapterId, false, m_inputInfo.srcWidth, m_inputInfo.srcHeight))) {
             PrintMes(VCE_LOG_ERROR, _T("Failed to initialize DX9 device.\n"));
@@ -599,6 +734,83 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
         PrintMes(VCE_LOG_ERROR, _T("Invalid memory type.\n"));
         return AMF_FAIL;
     }
+    return res;
+}
+
+AMF_RESULT VCECore::initDecoder(VCEParam *prm) {
+#if ENABLE_AVCODEC_VCE_READER
+    auto inputCodec = m_pFileReader->getInputCodec();
+    if (inputCodec == VCE_CODEC_NONE) {
+        return AMF_OK;
+    }
+    if (VCE_CODEC_UVD_NAME.find(inputCodec) == VCE_CODEC_UVD_NAME.end()) {
+        PrintMes(VCE_LOG_ERROR, _T("Input codec \"%s\" not supported.\n"), CodecIdToStr(inputCodec));
+        return AMF_NOT_SUPPORTED;
+    }
+    const auto codec_uvd_name = VCE_CODEC_UVD_NAME.at(inputCodec);
+    auto res = AMFCreateComponent(m_pContext, codec_uvd_name, &m_pDecoder);
+    if (res != AMF_OK) {
+        PrintMes(VCE_LOG_ERROR, _T("Failed to create decoder context: %d\n"), res);
+        return AMF_FAIL;
+    }
+
+    // our sample H264 parser provides decode order timestamps - change this depend on demuxer
+    if (AMF_OK != (res = m_pDecoder->SetProperty(AMF_TIMESTAMP_MODE, amf_int64(AMF_TS_DECODE)))) {
+        PrintMes(VCE_LOG_ERROR, _T("Failed to set deocder: %d\n"), res);
+        return AMF_FAIL;
+    }
+    sBitstream header = { 0 };
+    if (AMF_OK != (res = m_pFileReader->GetHeader(&header))) {
+        PrintMes(VCE_LOG_ERROR, _T("Failed to get video header: %d\n"), res);
+        return AMF_FAIL;
+    }
+    amf::AMFBufferPtr buffer;
+    m_pContext->AllocBuffer(amf::AMF_MEMORY_HOST, header.DataLength, &buffer);
+
+    memcpy(buffer->GetNative(), header.Data, header.DataLength);
+    m_pDecoder->SetProperty(AMF_VIDEO_DECODER_EXTRADATA, amf::AMFVariant(buffer));
+
+    if (AMF_OK != (res = m_pDecoder->Init(formatOut, m_inputInfo.srcWidth, m_inputInfo.srcHeight))) {
+        PrintMes(VCE_LOG_ERROR, _T("Failed to init decoder: %d\n"), res);
+        return res;
+    }
+    PrintMes(VCE_LOG_DEBUG, _T("Initialized decoder\n"), res);
+    return res;
+#else
+    return AMF_NOT_SUPPORTED;
+#endif
+}
+
+AMF_RESULT VCECore::initConverter(VCEParam *prm) {
+#if ENABLE_AVCODEC_VCE_READER
+    if (m_pFileReader->getInputCodec() == VCE_CODEC_NONE) {
+        return AMF_OK;
+    }
+    if (m_inputInfo.dstWidth != m_inputInfo.srcWidth || m_inputInfo.dstHeight != m_inputInfo.srcHeight) {
+        return AMF_OK;
+    }
+    auto res = AMFCreateComponent(m_pContext, AMFVideoConverter, &m_pConverter);
+    if (res != AMF_OK) {
+        PrintMes(VCE_LOG_ERROR, _T("Failed to create converter context: %d\n"), res);
+        return AMF_FAIL;
+    }
+
+    res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_MEMORY_TYPE, prm->memoryTypeIn);
+    res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_FORMAT, formatOut);
+    res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_SIZE, AMFConstructSize(m_inputInfo.dstWidth, m_inputInfo.dstHeight));
+    res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_SCALE, AMF_VIDEO_CONVERTER_SCALE_BICUBIC);
+    if (AMF_OK != (res = m_pConverter->Init(formatOut, m_inputInfo.srcWidth, m_inputInfo.srcHeight))) {
+        PrintMes(VCE_LOG_ERROR, _T("Failed to init converter: %d\n"), res);
+        return res;
+    }
+    return res;
+#else
+return AMF_NOT_SUPPORTED;
+#endif
+}
+
+AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
+    AMF_RESULT res = AMF_OK;
 
     if (m_pVCELog->getLogLevel() <= VCE_LOG_DEBUG) {
         TCHAR cpuInfo[256] = { 0 };
@@ -610,9 +822,9 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
         getCPUInfo(cpuInfo, _countof(cpuInfo));
         getGPUInfo("Advanced Micro Devices", gpu_info, _countof(gpu_info));
         PrintMes(VCE_LOG_DEBUG, _T("VCEEnc    %s (%s)\n"), VER_STR_FILEVERSION_TCHAR, BUILD_ARCH_STR);
-        PrintMes(VCE_LOG_DEBUG, _T("OS        %s (%s)\n"), getOSVersion(), is_64bit_os() ? _T("x64") : _T("x86"));
+        PrintMes(VCE_LOG_DEBUG, _T("OS        %s (%s)\n"), getOSVersion().c_str(), is_64bit_os() ? _T("x64") : _T("x86"));
         PrintMes(VCE_LOG_DEBUG, _T("CPU Info  %s\n"), cpuInfo);
-        PrintMes(VCE_LOG_DEBUG, _T("GPU Info  %s [%s]\n"), wchar_to_tstring(deviceName).c_str(), gpu_info);
+        PrintMes(VCE_LOG_DEBUG, _T("GPU Info  %s [%s]\n"), wstring_to_string(deviceName).c_str(), gpu_info);
     }
 
     if (AMF_OK != (res = AMFCreateComponent(m_pContext, list_codecs[prm->nCodecId], &m_pEncoder))) {
@@ -722,9 +934,21 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     PushParamsToPropertyStorage(&m_Params, ParamEncoderDynamic, m_pEncoder);
 
     // Connect pipeline
-    if (AMF_OK != (res = Connect(m_pInput, 4))) {
+    if (AMF_OK != (res = Connect(m_pFileReader, 4))) {
         PrintMes(VCE_LOG_ERROR, _T("failed to connect input to pipeline.\n"));
         return res;
+    }
+    if (m_pDecoder) {
+        if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementAMFComponent(m_pDecoder)), 4))) {
+            PrintMes(VCE_LOG_ERROR, _T("failed to connect deocder to pipeline.\n"));
+            return res;
+        }
+    }
+    if (m_pConverter) {
+        if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementAMFComponent(m_pConverter)), 4))) {
+            PrintMes(VCE_LOG_ERROR, _T("failed to connect converter to pipeline.\n"));
+            return res;
+        }
     }
     if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementEncoder(m_pEncoder, &m_Params, 0, 0)), 10))) {
         PrintMes(VCE_LOG_ERROR, _T("failed to connect encoder to pipeline.\n"));
@@ -762,7 +986,7 @@ AMF_RESULT VCECore::init(VCEParam *prm, VCEInputInfo *inputInfo) {
         PrintMes(VCE_LOG_DEBUG, _T("timeBeginPeriod(1)\n"));
     }
 
-    if (AMF_OK != (res = initInput(prm))) {
+    if (AMF_OK != (res = initInput(prm, &m_inputInfo))) {
         return res;
     }
 
@@ -771,6 +995,18 @@ AMF_RESULT VCECore::init(VCEParam *prm, VCEInputInfo *inputInfo) {
     }
 
     if (AMF_OK != (res = initOutput(prm))) {
+        return res;
+    }
+
+    if (AMF_OK != (res = initDevice(prm))) {
+        return res;
+    }
+
+    if (AMF_OK != (res = initDecoder(prm))) {
+        return res;
+    }
+
+    if (AMF_OK != (res = initConverter(prm))) {
         return res;
     }
 
@@ -800,7 +1036,7 @@ tstring VCECore::GetEncoderParam() {
     auto GetPropertyStr = [pProperty](const wchar_t *pName) {
         const wchar_t *pProp;
         pProperty->GetPropertyWString(pName, &pProp);
-        return wchar_to_tstring(pProp);
+        return wstring_to_string(pProp);
     };
 
     auto GetPropertyInt = [pProperty](const wchar_t *pName) {
@@ -840,10 +1076,10 @@ tstring VCECore::GetEncoderParam() {
     deviceName = str_replace(deviceName, L" (R)", L"");
     deviceName = str_replace(deviceName, L" Series", L"");
 
-    mes += strsprintf(_T("VCEEnc %s (%s) / %s (%s)\n"), VER_STR_FILEVERSION_TCHAR, BUILD_ARCH_STR, getOSVersion(), is_64bit_os() ? _T("x64") : _T("x86"));
+    mes += strsprintf(_T("VCEEnc %s (%s) / %s (%s)\n"), VER_STR_FILEVERSION_TCHAR, BUILD_ARCH_STR, getOSVersion().c_str(), is_64bit_os() ? _T("x64") : _T("x86"));
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
-    mes += strsprintf(_T("GPU:           %s [%s]\n"), wchar_to_tstring(deviceName).c_str(), gpu_info);
-    mes += strsprintf(_T("Input:         %s\n"), m_pInput->GetInputInfoStr().c_str());
+    mes += strsprintf(_T("GPU:           %s [%s]\n"), wstring_to_tstring(deviceName).c_str(), gpu_info);
+    mes += strsprintf(_T("Input:         %s\n"), m_pFileReader->GetInputInfoStr().c_str());
     if (m_inputInfo.crop.left || m_inputInfo.crop.up || m_inputInfo.crop.right || m_inputInfo.crop.bottom) {
         mes += strsprintf(_T("Crop:          %d,%d,%d,%d\n"), m_inputInfo.crop.left, m_inputInfo.crop.up, m_inputInfo.crop.right, m_inputInfo.crop.bottom);
     }

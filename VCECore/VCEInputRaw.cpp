@@ -39,11 +39,11 @@ VCEInputRaw::~VCEInputRaw() {
 }
 
 AMF_RESULT VCEInputRaw::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pStatus, VCEInputInfo *pInfo, amf::AMFContextPtr pContext) {
-    m_pVCELog = pLog;
-    m_pStatus = pStatus;
+    m_pPrintMes = pLog;
+    m_pEncSatusInfo = pStatus;
     m_pContext = pContext;
     
-    m_inputInfo = *pInfo;
+    m_inputFrameInfo = *pInfo;
     VCEInputRawParam *pRawParam = (VCEInputRawParam *)pInfo->pPrivateParam;
     m_bIsY4m = pRawParam->y4m;
     if (m_bIsY4m) {
@@ -70,13 +70,13 @@ AMF_RESULT VCEInputRaw::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pSta
         if (fread(buf, 1, strlen("YUV4MPEG2"), m_fp) != strlen("YUV4MPEG2")
             || strcmp(buf, "YUV4MPEG2") != 0
             || !fgets(buf, sizeof(buf), m_fp)
-            || ParseY4MHeader(buf, &m_inputInfo)) {
+            || ParseY4MHeader(buf, &m_inputFrameInfo)) {
             return AMF_UNEXPECTED;
         }
     }
 
     //読み込みバッファの確保
-    m_pBuffer.reset((uint8_t *)_aligned_malloc(m_inputInfo.srcWidth * m_inputInfo.srcHeight * 3 / 2, 32));
+    m_pBuffer.reset((uint8_t *)_aligned_malloc(m_inputFrameInfo.srcWidth * m_inputFrameInfo.srcHeight * 3 / 2, 32));
     if (m_pBuffer.get() == nullptr) {
         AddMessage(VCE_LOG_ERROR, _T("Failed to allocate memory for input.\n"));
         return AMF_OUT_OF_MEMORY;
@@ -87,17 +87,17 @@ AMF_RESULT VCEInputRaw::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pSta
         return AMF_NOT_SUPPORTED;
     }
 
-    if (m_inputInfo.fps.num > 0 && m_inputInfo.fps.den > 0) {
-        int fps_gcd = vce_gcd(m_inputInfo.fps.num, m_inputInfo.fps.den);
-        m_inputInfo.fps.num /= fps_gcd;
-        m_inputInfo.fps.den /= fps_gcd;
+    if (m_inputFrameInfo.fps.num > 0 && m_inputFrameInfo.fps.den > 0) {
+        int fps_gcd = vce_gcd(m_inputFrameInfo.fps.num, m_inputFrameInfo.fps.den);
+        m_inputFrameInfo.fps.num /= fps_gcd;
+        m_inputFrameInfo.fps.den /= fps_gcd;
     }
 
     tstring mes;
     if (m_bIsY4m) {
         mes = strsprintf(_T("y4m: %s->%s[%s], %dx%d%s, %d/%d fps"),
             VCE_CSP_NAMES[m_pConvertCsp->csp_from], VCE_CSP_NAMES[m_pConvertCsp->csp_to], get_simd_str(m_pConvertCsp->simd),
-            m_inputInfo.srcWidth, m_inputInfo.srcHeight, m_inputInfo.interlaced ? _T("i") : _T("p"), m_inputInfo.fps.num, m_inputInfo.fps.den);
+            m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcHeight, m_inputFrameInfo.interlaced ? _T("i") : _T("p"), m_inputFrameInfo.fps.num, m_inputFrameInfo.fps.den);
     } else {
         mes = _T("raw");
     }
@@ -107,8 +107,8 @@ AMF_RESULT VCEInputRaw::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pSta
 }
 
 AMF_RESULT VCEInputRaw::Terminate() {
-    m_pVCELog.reset();
-    m_pStatus.reset();
+    m_pPrintMes.reset();
+    m_pEncSatusInfo.reset();
     m_message.clear();
     m_pContext = nullptr;
     m_pBuffer.reset();
@@ -121,9 +121,9 @@ AMF_RESULT VCEInputRaw::Terminate() {
 AMF_RESULT VCEInputRaw::QueryOutput(amf::AMFData** ppData) {
     AMF_RESULT res = AMF_OK;
     amf::AMFSurfacePtr pSurface;
-    res = m_pContext->AllocSurface(amf::AMF_MEMORY_HOST, m_inputInfo.format,
-        m_inputInfo.srcWidth - m_inputInfo.crop.left - m_inputInfo.crop.right,
-        m_inputInfo.srcHeight - m_inputInfo.crop.bottom - m_inputInfo.crop.up,
+    res = m_pContext->AllocSurface(amf::AMF_MEMORY_HOST, m_inputFrameInfo.format,
+        m_inputFrameInfo.srcWidth - m_inputFrameInfo.crop.left - m_inputFrameInfo.crop.right,
+        m_inputFrameInfo.srcHeight - m_inputFrameInfo.crop.bottom - m_inputFrameInfo.crop.up,
         &pSurface);
     if (res != AMF_OK) {
         AddMessage(VCE_LOG_ERROR, _T("AMFContext::AllocSurface(amf::AMF_MEMORY_HOST) failed.\n"));
@@ -142,15 +142,15 @@ AMF_RESULT VCEInputRaw::QueryOutput(amf::AMFData** ppData) {
                 return AMF_EOF;
     }
     
-    size_t frameSize = m_inputInfo.srcWidth * m_inputInfo.srcHeight * 3 / 2;
+    size_t frameSize = m_inputFrameInfo.srcWidth * m_inputFrameInfo.srcHeight * 3 / 2;
     if (frameSize != fread(m_pBuffer.get(), 1, frameSize, m_fp)) {
         return AMF_EOF;
     }
 
     const void *src_ptr[3];
     src_ptr[0] = m_pBuffer.get();
-    src_ptr[1] = m_pBuffer.get() + m_inputInfo.srcWidth * m_inputInfo.srcHeight;
-    src_ptr[2] = m_pBuffer.get() + m_inputInfo.srcWidth * m_inputInfo.srcHeight * 5 / 4;
+    src_ptr[1] = m_pBuffer.get() + m_inputFrameInfo.srcWidth * m_inputFrameInfo.srcHeight;
+    src_ptr[2] = m_pBuffer.get() + m_inputFrameInfo.srcWidth * m_inputFrameInfo.srcHeight * 5 / 4;
 
     auto plane = pSurface->GetPlaneAt(0);
     int dst_stride = plane->GetHPitch();
@@ -159,14 +159,9 @@ AMF_RESULT VCEInputRaw::QueryOutput(amf::AMFData** ppData) {
     void *dst_ptr[2];
     dst_ptr[0] = (uint8_t *)plane->GetNative();
     dst_ptr[1] = (uint8_t *)dst_ptr[0] + dst_height * dst_stride;
-    m_pConvertCsp->func[!!m_inputInfo.interlaced](dst_ptr, src_ptr, m_inputInfo.srcWidth, m_inputInfo.srcWidth, m_inputInfo.srcWidth / 2, dst_stride, m_inputInfo.srcHeight, dst_height, m_inputInfo.crop.c);
-    m_pStatus->m_inputFrames++;
-
-    uint32_t tm = timeGetTime();
-    if (tm - m_tmLastUpdate > 800) {
-        m_tmLastUpdate = tm;
-        m_pStatus->UpdateDisplay(tm, 0);
-    }
+    m_pConvertCsp->func[!!m_inputFrameInfo.interlaced](dst_ptr, src_ptr, m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcWidth / 2, dst_stride, m_inputFrameInfo.srcHeight, dst_height, m_inputFrameInfo.crop.c);
+    m_pEncSatusInfo->m_nInputFrames++;
+    m_pEncSatusInfo->UpdateDisplay(0);
 
     *ppData = pSurface.Detach();
     return AMF_OK;
@@ -206,14 +201,14 @@ int VCEInputRaw::ParseY4MHeader(char *buf, VCEInputInfo *inputInfo) {
         break;
         case 'A':
         {
-            //int sar_x = 0, sar_y = 0;
-            //if (   (info->AspectRatioW == 0 || info->AspectRatioH == 0)
-            //    && sscanf_s(p+1, "%d:%d", &sar_x, &sar_y) == 2) {
-            //        if (sar_x && sar_y) {
-            //            info->AspectRatioW = (mfxU16)sar_x;
-            //            info->AspectRatioH = (mfxU16)sar_y;
-            //        }
-            //}
+            int sar_x = 0, sar_y = 0;
+            if (   (inputInfo->AspectRatioW == 0 || inputInfo->AspectRatioH == 0)
+                && sscanf_s(p+1, "%d:%d", &sar_x, &sar_y) == 2) {
+                    if (sar_x && sar_y) {
+                        inputInfo->AspectRatioW = sar_x;
+                        inputInfo->AspectRatioH = sar_y;
+                    }
+            }
         }
         break;
         //case 'I':

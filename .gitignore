@@ -47,6 +47,9 @@ _build/
 *.pidb
 *.log
 *.scc
+*.VC.db
+ffmpeg_lgpl/
+dtl/
 
 # Visual C++ cache files
 ipch/

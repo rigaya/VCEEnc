@@ -25,6 +25,8 @@
 //
 // ------------------------------------------------------------------------------------------
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <Windows.h>
 #include <tchar.h>
 #include <mmsystem.h>
@@ -36,8 +38,17 @@
 #include "VCELog.h"
 
 VCEInput::VCEInput() :
-    m_pVCELog(), m_pStatus(), m_message(), m_strReaderName(_T("general reader")),
-    m_strInputInfo(), m_pContext(nullptr), m_pConvertCsp(nullptr), m_tmLastUpdate(timeGetTime()) {
+    m_nInputCodec(VCE_CODEC_NONE),
+    m_sInputCrop({ 0 }),
+    m_inputFrameInfo({ 0 }),
+    m_pPrintMes(),
+    m_pEncSatusInfo(),
+    m_message(),
+    m_strReaderName(_T("general reader")),
+    m_strInputInfo(),
+    m_pContext(nullptr),
+    m_pConvertCsp(nullptr),
+    m_sTrimParam() {
 
 }
 
@@ -47,11 +58,14 @@ VCEInput::~VCEInput() {
 
 AMF_RESULT VCEInput::Terminate() {
     AddMessage(VCE_LOG_DEBUG, _T("Closing VCEInput.\n"));
-    m_pVCELog.reset();
-    m_pStatus.reset();
+    memset(&m_sInputCrop, 0, sizeof(m_sInputCrop));
+    m_pPrintMes.reset();
+    m_pEncSatusInfo.reset();
     m_message.clear();
     m_strInputInfo.clear();
     m_pContext = nullptr;
+    m_pConvertCsp = nullptr;
+    memset(&m_sTrimParam, 0, sizeof(m_sTrimParam));
     return AMF_OK;
 }
 

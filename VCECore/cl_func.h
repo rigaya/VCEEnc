@@ -32,6 +32,8 @@
 
 #if ENABLE_OPENCL
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <Windows.h>
 #include <CL/cl.h>
 

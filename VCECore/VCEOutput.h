@@ -40,8 +40,6 @@
 #include "VCEParam.h"
 #include "VCEStatus.h"
 
-static const int UPDATE_INTERVAL = 800;
-
 class VCEOutput : public PipelineElement {
 public:
     VCEOutput();
@@ -68,7 +66,7 @@ private:
         auto lines = split(str, _T("\n"));
         for (const auto& line : lines) {
             if (line[0] != _T('\0')) {
-                (*m_pVCELog)(log_level, (m_strWriterName + _T(": ") + line + _T("\n")).c_str());
+                m_pVCELog->write(log_level, (m_strWriterName + _T(": ") + line + _T("\n")).c_str());
             }
         }
     }

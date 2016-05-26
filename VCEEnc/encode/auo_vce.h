@@ -51,7 +51,9 @@ class AuoLog : public VCELog {
 public:
     AuoLog(const TCHAR *pLogFile, int log_level) : VCELog(pLogFile, log_level), m_printBuf() { };
     virtual ~AuoLog();
-    virtual void operator()(int log_level, const TCHAR *format, ...) override;
+
+    virtual void write_log(int log_level, const TCHAR *buffer, bool file_only = false) override;
+    virtual void write(int log_level, const TCHAR *format, ...) override;
 private:
     vector<TCHAR> m_printBuf;
 };
@@ -61,7 +63,8 @@ public:
     AuoStatus();
     virtual ~AuoStatus();
 protected:
-    virtual void UpdateDisplay(const char *mes, int drop_frames) override;
+    virtual void UpdateDisplay(const char *mes, int drop_frames, double progressPercent) override;
+    virtual AMF_RESULT UpdateDisplay(int drop_frames, double progressPercent = 0.0) override;
     virtual void WriteLine(const TCHAR *mes) override;
 
     vector<char> m_lineBuf;
@@ -85,7 +88,7 @@ class VCECoreAuo : public VCECore {
 public:
     VCECoreAuo();
     virtual ~VCECoreAuo();
-    virtual AMF_RESULT initInput(VCEParam *prm) override;
+    virtual AMF_RESULT initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo) override;
 };
 
 #endif //_AUO_VCE_H_

@@ -33,11 +33,25 @@
 #include "AMFPlatform.h"
 #include "PlatformWindows.h"
 #include "Thread.h"
+#include <chrono>
 
 #include "VCEUtil.h"
 #include "VCEParam.h"
 #include "VCELog.h"
 #include "cpu_info.h"
+
+using std::chrono::duration_cast;
+
+static const int UPDATE_INTERVAL = 800;
+
+struct PerfQueueInfo {
+    size_t usage_vid_in;
+    size_t usage_aud_in;
+    size_t usage_vid_out;
+    size_t usage_aud_out;
+    size_t usage_aud_enc;
+    size_t usage_aud_proc;
+};
 
 typedef struct sEncodeStatusData {
     uint32_t nProcessedFramesNum;
@@ -49,10 +63,13 @@ typedef struct sEncodeStatusData {
     uint64_t nPFrameSize;
     uint64_t nBFrameSize;
     uint64_t nWrittenBytes;
-    uint32_t tmStart;
-    double fEncodeFps;
-    double fBitrateKbps;
-    double fCPUUsagePercent;
+    double   fEncodeFps;
+    double   fBitrateKbps;
+    double   fCPUUsagePercent;
+    int      nGPUInfoCountSuccess;
+    int      nGPUInfoCountFail;
+    double   fGPULoadPercentTotal;
+    double   fGPUClockTotal;
 } sEncodeStatusData;
 
 class VCEStatus {
@@ -64,22 +81,27 @@ public:
     virtual void close();
 
     virtual void setOutputData(uint64_t nBytesWritten, uint32_t frameType);
-    virtual void UpdateDisplay(const TCHAR *mes, int drop_frames);
-    virtual void UpdateDisplay(uint32_t tm, int drop_frames, double progressPercent = 0.0);
+    virtual void UpdateDisplay(const TCHAR *mes, int drop_frames, double progressPercent);
+    virtual AMF_RESULT UpdateDisplay(int drop_frames, double progressPercent = 0.0);
     virtual void WriteLine(const TCHAR *mes);
+    virtual void WriteLineDirect(TCHAR *mes);
     virtual void WriteFrameTypeResult(const TCHAR *header, uint32_t count, uint32_t maxCount, uint64_t frameSize, uint64_t maxFrameSize);
     virtual void WriteResults();
     virtual void SetStart();
-    uint32_t m_inputFrames;
+    uint32_t m_nInputFrames;
 protected:
     sEncodeStatusData getStatus() {
         return m_sData;
     }
 
-    bool m_bStdErrWriteToConsole;
+    std::chrono::system_clock::time_point m_tmStart;
+    std::chrono::system_clock::time_point m_tmLastUpdate;
     PROCESS_TIME m_sStartTime;
     int m_nTotalOutFrames;
-    VCERational m_OutputFps;
+    uint32_t m_nOutputFPSRate;
+    uint32_t m_nOutputFPSScale;
     sEncodeStatusData m_sData;
     shared_ptr<VCELog> m_pVCELog;
+    bool m_bStdErrWriteToConsole;
+    bool m_bEncStarted;
 };
