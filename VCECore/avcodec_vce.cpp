@@ -85,12 +85,12 @@ bool checkAvcodecLicense() {
     return (check(avutil_license()) && check(avcodec_license()) && check(avformat_license()));
 }
 
-//mfxFrameInfoから、AVFieldOrderを返す
-AVFieldOrder qsv_field_order(const VCEInputInfo *pInfo) {
-    if (pInfo->interlaced == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD) {
+//AVFieldOrderを返す
+AVFieldOrder vce_field_order(int nInterlaced) {
+    if (nInterlaced == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD) {
         return AV_FIELD_TT;
     }
-    if (pInfo->interlaced == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD) {
+    if (nInterlaced == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD) {
         return AV_FIELD_BB;
     }
     return AV_FIELD_PROGRESSIVE;

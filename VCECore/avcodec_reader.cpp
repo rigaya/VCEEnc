@@ -854,13 +854,13 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
             if (m_Demux.video.pCodecCtx->codec && m_Demux.video.pCodecCtx->codec->name) {
                 AddMessage(VCE_LOG_ERROR, char_to_tstring(m_Demux.video.pCodecCtx->codec->name) + _T(" "));
             }
-            AddMessage(VCE_LOG_ERROR, _T("unable to decode by qsv.\n"));
+            AddMessage(VCE_LOG_ERROR, _T("unable to decode by vce.\n"));
             return AMF_INVALID_POINTER;
         }
-        AddMessage(VCE_LOG_DEBUG, _T("can be decoded by qsv.\n"));
+        AddMessage(VCE_LOG_DEBUG, _T("can be decoded by vce.\n"));
         //wmv3はAdvanced Profile (3)のみの対応
         if (m_Demux.video.pCodecCtx->codec_id == AV_CODEC_ID_WMV3 && m_Demux.video.pCodecCtx->profile != 3) {
-            AddMessage(VCE_LOG_ERROR, _T("unable to decode by qsv.\n"));
+            AddMessage(VCE_LOG_ERROR, _T("unable to decode by vce.\n"));
             return AMF_INVALID_POINTER;
         }
 
