@@ -76,7 +76,7 @@ AMF_RESULT VCEOutput::SubmitInput(amf::AMFData* pData) {
         amf_size towrite = pBuffer->GetSize();
         amf_size written = m_pDataStream->Write(pBuffer->GetNative(), towrite);
 
-        m_pStatus->setOutputData(written, 0x00);
+        m_pStatus->SetOutputData(written, 0x00);
     } else {
         res = AMF_EOF;
     }

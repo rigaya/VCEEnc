@@ -44,6 +44,14 @@ using std::chrono::duration_cast;
 
 static const int UPDATE_INTERVAL = 800;
 
+enum : uint32_t {
+    VCE_FRAMETYPE_UNKNOWN = 0x00,
+    VCE_FRAMETYPE_IDR     = 0x01,
+    VCE_FRAMETYPE_I       = 0x02,
+    VCE_FRAMETYPE_P       = 0x04,
+    VCE_FRAMETYPE_B       = 0x08,
+};
+
 struct PerfQueueInfo {
     size_t usage_vid_in;
     size_t usage_aud_in;
@@ -80,7 +88,7 @@ public:
     virtual AMF_RESULT init(shared_ptr<VCELog> pLog, VCERational outputFps, int totalOutFrames);
     virtual void close();
 
-    virtual void setOutputData(uint64_t nBytesWritten, uint32_t frameType);
+    virtual void SetOutputData(uint64_t nBytesWritten, uint32_t frameType);
     virtual void UpdateDisplay(const TCHAR *mes, int drop_frames, double progressPercent);
     virtual AMF_RESULT UpdateDisplay(int drop_frames, double progressPercent = 0.0);
     virtual void WriteLine(const TCHAR *mes);

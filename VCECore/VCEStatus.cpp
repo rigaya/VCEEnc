@@ -83,16 +83,16 @@ void VCEStatus::close() {
 
 #pragma warning(push)
 #pragma warning(disable: 4100)
-void VCEStatus::setOutputData(uint64_t nBytesWritten, uint32_t frameType) {
+void VCEStatus::SetOutputData(uint64_t nBytesWritten, uint32_t frameType) {
     m_sData.nProcessedFramesNum++;
     m_sData.nWrittenBytes += nBytesWritten;
-    //m_sData.nIDRCount     += ((frameType & MFX_FRAMETYPE_IDR) >> 7);
-    //m_sData.nICount       +=  (frameType & MFX_FRAMETYPE_I);
-    //m_sData.nPCount       += ((frameType & MFX_FRAMETYPE_P) >> 1);
-    //m_sData.nBCount       += ((frameType & MFX_FRAMETYPE_B) >> 2);
-    //m_sData.nIFrameSize   += nBytesWritten *  (frameType & MFX_FRAMETYPE_I);
-    //m_sData.nPFrameSize   += nBytesWritten * ((frameType & MFX_FRAMETYPE_P) >> 1);
-    //m_sData.nBFrameSize   += nBytesWritten * ((frameType & MFX_FRAMETYPE_B) >> 2);
+    m_sData.nIDRCount     += ((frameType & VCE_FRAMETYPE_IDR));
+    m_sData.nICount       += ((frameType & VCE_FRAMETYPE_I) >> 1);
+    m_sData.nPCount       += ((frameType & VCE_FRAMETYPE_P) >> 2);
+    m_sData.nBCount       += ((frameType & VCE_FRAMETYPE_B) >> 3);
+    m_sData.nIFrameSize   += nBytesWritten * ((frameType & VCE_FRAMETYPE_I) >> 1);
+    m_sData.nPFrameSize   += nBytesWritten * ((frameType & VCE_FRAMETYPE_P) >> 2);
+    m_sData.nBFrameSize   += nBytesWritten * ((frameType & VCE_FRAMETYPE_B) >> 3);
 }
 
 void VCEStatus::UpdateDisplay(const TCHAR *mes, int drop_frames, double progressPercent) {
