@@ -36,7 +36,7 @@
 #include "VCELog.h"
 
 VCEOutput::VCEOutput() :
-    m_pPrintMes(), m_pEncSatusInfo(), m_strOutputInfo(), m_strWriterName(_T("raw writer")) {
+    m_pPrintMes(), m_pEncSatusInfo(), m_strOutputInfo(), m_strWriterName(_T("raw writer")), m_bOutputIsStdout(false) {
 
 }
 

@@ -57,6 +57,10 @@ public:
     virtual AMF_RESULT SubmitInput(amf::AMFData* pData) override;
     virtual AMF_RESULT QueryOutput(amf::AMFData** ppData) override;
     virtual std::wstring GetDisplayResult() override;
+    virtual void WaitFin() { }
+    virtual bool outputStdout() {
+        return m_bOutputIsStdout;
+    }
 
 protected:
     void AddMessage(int log_level, const tstring& str) {
@@ -89,4 +93,5 @@ protected:
     shared_ptr<VCELog> m_pPrintMes;
     shared_ptr<VCEStatus> m_pEncSatusInfo;
     tstring m_strOutputInfo;
+    bool m_bOutputIsStdout;
 };
