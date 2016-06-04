@@ -202,7 +202,7 @@ std::pair<int, std::wstring> PathRemoveFileSpecFixed(const std::wstring& path);
 bool CreateDirectoryRecursive(const char *dir);
 bool CreateDirectoryRecursive(const WCHAR *dir);
 
-static const int VCE_TIMEBASE = 90000;
+static const int VCE_TIMEBASE = 100000;
 
 tstring print_time(double time);
 
