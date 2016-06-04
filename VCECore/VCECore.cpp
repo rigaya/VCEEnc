@@ -777,6 +777,8 @@ AMF_RESULT VCECore::initDevice(VCEParam *prm) {
     return res;
 }
 
+#pragma warning(push)
+#pragma warning(disable: 4100)
 AMF_RESULT VCECore::initDecoder(VCEParam *prm) {
 #if ENABLE_AVCODEC_VCE_READER
     auto inputCodec = m_pFileReader->getInputCodec();
@@ -820,6 +822,7 @@ AMF_RESULT VCECore::initDecoder(VCEParam *prm) {
     return AMF_NOT_SUPPORTED;
 #endif
 }
+#pragma warning(pop)
 
 AMF_RESULT VCECore::initConverter(VCEParam *prm) {
 #if ENABLE_AVCODEC_VCE_READER
