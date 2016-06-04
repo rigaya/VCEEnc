@@ -47,6 +47,7 @@
 #include "VCEInputVpy.h"
 #include "avcodec_reader.h"
 #include "EncoderParams.h"
+#include "chapter_rw.h"
 
 #include "VideoConverter.h"
 
@@ -417,6 +418,42 @@ void VCECore::Terminate() {
     m_pOutput.reset();
     m_pStatus.reset();
     m_pVCELog.reset();
+}
+
+AMF_RESULT VCECore::readChapterFile(tstring chapfile) {
+#if ENABLE_AVCODEC_VCE_READER
+    ChapterRW chapter;
+    auto err = chapter.read_file(chapfile.c_str(), CODE_PAGE_UNSET, 0.0);
+    if (err != AUO_CHAP_ERR_NONE) {
+        PrintMes(VCE_LOG_ERROR, _T("failed to %s chapter file: \"%s\".\n"), (err == AUO_CHAP_ERR_FILE_OPEN) ? _T("open") : _T("read"), chapfile.c_str());
+        return AMF_FAIL;
+    }
+    if (chapter.chapterlist().size() == 0) {
+        PrintMes(VCE_LOG_ERROR, _T("no chapter found from chapter file: \"%s\".\n"), chapfile.c_str());
+        return AMF_FAIL;
+    }
+    m_AVChapterFromFile.clear();
+    const auto& chapter_list = chapter.chapterlist();
+    tstring chap_log;
+    for (size_t i = 0; i < chapter_list.size(); i++) {
+        unique_ptr<AVChapter> avchap(new AVChapter);
+        avchap->time_base = av_make_q(1, 1000);
+        avchap->start = chapter_list[i]->get_ms();
+        avchap->end = (i < chapter_list.size()-1) ? chapter_list[i+1]->get_ms() : avchap->start + 1;
+        avchap->id = (int)m_AVChapterFromFile.size();
+        avchap->metadata = nullptr;
+        av_dict_set(&avchap->metadata, "title", wstring_to_string(chapter_list[i]->name, CP_UTF8).c_str(), 0);
+        chap_log += strsprintf(_T("chapter #%02d [%d.%02d.%02d.%03d]: %s.\n"),
+            avchap->id, chapter_list[i]->h, chapter_list[i]->m, chapter_list[i]->s, chapter_list[i]->ms,
+            wstring_to_tstring(chapter_list[i]->name).c_str());
+        m_AVChapterFromFile.push_back(std::move(avchap));
+    }
+    PrintMes(VCE_LOG_DEBUG, _T("%s"), chap_log.c_str());
+    return AMF_OK;
+#else
+    PrintMes(QSV_LOG_ERROR, _T("chater reading unsupportted in this build"));
+    return AMF_NOT_SUPPORTED;
+#endif //#if ENABLE_AVCODEC_VCE_READER
 }
 
 AMF_RESULT VCECore::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo) {

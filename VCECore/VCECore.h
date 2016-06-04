@@ -43,11 +43,16 @@
 #include "CapabilityManager.h"
 #include "VideoEncoderVCECaps.h"
 
+#include "VCEVersion.h"
 #include "VCEUtil.h"
 #include "VCEParam.h"
 #include "VCELog.h"
 #include "VCEInput.h"
 #include "VCEOutput.h"
+
+#if ENABLE_AVCODEC_VCE_READER
+struct AVChapter;
+#endif //#if ENABLE_AVCODEC_VCE_READER
 
 class VCECore : public Pipeline {
     class PipelineElementAMFComponent;
@@ -85,6 +90,7 @@ protected:
     bool QueryIOCaps(amf::AMFIOCapsPtr& ioCaps);
     bool QueryEncoderForCodec(const wchar_t *componentID, amf::AMFCapabilityManagerPtr& capsManager);
     bool QueryEncoderCaps(amf::AMFCapabilityManagerPtr& capsManager);
+    AMF_RESULT readChapterFile(tstring chapfile);
 
     virtual AMF_RESULT checkParam(VCEParam *prm);
     virtual AMF_RESULT initDevice(VCEParam *prm);
@@ -94,7 +100,9 @@ protected:
 
     shared_ptr<VCELog> m_pVCELog;
     bool m_bTimerPeriodTuning;
-
+#if ENABLE_AVCODEC_VCE_READER
+    vector<unique_ptr<AVChapter>> m_AVChapterFromFile;
+#endif //#if ENABLE_AVCODEC_VCE_READER
     shared_ptr<VCEInput> m_pFileReader;
     shared_ptr<VCEOutput> m_pOutput;
     shared_ptr<VCEStatus> m_pStatus;
