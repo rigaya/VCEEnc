@@ -104,8 +104,8 @@ protected:
     vector<unique_ptr<AVChapter>> m_AVChapterFromFile;
 #endif //#if ENABLE_AVCODEC_VCE_READER
     shared_ptr<VCEInput> m_pFileReader;
-    shared_ptr<VCEOutput> m_pOutput;
-    shared_ptr<VCEStatus> m_pStatus;
+    shared_ptr<VCEOutput> m_pFileWriter;
+    shared_ptr<VCEStatus> m_pEncSatusInfo;
 
     VCEInputInfo m_inputInfo;
 

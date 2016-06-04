@@ -359,8 +359,8 @@ VCECore::VCECore() :
     m_pVCELog(),
     m_bTimerPeriodTuning(true),
     m_pFileReader(),
-    m_pOutput(),
-    m_pStatus(),
+    m_pFileWriter(),
+    m_pEncSatusInfo(),
     m_inputInfo(),
     m_pContext(),
     m_pStreamOut(),
@@ -415,8 +415,8 @@ void VCECore::Terminate() {
     m_deviceDX11.Terminate();
 
     m_pFileReader.reset();
-    m_pOutput.reset();
-    m_pStatus.reset();
+    m_pFileWriter.reset();
+    m_pEncSatusInfo.reset();
     m_pVCELog.reset();
 }
 
@@ -459,8 +459,8 @@ AMF_RESULT VCECore::readChapterFile(tstring chapfile) {
 AMF_RESULT VCECore::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo) {
 #if !VCE_AUO
     m_pVCELog.reset(new VCELog(pParams->pStrLog, pParams->nLogLevel));
-    if (!m_pStatus) {
-        m_pStatus = std::make_shared<VCEStatus>();
+    if (!m_pEncSatusInfo) {
+        m_pEncSatusInfo = std::make_shared<VCEStatus>();
     }
 
     int sourceAudioTrackIdStart = 1;    //トラック番号は1スタート
@@ -554,7 +554,7 @@ AMF_RESULT VCECore::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo)
         PrintMes(VCE_LOG_ERROR, _T("Unknown reader selected\n"));
         return AMF_NOT_SUPPORTED;
     }
-    auto ret = m_pFileReader->init(m_pVCELog, m_pStatus, &m_inputInfo, m_pContext);
+    auto ret = m_pFileReader->init(m_pVCELog, m_pEncSatusInfo, &m_inputInfo, m_pContext);
     if (ret != AMF_OK) {
         PrintMes(VCE_LOG_ERROR, _T("Error: %s\n"), m_pFileReader->getMessage().c_str());
         return ret;
@@ -733,13 +733,13 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
 }
 
 AMF_RESULT VCECore::initOutput(VCEParam *prm) {
-    m_pStatus->init(m_pVCELog, m_inputInfo.fps, m_inputInfo.frames);
+    m_pEncSatusInfo->init(m_pVCELog, m_inputInfo.fps, m_inputInfo.frames);
 
-    m_pOutput.reset(new VCEOutput());
+    m_pFileWriter.reset(new VCEOutput());
 
-    auto ret = m_pOutput->Init(prm->pOutputFile, nullptr, m_pVCELog, m_pStatus);
+    auto ret = m_pFileWriter->Init(prm->pOutputFile, nullptr, m_pVCELog, m_pEncSatusInfo);
     if (ret != AMF_OK) {
-        PrintMes(VCE_LOG_ERROR, _T("Error: %s\n"), m_pOutput->GetOutputMessage().c_str());
+        PrintMes(VCE_LOG_ERROR, _T("Error: %s\n"), m_pFileWriter->GetOutputMessage().c_str());
         return ret;
     }
     return ret;
@@ -994,7 +994,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
         PrintMes(VCE_LOG_ERROR, _T("failed to connect encoder to pipeline.\n"));
         return res;
     }
-    if (AMF_OK != (res = Connect(m_pOutput, 5))) {
+    if (AMF_OK != (res = Connect(m_pFileWriter, 5))) {
         PrintMes(VCE_LOG_ERROR, _T("failed to connect output to pipeline.\n"));
         return res;
     }
@@ -1055,7 +1055,7 @@ AMF_RESULT VCECore::init(VCEParam *prm, VCEInputInfo *inputInfo) {
 
 AMF_RESULT VCECore::run() {
     AMF_RESULT res = AMF_OK;
-    m_pStatus->SetStart();
+    m_pEncSatusInfo->SetStart();
     res = Pipeline::Start();
     if (res != AMF_OK) {
         PrintMes(VCE_LOG_ERROR, _T("failed to start pipeline\n"));
@@ -1188,7 +1188,7 @@ tstring VCECore::GetEncoderParam() {
 }
 
 AMF_RESULT VCECore::PrintResult() {
-    m_pStatus->WriteResults();
+    m_pEncSatusInfo->WriteResults();
     return AMF_OK;
 }
 
