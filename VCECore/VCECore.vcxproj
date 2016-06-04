@@ -38,6 +38,7 @@
     <ClCompile Include="avcodec_reader.cpp" />
     <ClCompile Include="avcodec_vce.cpp" />
     <ClCompile Include="avcodec_vce_log.cpp" />
+    <ClCompile Include="avcodec_writer.cpp" />
     <ClCompile Include="cl_func.cpp" />
     <ClCompile Include="ConvertCsp.cpp" />
     <ClCompile Include="ConvertCspAVX.cpp">
@@ -72,6 +73,7 @@
     <ClInclude Include="avcodec_reader.h" />
     <ClInclude Include="avcodec_vce.h" />
     <ClInclude Include="avcodec_vce_log.h" />
+    <ClInclude Include="avcodec_writer.h" />
     <ClInclude Include="cl_func.h" />
     <ClInclude Include="ConvertCsp.h" />
     <ClInclude Include="ConvertCspSIMD.h" />

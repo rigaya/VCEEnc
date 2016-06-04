@@ -37,11 +37,15 @@
 
 #define CHECK_PERFORMANCE 1
 
+#define ENABLE_AVCODEC_OUT_THREAD 1
+
 #ifdef _M_IX86
 #define BUILD_ARCH_STR _T("x86")
 #else
 #define BUILD_ARCH_STR _T("x64")
 #endif
+
+#define ENABLE_LIBASS_SUBBURN 0
 
 #if defined(VCE_AUO) && defined(NDEBUG)
 #define ENABLE_VAPOURSYNTH_READER 0

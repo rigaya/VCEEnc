@@ -435,7 +435,6 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         pParams->nVideoStreamId = v;
         return 0;
     }
-#if 0
     if (IS_OPTION("audio-source")) {
         i++;
         size_t audioSourceLen = _tcslen(strInput[i]) + 1;
@@ -946,7 +945,6 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         }
         return 0;
     }
-#endif
     if (IS_OPTION("cqp")) {
         i++;
         int a = 0, b = 0, c = 0;

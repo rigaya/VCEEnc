@@ -46,6 +46,7 @@
 #include "VCEInputAvs.h"
 #include "VCEInputVpy.h"
 #include "avcodec_reader.h"
+#include "avcodec_writer.h"
 #include "EncoderParams.h"
 #include "chapter_rw.h"
 
@@ -414,7 +415,9 @@ void VCECore::Terminate() {
     m_deviceDX9.Terminate();
     m_deviceDX11.Terminate();
 
+    m_pFileWriterListAudio.clear();
     m_pFileReader.reset();
+    m_AudioReaders.clear();
     m_pFileWriter.reset();
     m_pEncSatusInfo.reset();
     m_pVCELog.reset();
@@ -732,17 +735,259 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
     return AMF_OK;
 }
 
-AMF_RESULT VCECore::initOutput(VCEParam *prm) {
+AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
     m_pEncSatusInfo->init(m_pVCELog, m_inputInfo.fps, m_inputInfo.frames);
-
-    m_pFileWriter.reset(new VCEOutput());
-
-    auto ret = m_pFileWriter->Init(prm->pOutputFile, nullptr, m_pVCELog, m_pEncSatusInfo);
-    if (ret != AMF_OK) {
-        PrintMes(VCE_LOG_ERROR, _T("Error: %s\n"), m_pFileWriter->GetOutputMessage().c_str());
-        return ret;
+    AMF_RESULT sts = AMF_OK;
+    bool stdoutUsed = false;
+#if ENABLE_AVCODEC_VCE_READER
+    vector<int> streamTrackUsed; //使用した音声/字幕のトラックIDを保存する
+    bool useH264ESOutput =
+        ((pParams->pAVMuxOutputFormat && 0 == _tcscmp(pParams->pAVMuxOutputFormat, _T("raw")))) //--formatにrawが指定されている
+        || (PathFindExtension(pParams->pOutputFile) == nullptr || PathFindExtension(pParams->pOutputFile)[0] != '.') //拡張子がしない
+        || check_ext(pParams->pOutputFile, { ".m2v", ".264", ".h264", ".avc", ".avc1", ".x264", ".265", ".h265", ".hevc" }); //特定の拡張子
+    if (!useH264ESOutput) {
+        pParams->nAVMux |= VCEENC_MUX_VIDEO;
     }
-    return ret;
+    //if (pParams->nCodecId == VCE_CODEC_RAW) {
+    //    pParams->nAVMux &= ~VCEENC_MUX_VIDEO;
+    //}
+    if (pParams->nAVMux & VCEENC_MUX_VIDEO) {
+        //if (pParams->nCodecId == VCE_CODEC_VP8 || pParams->nCodecId == VCE_CODEC_VP9) {
+        //    PrintMes(VCE_LOG_ERROR, _T("Output: muxing not supported with %s.\n"), CodecIdToStr(pParams->nCodecId));
+        //    return AMF_NOT_SUPPORTED;
+        //}
+        PrintMes(VCE_LOG_DEBUG, _T("Output: Using avformat writer.\n"));
+        m_pFileWriter = std::make_shared<CAvcodecWriter>();
+        AvcodecWriterPrm writerPrm;
+        writerPrm.vidPrm.nCodecId = pParams->nCodecId;
+        writerPrm.vidPrm.nCodecLevel = pParams->codecParam[pParams->nCodecId].nLevel;
+        writerPrm.vidPrm.nCodecProfile = pParams->codecParam[pParams->nCodecId].nProfile;
+        writerPrm.vidPrm.nEncWidth = m_inputInfo.dstWidth;
+        writerPrm.vidPrm.nEncHeight = m_inputInfo.dstHeight;
+        writerPrm.vidPrm.nInterlaced = m_inputInfo.interlaced;
+        writerPrm.vidPrm.sar = std::make_pair(m_inputInfo.AspectRatioW, m_inputInfo.AspectRatioH);
+        writerPrm.vidPrm.outFps = av_make_q(m_inputInfo.fps.num, m_inputInfo.fps.den);
+        writerPrm.vidPrm.nBframes = pParams->nBframes;
+        writerPrm.vidPrm.nBPyramid = pParams->bBPyramid;
+        writerPrm.vidPrm.nGopLength = pParams->nGOPLen;
+        writerPrm.vidPrm.nRef = 2;
+        writerPrm.vidPrm.vui.colormatrix = pParams->ColorMatrix;
+        writerPrm.vidPrm.vui.colorprim = pParams->ColorPrim;
+        writerPrm.vidPrm.vui.transfer = pParams->Transfer;
+        writerPrm.vidPrm.vui.fullrange = pParams->bFullrange;
+        writerPrm.vidPrm.vui.infoPresent = pParams->VuiEnable;
+        writerPrm.vidPrm.bDtsUnavailable = true;
+        writerPrm.pOutputFormat = pParams->pAVMuxOutputFormat;
+        if (m_pTrimParam) {
+            writerPrm.trimList = m_pTrimParam->list;
+        }
+        writerPrm.nOutputThread = pParams->nOutputThread;
+        writerPrm.nAudioThread  = pParams->nAudioThread;
+        writerPrm.nBufSizeMB = pParams->nOutputBufSizeMB;
+        writerPrm.nAudioResampler = pParams->nAudioResampler;
+        writerPrm.nAudioIgnoreDecodeError = pParams->nAudioIgnoreDecodeError;
+        writerPrm.bVideoDtsUnavailable = false;
+        writerPrm.pQueueInfo = nullptr;
+        //writerPrm.pQueueInfo = (m_pPerfMonitor) ? m_pPerfMonitor->GetQueueInfoPtr() : nullptr;
+        if (pParams->pMuxOpt) {
+            writerPrm.vMuxOpt = *pParams->pMuxOpt;
+        }
+        auto pAVCodecReader = std::dynamic_pointer_cast<CAvcodecReader>(m_pFileReader);
+        if (pAVCodecReader != nullptr) {
+            writerPrm.pInputFormatMetadata = pAVCodecReader->GetInputFormatMetadata();
+            if (pParams->pChapterFile) {
+                //チャプターファイルを読み込む
+                if (AMF_OK != readChapterFile(pParams->pChapterFile)) {
+                    return AMF_INVALID_FORMAT;
+                }
+                writerPrm.chapterList.clear();
+                for (uint32_t i = 0; i < m_AVChapterFromFile.size(); i++) {
+                    writerPrm.chapterList.push_back(m_AVChapterFromFile[i].get());
+                }
+            } else {
+                //入力ファイルのチャプターをコピーする
+                writerPrm.chapterList = pAVCodecReader->GetChapterList();
+            }
+            writerPrm.nVideoInputFirstKeyPts = pAVCodecReader->GetVideoFirstKeyPts();
+            writerPrm.pVideoInputCodecCtx = pAVCodecReader->GetInputVideoCodecCtx();
+        }
+        if (pParams->nAVMux & (VCEENC_MUX_AUDIO | VCEENC_MUX_SUBTITLE)) {
+            PrintMes(VCE_LOG_DEBUG, _T("Output: Audio/Subtitle muxing enabled.\n"));
+            pAVCodecReader = std::dynamic_pointer_cast<CAvcodecReader>(m_pFileReader);
+            bool copyAll = false;
+            for (int i = 0; !copyAll && i < pParams->nAudioSelectCount; i++) {
+                //トラック"0"が指定されていれば、すべてのトラックをコピーするということ
+                copyAll = (pParams->ppAudioSelectList[i]->nAudioSelect == 0);
+            }
+            PrintMes(VCE_LOG_DEBUG, _T("Output: CopyAll=%s\n"), (copyAll) ? _T("true") : _T("false"));
+            vector<AVDemuxStream> streamList;
+            if (pAVCodecReader) {
+                streamList = pAVCodecReader->GetInputStreamInfo();
+            }
+            for (const auto& audioReader : m_AudioReaders) {
+                if (audioReader->GetAudioTrackCount()) {
+                    auto pAVCodecAudioReader = std::dynamic_pointer_cast<CAvcodecReader>(audioReader);
+                    if (pAVCodecAudioReader) {
+                        vector_cat(streamList, pAVCodecAudioReader->GetInputStreamInfo());
+                    }
+                    //もしavqsvリーダーでないなら、音声リーダーから情報を取得する必要がある
+                    if (pAVCodecReader == nullptr) {
+                        writerPrm.nVideoInputFirstKeyPts = pAVCodecAudioReader->GetVideoFirstKeyPts();
+                        writerPrm.pVideoInputCodecCtx = pAVCodecAudioReader->GetInputVideoCodecCtx();
+                    }
+                }
+            }
+
+            for (auto& stream : streamList) {
+                bool bStreamIsSubtitle = stream.nTrackId < 0;
+                const sAudioSelect *pAudioSelect = nullptr;
+                for (int i = 0; i < pParams->nAudioSelectCount; i++) {
+                    if (stream.nTrackId == pParams->ppAudioSelectList[i]->nAudioSelect
+                        && pParams->ppAudioSelectList[i]->pAudioExtractFilename == nullptr) {
+                        pAudioSelect = pParams->ppAudioSelectList[i];
+                    }
+                }
+                if (pAudioSelect != nullptr || copyAll || bStreamIsSubtitle) {
+#if ENABLE_LIBASS_SUBBURN
+                    streamTrackUsed.push_back(stream.nTrackId);
+                    if (bStreamIsSubtitle && pParams->vpp.subburn.nTrack != 0) {
+                        continue;
+                    }
+#endif //#if ENABLE_LIBASS_SUBBURN
+                    AVOutputStreamPrm prm;
+                    prm.src = stream;
+                    //pAudioSelect == nullptrは "copyAll" か 字幕ストリーム によるもの
+                    prm.nBitrate = (pAudioSelect == nullptr) ? 0 : pAudioSelect->nAVAudioEncodeBitrate;
+                    prm.nSamplingRate = (pAudioSelect == nullptr) ? 0 : pAudioSelect->nAudioSamplingRate;
+                    prm.pEncodeCodec = (pAudioSelect == nullptr) ? AVVCE_CODEC_COPY : pAudioSelect->pAVAudioEncodeCodec;
+                    prm.pFilter = (pAudioSelect == nullptr) ? nullptr : pAudioSelect->pAudioFilter;
+                    PrintMes(VCE_LOG_DEBUG, _T("Output: Added %s track#%d (stream idx %d) for mux, bitrate %d, codec: %s\n"),
+                        (bStreamIsSubtitle) ? _T("sub") : _T("audio"),
+                        stream.nTrackId, stream.nIndex, prm.nBitrate, prm.pEncodeCodec);
+                    writerPrm.inputStreamList.push_back(std::move(prm));
+                }
+            }
+        }
+        sts = m_pFileWriter->Init(pParams->pOutputFile, &writerPrm, m_pVCELog, m_pEncSatusInfo);
+        if (sts < AMF_OK) {
+            PrintMes(VCE_LOG_ERROR, m_pFileWriter->GetOutputMessage().c_str());
+            return sts;
+        } else if (pParams->nAVMux & (VCEENC_MUX_AUDIO | VCEENC_MUX_SUBTITLE)) {
+            m_pFileWriterListAudio.push_back(m_pFileWriter);
+        }
+        stdoutUsed = m_pFileWriter->outputStdout();
+        PrintMes(VCE_LOG_DEBUG, _T("Output: Initialized avformat writer%s.\n"), (stdoutUsed) ? _T("using stdout") : _T(""));
+    } else if (pParams->nAVMux & (VCEENC_MUX_AUDIO | VCEENC_MUX_SUBTITLE)) {
+        PrintMes(VCE_LOG_ERROR, _T("Audio mux cannot be used alone, should be use with video mux.\n"));
+        return AMF_NOT_SUPPORTED;
+    } else {
+#endif
+        //if (pParams->nCodecId == VCE_CODEC_RAW) {
+        //    m_pFileWriter.reset(new CVCEOutFrame());
+        //    m_pFileWriter->SetVCELogPtr(m_pVCELog);
+        //    YUVWriterParam param;
+        //    param.bY4m = true;
+        //    param.memType = m_memType;
+        //    sts = m_pFileWriter->Init(pParams->strDstFile, &param, m_pEncSatusInfo);
+        //    if (sts < AMF_OK) {
+        //        PrintMes(VCE_LOG_ERROR, m_pFileWriter->GetOutputMessage());
+        //        return sts;
+        //    }
+        //    stdoutUsed = m_pFileWriter->outputStdout();
+        //    PrintMes(VCE_LOG_DEBUG, _T("Output: Initialized yuv frame writer%s.\n"), (stdoutUsed) ? _T("using stdout") : _T(""));
+        //} else {
+        m_pFileWriter = std::make_shared<VCEOutput>();
+        VCEOutRawParam rawPrm ={ 0 };
+        //rawPrm.bBenchmark = pParams->bBenchmark != 0;
+        rawPrm.nBufSizeMB = pParams->nOutputBufSizeMB;
+        sts = m_pFileWriter->Init(pParams->pOutputFile, &rawPrm, m_pVCELog, m_pEncSatusInfo);
+        if (sts < AMF_OK) {
+            PrintMes(VCE_LOG_ERROR, m_pFileWriter->GetOutputMessage().c_str());
+            return sts;
+        }
+        stdoutUsed = m_pFileWriter->outputStdout();
+        PrintMes(VCE_LOG_DEBUG, _T("Output: Initialized bitstream writer%s.\n"), (stdoutUsed) ? _T("using stdout") : _T(""));
+        //}
+#if ENABLE_AVCODEC_VCE_READER
+    } //ENABLE_AVCODEC_VCE_READER
+
+      //音声の抽出
+    if (pParams->nAudioSelectCount + pParams->nSubtitleSelectCount > (int)streamTrackUsed.size()) {
+        PrintMes(VCE_LOG_DEBUG, _T("Output: Audio file output enabled.\n"));
+        auto pAVCodecReader = std::dynamic_pointer_cast<CAvcodecReader>(m_pFileReader);
+        if (pParams->nInputType != VCE_INPUT_AVCODEC_VCE || pAVCodecReader == nullptr) {
+            PrintMes(VCE_LOG_ERROR, _T("Audio output is only supported with transcoding (avqsv reader).\n"));
+            return AMF_NOT_SUPPORTED;
+        } else {
+            auto inutAudioInfoList = pAVCodecReader->GetInputStreamInfo();
+            for (auto& audioTrack : inutAudioInfoList) {
+                bool bTrackAlreadyUsed = false;
+                for (auto usedTrack : streamTrackUsed) {
+                    if (usedTrack == audioTrack.nTrackId) {
+                        bTrackAlreadyUsed = true;
+                        PrintMes(VCE_LOG_DEBUG, _T("Audio track #%d is already set to be muxed, so cannot be extracted to file.\n"), audioTrack.nTrackId);
+                        break;
+                    }
+                }
+                if (bTrackAlreadyUsed) {
+                    continue;
+                }
+                const sAudioSelect *pAudioSelect = nullptr;
+                for (int i = 0; i < pParams->nAudioSelectCount; i++) {
+                    if (audioTrack.nTrackId == pParams->ppAudioSelectList[i]->nAudioSelect
+                        && pParams->ppAudioSelectList[i]->pAudioExtractFilename != nullptr) {
+                        pAudioSelect = pParams->ppAudioSelectList[i];
+                    }
+                }
+                if (pAudioSelect == nullptr) {
+                    PrintMes(VCE_LOG_ERROR, _T("Audio track #%d is not used anyware, this should not happen.\n"), audioTrack.nTrackId);
+                    return AMF_UNEXPECTED;
+                }
+                PrintMes(VCE_LOG_DEBUG, _T("Output: Output audio track #%d (stream index %d) to \"%s\", format: %s, codec %s, bitrate %d\n"),
+                    audioTrack.nTrackId, audioTrack.nIndex, pAudioSelect->pAudioExtractFilename, pAudioSelect->pAudioExtractFormat, pAudioSelect->pAVAudioEncodeCodec, pAudioSelect->nAVAudioEncodeBitrate);
+
+                AVOutputStreamPrm prm;
+                prm.src = audioTrack;
+                //pAudioSelect == nullptrは "copyAll" によるもの
+                prm.nBitrate = pAudioSelect->nAVAudioEncodeBitrate;
+                prm.pFilter = pAudioSelect->pAudioFilter;
+                prm.pEncodeCodec = pAudioSelect->pAVAudioEncodeCodec;
+                prm.nSamplingRate = pAudioSelect->nAudioSamplingRate;
+
+                AvcodecWriterPrm writerAudioPrm;
+                writerAudioPrm.nOutputThread   = pParams->nOutputThread;
+                writerAudioPrm.nAudioThread    = pParams->nAudioThread;
+                writerAudioPrm.nBufSizeMB      = pParams->nOutputBufSizeMB;
+                writerAudioPrm.pOutputFormat   = pAudioSelect->pAudioExtractFormat;
+                writerAudioPrm.nAudioIgnoreDecodeError = pParams->nAudioIgnoreDecodeError;
+                writerAudioPrm.nAudioResampler = pParams->nAudioResampler;
+                writerAudioPrm.inputStreamList.push_back(prm);
+                writerAudioPrm.pQueueInfo = nullptr;
+                if (m_pTrimParam) {
+                    writerAudioPrm.trimList = m_pTrimParam->list;
+                }
+                writerAudioPrm.nVideoInputFirstKeyPts = pAVCodecReader->GetVideoFirstKeyPts();
+                writerAudioPrm.pVideoInputCodecCtx = pAVCodecReader->GetInputVideoCodecCtx();
+
+                auto pWriter = std::make_shared<CAvcodecWriter>();
+                sts = pWriter->Init(pAudioSelect->pAudioExtractFilename, &writerAudioPrm, m_pVCELog, m_pEncSatusInfo);
+                if (sts < AMF_OK) {
+                    PrintMes(VCE_LOG_ERROR, pWriter->GetOutputMessage().c_str());
+                    return sts;
+                }
+                PrintMes(VCE_LOG_DEBUG, _T("Output: Intialized audio output for track #%d.\n"), audioTrack.nTrackId);
+                bool audioStdout = pWriter->outputStdout();
+                if (stdoutUsed && audioStdout) {
+                    PrintMes(VCE_LOG_ERROR, _T("Multiple stream outputs are set to stdout, please remove conflict.\n"));
+                    return AMF_INVALID_ARG;
+                }
+                stdoutUsed |= audioStdout;
+                m_pFileWriterListAudio.push_back(std::move(pWriter));
+            }
+        }
+    }
+#endif //ENABLE_AVCODEC_VCE_READER
+    return sts;
 }
 
 AMF_RESULT VCECore::initDevice(VCEParam *prm) {
