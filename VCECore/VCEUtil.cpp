@@ -70,6 +70,10 @@ unsigned int tchar_to_string(const TCHAR *tstr, std::string& str, DWORD codepage
 #endif
 }
 
+unsigned int tchar_to_string(const tstring& tstr, std::string& str, DWORD codepage) {
+    return tchar_to_string(tstr.c_str(), str, codepage);
+}
+
 std::string tchar_to_string(const TCHAR *tstr, DWORD codepage) {
     std::string str;
     tchar_to_string(tstr, str, codepage);
@@ -512,6 +516,25 @@ int vce_print_stderr(int log_level, const TCHAR *mes, HANDLE handle) {
         SetConsoleTextAttribute(handle, csbi.wAttributes); //元に戻す
     }
     return ret;
+}
+
+size_t malloc_degeneracy(void **ptr, size_t nSize, size_t nMinSize) {
+    *ptr = nullptr;
+    nMinSize = (std::max<size_t>)(nMinSize, 1);
+    //確保できなかったら、サイズを小さくして再度確保を試みる (最終的に1MBも確保できなかったら諦める)
+    while (nSize >= nMinSize) {
+        void *qtr = malloc(nSize);
+        if (qtr != nullptr) {
+            *ptr = qtr;
+            return nSize;
+        }
+        size_t nNextSize = 0;
+        for (size_t i = nMinSize; i < nSize; i<<=1) {
+            nNextSize = i;
+        }
+        nSize = nNextSize;
+    }
+    return 0;
 }
 
 BOOL is_64bit_os() {

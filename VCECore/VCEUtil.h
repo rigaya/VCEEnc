@@ -30,10 +30,14 @@
 #include <string>
 #include <algorithm>
 #include <vector>
+#include <array>
 #include <type_traits>
 #include <tchar.h>
 #include <cstdint>
 #include <memory>
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <Windows.h>
 
 enum VCELogLevel {
     VCE_LOG_TRACE = -3,
@@ -163,6 +167,7 @@ unsigned int wstring_to_string(const WCHAR *wstr, std::string& str, DWORD codepa
 std::string wstring_to_string(const WCHAR *wstr, DWORD codepage = CP_THREAD_ACP);
 std::string wstring_to_string(const std::wstring& wstr, DWORD codepage = CP_THREAD_ACP);
 unsigned int tchar_to_string(const TCHAR *tstr, std::string& str, DWORD codepage = CP_THREAD_ACP);
+unsigned int tchar_to_string(const tstring& tstr, std::string& str, DWORD codepage = CP_THREAD_ACP);
 std::string tchar_to_string(const TCHAR *tstr, DWORD codepage = CP_THREAD_ACP);
 std::string tchar_to_string(const tstring& tstr, DWORD codepage = CP_THREAD_ACP);
 unsigned int char_to_tstring(tstring& tstr, const char *str, DWORD codepage = CP_THREAD_ACP);
@@ -193,7 +198,9 @@ std::wstring GetFullPath(const WCHAR *path);
 bool vce_get_filesize(const char *filepath, uint64_t *filesize);
 bool vce_get_filesize(const WCHAR *filepath, UINT64 *filesize);
 std::pair<int, std::string> PathRemoveFileSpecFixed(const std::string& path);
+std::pair<int, std::wstring> PathRemoveFileSpecFixed(const std::wstring& path);
 bool CreateDirectoryRecursive(const char *dir);
+bool CreateDirectoryRecursive(const WCHAR *dir);
 
 static const int VCE_TIMEBASE = 90000;
 
@@ -239,6 +246,8 @@ static std::basic_string<type> repeatStr(std::basic_string<type> str, int count)
 
 bool check_ext(const TCHAR *filename, const std::vector<const char*>& ext_list);
 
+size_t malloc_degeneracy(void **ptr, size_t nSize, size_t nMinSize);
+
 tstring getOSVersion(OSVERSIONINFOEXW *osinfo = nullptr);
 BOOL is_64bit_os();
 
@@ -253,7 +262,11 @@ struct sBitstream {
     uint32_t DataLength;
     uint32_t MaxLength;
     uint64_t TimeStamp;
-    uint64_t DecodedTimeStamp;
+    uint64_t DecodeTimeStamp;
+    int      FrameType;
+    int      DataFlag;
+    int      PictStruct;
+    int      RepeatPict;
 };
 
 int bitstreamInit(sBitstream *pBitstream, uint32_t nSize);
