@@ -50,9 +50,17 @@ enum {
 enum {
     VCE_CODEC_NONE = 0,
     VCE_CODEC_H264,
+    VCE_CODEC_SVC,
+    VCE_CODEC_HEVC,
     VCE_CODEC_MPEG2,
     VCE_CODEC_VC1,
     VCE_CODEC_WMV3
+};
+
+static const wchar_t *list_codecs[] = {
+    L"Unknown",
+    AMFVideoEncoderVCE_AVC,
+    AMFVideoEncoderVCE_SVC
 };
 
 enum {
@@ -177,11 +185,6 @@ typedef struct {
     TCHAR *desc;
     int value;
 } CX_DESC;
-
-static const wchar_t *list_codecs[] = {
-    AMFVideoEncoderVCE_AVC,
-    AMFVideoEncoderVCE_SVC
-};
 
 const CX_DESC list_log_level[] = {
     { _T("trace"), VCE_LOG_TRACE },
@@ -332,6 +335,12 @@ static int get_value_from_chr(const CX_DESC *list, const TCHAR *chr) {
             return list[i].value;
     return PARSE_ERROR_FLAG;
 }
+static const TCHAR *get_chr_from_value(const CX_DESC *list, int v) {
+    for (int i = 0; list[i].desc; i++)
+        if (list[i].value == v)
+            return list[i].desc;
+    return _T("unknown");
+}
 
 typedef struct {
     int num, den;
@@ -361,6 +370,15 @@ typedef struct {
     int     nProfile;
     int     nLevel;
 } VCECodecParam;
+
+typedef struct {
+    int infoPresent;
+    int colormatrix;
+    int colorprim;
+    int transfer;
+    int videoformat;
+    int fullrange;
+} VCEVuiInfo;
 
 typedef struct {
     amf::AMF_MEMORY_TYPE memoryTypeIn;
@@ -402,6 +420,13 @@ typedef struct {
     const TCHAR *pOutputFile;
     const TCHAR *pStrLog;
 
+    int VuiEnable;
+    int VideoFormat;
+    int ColorMatrix;
+    int ColorPrim;
+    int Transfer;
+    bool bFullrange;
+
     int     nVideoTrack;
     int     nVideoStreamId;
     int     bCopyChapter;
@@ -434,6 +459,10 @@ typedef struct {
     int         bAudioIgnoreNoTrackError;
     float       fSeekSec; //指定された秒数分先頭を飛ばす
     TCHAR      *pFramePosListLog;
+
+    int         nOutputBufSizeMB;
+
+    VCEVuiInfo  vui;
 } VCEParam;
 
 bool is_interlaced(VCEParam *prm);
@@ -452,3 +481,5 @@ static const int VCE_MAX_BFRAMES = 3;
 static const int VCE_MAX_BITRATE = 100000;
 static const int VCE_MAX_GOP_LEN = 1000;
 static const int VCE_MAX_B_DELTA_QP = 10;
+
+static const int VCE_OUTPUT_BUF_MB_MAX = 128;

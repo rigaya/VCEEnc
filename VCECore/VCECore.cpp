@@ -692,6 +692,9 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
         PrintMes(VCE_LOG_ERROR, _T("Invalid output frame size - non mod%d (height: %d).\n"), h_mul, m_inputInfo.dstHeight);
         return AMF_FAIL;
     }
+    if (prm->nCodecId == VCE_CODEC_NONE) {
+        prm->nCodecId = VCE_CODEC_H264;
+    }
     if (prm->nBframes > VCE_MAX_BFRAMES) {
         PrintMes(VCE_LOG_WARN, _T("Maximum consecutive B frames is %d.\n"), VCE_MAX_BFRAMES);
         prm->nBframes = VCE_MAX_BFRAMES;
@@ -1223,7 +1226,7 @@ bool check_if_vce_available(tstring& mes) {
             || count == 0
             || AMF_OK != AMFCreateContext(&pContext)
             || AMF_OK != pContext->InitDX9(deviceDX9.GetDevice())
-            || AMF_OK != AMFCreateComponent(pContext, list_codecs[0], &pEncoder)) {
+            || AMF_OK != AMFCreateComponent(pContext, list_codecs[VCE_CODEC_H264], &pEncoder)) {
             ret = false;
             mes = _T("System has no GPU supporting VCE.");
         }

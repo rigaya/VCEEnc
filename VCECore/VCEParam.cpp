@@ -36,10 +36,10 @@ bool is_interlaced(VCEParam *prm) {
 void init_vce_param(VCEParam *prm) {
     memset(prm, 0, sizeof(prm[0]));
     prm->memoryTypeIn = amf::AMF_MEMORY_DX9;
-    prm->nCodecId     = 0;
+    prm->nCodecId     = VCE_CODEC_H264;
     prm->nUsage       = AMF_VIDEO_ENCODER_USAGE_TRANSCONDING;
-    prm->codecParam[prm->nCodecId].nLevel   = list_avc_level[0].value;
-    prm->codecParam[prm->nCodecId].nProfile = list_avc_profile[2].value;
+    prm->codecParam[VCE_CODEC_H264].nLevel   = list_avc_level[0].value;
+    prm->codecParam[VCE_CODEC_H264].nProfile = list_avc_profile[2].value;
     prm->nInterlaced = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME;
 
     prm->bTimerPeriodTuning = TRUE;
@@ -65,4 +65,13 @@ void init_vce_param(VCEParam *prm) {
     prm->nIDRPeriod = 1;
     prm->nSlices = 1;
     prm->nMotionEst = VCE_MOTION_EST_QUATER | VCE_MOTION_EST_HALF;
+    prm->nOutputBufSizeMB = 8;
+    prm->nInputThread = VCE_INPUT_THREAD_AUTO;
+    prm->nAudioThread = VCE_AUDIO_THREAD_AUTO;
+    prm->nOutputThread = VCE_OUTPUT_THREAD_AUTO;
+
+    prm->VideoFormat = get_value_from_chr(list_videoformat, _T("undef"));
+    prm->ColorMatrix = get_value_from_chr(list_colormatrix, _T("undef"));
+    prm->ColorPrim   = get_value_from_chr(list_colorprim,   _T("undef"));
+    prm->Transfer    = get_value_from_chr(list_transfer,    _T("undef"));
 }
