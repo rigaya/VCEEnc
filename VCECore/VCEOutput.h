@@ -40,12 +40,24 @@
 #include "VCEParam.h"
 #include "VCEStatus.h"
 
+struct AVOutputVideoPrm;
+
+struct VCEOutRawParam {
+    int  nBufSizeMB;
+};
+
 class VCEOutput : public PipelineElement {
 public:
     VCEOutput();
     virtual ~VCEOutput();
 
-    virtual AMF_RESULT init(const tstring& dstFile, shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pStatus);
+    virtual AMF_RESULT Init(const tstring& dstFile, const void *pOption, shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pEncSatusInfo);
+#pragma warning(push)
+#pragma warning(disable: 4100)
+    virtual AMF_RESULT SetVideoParam(AVOutputVideoPrm *pVidPrm, amf::AMFBufferPtr pExtradata) {
+        return AMF_NOT_SUPPORTED;
+    }
+#pragma warning(pop)
     virtual AMF_RESULT close();
     virtual tstring GetOutputMessage() {
         return m_strOutputInfo;

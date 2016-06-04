@@ -44,7 +44,8 @@ VCEOutput::~VCEOutput() {
     close();
 }
 
-AMF_RESULT VCEOutput::init(const tstring& dstFile, shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pStatus) {
+AMF_RESULT VCEOutput::Init(const tstring& dstFile, const void *pOption, shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pEncSatusInfo) {
+    pOption = nullptr; //ここでは使用しない
     m_pPrintMes = pLog;
     m_pEncSatusInfo = pEncSatusInfo;
     if (dstFile == _T("-")) {
