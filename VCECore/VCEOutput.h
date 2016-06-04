@@ -47,8 +47,8 @@ public:
 
     virtual AMF_RESULT init(const tstring& dstFile, shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pStatus);
     virtual AMF_RESULT close();
-    virtual tstring getMessage() {
-        return m_message;
+    virtual tstring GetOutputMessage() {
+        return m_strOutputInfo;
     }
 
     virtual amf_int32 GetOutputSlotCount() override {
@@ -58,20 +58,20 @@ public:
     virtual AMF_RESULT QueryOutput(amf::AMFData** ppData) override;
     virtual std::wstring GetDisplayResult() override;
 
-private:
+protected:
     void AddMessage(int log_level, const tstring& str) {
-        if (m_pVCELog == nullptr || log_level < m_pVCELog->getLogLevel()) {
+        if (m_pPrintMes == nullptr || log_level < m_pPrintMes->getLogLevel()) {
             return;
         }
         auto lines = split(str, _T("\n"));
         for (const auto& line : lines) {
             if (line[0] != _T('\0')) {
-                m_pVCELog->write(log_level, (m_strWriterName + _T(": ") + line + _T("\n")).c_str());
+                m_pPrintMes->write(log_level, (m_strWriterName + _T(": ") + line + _T("\n")).c_str());
             }
         }
     }
     void AddMessage(int log_level, const TCHAR *format, ...) {
-        if (m_pVCELog == nullptr || log_level < m_pVCELog->getLogLevel()) {
+        if (m_pPrintMes == nullptr || log_level < m_pPrintMes->getLogLevel()) {
             return;
         }
 
@@ -86,7 +86,7 @@ private:
     }
     tstring m_strWriterName;
     AMFDataStreamPtr m_pDataStream;
-    shared_ptr<VCELog> m_pVCELog;
-    shared_ptr<VCEStatus> m_pStatus;
-    tstring m_message;
+    shared_ptr<VCELog> m_pPrintMes;
+    shared_ptr<VCEStatus> m_pEncSatusInfo;
+    tstring m_strOutputInfo;
 };

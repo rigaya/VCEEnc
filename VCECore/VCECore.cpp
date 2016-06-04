@@ -734,9 +734,9 @@ AMF_RESULT VCECore::initOutput(VCEParam *prm) {
 
     m_pOutput.reset(new VCEOutput());
 
-    auto ret = m_pOutput->init(prm->pOutputFile, m_pVCELog, m_pStatus);
+    auto ret = m_pOutput->Init(prm->pOutputFile, m_pVCELog, m_pStatus);
     if (ret != AMF_OK) {
-        PrintMes(VCE_LOG_ERROR, _T("Error: %s\n"), m_pOutput->getMessage().c_str());
+        PrintMes(VCE_LOG_ERROR, _T("Error: %s\n"), m_pOutput->GetOutputMessage().c_str());
         return ret;
     }
     return ret;

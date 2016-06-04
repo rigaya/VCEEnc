@@ -36,7 +36,7 @@
 #include "VCELog.h"
 
 VCEOutput::VCEOutput() :
-    m_pVCELog(), m_pStatus(), m_message(), m_strWriterName(_T("raw writer")) {
+    m_pPrintMes(), m_pEncSatusInfo(), m_strOutputInfo(), m_strWriterName(_T("raw writer")) {
 
 }
 
@@ -45,8 +45,8 @@ VCEOutput::~VCEOutput() {
 }
 
 AMF_RESULT VCEOutput::init(const tstring& dstFile, shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pStatus) {
-    m_pVCELog = pLog;
-    m_pStatus = pStatus;
+    m_pPrintMes = pLog;
+    m_pEncSatusInfo = pEncSatusInfo;
     if (dstFile == _T("-")) {
         AddMessage(VCE_LOG_ERROR, _T("pipe output not supported.\n"));
         return AMF_FILE_NOT_OPEN;
@@ -62,9 +62,9 @@ AMF_RESULT VCEOutput::init(const tstring& dstFile, shared_ptr<VCELog> pLog, shar
 
 AMF_RESULT VCEOutput::close() {
     AddMessage(VCE_LOG_DEBUG, _T("Closing VCEOutput.\n"));
-    m_pVCELog.reset();
-    m_pStatus.reset();
-    m_message.clear();
+    m_pPrintMes.reset();
+    m_pEncSatusInfo.reset();
+    m_strOutputInfo.clear();
     return AMF_OK;
 }
 
@@ -76,7 +76,7 @@ AMF_RESULT VCEOutput::SubmitInput(amf::AMFData* pData) {
         amf_size towrite = pBuffer->GetSize();
         amf_size written = m_pDataStream->Write(pBuffer->GetNative(), towrite);
 
-        m_pStatus->SetOutputData(written, 0x00);
+        m_pEncSatusInfo->SetOutputData(written, 0x00);
     } else {
         res = AMF_EOF;
     }
