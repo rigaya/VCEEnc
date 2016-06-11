@@ -289,16 +289,16 @@ VCECoreAuo::~VCECoreAuo() {
 }
 
 AMF_RESULT VCECoreAuo::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo) {
-    m_pVCELog.reset(new AuoLog(pParams->pStrLog, pParams->nLogLevel));
-    m_pStatus.reset(new AuoStatus());
+    m_pVCELog.reset(new AuoLog(pParams->pStrLogFile, pParams->nLogLevel));
+    m_pEncSatusInfo.reset(new AuoStatus());
     m_pFileReader.reset(new VCEInputAuo());
 
-    auto ret = m_pFileReader->init(m_pVCELog, m_pStatus, &m_inputInfo, m_pContext);
+    auto ret = m_pFileReader->init(m_pVCELog, m_pEncSatusInfo, &m_inputInfo, m_pContext);
     if (ret != AMF_OK) {
         PrintMes(VCE_LOG_ERROR, _T("Error: %s\n"), m_pFileReader->getMessage().c_str());
         return ret;
     }
     m_inputInfo = m_pFileReader->GetInputFrameInfo();
-    m_pStatus->init(m_pVCELog, m_inputInfo.fps, m_inputInfo.frames);
+    m_pEncSatusInfo->init(m_pVCELog, m_inputInfo.fps, m_inputInfo.frames);
     return ret;
 }
