@@ -73,7 +73,7 @@ AMF_RESULT VCEStatus::init(shared_ptr<VCELog> pLog, VCERational outputFps, int t
 
 void VCEStatus::SetStart() {
     m_tmStart = std::chrono::system_clock::now();
-    GetProcessTime(GetCurrentProcess(), &m_sStartTime);
+    GetProcessTime(&m_sStartTime);
 }
 
 void VCEStatus::close() {

@@ -404,6 +404,14 @@ BOOL GetProcessTime(HANDLE hProcess, PROCESS_TIME *time) {
         && (WAIT_OBJECT_0 == WaitForSingleObject(hProcess, 0) || SystemTimeToFileTime(&systime, (FILETIME *)&time->exit)));
 }
 
+BOOL GetProcessTime(PROCESS_TIME *time) {
+#if defined(_WIN32) || defined(_WIN64)
+    return GetProcessTime(GetCurrentProcess(), time);
+#else
+    return GetProcessTime(NULL, time);
+#endif
+}
+
 double GetProcessAvgCPUUsage(HANDLE hProcess, PROCESS_TIME *start) {
     PROCESS_TIME current = { 0 };
     cpu_info_t cpu_info;
@@ -416,4 +424,12 @@ double GetProcessAvgCPUUsage(HANDLE hProcess, PROCESS_TIME *start) {
         result = (current_total_time - start_total_time) * 100.0 / (double)(cpu_info.logical_cores * (current.exit - ((nullptr == start) ? current.creation : start->exit)));
     }
     return result;
+}
+
+double GetProcessAvgCPUUsage(PROCESS_TIME *start) {
+#if defined(_WIN32) || defined(_WIN64)
+    return GetProcessAvgCPUUsage(GetCurrentProcess(), start);
+#else
+    return GetProcessAvgCPUUsage(NULL, start);
+#endif
 }
