@@ -30,6 +30,8 @@
 #include "VideoEncoderVCE.h"
 #include "VCEUtil.h"
 
+typedef AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM VCE_PICSTRUCT;
+
 enum {
     VCE_RC_CQP = 0,
     VCE_RC_CBR = 3,
@@ -361,7 +363,7 @@ typedef struct {
     int AspectRatioW;
     int AspectRatioH;
     sInputCrop crop;
-    int interlaced;
+    VCE_PICSTRUCT nPicStruct;
     amf::AMF_SURFACE_FORMAT format;
     void *pPrivateParam;
 } VCEInputInfo;
@@ -399,7 +401,7 @@ typedef struct {
     int     nSlices;
     int     nMaxLTR;
     int     bTimerPeriodTuning;
-    int     nInterlaced;
+    VCE_PICSTRUCT nPicStruct;
 
     int     bDeblockFilter;
     int     bEnableSkipFrame;
@@ -465,7 +467,14 @@ typedef struct {
     VCEVuiInfo  vui;
 } VCEParam;
 
-bool is_interlaced(VCEParam *prm);
+static bool is_interlaced(VCE_PICSTRUCT nInterlaced) {
+    return nInterlaced == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD
+        || nInterlaced == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD;
+}
+
+static bool is_interlaced(VCEParam *prm) {
+    return is_interlaced(prm->nPicStruct);
+}
 
 void init_vce_param(VCEParam *prm);
 

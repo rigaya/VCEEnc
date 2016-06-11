@@ -28,11 +28,6 @@
 #include "VCEUtil.h"
 #include "VCEParam.h"
 
-bool is_interlaced(VCEParam *prm) {
-    return prm->nInterlaced == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD
-        || prm->nInterlaced == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD;
-}
-
 void init_vce_param(VCEParam *prm) {
     memset(prm, 0, sizeof(prm[0]));
     prm->memoryTypeIn = amf::AMF_MEMORY_DX9;
@@ -40,7 +35,7 @@ void init_vce_param(VCEParam *prm) {
     prm->nUsage       = AMF_VIDEO_ENCODER_USAGE_TRANSCONDING;
     prm->codecParam[VCE_CODEC_H264].nLevel   = list_avc_level[0].value;
     prm->codecParam[VCE_CODEC_H264].nProfile = list_avc_profile[2].value;
-    prm->nInterlaced = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME;
+    prm->nPicStruct = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME;
 
     prm->bTimerPeriodTuning = TRUE;
 

@@ -188,7 +188,7 @@ AMF_RESULT VCEInputAuo::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pSta
     }
     tstring mes = strsprintf(_T("auo: %s->%s[%s], %dx%d%s, %d/%d fps"),
         VCE_CSP_NAMES[m_pConvertCsp->csp_from], VCE_CSP_NAMES[m_pConvertCsp->csp_to], get_simd_str(m_pConvertCsp->simd),
-        m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcHeight, m_inputFrameInfo.interlaced ? _T("i") : _T("p"), m_inputFrameInfo.fps.num, m_inputFrameInfo.fps.den);
+        m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcHeight, is_interlaced(m_inputFrameInfo.nPicStruct) ? _T("i") : _T("p"), m_inputFrameInfo.fps.num, m_inputFrameInfo.fps.den);
     AddMessage(VCE_LOG_DEBUG, _T("%s\n"), mes.c_str());
     m_strInputInfo += mes;
     return AMF_OK;
@@ -255,7 +255,7 @@ AMF_RESULT VCEInputAuo::QueryOutput(amf::AMFData** ppData) {
     dst_ptr[0] = (uint8_t *)plane->GetNative();
     dst_ptr[1] = (uint8_t *)dst_ptr[0] + dst_height * dst_stride;
     int crop[4] = { 0 };
-    m_pConvertCsp->func[!!m_inputFrameInfo.interlaced](dst_ptr, &frame, m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcWidth * 2, 0, dst_stride, m_inputFrameInfo.srcHeight, dst_height, crop);
+    m_pConvertCsp->func[is_interlaced(m_inputFrameInfo.nPicStruct) ? 1 : 0](dst_ptr, &frame, m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcWidth * 2, 0, dst_stride, m_inputFrameInfo.srcHeight, dst_height, crop);
 
     m_pEncSatusInfo->m_nInputFrames++;
     if (!(m_pEncSatusInfo->m_nInputFrames & 7))

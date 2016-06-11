@@ -814,7 +814,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     fcgCBBPyramid->Checked           = cnf->vce.bBPyramid != 0;
     SetCXIndex(fcgCXCodecLevel,        get_cx_index(list_avc_level, cnf->vce.codecParam[cnf->vce.nCodecId].nLevel));
     SetCXIndex(fcgCXCodecProfile,      get_cx_index(list_avc_profile, cnf->vce.codecParam[cnf->vce.nCodecId].nProfile));
-    SetCXIndex(fcgCXInterlaced,        get_cx_index(list_interlaced, cnf->vce.nInterlaced));
+    SetCXIndex(fcgCXInterlaced,        get_cx_index(list_interlaced, cnf->vce.nPicStruct));
     /*if (cnf->qsv.nPAR[0] * cnf->qsv.nPAR[1] <= 0)
         cnf->qsv.nPAR[0] = cnf->qsv.nPAR[1] = 0;
     SetCXIndex(fcgCXAspectRatio, (cnf->qsv.nPAR[0] < 0));
@@ -902,7 +902,7 @@ System::Void frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     cnf->vce.nDeltaQPBFrame                          = (int)fcgNUBDeltaQP->Value;
     cnf->vce.nDeltaQPBFrameRef                       = (int)fcgNUBRefDeltaQP->Value;
 
-    cnf->vce.nInterlaced                             = list_interlaced[fcgCXInterlaced->SelectedIndex].value;
+    cnf->vce.nPicStruct                              = (VCE_PICSTRUCT)list_interlaced[fcgCXInterlaced->SelectedIndex].value;
     cnf->vce.nSlices                                 = (int)fcgNUSlices->Value;
 
     cnf->vce.bDeblockFilter                          = fcgCBDeblock->Checked;

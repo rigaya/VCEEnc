@@ -764,7 +764,7 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
         writerPrm.vidPrm.nCodecProfile = pParams->codecParam[pParams->nCodecId].nProfile;
         writerPrm.vidPrm.nEncWidth = m_inputInfo.dstWidth;
         writerPrm.vidPrm.nEncHeight = m_inputInfo.dstHeight;
-        writerPrm.vidPrm.nInterlaced = m_inputInfo.interlaced;
+        writerPrm.vidPrm.nPicStruct = m_inputInfo.nPicStruct;
         writerPrm.vidPrm.sar = std::make_pair(m_inputInfo.AspectRatioW, m_inputInfo.AspectRatioH);
         writerPrm.vidPrm.outFps = av_make_q(m_inputInfo.fps.num, m_inputInfo.fps.den);
         writerPrm.vidPrm.nBframes = pParams->nBframes;
@@ -1157,7 +1157,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     m_Params.SetParam(AMF_VIDEO_ENCODER_USAGE,              (amf_int64)AMF_VIDEO_ENCODER_USAGE_TRANSCONDING);
     m_Params.SetParam(AMF_VIDEO_ENCODER_PROFILE,            (amf_int64)prm->codecParam[prm->nCodecId].nProfile);
     //m_Params.SetParam(AMF_VIDEO_ENCODER_PROFILE_LEVEL,      (amf_int64)prm->codecParam[prm->nCodecId].nLevel);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)is_interlaced(prm));
+    m_Params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)(is_interlaced(prm) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
     m_Params.SetParam(AMF_VIDEO_ENCODER_QUALITY_PRESET,     (amf_int64)prm->nQualityPreset);
 
     m_Params.SetParam(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP,     (amf_int64)prm->nDeltaQPBFrame);
@@ -1374,7 +1374,7 @@ tstring VCECore::GetEncoderParam() {
     mes += strsprintf(_T("Output:        H.264/AVC %s @ %s %dx%d%s %d/%d(%.3f) fps\n"),
         getPropertyDesc(AMF_VIDEO_ENCODER_PROFILE, list_avc_profile).c_str(),
         getPropertyDesc(AMF_VIDEO_ENCODER_PROFILE_LEVEL, list_avc_level).c_str(),
-        frameSize.width, frameSize.height, GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE) ? _T("i") : _T("p"), frameRate.num, frameRate.den, frameRate.num / (double)frameRate.den);
+        frameSize.width, frameSize.height, GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE) == AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED ? _T("i") : _T("p"), frameRate.num, frameRate.den, frameRate.num / (double)frameRate.den);
     mes += strsprintf(_T("Quality:       %s\n"), getPropertyDesc(AMF_VIDEO_ENCODER_QUALITY_PRESET, list_vce_quality_preset).c_str());
     if (GetPropertyInt(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD) == AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTRAINED_QP) {
         mes += strsprintf(_T("CQP:           I:%d, P:%d"),

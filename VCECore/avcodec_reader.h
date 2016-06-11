@@ -441,7 +441,7 @@ public:
         }
     }
     //mfxのpicstructを返す
-    int getPicStruct() {
+    VCE_PICSTRUCT getPicStruct() {
         const uint8_t bottomFeildMask = (AVVCE_PICSTRUCT_FRAME_BFF | AVVCE_PICSTRUCT_FIELD_BOTTOM) & (~AVVCE_PICSTRUCT_FIELD) & ~(AVVCE_PICSTRUCT_FRAME);
         const int nListSize = (int)m_list.size();
         for (int i = 0; i < nListSize; i++) {

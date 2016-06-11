@@ -221,7 +221,7 @@ struct AVOutputVideoPrm {
     int                          nCodecProfile;
     int                          nEncWidth;
     int                          nEncHeight;
-    int                          nInterlaced;
+    VCE_PICSTRUCT                nPicStruct;
     std::pair<int, int>          sar;
     AVRational                   outFps;
     int                          nBframes;

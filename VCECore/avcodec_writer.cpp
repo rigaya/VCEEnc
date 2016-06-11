@@ -529,7 +529,7 @@ AMF_RESULT CAvcodecWriter::InitVideo(const AvcodecWriterPrm *prm) {
     if (m_Mux.format.bIsMatroska) {
         m_Mux.video.pStream->time_base = av_make_q(1, 1000);
     }
-    if (prm->vidPrm.nInterlaced != AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME) {
+    if (is_interlaced(prm->vidPrm.nPicStruct)) {
         m_Mux.video.pStream->time_base.den *= 2;
     }
 #if !USE_AVCODECPAR
@@ -1681,7 +1681,7 @@ AMF_RESULT CAvcodecWriter::SetVideoParam(AVOutputVideoPrm *pVidPrm, amf::AMFBuff
             //    return sts;
             //}
         }
-        m_Mux.video.bIsPAFF = pVidPrm->nInterlaced != 0;
+        m_Mux.video.bIsPAFF = pVidPrm->nPicStruct != 0;
         if (m_Mux.video.bIsPAFF) {
             AddMessage(VCE_LOG_DEBUG, _T("output is PAFF.\n"));
         }

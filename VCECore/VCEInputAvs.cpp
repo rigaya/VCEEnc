@@ -155,7 +155,7 @@ AMF_RESULT VCEInputAvs::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pSta
     tstring mes = strsprintf(_T("Avisynth %s %s->%s[%s], %dx%d%s, %d/%d fps"),
         avisynth_version.c_str(),
         VCE_CSP_NAMES[m_pConvertCsp->csp_from], VCE_CSP_NAMES[m_pConvertCsp->csp_to], get_simd_str(m_pConvertCsp->simd),
-        m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcHeight, m_inputFrameInfo.interlaced ? _T("i") : _T("p"), m_inputFrameInfo.fps.num, m_inputFrameInfo.fps.den);
+        m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcHeight, is_interlaced(m_inputFrameInfo.nPicStruct) ? _T("i") : _T("p"), m_inputFrameInfo.fps.num, m_inputFrameInfo.fps.den);
 
     AddMessage(VCE_LOG_DEBUG, _T("%s\n"), mes.c_str());
     m_strInputInfo += mes;
@@ -211,7 +211,7 @@ AMF_RESULT VCEInputAvs::QueryOutput(amf::AMFData **ppData) {
     void *dst_ptr[2];
     dst_ptr[0] = (uint8_t *)plane->GetNative();
     dst_ptr[1] = (uint8_t *)dst_ptr[0] + dst_height * dst_stride;
-    m_pConvertCsp->func[!!m_inputFrameInfo.interlaced](dst_ptr, src_ptr, m_inputFrameInfo.srcWidth, avs_get_pitch_p(frame, AVS_PLANAR_Y), avs_get_pitch_p(frame, AVS_PLANAR_U), dst_stride, m_inputFrameInfo.srcHeight, dst_height, m_inputFrameInfo.crop.c);
+    m_pConvertCsp->func[is_interlaced(m_inputFrameInfo.nPicStruct) ? 1 : 0](dst_ptr, src_ptr, m_inputFrameInfo.srcWidth, avs_get_pitch_p(frame, AVS_PLANAR_Y), avs_get_pitch_p(frame, AVS_PLANAR_U), dst_stride, m_inputFrameInfo.srcHeight, dst_height, m_inputFrameInfo.crop.c);
     m_pEncSatusInfo->m_nInputFrames++;
 
     m_sAvisynth.release_video_frame(frame);

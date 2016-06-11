@@ -133,7 +133,7 @@ enum AVQSVFormatType : uint32_t {
 };
 
 //AVFieldOrderを返す
-AVFieldOrder vce_field_order(int nInterlaced);
+AVFieldOrder vce_field_order(VCE_PICSTRUCT nInterlaced);
 
 //avcodecのエラーを表示
 tstring qsv_av_err2str(int ret);

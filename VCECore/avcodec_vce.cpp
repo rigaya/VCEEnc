@@ -86,11 +86,11 @@ bool checkAvcodecLicense() {
 }
 
 //AVFieldOrderを返す
-AVFieldOrder vce_field_order(int nInterlaced) {
-    if (nInterlaced == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD) {
+AVFieldOrder vce_field_order(VCE_PICSTRUCT nPicStruct) {
+    if (nPicStruct == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD) {
         return AV_FIELD_TT;
     }
-    if (nInterlaced == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD) {
+    if (nPicStruct == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD) {
         return AV_FIELD_BB;
     }
     return AV_FIELD_PROGRESSIVE;

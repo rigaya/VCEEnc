@@ -1002,7 +1002,7 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
         m_inputFrameInfo.AspectRatioH = ((bAspectRatioUnknown) ? 0 : aspectRatio.den);
         m_inputFrameInfo.frames       = 0;
         //インタレの可能性があるときは、MFX_PICSTRUCT_UNKNOWNを返すようにする
-        m_inputFrameInfo.interlaced      = m_Demux.frames.getPicStruct();
+        m_inputFrameInfo.nPicStruct   = m_Demux.frames.getPicStruct();
 
         tstring mes = strsprintf(_T("avcodec video: %s, %dx%d, %d/%d fps"), CodecIdToStr(m_nInputCodec),
             m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcHeight, m_inputFrameInfo.fps.num, m_inputFrameInfo.fps.den);
