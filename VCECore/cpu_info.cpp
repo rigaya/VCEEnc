@@ -239,7 +239,7 @@ static unsigned int __stdcall getCPUClockMaxSubFunc(void *arg) {
     UINT64 *prm = (UINT64 *)arg;
     //渡されたスレッドIDからスレッドAffinityを決定
     //特定のコアにスレッドを縛り付ける
-    SetThreadAffinityMask(GetCurrentThread(), 1 << (int)*prm);
+    SetThreadAffinityMask(GetCurrentThread(), (size_t)1 << (int)*prm);
     //高優先度で実行
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
