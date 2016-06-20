@@ -207,15 +207,143 @@ static tstring help() {
         _T("-o,--output-file <filename>     set ouput file name\n")
         _T("\n")
         _T("   --check-vce                  check for vce support on system.\n")
-        _T("\n")
+#if ENABLE_AVCODEC_VCE_READER
+        _T("   --check-avversion            show dll version\n")
+        _T("   --check-codecs               show codecs available\n")
+        _T("   --check-encoders             show audio encoders available\n")
+        _T("   --check-decoders             show audio decoders available\n")
+        _T("   --check-formats              show in/out formats available\n")
+        _T("   --check-protocols            show in/out protocols available\n")
+        _T("   --check-filters              show filters available\n")
+#endif
+        _T("\n"),
+        (ENABLE_AVISYNTH_READER)    ? _T("avs, ") : _T(""),
+        (ENABLE_VAPOURSYNTH_READER) ? _T("vpy, ") : _T(""));
+    str += strsprintf(_T("\n")
         _T(" Input formats (will be estimated from extension if not set.)\n")
         _T("   --raw                        set input as raw format\n")
         _T("   --y4m                        set input as y4m format\n")
+#if ENABLE_AVISYNTH_READER
         _T("   --avs                        set input as avs format\n")
+#endif
+#if ENABLE_VAPOURSYNTH_READER
         _T("   --vpy                        set input as vpy format\n")
         _T("   --vpy-mt                     set input as vpy format in multi-thread\n")
+#endif
+        );
+#if ENABLE_AVCODEC_VCE_READER
+    str += strsprintf(
+        _T("   --avvce                      set input to use avcodec + vce\n")
+        _T("   --avvce-analyze <int>        set time (sec) which reader analyze input file.\n")
+        _T("                                 default: 5 (seconds).\n")
+        _T("                                 could be only used with avvce reader.\n")
+        _T("                                 use if reader fails to detect audio stream.\n")
+        _T("   --video-track <int>          set video track to encode in track id\n")
+        _T("                                 1 (default)  highest resolution video track\n")
+        _T("                                 2            next high resolution video track\n")
+        _T("                                   ... \n")
+        _T("                                 -1           lowest resolution video track\n")
+        _T("                                 -2           next low resolution video track\n")
+        _T("                                   ... \n")
+        _T("   --video-streamid <int>       set video track to encode in stream id\n")
+        _T("   --audio-source <string>      input extra audio file\n")
+        _T("   --audio-file [<int>?][<string>:]<string>\n")
+        _T("                                extract audio into file.\n")
+        _T("                                 could be only used with avvce reader.\n")
+        _T("                                 below are optional,\n")
+        _T("                                  in [<int>?], specify track number to extract.\n")
+        _T("                                  in [<string>?], specify output format.\n")
+        _T("   --trim <int>:<int>[,<int>:<int>]...\n")
+        _T("                                trim video for the frame range specified.\n")
+        _T("                                 frame range should not overwrap each other.\n")
+        _T("   --seek [<int>:][<int>:]<int>[.<int>] (hh:mm:ss.ms)\n")
+        _T("                                skip video for the time specified,\n")
+        _T("                                 seek will be inaccurate but fast.\n")
+        _T("-f,--format <string>            set output format of output file.\n")
+        _T("                                 if format is not specified, output format will\n")
+        _T("                                 be guessed from output file extension.\n")
+        _T("                                 set \"raw\" for H.264/ES output.\n")
+        _T("   --audio-copy [<int>[,...]]   mux audio with video during output.\n")
+        _T("                                 could be only used with\n")
+        _T("                                 avvce reader and avcodec muxer.\n")
+        _T("                                 by default copies all audio tracks.\n")
+        _T("                                 \"--audio-copy 1,2\" will extract\n")
+        _T("                                 audio track #1 and #2.\n")
+        _T("   --audio-codec [<int>?]<string>\n")
+        _T("                                encode audio to specified format.\n")
+        _T("                                  in [<int>?], specify track number to encode.\n")
+        _T("   --audio-bitrate [<int>?]<int>\n")
+        _T("                                set encode bitrate for audio (kbps).\n")
+        _T("                                  in [<int>?], specify track number of audio.\n")
+        _T("   --audio-ignore-decode-error <int>  (default: %d)\n")
+        _T("                                set numbers of continuous packets of audio\n")
+        _T("                                 decode error to ignore, replaced by silence.\n")
+        _T("   --audio-ignore-notrack-error ignore error when audio track is unfound.\n")
+        _T("   --audio-samplerate [<int>?]<int>\n")
+        _T("                                set sampling rate for audio (Hz).\n")
+        _T("                                  in [<int>?], specify track number of audio.\n")
+        _T("   --audio-resampler <string>   set audio resampler.\n")
+        _T("                                  swr (swresampler: default), soxr (libsoxr)\n")
+        _T("   --audio-stream [<int>?][<string1>][:<string2>][,[<string1>][:<string2>]][..\n")
+        _T("       set audio streams in channels.\n")
+        _T("         in [<int>?], specify track number to split.\n")
+        _T("         in <string1>, set input channels to use from source stream.\n")
+        _T("           if unset, all input channels will be used.\n")
+        _T("         in <string2>, set output channels to mix.\n")
+        _T("           if unset, all input channels will be copied without mixing.\n")
+        _T("       example1: --audio-stream FL,FR\n")
+        _T("         splitting dual mono audio to each stream.\n")
+        _T("       example2: --audio-stream :stereo\n")
+        _T("         mixing input channels to stereo.\n")
+        _T("       example3: --audio-stream 5.1,5.1:stereo\n")
+        _T("         keeping 5.1ch audio and also adding downmixed stereo stream.\n")
+        _T("       usable simbols\n")
+        _T("         mono       = FC\n")
+        _T("         stereo     = FL + FR\n")
+        _T("         2.1        = FL + FR + LFE\n")
+        _T("         3.0        = FL + FR + FC\n")
+        _T("         3.0(back)  = FL + FR + BC\n")
+        _T("         3.1        = FL + FR + FC + LFE\n")
+        _T("         4.0        = FL + FR + FC + BC\n")
+        _T("         quad       = FL + FR + BL + BR\n")
+        _T("         quad(side) = FL + FR + SL + SR\n")
+        _T("         5.0        = FL + FR + FC + SL + SR\n")
+        _T("         5.1        = FL + FR + FC + LFE + SL + SR\n")
+        _T("         6.0        = FL + FR + FC + BC + SL + SR\n")
+        _T("         6.0(front) = FL + FR + FLC + FRC + SL + SR\n")
+        _T("         hexagonal  = FL + FR + FC + BL + BR + BC\n")
+        _T("         6.1        = FL + FR + FC + LFE + BC + SL + SR\n")
+        _T("         6.1(front) = FL + FR + LFE + FLC + FRC + SL + SR\n")
+        _T("         7.0        = FL + FR + FC + BL + BR + SL + SR\n")
+        _T("         7.0(front) = FL + FR + FC + FLC + FRC + SL + SR\n")
+        _T("         7.1        = FL + FR + FC + LFE + BL + BR + SL + SR\n")
+        _T("         7.1(wide)  = FL + FR + FC + LFE + FLC + FRC + SL + SR\n")
+        _T("   --audio-filter [<int>?]<string>\n")
+        _T("                                set audio filter.\n")
+        _T("                                  in [<int>?], specify track number of audio.\n")
+        _T("   --chapter-copy               copy chapter to output file.\n")
+        _T("   --chapter <string>           set chapter from file specified.\n")
+        _T("   --sub-copy [<int>[,...]]     copy subtitle to output file.\n")
+        _T("                                 these could be only used with\n")
+        _T("                                 avvce reader and avcodec muxer.\n")
+        _T("                                 below are optional,\n")
+        _T("                                  in [<int>?], specify track number to copy.\n")
         _T("\n")
+        _T("   --avsync <string>            method for AV sync (default: through)\n")
+        _T("                                 through  ... assume cfr, no check but fast\n")
+        _T("                                 forcecfr ... check timestamp and force cfr.\n")
+        _T("-m,--mux-option <string1>:<string2>\n")
+        _T("                                set muxer option name and value.\n")
+        _T("                                 these could be only used with\n")
+        _T("                                 avvce reader and avcodec muxer.\n"),
+        VCE_DEFAULT_AUDIO_IGNORE_DECODE_ERROR);
+#endif
+    str += strsprintf(_T("\n")
         _T("   --input-res <int>x<int>      set input resolution\n")
+        _T("   --output-res <int>x<int>     output resolution\n")
+        _T("                                if different from input, uses vpp resizing\n")
+        _T("                                if not set, output resolution will be same\n")
+        _T("                                as input (no resize will be done).\n")
         _T("   --fps <int>/<int>            set input framerate\n")
         _T("   --crop <int>,<int>,<int>,<int>\n")
         _T("                                set crop pixels of left, up, right, bottom.\n")
@@ -239,10 +367,8 @@ static tstring help() {
         _T("   --motion-est                 set motion estimation precision\n")
         _T("                                 full-pel, half-pel, q-pel(default)\n")
         _T("   --gop-len <int>              set length of gop (default: auto)\n")
-        _T("   --log-level <int>            set log level\n")
-        _T("                                 error, warn, info(default), debug\n"),
-        (ENABLE_AVISYNTH_READER)    ? _T("avs, ") : _T(""),
-        (ENABLE_VAPOURSYNTH_READER) ? _T("vpy, ") : _T(""),
+        _T("   --tff                        set input as interlaced (tff)\n")
+        _T("   --bff                        set input as interlaced (bff)\n"),
         VCE_DEFAULT_QPI, VCE_DEFAULT_QPP, VCE_DEFAULT_QPB, VCE_DEFAULT_BFRAMES,
         VCE_DEFAULT_MAX_BITRATE, VCE_DEFAULT_VBV_BUFSIZE, VCE_DEFAULT_SLICES
     );
@@ -253,11 +379,30 @@ static tstring help() {
     str += PrintMultipleListOptions(_T("--profile <string>"), _T("set codec profile"),
         { { _T("H.264"), list_avc_profile,   0 },
         });
+
+    str += strsprintf(_T("\n")
+        _T("   --sar <int>:<int>            set Sample Aspect Ratio\n")
+        _T("   --dar <int>:<int>            set Display Aspect Ratio\n")
+        _T("\n")
+        _T("   --crop <int>,<int>,<int>,<int>\n")
+        _T("                                set crop pixels of left, up, right, bottom.\n")
+        _T("\n")
+        _T("   --fullrange                  set stream as fullrange yuv\n"));
+    str += PrintListOptions(_T("--videoformat <string>"), list_videoformat, 0);
+    str += PrintListOptions(_T("--colormatrix <string>"), list_colormatrix, 0);
+    str += PrintListOptions(_T("--colorprim <string>"), list_colorprim, 0);
+    str += PrintListOptions(_T("--transfer <string>"), list_transfer, 0);
+    str += strsprintf(_T("\n")
+        _T("   --log <string>               output log to file (txt or html).\n")
+        _T("   --log-level <int>            set log level\n")
+        _T("                                 error, warn, info(default), debug\n")
+        _T("   --log-framelist <string>     output frame info for avqsv reader (for debug)\n")
         );
     return str;
 }
 
 static void PrintHelp(const TCHAR *strAppName, const TCHAR *strErrorMessage, const TCHAR *strOptionName, const TCHAR *strErrorValue = nullptr) {
+    strAppName = strAppName;
     if (strErrorMessage) {
         if (strOptionName) {
             if (strErrorValue) {
@@ -364,6 +509,20 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         pInputInfo->srcHeight = height;
         return 0;
     }
+    if (0 == _tcscmp(option_name, _T("output-res"))) {
+        i++;
+        int width = 0, height = 0;
+        if (   2 != _stscanf_s(strInput[i], _T("%dx%d"), &width, &height)
+            && 2 != _stscanf_s(strInput[i], _T("%d,%d"), &width, &height)
+            && 2 != _stscanf_s(strInput[i], _T("%d/%d"), &width, &height)
+            && 2 != _stscanf_s(strInput[i], _T("%d:%d"), &width, &height)) {
+            PrintHelp(strInput[0], _T("Invalid value"), option_name, strInput[i]);
+            return -1;
+        }
+        pInputInfo->dstWidth  = width;
+        pInputInfo->dstHeight = height;
+        return 0;
+    }
     if (IS_OPTION("fps")) {
         i++;
         VCERational framerate;
@@ -392,6 +551,37 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         return 0;
     }
 
+    if (IS_OPTION("trim")) {
+        i++;
+        auto trim_str_list = split(strInput[i], _T(","));
+        std::vector<sTrim> trim_list;
+        for (auto trim_str : trim_str_list) {
+            sTrim trim;
+            if (2 != _stscanf_s(trim_str.c_str(), _T("%d:%d"), &trim.start, &trim.fin) || (trim.fin > 0 && trim.fin < trim.start)) {
+                PrintHelp(strInput[0], _T("Invalid Value"), option_name);
+                return -1;
+            }
+            if (trim.fin == 0) {
+                trim.fin = TRIM_MAX;
+            } else if (trim.fin < 0) {
+                trim.fin = trim.start - trim.fin - 1;
+            }
+            trim_list.push_back(trim);
+        }
+        if (trim_list.size()) {
+            std::sort(trim_list.begin(), trim_list.end(), [](const sTrim& trimA, const sTrim& trimB) { return trimA.start < trimB.start; });
+            for (int j = (int)trim_list.size() - 2; j >= 0; j--) {
+                if (trim_list[j].fin > trim_list[j+1].start) {
+                    trim_list[j].fin = trim_list[j+1].fin;
+                    trim_list.erase(trim_list.begin() + j+1);
+                }
+            }
+            pParams->nTrimCount = (int)trim_list.size();
+            pParams->pTrimList = (sTrim *)malloc(sizeof(pParams->pTrimList[0]) * trim_list.size());
+            memcpy(pParams->pTrimList, &trim_list[0], sizeof(pParams->pTrimList[0]) * trim_list.size());
+        }
+        return 0;
+    }
     if (IS_OPTION("seek")) {
         i++;
         int ret = 0;
@@ -979,6 +1169,26 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         }
         return 0;
     }
+    if (IS_OPTION("sar") || IS_OPTION("dar")) {
+        i++;
+        int value[2] = { 0 };
+        if (   2 != _stscanf_s(strInput[i], _T("%dx%d"), &value[0], &value[1])
+            && 2 != _stscanf_s(strInput[i], _T("%d,%d"), &value[0], &value[1])
+            && 2 != _stscanf_s(strInput[i], _T("%d/%d"), &value[0], &value[1])
+            && 2 != _stscanf_s(strInput[i], _T("%d:%d"), &value[0], &value[1])) {
+            pInputInfo->AspectRatioW = 0;
+            pInputInfo->AspectRatioH = 0;
+            PrintHelp(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            return -1;
+        }
+        if (IS_OPTION("dar")) {
+            value[0] = -value[0];
+            value[1] = -value[1];
+        }
+        pInputInfo->AspectRatioW = value[0];
+        pInputInfo->AspectRatioH = value[1];
+        return 0;
+    }
     if (IS_OPTION("cqp")) {
         i++;
         int a = 0, b = 0, c = 0;
@@ -1165,6 +1375,56 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
             return -1;
         }
         pParams->nGOPLen = value;
+        return 0;
+    }
+    if (IS_OPTION("tff")) {
+        pParams->nPicStruct = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD;
+        return 0;
+    }
+    if (IS_OPTION("bff")) {
+        pParams->nPicStruct = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD;
+        return 0;
+    }
+    if (IS_OPTION("colormatrix")) {
+        i++;
+        int value;
+        if (PARSE_ERROR_FLAG != (value = get_value_from_chr(list_colormatrix, strInput[i])))
+            pParams->ColorMatrix = value;
+        return 0;
+    }
+    if (IS_OPTION("colorprim")) {
+        i++;
+        int value;
+        if (PARSE_ERROR_FLAG != (value = get_value_from_chr(list_colorprim, strInput[i])))
+            pParams->ColorPrim = value;
+        return 0;
+    }
+    if (IS_OPTION("transfer")) {
+        i++;
+        int value;
+        if (PARSE_ERROR_FLAG != (value = get_value_from_chr(list_transfer, strInput[i])))
+            pParams->Transfer = value;
+        return 0;
+    }
+    if (IS_OPTION("videoformat")) {
+        i++;
+        int value;
+        if (PARSE_ERROR_FLAG != (value = get_value_from_chr(list_videoformat, strInput[i])))
+            pParams->ColorMatrix = value;
+        return 0;
+    }
+    if (IS_OPTION("fullrange")) {
+        pParams->bFullrange = true;
+        return 0;
+    }
+    if (IS_OPTION("log")) {
+        i++;
+        pParams->pStrLogFile = _tcsdup(strInput[i]);
+        return 0;
+    }
+    if (IS_OPTION("log-framelist")) {
+        i++;
+        pParams->pFramePosListLog = _tcsdup(strInput[i]);
         return 0;
     }
     if (IS_OPTION("log-level")) {

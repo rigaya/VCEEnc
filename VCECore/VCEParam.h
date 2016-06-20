@@ -303,8 +303,8 @@ const CX_DESC list_vce_quality_preset[] = {
 
 const CX_DESC list_interlaced[] = {
     { _T("Progressive"), AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME        },
-    //{ _T("tff"),         AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD    },
-    //{ _T("bff"),         AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD },
+    { _T("tff"),         AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD    },
+    { _T("bff"),         AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD },
     { NULL, NULL }
 };
 
@@ -438,7 +438,8 @@ typedef struct {
     int     nGOPLen;
     const TCHAR *pInputFile;
     const TCHAR *pOutputFile;
-    const TCHAR *pStrLog;
+    const TCHAR *pStrLogFile;
+    const TCHAR *pFramePosListLog;
 
     int VuiEnable;
     int VideoFormat;
@@ -478,7 +479,6 @@ typedef struct {
     int         nInputThread;
     int         bAudioIgnoreNoTrackError;
     float       fSeekSec; //指定された秒数分先頭を飛ばす
-    TCHAR      *pFramePosListLog;
 
     int         nOutputBufSizeMB;
 
@@ -510,3 +510,5 @@ static const int VCE_MAX_GOP_LEN = 1000;
 static const int VCE_MAX_B_DELTA_QP = 10;
 
 static const int VCE_OUTPUT_BUF_MB_MAX = 128;
+
+static const int VCE_DEFAULT_AUDIO_IGNORE_DECODE_ERROR = 10;
