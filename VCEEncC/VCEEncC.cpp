@@ -239,6 +239,14 @@ static tstring help() {
         (ENABLE_VAPOURSYNTH_READER) ? _T("vpy, ") : _T(""),
         VCE_DEFAULT_QPI, VCE_DEFAULT_QPP, VCE_DEFAULT_QPB, VCE_DEFAULT_BFRAMES,
         VCE_DEFAULT_MAX_BITRATE, VCE_DEFAULT_VBV_BUFSIZE, VCE_DEFAULT_SLICES
+    );
+
+    str += PrintMultipleListOptions(_T("--level <string>"), _T("set codec level"),
+        { { _T("H.264"), list_avc_level,   0 },
+        });
+    str += PrintMultipleListOptions(_T("--profile <string>"), _T("set codec profile"),
+        { { _T("H.264"), list_avc_profile,   0 },
+        });
         );
     return str;
 }
@@ -945,6 +953,26 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         }
         return 0;
     }
+    if (IS_OPTION("level")) {
+        if (i+1 < nArgNum) {
+            i++;
+            argData->cachedlevel = strInput[i];
+        } else {
+            PrintHelp(strInput[0], _T("Invalid value"), option_name);
+            return -1;
+        }
+        return 0;
+    }
+    if (IS_OPTION("profile")) {
+        if (i+1 < nArgNum) {
+            i++;
+            argData->cachedprofile = strInput[i];
+        } else {
+            PrintHelp(strInput[0], _T("Invalid value"), option_name);
+            return -1;
+        }
+        return 0;
+    }
     if (IS_OPTION("cqp")) {
         i++;
         int a = 0, b = 0, c = 0;
@@ -1225,6 +1253,42 @@ int parse_args(VCEParam *pParams, VCEInputInfo *pInputInfo, int nArgNum, const T
         auto sts = ParseOneOption(option_name, strInput, i, nArgNum, pParams, pInputInfo, &argsData);
         if (sts != 0) {
             return sts;
+        }
+    }
+
+    //parse cached profile and level
+    if (argsData.cachedlevel.length() > 0) {
+        const auto desc = get_level_list(pParams->nCodecId);
+        int value = 0;
+        bool bParsed = false;
+        if (desc != nullptr) {
+            if (PARSE_ERROR_FLAG != (value = get_value_from_chr(desc, argsData.cachedlevel.c_str()))) {
+                pParams->codecParam[pParams->nCodecId].nLevel = value;
+                bParsed = true;
+            } else {
+                double val_float = 0.0;
+                if (1 == _stscanf_s(argsData.cachedlevel.c_str(), _T("%lf"), &val_float)) {
+                    value = (int)(val_float * 10 + 0.5);
+                    if (value == desc[get_cx_index(desc, value)].value) {
+                        pParams->codecParam[pParams->nCodecId].nLevel = value;
+                        bParsed = true;
+                    }
+                }
+            }
+        }
+        if (!bParsed) {
+            PrintHelp(strInput[0], _T("Unknown value"), _T("level"));
+            return -1;
+        }
+    }
+    if (argsData.cachedprofile.length() > 0) {
+        const auto desc = get_profile_list(pParams->nCodecId);
+        int value = 0;
+        if (desc != nullptr && PARSE_ERROR_FLAG != (value = get_value_from_chr(desc, argsData.cachedprofile.c_str()))) {
+            pParams->codecParam[pParams->nCodecId].nProfile = value;
+        } else {
+            PrintHelp(strInput[0], _T("Unknown value"), _T("profile"));
+            return -1;
         }
     }
     return 0;

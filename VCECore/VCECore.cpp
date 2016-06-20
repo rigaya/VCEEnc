@@ -1151,6 +1151,10 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     if (nGOPLen == 0) {
         nGOPLen = (int)(m_inputInfo.fps.num / (double)m_inputInfo.fps.den + 0.5) * 10;
     }
+    //VCEにはlevelを自動で設定してくれる機能はないようで、"0"などとするとエラー終了してしまう。
+    if (prm->codecParam[prm->nCodecId].nLevel == 0) {
+        prm->codecParam[prm->nCodecId].nLevel = 41;
+    }
 
     m_Params.SetParam(AMF_VIDEO_ENCODER_FORCE_PICTURE_TYPE, (amf_int64)AMF_VIDEO_ENCODER_PICTURE_TYPE_IDR);
 
@@ -1166,7 +1170,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     m_Params.SetParam(AMF_VIDEO_ENCODER_FRAMERATE,          AMFConstructRate(m_inputInfo.fps.num, m_inputInfo.fps.den));
     m_Params.SetParam(AMF_VIDEO_ENCODER_USAGE,              (amf_int64)AMF_VIDEO_ENCODER_USAGE_TRANSCONDING);
     m_Params.SetParam(AMF_VIDEO_ENCODER_PROFILE,            (amf_int64)prm->codecParam[prm->nCodecId].nProfile);
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_PROFILE_LEVEL,      (amf_int64)prm->codecParam[prm->nCodecId].nLevel);
+    m_Params.SetParam(AMF_VIDEO_ENCODER_PROFILE_LEVEL,      (amf_int64)prm->codecParam[prm->nCodecId].nLevel);
     m_Params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)(is_interlaced(prm) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
     m_Params.SetParam(AMF_VIDEO_ENCODER_QUALITY_PRESET,     (amf_int64)prm->nQualityPreset);
 
