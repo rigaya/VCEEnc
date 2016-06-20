@@ -371,7 +371,8 @@ VCECore::VCECore() :
     m_pConverter(),
     m_deviceDX9(),
     m_deviceDX11(),
-    m_Params() {
+    m_Params(),
+    m_VCECodecId(VCE_CODEC_NONE) {
 }
 
 VCECore::~VCECore() {
@@ -421,6 +422,7 @@ void VCECore::Terminate() {
     m_pFileWriter.reset();
     m_pEncSatusInfo.reset();
     m_pVCELog.reset();
+    m_VCECodecId = VCE_CODEC_NONE;
 }
 
 AMF_RESULT VCECore::readChapterFile(tstring chapfile) {
@@ -1115,6 +1117,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
         PrintMes(VCE_LOG_DEBUG, _T("GPU Info  %s [%s]\n"), wstring_to_string(deviceName).c_str(), gpu_info);
     }
 
+    m_VCECodecId = prm->nCodecId;
     if (AMF_OK != (res = AMFCreateComponent(m_pContext, list_codecs[prm->nCodecId], &m_pEncoder))) {
         PrintMes(VCE_LOG_ERROR, _T("Failed to AMFCreateComponent.\n"));
         return AMF_FAIL;
@@ -1367,14 +1370,19 @@ tstring VCECore::GetEncoderParam() {
     mes += strsprintf(_T("VCEEnc %s (%s) / %s (%s)\n"), VER_STR_FILEVERSION_TCHAR, BUILD_ARCH_STR, getOSVersion().c_str(), is_64bit_os() ? _T("x64") : _T("x86"));
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
     mes += strsprintf(_T("GPU:           %s [%s]\n"), wstring_to_tstring(deviceName).c_str(), gpu_info);
-    mes += strsprintf(_T("Input:         %s\n"), m_pFileReader->GetInputInfoStr().c_str());
+    mes += strsprintf(_T("Input Info:    %s\n"), m_pFileReader->GetInputInfoStr().c_str());
     if (m_inputInfo.crop.left || m_inputInfo.crop.up || m_inputInfo.crop.right || m_inputInfo.crop.bottom) {
         mes += strsprintf(_T("Crop:          %d,%d,%d,%d\n"), m_inputInfo.crop.left, m_inputInfo.crop.up, m_inputInfo.crop.right, m_inputInfo.crop.bottom);
     }
-    mes += strsprintf(_T("Output:        H.264/AVC %s @ %s %dx%d%s %d/%d(%.3f) fps\n"),
-        getPropertyDesc(AMF_VIDEO_ENCODER_PROFILE, list_avc_profile).c_str(),
-        getPropertyDesc(AMF_VIDEO_ENCODER_PROFILE_LEVEL, list_avc_level).c_str(),
-        frameSize.width, frameSize.height, GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE) == AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED ? _T("i") : _T("p"), frameRate.num, frameRate.den, frameRate.num / (double)frameRate.den);
+    mes += strsprintf(_T("Output:        %s  %s @ Level %s\n"),
+        CodecIdToStr(m_VCECodecId),
+        getPropertyDesc(AMF_VIDEO_ENCODER_PROFILE, get_profile_list(m_VCECodecId)).c_str(),
+        getPropertyDesc(AMF_VIDEO_ENCODER_PROFILE_LEVEL, get_level_list(m_VCECodecId)).c_str());
+    const AMF_VIDEO_ENCODER_SCANTYPE_ENUM scan_type = (AMF_VIDEO_ENCODER_SCANTYPE_ENUM)GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE);
+    mes += strsprintf(_T("               %dx%d%s %0.3ffps (%d/%dfps)\n"),
+        frameSize.width, frameSize.height,
+        scan_type == AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED ? _T("i") : _T("p"),
+        frameRate.num / (double)frameRate.den, frameRate.num, frameRate.den);
     mes += strsprintf(_T("Quality:       %s\n"), getPropertyDesc(AMF_VIDEO_ENCODER_QUALITY_PRESET, list_vce_quality_preset).c_str());
     if (GetPropertyInt(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD) == AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTRAINED_QP) {
         mes += strsprintf(_T("CQP:           I:%d, P:%d"),

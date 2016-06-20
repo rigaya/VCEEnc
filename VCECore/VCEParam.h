@@ -188,6 +188,10 @@ typedef struct {
     int value;
 } CX_DESC;
 
+const CX_DESC list_empty[] = {
+    { NULL, 0 }
+};
+
 const CX_DESC list_log_level[] = {
     { _T("trace"), VCE_LOG_TRACE },
     { _T("debug"), VCE_LOG_DEBUG },
@@ -342,6 +346,20 @@ static const TCHAR *get_chr_from_value(const CX_DESC *list, int v) {
         if (list[i].value == v)
             return list[i].desc;
     return _T("unknown");
+}
+
+static inline const CX_DESC *get_level_list(int CodecID) {
+    switch (CodecID) {
+    case VCE_CODEC_H264:    return list_avc_level;
+    default:                return list_empty;
+    }
+}
+
+static inline const CX_DESC *get_profile_list(int CodecID) {
+    switch (CodecID) {
+    case VCE_CODEC_H264:    return list_avc_profile;
+    default:                return list_empty;
+    }
 }
 
 typedef struct {

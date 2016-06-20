@@ -125,4 +125,5 @@ protected:
     DeviceDX11 m_deviceDX11;
 
     ParametersStorage m_Params;
+    int m_VCECodecId;
 };
