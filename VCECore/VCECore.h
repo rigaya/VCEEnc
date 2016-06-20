@@ -29,6 +29,7 @@
 
 #include <d3d9.h>
 #include <d3d11.h>
+#include <thread>
 #include "VideoEncoderVCE.h"
 #include "DeviceDX9.h"
 #include "DeviceDX11.h"
@@ -120,6 +121,7 @@ protected:
     amf::AMFComponentPtr m_pDecoder;
     amf::AMFComponentPtr m_pEncoder;
     amf::AMFComponentPtr m_pConverter;
+    std::thread m_thStreamSender;
 
     DeviceDX9 m_deviceDX9;
     DeviceDX11 m_deviceDX11;

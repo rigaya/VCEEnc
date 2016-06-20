@@ -359,8 +359,13 @@ void VCECore::PrintMes(int log_level, const TCHAR *format, ...) {
 VCECore::VCECore() :
     m_pVCELog(),
     m_bTimerPeriodTuning(true),
+#if ENABLE_AVCODEC_VCE_READER
+    m_AVChapterFromFile(),
+#endif
     m_pFileReader(),
+    m_AudioReaders(),
     m_pFileWriter(),
+    m_pFileWriterListAudio(),
     m_pEncSatusInfo(),
     m_inputInfo(),
     m_pContext(),
@@ -369,6 +374,7 @@ VCECore::VCECore() :
     m_pDecoder(),
     m_pEncoder(),
     m_pConverter(),
+    m_thStreamSender(),
     m_deviceDX9(),
     m_deviceDX11(),
     m_Params(),
@@ -386,6 +392,9 @@ void VCECore::Terminate() {
         m_bTimerPeriodTuning = false;
     }
     PrintMes(VCE_LOG_DEBUG, _T("Stopping pipeline...\n"));
+    if (m_thStreamSender.joinable()) {
+        m_thStreamSender.join();
+    }
     Pipeline::Stop();
     PrintMes(VCE_LOG_DEBUG, _T("Pipeline Stopped.\n"));
 
@@ -568,43 +577,41 @@ AMF_RESULT VCECore::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo)
     sourceAudioTrackIdStart    += m_pFileReader->GetAudioTrackCount();
     sourceSubtitleTrackIdStart += m_pFileReader->GetSubtitleTrackCount();
 
-#if 0
     if (pParams->nAudioSourceCount && pParams->ppAudioSourceList) {
-        mfxFrameInfo videoInfo = { 0 };
-        m_pFileReader->GetInputFrameInfo(&videoInfo);
+        auto videoInfo = m_pFileReader->GetInputFrameInfo();
 
         for (int i = 0; i < pParams->nAudioSourceCount; i++) {
-            AvcodecReaderPrm avcodecReaderPrm = { 0 };
-            avcodecReaderPrm.memType = pParams->memType;
-            avcodecReaderPrm.bReadVideo = false;
-            avcodecReaderPrm.nReadAudio |= pParams->nAudioSelectCount > 0;
-            avcodecReaderPrm.nAnalyzeSec = pParams->nAVDemuxAnalyzeSec;
-            avcodecReaderPrm.pTrimList = pParams->pTrimList;
-            avcodecReaderPrm.nTrimCount = pParams->nTrimCount;
-            avcodecReaderPrm.nVideoAvgFramerate = std::make_pair(videoInfo.FrameRateExtN, videoInfo.FrameRateExtD);
-            avcodecReaderPrm.nAudioTrackStart = sourceAudioTrackIdStart;
-            avcodecReaderPrm.nSubtitleTrackStart = sourceSubtitleTrackIdStart;
-            avcodecReaderPrm.ppAudioSelect = pParams->ppAudioSelectList;
-            avcodecReaderPrm.nAudioSelectCount = pParams->nAudioSelectCount;
-            avcodecReaderPrm.nProcSpeedLimit = pParams->nProcSpeedLimit;
-            avcodecReaderPrm.fSeekSec = pParams->fSeekSec;
-            avcodecReaderPrm.bAudioIgnoreNoTrackError = pParams->bAudioIgnoreNoTrackError;
-            avcodecReaderPrm.nInputThread = 0;
-            avcodecReaderPrm.pQueueInfo = nullptr;
+            AvcodecReaderPrm audioReaderPrm = { 0 };
+            audioReaderPrm.srcFile = pParams->ppAudioSourceList[i];
+            audioReaderPrm.bReadVideo = false;
+            audioReaderPrm.nReadAudio |= pParams->nAudioSelectCount > 0;
+            audioReaderPrm.nAnalyzeSec = (uint16_t)pParams->nAVDemuxAnalyzeSec;
+            audioReaderPrm.pTrimList = pParams->pTrimList;
+            audioReaderPrm.nTrimCount = (uint16_t)pParams->nTrimCount;
+            audioReaderPrm.nVideoAvgFramerate = std::make_pair(videoInfo.fps.num, videoInfo.fps.den);
+            audioReaderPrm.nAudioTrackStart = sourceAudioTrackIdStart;
+            audioReaderPrm.nSubtitleTrackStart = sourceSubtitleTrackIdStart;
+            audioReaderPrm.ppAudioSelect = pParams->ppAudioSelectList;
+            audioReaderPrm.nAudioSelectCount = pParams->nAudioSelectCount;
+            audioReaderPrm.nProcSpeedLimit = pParams->nProcSpeedLimit;
+            audioReaderPrm.fSeekSec = pParams->fSeekSec;
+            audioReaderPrm.bAudioIgnoreNoTrackError = (int8_t)pParams->bAudioIgnoreNoTrackError;
+            audioReaderPrm.nInputThread = 0;
+            audioReaderPrm.pQueueInfo = nullptr;
+            auto inputInfoCopy = m_inputInfo;
+            inputInfoCopy.pPrivateParam = &audioReaderPrm;
 
-            unique_ptr<CQSVInput> audioReader(new CAvcodecReader());
-            audioReader->SetQSVLogPtr(m_pQSVLog);
-            sts = audioReader->Init(pParams->ppAudioSourceList[i], 0, &avcodecReaderPrm, nullptr, nullptr, nullptr);
-            if (sts < MFX_ERR_NONE) {
-                PrintMes(QSV_LOG_ERROR, audioReader->GetInputMessage());
-                return sts;
+            unique_ptr<VCEInput> audioReader(new CAvcodecReader());
+            ret = audioReader->init(m_pVCELog, nullptr, &inputInfoCopy, m_pContext);
+            if (ret != AMF_OK) {
+                PrintMes(VCE_LOG_ERROR, audioReader->getMessage().c_str());
+                return ret;
             }
             sourceAudioTrackIdStart += audioReader->GetAudioTrackCount();
             sourceSubtitleTrackIdStart += audioReader->GetSubtitleTrackCount();
             m_AudioReaders.push_back(std::move(audioReader));
         }
     }
-#endif
 
     if (!m_pFileReader->getInputCodec()
         && pParams->pTrimList && pParams->nTrimCount > 0) {
@@ -1307,6 +1314,61 @@ AMF_RESULT VCECore::init(VCEParam *prm, VCEInputInfo *inputInfo) {
 AMF_RESULT VCECore::run() {
     AMF_RESULT res = AMF_OK;
     m_pEncSatusInfo->SetStart();
+    if (m_pFileWriterListAudio.size() > 0) {
+#if ENABLE_AVCODEC_VCE_READER
+        m_thStreamSender = std::thread([this](){
+            //streamのindexから必要なwriteへのポインタを返すテーブルを作成
+            std::map<int, shared_ptr<CAvcodecWriter>> pWriterForAudioStreams;
+            for (auto pWriter : m_pFileWriterListAudio) {
+                auto pAVCodecWriter = std::dynamic_pointer_cast<CAvcodecWriter>(pWriter);
+                if (pAVCodecWriter) {
+                    auto trackIdList = pAVCodecWriter->GetStreamTrackIdList();
+                    for (auto trackID : trackIdList) {
+                        pWriterForAudioStreams[trackID] = pAVCodecWriter;
+                    }
+                }
+            }
+            AMF_RESULT sts = AMF_OK;
+            PipelineState state = PipelineStateRunning;
+            while ((state = GetState()) != PipelineStateRunning) {
+                auto pAVCodecReader = std::dynamic_pointer_cast<CAvcodecReader>(m_pFileReader);
+                vector<AVPacket> packetList;
+                if (pAVCodecReader != nullptr) {
+                    packetList = pAVCodecReader->GetStreamDataPackets();
+                }
+                //音声ファイルリーダーからのトラックを結合する
+                for (const auto& reader : m_AudioReaders) {
+                    auto pReader = std::dynamic_pointer_cast<CAvcodecReader>(reader);
+                    if (pReader != nullptr) {
+                        vector_cat(packetList, pReader->GetStreamDataPackets());
+                    }
+                }
+                //パケットを各Writerに分配する
+                for (uint32_t i = 0; i < packetList.size(); i++) {
+                    const int nTrackId = packetList[i].flags >> 16;
+                    if (pWriterForAudioStreams.count(nTrackId)) {
+                        auto pWriter = pWriterForAudioStreams[nTrackId];
+                        if (pWriter == nullptr) {
+                            PrintMes(VCE_LOG_ERROR, _T("Invalid writer found for track %d\n"), nTrackId);
+                            return AMF_INVALID_POINTER;
+                        }
+                        if (AMF_OK != (sts = pWriter->WriteNextPacket(&packetList[i]))) {
+                            return sts;
+                        }
+                    } else {
+                        PrintMes(VCE_LOG_ERROR, _T("Failed to find writer for track %d\n"), nTrackId);
+                        return AMF_INVALID_POINTER;
+                    }
+                }
+                amf_sleep(100);
+            }
+            if (sts != AMF_OK && sts != AMF_EOF) {
+
+            }
+            return GetState() == PipelineStateEof ? AMF_OK : AMF_FAIL;
+        });
+#endif //ENABLE_AVCODEC_VCE_READER
+    }
     res = Pipeline::Start();
     if (res != AMF_OK) {
         PrintMes(VCE_LOG_ERROR, _T("failed to start pipeline\n"));
@@ -1383,6 +1445,24 @@ tstring VCECore::GetEncoderParam() {
         frameSize.width, frameSize.height,
         scan_type == AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED ? _T("i") : _T("p"),
         frameRate.num / (double)frameRate.den, frameRate.num, frameRate.den);
+    if (m_pFileWriter) {
+        auto mesSplitted = split(m_pFileWriter->GetOutputMessage(), _T("\n"));
+        for (auto line : mesSplitted) {
+            if (line.length()) {
+                mes += strsprintf(_T("%s%s\n"), _T("               "), line.c_str());
+            }
+        }
+    }
+    for (auto pWriter : m_pFileWriterListAudio) {
+        if (pWriter && pWriter != m_pFileWriter) {
+            auto mesSplitted = split(pWriter->GetOutputMessage(), _T("\n"));
+            for (auto line : mesSplitted) {
+                if (line.length()) {
+                    mes += strsprintf(_T("%s%s\n"), _T("               "), line.c_str());
+                }
+            }
+        }
+    }
     mes += strsprintf(_T("Quality:       %s\n"), getPropertyDesc(AMF_VIDEO_ENCODER_QUALITY_PRESET, list_vce_quality_preset).c_str());
     if (GetPropertyInt(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD) == AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTRAINED_QP) {
         mes += strsprintf(_T("CQP:           I:%d, P:%d"),
