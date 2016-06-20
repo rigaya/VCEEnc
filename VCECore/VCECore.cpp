@@ -1080,9 +1080,6 @@ AMF_RESULT VCECore::initDecoder(VCEParam *prm) {
 
 AMF_RESULT VCECore::initConverter(VCEParam *prm) {
 #if ENABLE_AVCODEC_VCE_READER
-    if (m_pFileReader->getInputCodec() == VCE_CODEC_NONE) {
-        return AMF_OK;
-    }
     if (m_inputInfo.dstWidth != m_inputInfo.srcWidth || m_inputInfo.dstHeight != m_inputInfo.srcHeight) {
         return AMF_OK;
     }
