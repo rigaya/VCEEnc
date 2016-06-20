@@ -1503,36 +1503,9 @@ AMF_RESULT CAvcodecWriter::SetSPSPPSToExtraData(amf::AMFBufferPtr pExtradata) {
 }
 
 AMF_RESULT CAvcodecWriter::AddH264HeaderToExtraData(const sBitstream *pBitstream) {
-    uint8_t *ptr = pBitstream->Data;
-    struct nal_info {
-        uint8_t *ptr;
-        uint8_t type;
-        int size;
-    };
-    nal_info nal_start = { nullptr, 0, 0 };
-    std::vector<nal_info> nal_list;
-    const int i_fin = pBitstream->DataOffset + pBitstream->DataLength - 3;
-    for (int i = pBitstream->DataOffset; i < i_fin; i++) {
-        if (ptr[i+0] == 0 && ptr[i+1] == 0 && ptr[i+2] == 1) {
-            if (nal_start.ptr) {
-                nal_list.push_back(nal_start);
-            }
-            nal_start.ptr = ptr + i - (i > 0 && ptr[i-1] == 0);
-            nal_start.type = ptr[i+3] & 0x1f;
-            nal_start.size = (int)(pBitstream->Data + pBitstream->DataLength - nal_start.ptr);
-            if (nal_list.size()) {
-                auto prev = nal_list.end()-1;
-                prev->size = (int)(nal_start.ptr - prev->ptr);
-            }
-        }
-    }
-    if (nal_start.ptr) {
-        nal_list.push_back(nal_start);
-    }
-    const uint8_t h264_sps = 7;
-    const uint8_t h264_pps = 8;
-    auto h264_sps_nal = std::find_if(nal_list.begin(), nal_list.end(), [h264_sps](nal_info info) { return info.type == h264_sps; });
-    auto h264_pps_nal = std::find_if(nal_list.begin(), nal_list.end(), [h264_pps](nal_info info) { return info.type == h264_pps; });
+    std::vector<nal_info> nal_list = parse_nal_unit(pBitstream->Data + pBitstream->DataOffset, pBitstream->DataLength);
+    auto h264_sps_nal = std::find_if(nal_list.begin(), nal_list.end(), [](nal_info info) { return info.type == NALU_H264_SPS; });
+    auto h264_pps_nal = std::find_if(nal_list.begin(), nal_list.end(), [](nal_info info) { return info.type == NALU_H264_PPS; });
     bool header_check = (nal_list.end() != h264_sps_nal) && (nal_list.end() != h264_pps_nal);
     if (header_check) {
 #if USE_AVCODECPAR
