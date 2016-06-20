@@ -1207,10 +1207,10 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     //m_Params.SetParam(AMF_VIDEO_ENCODER_END_OF_SEQUENCE,                false);
     //m_Params.SetParam(AMF_VIDEO_ENCODER_END_OF_STREAM,                  false);
     //m_Params.SetParam(AMF_VIDEO_ENCODER_FORCE_PICTURE_TYPE,             (amf_int64)AMF_VIDEO_ENCODER_PICTURE_TYPE_NONE);
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_AUD,                     false);
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_SPS,                     false);
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_PPS,                     false);
     m_Params.SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE,              (amf_int64)prm->nInterlaced);
+    m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_AUD, false);
+    m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_SPS, false);
+    m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_PPS, false);
     //m_Params.SetParam(AMF_VIDEO_ENCODER_MARK_CURRENT_WITH_LTR_INDEX,    false);
     //m_Params.SetParam(AMF_VIDEO_ENCODER_FORCE_LTR_REFERENCE_BITFIELD,   (amf_int64)0);
 
