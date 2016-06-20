@@ -1444,7 +1444,9 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         pParams->nLogLevel = value;
         return 0;
     }
-    _ftprintf(stderr, _T("Unknow Options: \"%s\"\n"), strInput[i]);
+    tstring mes = _T("Unknown option: --");
+    mes += option_name;
+    PrintHelp(strInput[0], (TCHAR *)mes.c_str(), NULL, strInput[i]);
     return -1;
 }
 
