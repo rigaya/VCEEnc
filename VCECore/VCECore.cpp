@@ -70,6 +70,28 @@ const wchar_t* VCECore::PARAM_NAME_CAPABILITY = L"DISPLAYCAPABILITY";
 
 static const amf::AMF_SURFACE_FORMAT formatOut = amf::AMF_SURFACE_NV12;
 
+typedef decltype(WriteFile)* funcWriteFile;
+static funcWriteFile origWriteFileFunc = nullptr;
+static HANDLE hStdOut = NULL;
+static HANDLE hStdErr = NULL;
+BOOL __stdcall WriteFileHook(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped) {
+    if (hFile == hStdOut || hFile == hStdErr) {
+        //フィルタリングするメッセージ
+        const char *mes_filter[] = {
+            "Found NALU with forbidden_bit set, bit error",
+            "read_new_slice: Found NALU_TYPE_FILL,",
+            "Skipping these filling bits, proceeding w/ next NALU"
+        };
+        for (int i = 0; i < _countof(mes_filter); i++) {
+            if (0 == strncmp((const char *)lpBuffer, mes_filter[i], strlen(mes_filter[i]))) {
+                *lpNumberOfBytesWritten = 0;
+                return FALSE;
+            }
+        }
+    }
+    return origWriteFileFunc(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
+}
+
 class VCECore::PipelineElementAMFComponent : public PipelineElement {
 public:
     PipelineElementAMFComponent(amf::AMFComponentPtr pComponent) :
@@ -1320,6 +1342,9 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
 
 AMF_RESULT VCECore::init(VCEParam *prm, VCEInputInfo *inputInfo) {
     Terminate();
+    hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    hStdErr = GetStdHandle(STD_ERROR_HANDLE);
+    m_apihook.hook(_T("kernel32.dll"), "WriteFile", WriteFileHook, (void **)&origWriteFileFunc);
 
     tstring vce_check;
     if (!check_if_vce_available(vce_check)) {

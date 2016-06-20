@@ -35,6 +35,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="api_hook.cpp" />
     <ClCompile Include="avcodec_reader.cpp" />
     <ClCompile Include="avcodec_vce.cpp" />
     <ClCompile Include="avcodec_vce_log.cpp" />
@@ -70,6 +71,7 @@
     <ClCompile Include="VCEUtil.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="api_hook.h" />
     <ClInclude Include="avcodec_reader.h" />
     <ClInclude Include="avcodec_vce.h" />
     <ClInclude Include="avcodec_vce_log.h" />

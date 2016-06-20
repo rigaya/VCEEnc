@@ -51,6 +51,8 @@
 #include "VCEInput.h"
 #include "VCEOutput.h"
 
+#include "api_hook.h"
+
 #if ENABLE_AVCODEC_VCE_READER
 struct AVChapter;
 #endif //#if ENABLE_AVCODEC_VCE_READER
@@ -128,4 +130,5 @@ protected:
 
     ParametersStorage m_Params;
     int m_VCECodecId;
+    apihook m_apihook;
 };
