@@ -465,7 +465,7 @@ AMF_RESULT VCECore::readChapterFile(tstring chapfile) {
     PrintMes(VCE_LOG_DEBUG, _T("%s"), chap_log.c_str());
     return AMF_OK;
 #else
-    PrintMes(QSV_LOG_ERROR, _T("chater reading unsupportted in this build"));
+    PrintMes(VCE_LOG_ERROR, _T("chater reading unsupportted in this build"));
     return AMF_NOT_SUPPORTED;
 #endif //#if ENABLE_AVCODEC_VCE_READER
 }
@@ -857,8 +857,8 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
                     }
                 }
                 if (pAudioSelect != nullptr || copyAll || bStreamIsSubtitle) {
-#if ENABLE_LIBASS_SUBBURN
                     streamTrackUsed.push_back(stream.nTrackId);
+#if ENABLE_LIBASS_SUBBURN
                     if (bStreamIsSubtitle && pParams->vpp.subburn.nTrack != 0) {
                         continue;
                     }
@@ -906,7 +906,7 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
         //    PrintMes(VCE_LOG_DEBUG, _T("Output: Initialized yuv frame writer%s.\n"), (stdoutUsed) ? _T("using stdout") : _T(""));
         //} else {
         m_pFileWriter = std::make_shared<VCEOutput>();
-        VCEOutRawParam rawPrm ={ 0 };
+        VCEOutRawParam rawPrm = { 0 };
         //rawPrm.bBenchmark = pParams->bBenchmark != 0;
         rawPrm.nBufSizeMB = pParams->nOutputBufSizeMB;
         sts = m_pFileWriter->Init(pParams->pOutputFile, &rawPrm, m_pVCELog, m_pEncSatusInfo);
@@ -1091,7 +1091,7 @@ AMF_RESULT VCECore::initConverter(VCEParam *prm) {
 
     res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_MEMORY_TYPE, prm->memoryTypeIn);
     res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_FORMAT, formatOut);
-    res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_SIZE, AMFConstructSize(m_inputInfo.dstWidth, m_inputInfo.dstHeight));
+    res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_SIZE,   AMFConstructSize(m_inputInfo.dstWidth, m_inputInfo.dstHeight));
     res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_SCALE, AMF_VIDEO_CONVERTER_SCALE_BICUBIC);
     if (AMF_OK != (res = m_pConverter->Init(formatOut, m_inputInfo.srcWidth, m_inputInfo.srcHeight))) {
         PrintMes(VCE_LOG_ERROR, _T("Failed to init converter: %d\n"), res);
