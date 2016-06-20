@@ -1923,6 +1923,11 @@ AMF_RESULT CAvcodecWriter::VCECheckStreamAVParser(sBitstream *pBitstream) {
 
 AMF_RESULT CAvcodecWriter::WriteNextFrameInternal(sBitstream *pBitstream, int64_t *pWrittenDts) {
     VCECheckStreamAVParser(pBitstream);
+    std::vector<nal_info> nal_list = parse_nal_unit(pBitstream->Data + pBitstream->DataOffset, pBitstream->DataLength);
+    if (nal_list[0].type == NALU_H264_AUD) {
+        pBitstream->DataOffset += nal_list[0].size;
+        pBitstream->DataLength -= nal_list[0].size;
+    }
 
     if (!m_Mux.format.bFileHeaderWritten) {
         //HEVCエンコードでは、DecodeTimeStampが正しく設定されない
