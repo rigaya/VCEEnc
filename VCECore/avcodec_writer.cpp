@@ -1936,6 +1936,7 @@ AMF_RESULT CAvcodecWriter::WriteNextFrameInternal(sBitstream *pBitstream, int64_
         }
         AMF_RESULT sts = WriteFileHeader(pBitstream);
         if (sts != AMF_OK) {
+            m_Mux.format.bStreamError |= true;
             return sts;
         }
     }
