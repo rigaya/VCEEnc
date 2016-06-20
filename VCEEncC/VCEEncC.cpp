@@ -158,6 +158,9 @@ static const TCHAR *short_opt_to_long(TCHAR short_opt) {
     case _T('c'):
         option_name = _T("codec");
         break;
+    case _T('f'):
+        option_name = _T("format");
+        break;
     case _T('u'):
         option_name = _T("quality");
         break;
@@ -166,6 +169,9 @@ static const TCHAR *short_opt_to_long(TCHAR short_opt) {
         break;
     case _T('o'):
         option_name = _T("output-file");
+        break;
+    case _T('m'):
+        option_name = _T("mux-option");
         break;
     case _T('v'):
         option_name = _T("version");
