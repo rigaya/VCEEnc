@@ -75,6 +75,7 @@ typedef struct AVMuxVideo {
     int                   nBframeDelay;         //Bフレームによる遅延
     AVCodecParserContext *pParserCtx;           //動画ストリームのParser (VCEのみ)
     int64_t               nParserStreamPos;     //動画ストリームのバイト数
+    bool                  bCFR;                 //CFR/VFR
 } AVMuxVideo;
 
 typedef struct AVMuxAudio {
@@ -224,6 +225,7 @@ struct AVOutputVideoPrm {
     VCE_PICSTRUCT                nPicStruct;
     std::pair<int, int>          sar;
     AVRational                   outFps;
+    bool                         bCFR;
     int                          nBframes;
     int                          nBPyramid;
     int                          nGopLength;

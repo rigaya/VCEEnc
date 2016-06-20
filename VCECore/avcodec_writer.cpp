@@ -542,6 +542,7 @@ AMF_RESULT CAvcodecWriter::InitVideo(const AvcodecWriterPrm *prm) {
     m_Mux.video.bDtsUnavailable   = prm->bVideoDtsUnavailable;
     m_Mux.video.nInputFirstKeyPts = prm->nVideoInputFirstKeyPts;
     m_Mux.video.pInputCodecCtx    = prm->pVideoInputCodecCtx;
+    m_Mux.video.bCFR              = prm->vidPrm.bCFR;
 
     m_Mux.video.pCodecCtx->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
@@ -1951,11 +1952,13 @@ AMF_RESULT CAvcodecWriter::WriteNextFrameInternal(sBitstream *pBitstream, int64_
         pkt.size = bytesToWrite;
 
         const AVRational fpsTimebase = av_div_q({1, 1 + bIsPAFF}, m_Mux.video.nFPS);
+        const AVRational inputTimebase = (m_Mux.video.bCFR) ? fpsTimebase : ((m_Mux.video.pInputCodecCtx) ? m_Mux.video.pInputCodecCtx->pkt_timebase : VCE_NATIVE_TIMEBASE);
         const AVRational streamTimebase = m_Mux.video.pStream->codec->pkt_timebase;
         pkt.stream_index = m_Mux.video.pStream->index;
-        pkt.flags        = 0; // !!(pBitstream->FrameType & (MFX_FRAMETYPE_IDR << (i<<3)));
+        pkt.flags = !!((pBitstream->DataFlag & 1) && (i == 0));
         pkt.duration     = (int)av_rescale_q(1, fpsTimebase, streamTimebase);
-        pkt.pts          = av_rescale_q(pBitstream->TimeStamp, fpsTimebase, streamTimebase) + bIsPAFF * i * pkt.duration;
+        auto temp = av_rescale_q(pBitstream->TimeStamp - ((m_Mux.video.bCFR) ? 0 : m_Mux.video.nInputFirstKeyPts), inputTimebase, fpsTimebase);
+        pkt.pts          = av_rescale_q(temp, fpsTimebase, streamTimebase) + bIsPAFF * i * pkt.duration;
         if (!m_Mux.video.bDtsUnavailable) {
             pkt.dts = av_rescale_q(av_rescale_q(pBitstream->DecodeTimeStamp, VCE_NATIVE_TIMEBASE, fpsTimebase), fpsTimebase, streamTimebase) + bIsPAFF * i * pkt.duration;
         } else {

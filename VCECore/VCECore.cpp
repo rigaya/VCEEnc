@@ -50,6 +50,7 @@
 #include "EncoderParams.h"
 #include "chapter_rw.h"
 
+#include "VideoEncoderVCE.h"
 #include "VideoConverter.h"
 
 const wchar_t* VCECore::PARAM_NAME_INPUT = L"INPUT";
@@ -118,13 +119,14 @@ class VCECore::PipelineElementEncoder : public PipelineElementAMFComponent {
 public:
     PipelineElementEncoder(amf::AMFComponentPtr pComponent,
         ParametersStorage* pParams, amf_int64 frameParameterFreq,
-        amf_int64 dynamicParameterFreq) :
+        amf_int64 dynamicParameterFreq, bool bCFR) :
         PipelineElementAMFComponent(pComponent), m_pParams(pParams),
         m_framesSubmitted(0), m_framesQueried(0),
         m_frameParameterFreq(frameParameterFreq),
         m_dynamicParameterFreq(dynamicParameterFreq),
         m_maxLatencyTime(0), m_TotalLatencyTime(0),
-        m_maxLatencyFrame(0), m_LastReadyFrameTime(0) {
+        m_maxLatencyFrame(0), m_LastReadyFrameTime(0),
+        m_bCFR(bCFR) {
 
     }
 
@@ -151,6 +153,9 @@ public:
             //    surface->GetFrameType());
             //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
             surface->SetFrameType(amf::AMF_FRAME_PROGRESSIVE);
+            if (m_bCFR) {
+                surface->SetPts(m_framesSubmitted);
+            }
             if (m_frameParameterFreq != 0 && m_framesSubmitted != 0
                 && (m_framesSubmitted % m_frameParameterFreq) == 0) { // apply frame-specific properties to the current frame
                 PushParamsToPropertyStorage(m_pParams, ParamEncoderFrame, pData);
@@ -219,6 +224,7 @@ protected:
     amf_int64 m_TotalLatencyTime;
     amf_int64 m_LastReadyFrameTime;
     amf_int m_maxLatencyFrame;
+    bool m_bCFR;
 };
 
 std::wstring VCECore::AccelTypeToString(amf::AMF_ACCELERATION_TYPE accelType) {
@@ -831,6 +837,7 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
         writerPrm.vidPrm.vui.fullrange = pParams->bFullrange;
         writerPrm.vidPrm.vui.infoPresent = pParams->VuiEnable;
         writerPrm.vidPrm.bDtsUnavailable = true;
+        writerPrm.vidPrm.bCFR = true;
         writerPrm.pOutputFormat = pParams->pAVMuxOutputFormat;
         if (m_pTrimParam) {
             writerPrm.trimList = m_pTrimParam->list;
@@ -842,6 +849,8 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
         writerPrm.nAudioIgnoreDecodeError = pParams->nAudioIgnoreDecodeError;
         writerPrm.bVideoDtsUnavailable = false;
         writerPrm.pQueueInfo = nullptr;
+        writerPrm.nVideoInputFirstKeyPts = 0;
+        writerPrm.pVideoInputCodecCtx = nullptr;
         //writerPrm.pQueueInfo = (m_pPerfMonitor) ? m_pPerfMonitor->GetQueueInfoPtr() : nullptr;
         if (pParams->pMuxOpt) {
             writerPrm.vMuxOpt = *pParams->pMuxOpt;
@@ -1293,7 +1302,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
             return res;
         }
     }
-    if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementEncoder(m_pEncoder, &m_Params, 0, 0)), 10))) {
+    if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementEncoder(m_pEncoder, &m_Params, 0, 0, true)), 10))) {
         PrintMes(VCE_LOG_ERROR, _T("failed to connect encoder to pipeline.\n"));
         return res;
     }
