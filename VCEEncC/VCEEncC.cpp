@@ -253,9 +253,11 @@ static tstring help() {
         _T("                                 below are optional,\n")
         _T("                                  in [<int>?], specify track number to extract.\n")
         _T("                                  in [<string>?], specify output format.\n")
+#if 0
         _T("   --trim <int>:<int>[,<int>:<int>]...\n")
         _T("                                trim video for the frame range specified.\n")
         _T("                                 frame range should not overwrap each other.\n")
+#endif
         _T("   --seek [<int>:][<int>:]<int>[.<int>] (hh:mm:ss.ms)\n")
         _T("                                skip video for the time specified,\n")
         _T("                                 seek will be inaccurate but fast.\n")
@@ -329,9 +331,11 @@ static tstring help() {
         _T("                                 below are optional,\n")
         _T("                                  in [<int>?], specify track number to copy.\n")
         _T("\n")
+#if 0
         _T("   --avsync <string>            method for AV sync (default: through)\n")
         _T("                                 through  ... assume cfr, no check but fast\n")
         _T("                                 forcecfr ... check timestamp and force cfr.\n")
+#endif
         _T("-m,--mux-option <string1>:<string2>\n")
         _T("                                set muxer option name and value.\n")
         _T("                                 these could be only used with\n")
@@ -550,7 +554,7 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         memcpy(pInputInfo->crop.c, crop, sizeof(crop));
         return 0;
     }
-
+#if 0
     if (IS_OPTION("trim")) {
         i++;
         auto trim_str_list = split(strInput[i], _T(","));
@@ -582,6 +586,7 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         }
         return 0;
     }
+#endif
     if (IS_OPTION("seek")) {
         i++;
         int ret = 0;
@@ -1119,6 +1124,7 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         }
         return 0;
     }
+#if 0
     if (IS_OPTION("avsync")) {
         int value = 0;
         i++;
@@ -1130,6 +1136,7 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         }
         return 0;
     }
+#endif
     if (IS_OPTION("mux-option")) {
         if (i+1 < nArgNum && strInput[i+1][0] != _T('-')) {
             i++;
