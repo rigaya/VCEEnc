@@ -1195,7 +1195,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     //m_Params.SetParam(AMF_VIDEO_ENCODER_HEADER_INSERTION_SPACING,       (amf_int64)0);
     m_Params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN,                  (amf_int64)prm->nBframes);
     m_Params.SetParam(AMF_VIDEO_ENCODER_DE_BLOCKING_FILTER,             !!prm->bDeblockFilter);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE,             !!prm->bBPyramid);
+    m_Params.SetParam(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE,             prm->nBframes > 0 && !!prm->bBPyramid);
     m_Params.SetParam(AMF_VIDEO_ENCODER_IDR_PERIOD,                     (amf_int64)nGOPLen);
     ////m_Params.SetParam(AMF_VIDEO_ENCODER_INTRA_REFRESH_NUM_MBS_PER_SLOT, false);
     m_Params.SetParam(AMF_VIDEO_ENCODER_SLICES_PER_FRAME,               (amf_int64)prm->nSlices);
