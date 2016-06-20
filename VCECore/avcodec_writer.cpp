@@ -1238,7 +1238,7 @@ AMF_RESULT CAvcodecWriter::Init(const tstring& dstFile, const void *pOption, sha
     if (NULL == (m_Mux.format.pOutputFmt = av_guess_format((prm->pOutputFormat) ? tchar_to_string(prm->pOutputFormat).c_str() : NULL, filename.c_str(), NULL))) {
         AddMessage(VCE_LOG_ERROR,
             _T("failed to assume format from output filename.\n")
-            _T("please set proper extension for output file, or specify format using option %s.\n"), (prm->pVideoInputCodecCtx) ? _T("--format") : _T("--audio-file <format>:<filename>"));
+            _T("please set proper extension for output file, or specify format using option %s.\n"), (prm->vidPrm.nCodecId != VCE_CODEC_NONE) ? _T("--format") : _T("--audio-file <format>:<filename>"));
         if (prm->pOutputFormat != nullptr) {
             AddMessage(VCE_LOG_ERROR, _T("Please use --check-formats to check available formats.\n"));
         }
@@ -1308,7 +1308,7 @@ AMF_RESULT CAvcodecWriter::Init(const tstring& dstFile, const void *pOption, sha
         CreateDirectoryRecursive(PathRemoveFileSpecFixed(dstFile).second.c_str());
         errno_t error;
         if (0 != (error = _tfopen_s(&m_Mux.format.fpOutput, dstFile.c_str(), _T("wb"))) || m_Mux.format.fpOutput == NULL) {
-            AddMessage(VCE_LOG_ERROR, _T("failed to open %soutput file \"%s\": %s.\n"), (prm->pVideoInputCodecCtx) ? _T("") : _T("audio "), dstFile.c_str(), _tcserror(error));
+            AddMessage(VCE_LOG_ERROR, _T("failed to open %soutput file \"%s\": %s.\n"), (prm->vidPrm.nCodecId != VCE_CODEC_NONE) ? _T("") : _T("audio "), dstFile.c_str(), _tcserror(error));
             return AMF_INVALID_POINTER; // Couldn't open file
         }
         if (0 < (m_Mux.format.nOutputBufferSize = (uint32_t)malloc_degeneracy((void **)&m_Mux.format.pOutputBuffer, m_Mux.format.nOutputBufferSize, 1024 * 1024))) {
@@ -1324,7 +1324,7 @@ AMF_RESULT CAvcodecWriter::Init(const tstring& dstFile, const void *pOption, sha
 
     m_Mux.trim = prm->trimList;
 
-    if (prm->pVideoInputCodecCtx) {
+    if (prm->vidPrm.nCodecId != VCE_CODEC_NONE) {
         AMF_RESULT sts = InitVideo(prm);
         if (sts != AMF_OK) {
             return sts;
