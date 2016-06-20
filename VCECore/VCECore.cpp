@@ -1054,8 +1054,7 @@ AMF_RESULT VCECore::initDecoder(VCEParam *prm) {
         return AMF_FAIL;
     }
 
-    // our sample H264 parser provides decode order timestamps - change this depend on demuxer
-    if (AMF_OK != (res = m_pDecoder->SetProperty(AMF_TIMESTAMP_MODE, amf_int64(AMF_TS_DECODE)))) {
+    if (AMF_OK != (res = m_pDecoder->SetProperty(AMF_TIMESTAMP_MODE, amf_int64(AMF_TS_PRESENTATION)))) {
         PrintMes(VCE_LOG_ERROR, _T("Failed to set deocder: %d\n"), res);
         return AMF_FAIL;
     }
