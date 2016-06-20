@@ -142,6 +142,15 @@ public:
             if (pData->GetProperty(ENCODER_SUBMIT_TIME, &submitTime) != AMF_OK) {
                 pData->SetProperty(ENCODER_SUBMIT_TIME, currentTime);
             }
+            amf::AMFSurfacePtr surface(pData);
+            //fprintf(stderr, "%dx%d, format: %d, planes: %d, frame type: %d\n",
+            //    surface->GetPlaneAt(0)->GetWidth(),
+            //    surface->GetPlaneAt(0)->GetHeight(),
+            //    surface->GetFormat(),
+            //    surface->GetPlanesCount(),
+            //    surface->GetFrameType());
+            //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
+            surface->SetFrameType(amf::AMF_FRAME_PROGRESSIVE);
             if (m_frameParameterFreq != 0 && m_framesSubmitted != 0
                 && (m_framesSubmitted % m_frameParameterFreq) == 0) { // apply frame-specific properties to the current frame
                 PushParamsToPropertyStorage(m_pParams, ParamEncoderFrame, pData);
@@ -152,6 +161,9 @@ public:
                 PushParamsToPropertyStorage(m_pParams, ParamEncoderDynamic,
                     m_pComponent);
             }
+            //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
+            //フレーム情報のほうもプログレに書き換えなければ、SubmitInputでエラーが返る
+            m_pParams->SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE, AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD);
             res = m_pComponent->SubmitInput(pData);
             if (res == AMF_DECODER_NO_FREE_SURFACES || res == AMF_INPUT_FULL) {
                 return AMF_INPUT_FULL;
@@ -639,6 +651,24 @@ AMF_RESULT VCECore::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo)
 }
 
 AMF_RESULT VCECore::checkParam(VCEParam *prm) {
+    amf::AMFCapabilityManager *pcap;
+    if (AMFCreateCapsManager(&pcap) != AMF_OK) {
+        PrintMes(VCE_LOG_ERROR, _T("Failed to create encoder capability manager.\n"));
+        return AMF_FAIL;
+    }
+    amf::AMFCapabilityManagerPtr capsManager(pcap);
+    amf::AMFEncoderCapsPtr encoderCaps;
+    if (capsManager->GetEncoderCaps(list_codecs[prm->nCodecId], &encoderCaps) != AMF_OK) {
+        PrintMes(VCE_LOG_ERROR, _T("Failed to get encoder capability.\n"));
+        return AMF_FAIL;
+    }
+
+    amf::AMFIOCapsPtr inputCaps;
+    if (encoderCaps->GetInputCaps(&inputCaps) != AMF_OK) {
+        PrintMes(VCE_LOG_ERROR, _T("Failed to get encoder input capability.\n"));
+        return AMF_FAIL;
+    }
+
     auto srcInfo = m_pFileReader->GetInputFrameInfo();
     if (m_inputInfo.fps.num <= 0 || m_inputInfo.fps.den <= 0) {
         m_inputInfo.fps = srcInfo.fps;
@@ -654,6 +684,14 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
     }
     if (srcInfo.format) {
         m_inputInfo.format = srcInfo.format;
+    }
+
+    if (!inputCaps->IsInterlacedSupported()
+        && (prm->nPicStruct != AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME)) {
+        PrintMes(VCE_LOG_WARN, _T("This platform does not support interlaced encoding.\n"));
+        PrintMes(VCE_LOG_WARN, _T("--tff/--bff was set, but video will be encoded as progressive video.\n"));
+        m_inputInfo.nPicStruct = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME;
+        prm->nPicStruct = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME;
     }
 
     if (m_inputInfo.fps.num <= 0 || m_inputInfo.fps.den <= 0) {
@@ -1213,10 +1251,10 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     //m_Params.SetParam(AMF_VIDEO_ENCODER_END_OF_SEQUENCE,                false);
     //m_Params.SetParam(AMF_VIDEO_ENCODER_END_OF_STREAM,                  false);
     //m_Params.SetParam(AMF_VIDEO_ENCODER_FORCE_PICTURE_TYPE,             (amf_int64)AMF_VIDEO_ENCODER_PICTURE_TYPE_NONE);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE,              (amf_int64)prm->nInterlaced);
     m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_AUD, false);
     m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_SPS, false);
     m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_PPS, false);
+    //m_Params.SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE,                (amf_int64)prm->nPicStruct);
     //m_Params.SetParam(AMF_VIDEO_ENCODER_MARK_CURRENT_WITH_LTR_INDEX,    false);
     //m_Params.SetParam(AMF_VIDEO_ENCODER_FORCE_LTR_REFERENCE_BITFIELD,   (amf_int64)0);
 

@@ -484,7 +484,7 @@ AMF_RESULT CAvcodecWriter::InitVideo(const AvcodecWriterPrm *prm) {
     m_Mux.video.pStream->codecpar->sample_aspect_ratio.num = prm->vidPrm.sar.first;
     m_Mux.video.pStream->codecpar->sample_aspect_ratio.den = prm->vidPrm.sar.second;
     m_Mux.video.pStream->codecpar->chroma_location         = AVCHROMA_LOC_LEFT;
-    m_Mux.video.pStream->codecpar->field_order             = vce_field_order(prm->vidPrm.nInterlaced);
+    m_Mux.video.pStream->codecpar->field_order             = vce_field_order(prm->vidPrm.nPicStruct);
     m_Mux.video.pStream->codecpar->video_delay             = (prm->vidPrm.nBframes > 0) + ((prm->vidPrm.nBframes > 0) & (prm->vidPrm.nBPyramid > 0));
 #else
     m_Mux.video.pCodecCtx->codec_type              = AVMEDIA_TYPE_VIDEO;
@@ -1681,7 +1681,7 @@ AMF_RESULT CAvcodecWriter::SetVideoParam(AVOutputVideoPrm *pVidPrm, amf::AMFBuff
             //    return sts;
             //}
         }
-        m_Mux.video.bIsPAFF = pVidPrm->nPicStruct != 0;
+        m_Mux.video.bIsPAFF = is_interlaced(pVidPrm->nPicStruct);
         if (m_Mux.video.bIsPAFF) {
             AddMessage(VCE_LOG_DEBUG, _T("output is PAFF.\n"));
         }
