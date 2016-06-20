@@ -824,7 +824,7 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
         writerPrm.vidPrm.nBframes = pParams->nBframes;
         writerPrm.vidPrm.nBPyramid = pParams->bBPyramid;
         writerPrm.vidPrm.nGopLength = pParams->nGOPLen;
-        writerPrm.vidPrm.nRef = 2;
+        writerPrm.vidPrm.nRef = 1;
         writerPrm.vidPrm.vui.colormatrix = pParams->ColorMatrix;
         writerPrm.vidPrm.vui.colorprim = pParams->ColorPrim;
         writerPrm.vidPrm.vui.transfer = pParams->Transfer;

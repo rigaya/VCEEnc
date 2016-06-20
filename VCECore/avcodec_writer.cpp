@@ -496,11 +496,11 @@ AMF_RESULT CAvcodecWriter::InitVideo(const AvcodecWriterPrm *prm) {
     m_Mux.video.pCodecCtx->compression_level       = FF_COMPRESSION_DEFAULT;
     m_Mux.video.pCodecCtx->level                   = prm->vidPrm.nCodecLevel;
     m_Mux.video.pCodecCtx->profile                 = prm->vidPrm.nCodecProfile;
-    m_Mux.video.pCodecCtx->refs                    = prm->vidPrm.nBframes;
-    m_Mux.video.pCodecCtx->gop_size                = prm->pVideoInfo->GopPicSize;
-    m_Mux.video.pCodecCtx->max_b_frames            = prm->pVideoInfo->GopRefDist - 1;
+    m_Mux.video.pCodecCtx->refs                    = prm->vidPrm.nRef;
+    m_Mux.video.pCodecCtx->gop_size                = prm->vidPrm.nGopLength;
+    m_Mux.video.pCodecCtx->max_b_frames            = prm->vidPrm.nBframes;
     m_Mux.video.pCodecCtx->chroma_sample_location  = AVCHROMA_LOC_LEFT;
-    m_Mux.video.pCodecCtx->slice_count             = prm->pVideoInfo->NumSlice;
+    m_Mux.video.pCodecCtx->slice_count             = 1;
     m_Mux.video.pCodecCtx->sample_aspect_ratio.num = prm->vidPrm.sar.first;
     m_Mux.video.pCodecCtx->sample_aspect_ratio.den = prm->vidPrm.sar.second;
 #endif //#if USE_AVCODECPAR
