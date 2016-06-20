@@ -49,6 +49,7 @@ class Slot: public AMFThread
 {
 public:
     bool m_bThread;
+    bool m_bError;
     PipelineConnector *m_pConnector;
     amf_int32 m_iThisSlot;
     AMFPreciseWaiter m_waiter;
@@ -59,6 +60,8 @@ public:
     }
 
     void Stop();
+    void SetError();
+    bool ErrorOccurred();
     virtual bool StopRequested();
 };
 //-------------------------------------------------------------------------------------------------
@@ -124,6 +127,7 @@ public:
         m_bPush = false;
     }
 
+    bool ErrorOccurred();
     void OnEof();
 
     // a-sync operations from threads
@@ -263,6 +267,17 @@ void Pipeline::OnEof()
 
 PipelineState Pipeline::GetState()
 {
+    bool bError = false;
+    for (ConnectorList::iterator it = m_connectors.begin();
+        it != m_connectors.end() && !bError; it++) {
+        if ((*it)->ErrorOccurred()) {
+            bError = true;
+        }
+    }
+    if (bError) {
+        Stop();
+        m_state = PipelineStateError;
+    }
     AMFLock lock(&m_cs);
     return m_state;
 }
@@ -331,13 +346,21 @@ amf_int64 Pipeline::GetNumberOfProcessedFrames()
 // class Slot
 //-------------------------------------------------------------------------------------------------
 Slot::Slot(bool bThread, PipelineConnector *connector, amf_int32 thisSlot) :
-    m_bThread(bThread), m_pConnector(connector), m_iThisSlot(thisSlot)
+    m_bThread(bThread), m_bError(false), m_pConnector(connector), m_iThisSlot(thisSlot)
 {
 }
 void Slot::Stop()
 {
     RequestStop();
     WaitForStop();
+}
+void Slot::SetError()
+{
+    m_bError = true;
+}
+bool Slot::ErrorOccurred()
+{
+    return m_bError;
 }
 bool Slot::StopRequested()
 {
@@ -367,6 +390,10 @@ void InputSlot::Run()
             if (res == AMF_OK || res == AMF_EOF)
             {
                 res = SubmitInput(data, 50, false);
+            }
+            else if (ErrorOccurred())
+            {
+                break;
             }
             else
             {
@@ -451,8 +478,8 @@ AMF_RESULT InputSlot::SubmitInput(amf::AMFData* pData, amf_ulong ulTimeout,
                 }
                 else if (res != AMF_EOF)
                 {
-                    LOG_ERROR(L"SubmitInput() returned error: "
-                                    << amf::AMFGetResultText(res));
+                    //LOG_ERROR(L"SubmitInput() returned error: " << amf::AMFGetResultText(res));
+                    SetError();
                 }
 
                 break;
@@ -495,6 +522,10 @@ void OutputSlot::Run()
             {
                 m_waiter.Wait(3);
             }
+        }
+        else if (ErrorOccurred())
+        {
+            break;
         }
         else
         {
@@ -634,6 +665,19 @@ void PipelineConnector::Start()
         }
     }
 
+}
+bool PipelineConnector::ErrorOccurred() {
+    for (amf_size i = 0; i < m_InputSlots.size(); i++) {
+        if (m_InputSlots[i]->ErrorOccurred()) {
+            return true;
+        }
+    }
+    for (amf_size i = 0; i < m_OutputSlots.size(); i++) {
+        if (m_OutputSlots[i]->ErrorOccurred()) {
+            return true;
+        }
+    }
+    return false;
 }
 void PipelineConnector::Stop()
 {

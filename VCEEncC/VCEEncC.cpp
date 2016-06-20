@@ -1579,8 +1579,13 @@ int vce_run(VCEParam *pParams, VCEInputInfo *pInputInfo) {
             return 1;
         }
 
-        while (vce->GetState() != PipelineStateEof) {
+        PipelineState state = PipelineStateRunning;
+        while ((state = vce->GetState()) != PipelineStateEof && state != PipelineStateError) {
             amf_sleep(100);
+        }
+        if (state == PipelineStateError) {
+            _ftprintf(stderr, _T("fatal error in encoding pipeline.\n"));
+            return 1;
         }
         vce->PrintResult();
     } catch (...) {

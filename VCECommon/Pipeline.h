@@ -43,6 +43,7 @@ enum PipelineState
     PipelineStateReady,
     PipelineStateRunning,
     PipelineStateEof,
+    PipelineStateError,
 };
 
 class Pipeline

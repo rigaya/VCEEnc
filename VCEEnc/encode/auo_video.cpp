@@ -214,7 +214,8 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
         try {
             ret |= vce->run() ? AUO_RESULT_ERROR : AUO_RESULT_SUCCESS;
 
-            while (ret == AUO_RESULT_SUCCESS && vce->GetState() != PipelineStateEof) {
+            PipelineState state = PipelineStateRunning;
+            while (ret == AUO_RESULT_SUCCESS && (state = vce->GetState()) != PipelineStateEof && state != PipelineStateError) {
                 if (pe->aud_parallel.abort || oip->func_is_abort()) {
                     pe->aud_parallel.abort = TRUE;
                     ret |= AUO_RESULT_ABORT;
