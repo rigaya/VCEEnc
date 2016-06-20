@@ -680,6 +680,10 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
         PrintMes(VCE_LOG_ERROR, _T("crop size is too big.\n"));
         return AMF_FAIL;
     }
+    if (prm->nInputType == VCE_INPUT_AVCODEC_VCE && (m_inputInfo.crop.left | m_inputInfo.crop.right | m_inputInfo.crop.bottom | m_inputInfo.crop.up)) {
+        PrintMes(VCE_LOG_ERROR, _T("crop not available with avvce readder.\n"));
+        return AMF_NOT_SUPPORTED;
+    }
     m_inputInfo.srcWidth -= (m_inputInfo.crop.left + m_inputInfo.crop.right);
     m_inputInfo.srcHeight -= (m_inputInfo.crop.bottom + m_inputInfo.crop.up);
     if (m_inputInfo.srcWidth % 2 != 0) {
