@@ -81,17 +81,21 @@ public:
     }
 
     virtual AMF_RESULT SubmitInput(amf::AMFData* pData) {
-        AMF_RESULT res = AMF_OK;
-        if (pData == NULL) // EOF
-        {
-            res = m_pComponent->Drain();
-        } else {
-            res = m_pComponent->SubmitInput(pData);
-            if (res == AMF_DECODER_NO_FREE_SURFACES || res == AMF_INPUT_FULL) {
-                return AMF_INPUT_FULL;
+        __try {
+            AMF_RESULT res = AMF_OK;
+            if (pData == NULL) // EOF
+            {
+                res = m_pComponent->Drain();
+            } else {
+                res = m_pComponent->SubmitInput(pData);
+                if (res == AMF_DECODER_NO_FREE_SURFACES || res == AMF_INPUT_FULL) {
+                    return AMF_INPUT_FULL;
+                }
             }
+            return res;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            return AMF_FAIL;
         }
-        return res;
     }
 
     virtual AMF_RESULT QueryOutput(amf::AMFData** ppData) {

@@ -173,6 +173,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4505;4564;4996;</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\AMD Media SDK\lib\amf\$(Platform)\$(Configuration)\vs12;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -198,6 +199,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4505;4564;4996;</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\AMD Media SDK\lib\amf\$(Platform)\Debug\vs12;..\ffmpeg_lgpl\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -222,6 +224,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4505;4564;4996;</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\AMD Media SDK\lib\amf\$(Platform)\$(Configuration)\vs12;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -244,6 +247,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4505;4564;4996;</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\AMD Media SDK\lib\amf\$(Platform)\Debug\vs12;..\ffmpeg_lgpl\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -267,6 +271,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableSpecificWarnings>4505;4564;4996;</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\AMD Media SDK\lib\amf\$(Platform)\$(Configuration)\vs12;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -300,6 +305,7 @@
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
       <StringPooling>true</StringPooling>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\AMD Media SDK\lib\amf\$(Platform)\$(Configuration)\vs12;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -330,6 +336,7 @@
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
       <StringPooling>true</StringPooling>
       <DisableSpecificWarnings>4505;4564;4996;</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\AMD Media SDK\lib\amf\$(Platform)\Release\vs12;..\ffmpeg_lgpl\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -363,6 +370,7 @@
       <StringPooling>true</StringPooling>
       <DisableSpecificWarnings>4505;4564;4996;</DisableSpecificWarnings>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>..\AMD Media SDK\lib\amf\$(Platform)\Release\vs12;..\ffmpeg_lgpl\lib\$(Platform);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
