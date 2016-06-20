@@ -472,7 +472,10 @@ AMF_RESULT VCECore::readChapterFile(tstring chapfile) {
 
 AMF_RESULT VCECore::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo) {
 #if !VCE_AUO
-    m_pVCELog.reset(new VCELog(pParams->pStrLog, pParams->nLogLevel));
+    m_pVCELog.reset(new VCELog(pParams->pStrLogFile, pParams->nLogLevel));
+    if (pParams->pStrLogFile) {
+        m_pVCELog->writeFileHeader(pParams->pOutputFile);
+    }
     if (!m_pEncSatusInfo) {
         m_pEncSatusInfo = std::make_shared<VCEStatus>();
     }
