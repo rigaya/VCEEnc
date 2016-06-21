@@ -1647,7 +1647,6 @@ AMF_RESULT CAvcodecWriter::WriteFileHeader(const sBitstream *pBitstream) {
 }
 
 AMF_RESULT CAvcodecWriter::SetVideoParam(AVOutputVideoPrm *pVidPrm, amf::AMFBufferPtr pExtradata) {
-    AMF_RESULT sts = AMF_OK;
     if (pVidPrm) {
         if (pExtradata) {
             //VCEではこの時点で動画のextraDataが手に入らないため、ヘッダを出力できない
