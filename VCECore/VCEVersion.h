@@ -46,7 +46,7 @@
 
 #define ENABLE_LIBASS_SUBBURN 0
 
-#if defined(VCE_AUO) && defined(NDEBUG)
+#if defined(VCE_AUO)
 #define ENABLE_VAPOURSYNTH_READER 0
 #define ENABLE_AVISYNTH_READER 0
 #define ENABLE_AVCODEC_VCE_READER 0
