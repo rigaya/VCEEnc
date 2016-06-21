@@ -1152,7 +1152,7 @@ AMF_RESULT VCECore::initDecoder(VCEParam *prm) {
     PrintMes(VCE_LOG_DEBUG, _T("Initialized decoder\n"), res);
     return res;
 #else
-    return AMF_NOT_SUPPORTED;
+    return AMF_OK;
 #endif
 }
 #pragma warning(pop)
@@ -1178,7 +1178,7 @@ AMF_RESULT VCECore::initConverter(VCEParam *prm) {
     }
     return res;
 #else
-return AMF_NOT_SUPPORTED;
+    return AMF_OK;
 #endif
 }
 
@@ -1342,9 +1342,11 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
 
 AMF_RESULT VCECore::init(VCEParam *prm, VCEInputInfo *inputInfo) {
     Terminate();
+#if !VCE_AUO
     hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
     hStdErr = GetStdHandle(STD_ERROR_HANDLE);
     m_apihook.hook(_T("kernel32.dll"), "WriteFile", WriteFileHook, (void **)&origWriteFileFunc);
+#endif
 
     tstring vce_check;
     if (!check_if_vce_available(vce_check)) {
