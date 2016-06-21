@@ -1,7 +1,7 @@
 ﻿# VCEEnc
 by rigaya
 
-VCEEnc.auo … NVIDIAのNVEncを使用してエンコードを行うAviutlの出力プラグインです。
+VCEEnc.auo … AMDのVCEを使用してエンコードを行うAviutlの出力プラグインです。
 
 VCEEncC.exe … 上記のコマンドライン版です。
 
