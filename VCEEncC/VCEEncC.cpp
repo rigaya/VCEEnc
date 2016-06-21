@@ -390,12 +390,13 @@ static tstring help() {
         _T("\n")
         _T("   --crop <int>,<int>,<int>,<int>\n")
         _T("                                set crop pixels of left, up, right, bottom.\n")
-        _T("\n")
-        _T("   --fullrange                  set stream as fullrange yuv\n"));
-    str += PrintListOptions(_T("--videoformat <string>"), list_videoformat, 0);
-    str += PrintListOptions(_T("--colormatrix <string>"), list_colormatrix, 0);
-    str += PrintListOptions(_T("--colorprim <string>"), list_colorprim, 0);
-    str += PrintListOptions(_T("--transfer <string>"), list_transfer, 0);
+        //_T("\n")
+        //_T("   --fullrange                  set stream as fullrange yuv\n")
+    );
+    //str += PrintListOptions(_T("--videoformat <string>"), list_videoformat, 0);
+    //str += PrintListOptions(_T("--colormatrix <string>"), list_colormatrix, 0);
+    //str += PrintListOptions(_T("--colorprim <string>"), list_colorprim, 0);
+    //str += PrintListOptions(_T("--transfer <string>"), list_transfer, 0);
     str += strsprintf(_T("\n")
         _T("   --log <string>               output log to file (txt or html).\n")
         _T("   --log-level <int>            set log level\n")
@@ -1392,6 +1393,7 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         pParams->nPicStruct = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD;
         return 0;
     }
+#if 0
     if (IS_OPTION("colormatrix")) {
         i++;
         int value;
@@ -1424,6 +1426,7 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         pParams->bFullrange = true;
         return 0;
     }
+#endif
     if (IS_OPTION("log")) {
         i++;
         pParams->pStrLogFile = _tcsdup(strInput[i]);
