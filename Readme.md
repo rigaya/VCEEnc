@@ -53,8 +53,10 @@ VCEEncを使用したことによる、いかなる損害・トラブルにつ�
 - 本ソフトウェアはAMD Media SDKのサンプルコードをベースに作成されており、
   AMD Media SDKのソースを含みます。
   詳細は各ソースのヘッダ部分や、VCEEnc_license.txtをご覧ください。
-- 本ソフトウェアでは、tinyxml2を使用しています。
-  tinyxml2のライセンスにつきましては、該当ソースのヘッダ部分や、VCEEnc_license.txtをご覧ください。
+- 本ソフトウェアでは、
+  [ffmpeg](https://ffmpeg.org/),
+  [tinyxml2](http://www.grinninglizard.com/tinyxml2/)を使用しています。  
+  これらのライセンスにつきましては、該当ソースのヘッダ部分や、VCEEnc_license.txtをご覧ください。
 
 ### ソース概要
 Windows ... VCビルド  
