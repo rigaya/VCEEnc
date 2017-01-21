@@ -29,16 +29,17 @@
 
 #include <d3d9.h>
 #include <d3d11.h>
+#pragma warning(push)
+#pragma warning(disable:4100)
 #include "VideoEncoderVCE.h"
-#include "AMFPlatform.h"
-#include "PlatformWindows.h"
-#include "Thread.h"
 
+#include "DataStream.h"
 #include "PipelineElement.h"
 
 #include "VCEUtil.h"
 #include "VCEParam.h"
 #include "VCEStatus.h"
+#pragma warning(pop)
 
 struct AVOutputVideoPrm;
 
@@ -63,6 +64,9 @@ public:
         return m_strOutputInfo;
     }
 
+    virtual amf_int32 GetInputSlotCount() override {
+        return 1;
+    }
     virtual amf_int32 GetOutputSlotCount() override {
         return 0;
     }
@@ -101,7 +105,7 @@ protected:
         AddMessage(log_level, buffer);
     }
     tstring m_strWriterName;
-    AMFDataStreamPtr m_pDataStream;
+    amf::AMFDataStreamPtr m_pDataStream;
     shared_ptr<VCELog> m_pPrintMes;
     shared_ptr<VCEStatus> m_pEncSatusInfo;
     tstring m_strOutputInfo;

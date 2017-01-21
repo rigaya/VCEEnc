@@ -29,10 +29,9 @@
 
 #include <d3d9.h>
 #include <d3d11.h>
+#pragma warning(push)
+#pragma warning(disable:4100)
 #include "VideoEncoderVCE.h"
-#include "AMFPlatform.h"
-#include "PlatformWindows.h"
-#include "Thread.h"
 
 #include "PipelineElement.h"
 
@@ -41,6 +40,7 @@
 #include "VCELog.h"
 #include "VCEStatus.h"
 #include "ConvertCsp.h"
+#pragma warning(pop)
 
 class VCEInput : public PipelineElement {
 public:
@@ -82,8 +82,11 @@ public:
     }
 #pragma warning (pop)
 
-    virtual amf_int32 GetInputSlotCount()  override {
+    virtual amf_int32 GetInputSlotCount() override {
         return 0;
+    }
+    virtual amf_int32 GetOutputSlotCount() override {
+        return 1;
     }
     virtual tstring GetInputInfoStr() {
         return m_strInputInfo;

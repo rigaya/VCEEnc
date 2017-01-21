@@ -24,7 +24,7 @@
 // THE SOFTWARE.
 //
 // ------------------------------------------------------------------------------------------
-#include "VideoEncoderVCE.h"
+
 #include "VCEUtil.h"
 #include "VCEParam.h"
 
@@ -54,7 +54,7 @@ void init_vce_param(VCEParam *prm) {
 
     prm->nBframes = VCE_DEFAULT_BFRAMES;
     prm->bBPyramid = FALSE;
-    prm->nRateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTRAINED_QP;
+    prm->nRateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP;
     prm->bDeblockFilter = TRUE;
     prm->nGOPLen = 0;
     prm->nIDRPeriod = 1;

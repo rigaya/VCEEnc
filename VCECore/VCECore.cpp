@@ -47,11 +47,13 @@
 #include "VCEInputVpy.h"
 #include "avcodec_reader.h"
 #include "avcodec_writer.h"
-#include "EncoderParams.h"
 #include "chapter_rw.h"
 
 #include "VideoEncoderVCE.h"
+#include "VideoEncoderHEVC.h"
 #include "VideoConverter.h"
+#include "EncoderParamsAVC.h"
+#include "EncoderParamsHEVC.h"
 
 const wchar_t* VCECore::PARAM_NAME_INPUT = L"INPUT";
 const wchar_t* VCECore::PARAM_NAME_INPUT_WIDTH = L"WIDTH";
@@ -136,6 +138,12 @@ public:
     }
     virtual AMF_RESULT Drain() {
         return m_pComponent->Drain();
+    }
+    virtual amf_int32 GetInputSlotCount() override {
+        return 1;
+    }
+    virtual amf_int32 GetOutputSlotCount() override {
+        return 1;
     }
 protected:
     amf::AMFComponentPtr m_pComponent;
@@ -224,6 +232,10 @@ public:
         }
         return ret;
     }
+    virtual AMF_RESULT Drain(amf_int32 inputSlot) {
+        inputSlot;
+        return m_pComponent->Drain();
+    }
     virtual std::wstring GetDisplayResult() {
         std::wstring ret;
         if (m_framesSubmitted > 0) {
@@ -270,114 +282,6 @@ std::wstring VCECore::AccelTypeToString(amf::AMF_ACCELERATION_TYPE accelType) {
         break;
     }
     return strValue;
-}
-
-bool VCECore::QueryIOCaps(amf::AMFIOCapsPtr& ioCaps) {
-    bool result = true;
-    if (ioCaps != NULL) {
-        amf_int32 minWidth, maxWidth;
-        ioCaps->GetWidthRange(&minWidth, &maxWidth);
-        std::wcout << L"\t\t\tWidth: [" << minWidth << L"-" << maxWidth << L"]\n";
-
-        amf_int32 minHeight, maxHeight;
-        ioCaps->GetHeightRange(&minHeight, &maxHeight);
-        std::wcout << L"\t\t\tHeight: [" << minHeight << L"-" << maxHeight << L"]\n";
-
-        amf_int32 vertAlign = ioCaps->GetVertAlign();
-        std::wcout << L"\t\t\tVertical alignment: " << vertAlign << L" lines.\n";
-
-        amf_bool interlacedSupport = ioCaps->IsInterlacedSupported();
-        std::wcout << L"\t\t\tInterlaced support: " << (interlacedSupport ? L"YES" : L"NO") << L"\n";
-
-        amf_int32 numOfFormats = ioCaps->GetNumOfFormats();
-        std::wcout << L"\t\t\tTotal of " << numOfFormats << L" pixel format(s) supported:\n";
-        for (amf_int32 i = 0; i < numOfFormats; i++) {
-            amf::AMF_SURFACE_FORMAT format;
-            amf_bool native = false;
-            if (ioCaps->GetFormatAt(i, &format, &native) == AMF_OK) {
-                std::wcout << L"\t\t\t\t" << i << L": " << amf::AMFSurfaceGetFormatName(format) << L" " << (native ? L"(native)" : L"") << L"\n";
-            } else {
-                result = false;
-                break;
-            }
-        }
-
-        if (result == true) {
-            amf_int32 numOfMemTypes = ioCaps->GetNumOfMemoryTypes();
-            std::wcout << L"\t\t\tTotal of " << numOfMemTypes << L" memory type(s) supported:\n";
-            for (amf_int32 i = 0; i < numOfMemTypes; i++) {
-                amf::AMF_MEMORY_TYPE memType;
-                amf_bool native = false;
-                if (ioCaps->GetMemoryTypeAt(i, &memType, &native) == AMF_OK) {
-                    std::wcout << L"\t\t\t\t" << i << L": " << amf::AMFGetMemoryTypeName(memType) << L" " << (native ? L"(native)" : L"") << L"\n";
-                }
-            }
-        }
-    } else {
-        std::wcerr << L"ERROR: ioCaps == NULL\n";
-        result = false;
-    }
-    return result;
-}
-
-bool VCECore::QueryEncoderForCodec(const wchar_t *componentID, amf::AMFCapabilityManagerPtr& capsManager) {
-    std::wcout << L"\tCodec " << componentID << L"\n";
-    amf::AMFEncoderCapsPtr encoderCaps;
-    bool result = false;
-    if (capsManager->GetEncoderCaps(componentID, &encoderCaps) == AMF_OK) {
-        amf::AMF_ACCELERATION_TYPE accelType = encoderCaps->GetAccelerationType();
-        std::wcout << L"\t\tAcceleration Type:" << AccelTypeToString(accelType) << L"\n";
-
-        amf::H264EncoderCapsPtr encoderH264Caps = (amf::H264EncoderCapsPtr)encoderCaps;
-
-        amf_uint32 numProfiles = encoderH264Caps->GetNumOfSupportedProfiles();
-        amf_uint32 numLevels = encoderH264Caps->GetNumOfSupportedLevels();
-        std::wcout << L"\t\tnumber of supported profiles:" <<numProfiles << L"\n";
-
-        for (amf_uint32 i = 0; i < numProfiles; i++) {
-            std::wcout << L"\t\t\t" << encoderH264Caps->GetProfile(i) << L"\n";
-
-        }
-        std::wcout << L"\t\tnumber of supported levels:" << numLevels << L"\n";
-
-        for (amf_uint32 i = 0; i < numLevels; i++) {
-            std::wcout << L"\t\t\t" << encoderH264Caps->GetLevel(i) << L"\n";
-
-        }
-
-        std::wcout << L"\t\tnumber of supported Rate Control Metheds:" << encoderH264Caps->GetNumOfRateControlMethods() << L"\n";
-
-        for (amf_int32 i = 0; i < encoderH264Caps->GetNumOfRateControlMethods(); i++) {
-            std::wcout << L"\t\t\t" << encoderH264Caps->GetRateControlMethod(i) << L"\n";
-
-        }
-
-        std::wcout << L"\t\tNumber of temporal Layers:" << encoderH264Caps->GetMaxNumOfTemporalLayers() << L"\n";
-        std::wcout << L"\t\tMax Supported Job Priority:" << encoderH264Caps->GetMaxSupportedJobPriority() << L"\n";
-        std::wcout << L"\t\tIsBPictureSupported:" << encoderH264Caps->IsBPictureSupported() << L"\n\n";
-        std::wcout << L"\t\tMax Number of streams supported:" << encoderH264Caps->GetMaxNumOfStreams() << L"\n";
-        std::wcout << L"\t\tEncoder input:\n";
-        amf::AMFIOCapsPtr inputCaps;
-        if (encoderCaps->GetInputCaps(&inputCaps) == AMF_OK) {
-            result = QueryIOCaps(inputCaps);
-        }
-
-        std::wcout << L"\t\tEncoder output:\n";
-        amf::AMFIOCapsPtr outputCaps;
-        if (encoderCaps->GetOutputCaps(&outputCaps) == AMF_OK) {
-            result = QueryIOCaps(outputCaps);
-        }
-        return true;
-    } else {
-        std::wcout << AccelTypeToString(amf::AMF_ACCEL_NOT_SUPPORTED) << L"\n";
-        return false;
-    }
-}
-
-bool VCECore::QueryEncoderCaps(amf::AMFCapabilityManagerPtr& capsManager) {
-    std::wcout << L"Querying video encoder capabilities...\n";
-
-    return  QueryEncoderForCodec(AMFVideoEncoderVCE_AVC, capsManager);
 }
 
 void VCECore::PrintMes(int log_level, const TCHAR *format, ...) {
@@ -683,24 +587,6 @@ AMF_RESULT VCECore::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo)
 }
 
 AMF_RESULT VCECore::checkParam(VCEParam *prm) {
-    amf::AMFCapabilityManager *pcap;
-    if (AMFCreateCapsManager(&pcap) != AMF_OK) {
-        PrintMes(VCE_LOG_ERROR, _T("Failed to create encoder capability manager.\n"));
-        return AMF_FAIL;
-    }
-    amf::AMFCapabilityManagerPtr capsManager(pcap);
-    amf::AMFEncoderCapsPtr encoderCaps;
-    if (capsManager->GetEncoderCaps(list_codecs[prm->nCodecId], &encoderCaps) != AMF_OK) {
-        PrintMes(VCE_LOG_ERROR, _T("Failed to get encoder capability.\n"));
-        return AMF_FAIL;
-    }
-
-    amf::AMFIOCapsPtr inputCaps;
-    if (encoderCaps->GetInputCaps(&inputCaps) != AMF_OK) {
-        PrintMes(VCE_LOG_ERROR, _T("Failed to get encoder input capability.\n"));
-        return AMF_FAIL;
-    }
-
     auto srcInfo = m_pFileReader->GetInputFrameInfo();
     if (m_inputInfo.fps.num <= 0 || m_inputInfo.fps.den <= 0) {
         m_inputInfo.fps = srcInfo.fps;
@@ -716,14 +602,6 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
     }
     if (srcInfo.format) {
         m_inputInfo.format = srcInfo.format;
-    }
-
-    if (!inputCaps->IsInterlacedSupported()
-        && (prm->nPicStruct != AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME)) {
-        PrintMes(VCE_LOG_WARN, _T("This platform does not support interlaced encoding.\n"));
-        PrintMes(VCE_LOG_WARN, _T("--tff/--bff was set, but video will be encoded as progressive video.\n"));
-        m_inputInfo.nPicStruct = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME;
-        prm->nPicStruct = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME;
     }
 
     if (m_inputInfo.fps.num <= 0 || m_inputInfo.fps.den <= 0) {
@@ -1124,7 +1002,7 @@ AMF_RESULT VCECore::initDecoder(VCEParam *prm) {
         return AMF_NOT_SUPPORTED;
     }
     const auto codec_uvd_name = VCE_CODEC_UVD_NAME.at(inputCodec);
-    auto res = AMFCreateComponent(m_pContext, codec_uvd_name, &m_pDecoder);
+    auto res = g_AMFFactory.GetFactory()->CreateComponent(m_pContext, codec_uvd_name, &m_pDecoder);
     if (res != AMF_OK) {
         PrintMes(VCE_LOG_ERROR, _T("Failed to create decoder context: %d\n"), res);
         return AMF_FAIL;
@@ -1162,7 +1040,7 @@ AMF_RESULT VCECore::initConverter(VCEParam *prm) {
     if (m_inputInfo.dstWidth == m_inputInfo.srcWidth && m_inputInfo.dstHeight == m_inputInfo.srcHeight) {
         return AMF_OK;
     }
-    auto res = AMFCreateComponent(m_pContext, AMFVideoConverter, &m_pConverter);
+    auto res = g_AMFFactory.GetFactory()->CreateComponent(m_pContext, AMFVideoConverter, &m_pConverter);
     if (res != AMF_OK) {
         PrintMes(VCE_LOG_ERROR, _T("Failed to create converter context: %d\n"), res);
         return AMF_FAIL;
@@ -1181,6 +1059,120 @@ AMF_RESULT VCECore::initConverter(VCEParam *prm) {
     return AMF_OK;
 #endif
 }
+
+bool VCECore::QueryIOCaps(amf::AMFIOCapsPtr& ioCaps) {
+    bool result = true;
+    if (ioCaps != NULL) {
+        amf_int32 minWidth, maxWidth;
+        ioCaps->GetWidthRange(&minWidth, &maxWidth);
+        std::wcout << L"\t\t\tWidth: [" << minWidth << L"-" << maxWidth << L"]\n";
+
+        amf_int32 minHeight, maxHeight;
+        ioCaps->GetHeightRange(&minHeight, &maxHeight);
+        std::wcout << L"\t\t\tHeight: [" << minHeight << L"-" << maxHeight << L"]\n";
+
+        amf_int32 vertAlign = ioCaps->GetVertAlign();
+        std::wcout << L"\t\t\tVertical alignment: " << vertAlign << L" lines.\n";
+
+        amf_bool interlacedSupport = ioCaps->IsInterlacedSupported();
+        std::wcout << L"\t\t\tInterlaced support: " << (interlacedSupport ? L"YES" : L"NO") << L"\n";
+
+        amf_int32 numOfFormats = ioCaps->GetNumOfFormats();
+        std::wcout << L"\t\t\tTotal of " << numOfFormats << L" pixel format(s) supported:\n";
+        for (amf_int32 i = 0; i < numOfFormats; i++) {
+            amf::AMF_SURFACE_FORMAT format;
+            amf_bool native = false;
+            if (ioCaps->GetFormatAt(i, &format, &native) == AMF_OK) {
+                std::wcout << L"\t\t\t\t" << i << L": " << g_AMFFactory.GetTrace()->SurfaceGetFormatName(format) << L" " << (native ? L"(native)" : L"") << L"\n";
+            } else {
+                result = false;
+                break;
+            }
+        }
+
+        if (result == true) {
+            amf_int32 numOfMemTypes = ioCaps->GetNumOfMemoryTypes();
+            std::wcout << L"\t\t\tTotal of " << numOfMemTypes << L" memory type(s) supported:\n";
+            for (amf_int32 i = 0; i < numOfMemTypes; i++) {
+                amf::AMF_MEMORY_TYPE memType;
+                amf_bool native = false;
+                if (ioCaps->GetMemoryTypeAt(i, &memType, &native) == AMF_OK) {
+                    std::wcout << L"\t\t\t\t" << i << L": " << g_AMFFactory.GetTrace()->GetMemoryTypeName(memType) << L" " << (native ? L"(native)" : L"") << L"\n";
+                }
+            }
+        }
+    } else {
+        std::wcerr << L"ERROR: ioCaps == NULL\n";
+        result = false;
+    }
+    return result;
+}
+
+bool VCECore::QueryIOCaps(int encCodecId, amf::AMFCapsPtr& encoderCaps) {
+    if (encoderCaps == NULL) {
+        return false;
+    }
+    if (encCodecId == VCE_CODEC_H264) {
+        amf::AMF_ACCELERATION_TYPE accelType = encoderCaps->GetAccelerationType();
+        std::wcout << L"\t\tAcceleration Type:" << AccelTypeToString(accelType) << L"\n";
+
+        amf_uint32 maxProfile = 0;
+        encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_MAX_PROFILE, &maxProfile);
+        std::wcout << L"\t\tmaximum profile:" <<maxProfile << L"\n";
+
+        amf_uint32 maxLevel = 0;
+        encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_MAX_LEVEL, &maxLevel);
+        std::wcout << L"\t\tmaximum level:" <<maxLevel << L"\n";
+
+        amf_uint32 maxTemporalLayers = 0;
+        encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_MAX_TEMPORAL_LAYERS, &maxTemporalLayers);
+        std::wcout << L"\t\tNumber of temporal Layers:" << maxTemporalLayers << L"\n";
+
+        bool bBPictureSupported = false;
+        encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_BFRAMES, &bBPictureSupported);
+        std::wcout << L"\t\tIsBPictureSupported:" << bBPictureSupported << L"\n\n";
+
+        amf_uint32 maxNumOfStreams = 0;
+        encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_NUM_OF_STREAMS, &maxNumOfStreams);
+        std::wcout << L"\t\tMax Number of streams supported:" << maxNumOfStreams << L"\n";
+
+        amf_uint32 NumOfHWInstances = 0;
+        encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_NUM_OF_HW_INSTANCES, &NumOfHWInstances);
+        std::wcout << L"\t\tNumber HW instances:" << NumOfHWInstances << L"\n";
+    } else if (encCodecId == VCE_CODEC_HEVC) {
+        amf::AMF_ACCELERATION_TYPE accelType = encoderCaps->GetAccelerationType();
+        std::wcout << L"\t\tAcceleration Type:" << AccelTypeToString(accelType) << L"\n";
+
+        amf_uint32 maxProfile = 0;
+        encoderCaps->GetProperty(AMF_VIDEO_ENCODER_HEVC_CAP_MAX_PROFILE, &maxProfile);
+        std::wcout << L"\t\tmaximum profile:" <<maxProfile << L"\n";
+
+        amf_uint32 maxTier = 0;
+        encoderCaps->GetProperty(AMF_VIDEO_ENCODER_HEVC_CAP_MAX_TIER, &maxTier);
+        std::wcout << L"\t\tmaximum tier:" <<maxTier << L"\n";
+
+        amf_uint32 maxLevel = 0;
+        encoderCaps->GetProperty(AMF_VIDEO_ENCODER_HEVC_CAP_MAX_LEVEL, &maxLevel);
+        std::wcout << L"\t\tmaximum level:" <<maxLevel << L"\n";
+
+        amf_uint32 maxNumOfStreams = 0;
+        encoderCaps->GetProperty(AMF_VIDEO_ENCODER_HEVC_CAP_NUM_OF_STREAMS, &maxNumOfStreams);
+        std::wcout << L"\t\tMax Number of streams supported:" << maxNumOfStreams << L"\n";
+    }
+    std::wcout << L"\t\tEncoder input:\n";
+    amf::AMFIOCapsPtr inputCaps;
+    if (encoderCaps->GetInputCaps(&inputCaps) == AMF_OK) {
+        QueryIOCaps(inputCaps);
+    }
+
+    std::wcout << L"\t\tEncoder output:\n";
+    amf::AMFIOCapsPtr outputCaps;
+    if (encoderCaps->GetOutputCaps(&outputCaps) == AMF_OK) {
+        QueryIOCaps(outputCaps);
+    }
+    return true;
+}
+
 
 AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     AMF_RESULT res = AMF_OK;
@@ -1201,23 +1193,33 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     }
 
     m_VCECodecId = prm->nCodecId;
-    if (AMF_OK != (res = AMFCreateComponent(m_pContext, list_codecs[prm->nCodecId], &m_pEncoder))) {
+    if (AMF_OK != (res = g_AMFFactory.GetFactory()->CreateComponent(m_pContext, list_codecs[prm->nCodecId], &m_pEncoder))) {
         PrintMes(VCE_LOG_ERROR, _T("Failed to AMFCreateComponent.\n"));
         return AMF_FAIL;
     }
     PrintMes(VCE_LOG_DEBUG, _T("initialized Encoder component.\n"));
 
-    m_Params.SetParamDescription(PARAM_NAME_INPUT,         ParamCommon, L"Input file name");
-    m_Params.SetParamDescription(PARAM_NAME_INPUT_WIDTH,   ParamCommon, L"Input Frame width (integer, default = 0)");
-    m_Params.SetParamDescription(PARAM_NAME_INPUT_HEIGHT,  ParamCommon, L"Input Frame height (integer, default = 0)");
-    m_Params.SetParamDescription(PARAM_NAME_OUTPUT,        ParamCommon, L"Output file name");
-    m_Params.SetParamDescription(PARAM_NAME_OUTPUT_WIDTH,  ParamCommon, L"Output Frame width (integer, default = 0)");
-    m_Params.SetParamDescription(PARAM_NAME_OUTPUT_HEIGHT, ParamCommon, L"Output Frame height (integer, default = 0)");
-    m_Params.SetParamDescription(PARAM_NAME_ENGINE,        ParamCommon, L"Specifies decoder/encoder engine type (DX9, DX11)");
-    m_Params.SetParamDescription(PARAM_NAME_ADAPTERID,     ParamCommon, L"Specifies adapter ID (integer, default = 0)");
-    m_Params.SetParamDescription(PARAM_NAME_CAPABILITY,    ParamCommon, L"Enable/Disable to display the device capabilities (true, false default =  false)");
+    m_Params.SetParamDescription(PARAM_NAME_INPUT,         ParamCommon, L"Input file name", NULL);
+    m_Params.SetParamDescription(PARAM_NAME_INPUT_WIDTH,   ParamCommon, L"Input Frame width (integer, default = 0)", ParamConverterInt64);
+    m_Params.SetParamDescription(PARAM_NAME_INPUT_HEIGHT,  ParamCommon, L"Input Frame height (integer, default = 0)", ParamConverterInt64);
+    m_Params.SetParamDescription(PARAM_NAME_OUTPUT,        ParamCommon, L"Output file name", NULL);
+    m_Params.SetParamDescription(PARAM_NAME_OUTPUT_WIDTH,  ParamCommon, L"Output Frame width (integer, default = 0)", ParamConverterInt64);
+    m_Params.SetParamDescription(PARAM_NAME_OUTPUT_HEIGHT, ParamCommon, L"Output Frame height (integer, default = 0)", ParamConverterInt64);
+    m_Params.SetParamDescription(PARAM_NAME_ENGINE,        ParamCommon, L"Specifies decoder/encoder engine type (DX9, DX11)", NULL);
+    m_Params.SetParamDescription(PARAM_NAME_ADAPTERID,     ParamCommon, L"Specifies adapter ID (integer, default = 0)", ParamConverterInt64);
+    m_Params.SetParamDescription(PARAM_NAME_CAPABILITY,    ParamCommon, L"Enable/Disable to display the device capabilities (true, false default =  false)", ParamConverterBoolean);
 
-    RegisterEncoderParams(&m_Params);
+    switch (prm->nCodecId) {
+    case VCE_CODEC_H264:
+        RegisterEncoderParamsAVC(&m_Params);
+        break;
+    case VCE_CODEC_HEVC:
+        RegisterEncoderParamsHEVC(&m_Params);
+        break;
+    default:
+        PrintMes(VCE_LOG_ERROR, _T("Unknown Codec.\n"));
+        return AMF_FAIL;
+    }
 
     m_Params.SetParamAsString(PARAM_NAME_INPUT,     tchar_to_wstring(prm->pInputFile));
     m_Params.SetParamAsString(PARAM_NAME_OUTPUT,    tchar_to_wstring(prm->pOutputFile));
@@ -1253,11 +1255,9 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     m_Params.SetParam(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP,     (amf_int64)prm->nDeltaQPBFrame);
     m_Params.SetParam(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrameRef);
 
-
     m_Params.SetParam(AMF_VIDEO_ENCODER_ENFORCE_HRD,        true);
     //m_Params.SetParam(AMF_VIDEO_ENCODER_FILLER_DATA_ENABLE, false);
 
-    m_Params.SetParam(AMF_VIDEO_ENCODER_GOP_SIZE,                       (amf_int64)nGOPLen);
     m_Params.SetParam(AMF_VIDEO_ENCODER_VBV_BUFFER_SIZE,                (amf_int64)prm->nVBVBufferSize * 1000);
     m_Params.SetParam(AMF_VIDEO_ENCODER_INITIAL_VBV_BUFFER_FULLNESS,    (amf_int64)prm->nInitialVBVPercent);
 
@@ -1312,27 +1312,27 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     PushParamsToPropertyStorage(&m_Params, ParamEncoderDynamic, m_pEncoder);
 
     // Connect pipeline
-    if (AMF_OK != (res = Connect(m_pFileReader, 4))) {
+    if (AMF_OK != (res = Connect(m_pFileReader, 4, CT_Direct))) {
         PrintMes(VCE_LOG_ERROR, _T("failed to connect input to pipeline.\n"));
         return res;
     }
     if (m_pDecoder) {
-        if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementAMFComponent(m_pDecoder)), 4))) {
+        if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementAMFComponent(m_pDecoder)), 4, CT_Direct))) {
             PrintMes(VCE_LOG_ERROR, _T("failed to connect deocder to pipeline.\n"));
             return res;
         }
     }
     if (m_pConverter) {
-        if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementAMFComponent(m_pConverter)), 4))) {
+        if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementAMFComponent(m_pConverter)), 4, CT_Direct))) {
             PrintMes(VCE_LOG_ERROR, _T("failed to connect converter to pipeline.\n"));
             return res;
         }
     }
-    if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementEncoder(m_pEncoder, &m_Params, 0, 0, true)), 10))) {
+    if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementEncoder(m_pEncoder, &m_Params, 0, 0, true)), 10, CT_Direct))) {
         PrintMes(VCE_LOG_ERROR, _T("failed to connect encoder to pipeline.\n"));
         return res;
     }
-    if (AMF_OK != (res = Connect(m_pFileWriter, 5))) {
+    if (AMF_OK != (res = Connect(m_pFileWriter, 5, CT_ThreadPoll))) {
         PrintMes(VCE_LOG_ERROR, _T("failed to connect output to pipeline.\n"));
         return res;
     }
@@ -1348,13 +1348,14 @@ AMF_RESULT VCECore::init(VCEParam *prm, VCEInputInfo *inputInfo) {
     m_apihook.hook(_T("kernel32.dll"), "WriteFile", WriteFileHook, (void **)&origWriteFileFunc);
 #endif
 
-    tstring vce_check;
-    if (!check_if_vce_available(vce_check)) {
-        PrintMes(VCE_LOG_ERROR, _T("%s\n"), vce_check);
+    AMF_RESULT ret = g_AMFFactory.Init();
+
+    if (ret != AMF_OK) {
+        PrintMes(VCE_LOG_ERROR, _T("Failed to initalize VCE"));
         return AMF_NO_DEVICE;
     }
 
-    AMF_RESULT res = AMFCreateContext(&m_pContext);
+    AMF_RESULT res = g_AMFFactory.GetFactory()->CreateContext(&m_pContext);
     if (res != AMF_OK) {
         PrintMes(VCE_LOG_ERROR, _T("Failed to create AMF Context.\n"));
         return res;
@@ -1549,7 +1550,7 @@ tstring VCECore::GetEncoderParam() {
         }
     }
     mes += strsprintf(_T("Quality:       %s\n"), getPropertyDesc(AMF_VIDEO_ENCODER_QUALITY_PRESET, list_vce_quality_preset).c_str());
-    if (GetPropertyInt(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD) == AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTRAINED_QP) {
+    if (GetPropertyInt(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD) == AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP) {
         mes += strsprintf(_T("CQP:           I:%d, P:%d"),
             GetPropertyInt(AMF_VIDEO_ENCODER_QP_I),
             GetPropertyInt(AMF_VIDEO_ENCODER_QP_P));
@@ -1575,7 +1576,7 @@ tstring VCECore::GetEncoderParam() {
     }
     mes += strsprintf(_T("Motion Est:    %s\n"), get_cx_desc(list_mv_presicion, nMotionEst));
     mes += strsprintf(_T("Slices:        %d\n"), GetPropertyInt(AMF_VIDEO_ENCODER_SLICES_PER_FRAME));
-    mes += strsprintf(_T("GOP Len:       %d frames\n"), GetPropertyInt(AMF_VIDEO_ENCODER_GOP_SIZE));
+    mes += strsprintf(_T("GOP Len:       %d frames\n"), GetPropertyInt(AMF_VIDEO_ENCODER_IDR_PERIOD));
     tstring others;
     if (GetPropertyBool(AMF_VIDEO_ENCODER_RATE_CONTROL_SKIP_FRAME_ENABLE)) {
         others += _T("skip_frame ");
@@ -1613,61 +1614,8 @@ AMF_RESULT VCECore::PrintResult() {
     return AMF_OK;
 }
 
-bool check_if_vce_available(tstring& mes) {
-#if _M_IX86
-    const TCHAR *dllNameCore      = _T("amf-core-windesktop32.dll");
-    const TCHAR *dllNameComponent = _T("amf-component-vce-windesktop32.dll");
-#else
-    const TCHAR *dllNameCore      = _T("amf-core-windesktop64.dll");
-    const TCHAR *dllNameComponent = _T("amf-component-vce-windesktop64.dll");
-#endif
-    HMODULE hModuleCore = LoadLibrary(dllNameCore);
-    HMODULE hModuleComponent = LoadLibrary(dllNameComponent);
-
-    bool ret = true;
-    mes = _T("");
-    if (hModuleComponent == NULL) {
-        ret = false;
-        mes += tstring(dllNameComponent) + _T(" not found on system");
-    } else {
-        FreeLibrary(hModuleComponent);
-    }
-    if (hModuleCore == NULL) {
-        ret = false;
-        mes += tstring(dllNameCore) + _T(" not found on system");
-    } else {
-        FreeLibrary(hModuleCore);
-    }
-    if (ret) {
-        uint32_t count = 0;
-        amf::AMFContextPtr pContext;
-        amf::AMFComponentPtr pEncoder;
-        DeviceDX9 deviceDX9;
-        if (   AMF_OK != deviceDX9.GetAdapterCount(&count)
-            || count == 0
-            || AMF_OK != AMFCreateContext(&pContext)
-            || AMF_OK != pContext->InitDX9(deviceDX9.GetDevice())
-            || AMF_OK != AMFCreateComponent(pContext, list_codecs[VCE_CODEC_H264], &pEncoder)) {
-            ret = false;
-            mes = _T("System has no GPU supporting VCE.");
-        }
-
-        if (pEncoder != nullptr) {
-            pEncoder->Terminate();
-            pEncoder = nullptr;
-        }
-
-        if (pContext != nullptr) {
-            pContext->Terminate();
-            pContext = nullptr;
-        }
-
-        deviceDX9.Terminate();
-    }
-    return ret;
-}
-
 bool check_if_vce_available() {
-    tstring dummy;
-    return check_if_vce_available(dummy);
+    bool ret = g_AMFFactory.Init() == AMF_OK;
+    g_AMFFactory.Terminate();
+    return ret;
 }

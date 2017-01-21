@@ -141,8 +141,8 @@ static int getFreeAudioTrack(const VCEParam *pParams) {
 
 static bool check_if_vce_supported() {
     tstring mes;
-    if (!check_if_vce_available(mes)) {
-        _ftprintf(stderr, _T("%s\n"), mes.c_str());
+    if (!check_if_vce_available()) {
+        _ftprintf(stderr, _T("VCE check failed!\n"), mes.c_str());
         return false;
     }
     return true;
@@ -1214,7 +1214,7 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
             PrintHelp(strInput[0], _T("Invalid value"), option_name, strInput[i]);
             return -1;
         }
-        pParams->nRateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTRAINED_QP;
+        pParams->nRateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP;
         pParams->nQPI = a;
         pParams->nQPP = b;
         pParams->nQPB = c;

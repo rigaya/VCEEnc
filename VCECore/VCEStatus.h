@@ -29,10 +29,10 @@
 
 #include <d3d9.h>
 #include <d3d11.h>
+#pragma warning(push)
+#pragma warning(disable:4100)
 #include "VideoEncoderVCE.h"
-#include "AMFPlatform.h"
-#include "PlatformWindows.h"
-#include "Thread.h"
+#pragma warning(pop)
 #include <chrono>
 
 #include "VCEUtil.h"

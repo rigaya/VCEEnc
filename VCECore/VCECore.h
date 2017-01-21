@@ -30,19 +30,18 @@
 #include <d3d9.h>
 #include <d3d11.h>
 #include <thread>
+#pragma warning(push)
+#pragma warning(disable:4100)
 #include "VideoEncoderVCE.h"
 #include "DeviceDX9.h"
 #include "DeviceDX11.h"
-#include "AMFPlatform.h"
-#include "PlatformWindows.h"
-#include "Thread.h"
 
 #include "PipelineElement.h"
 #include "Pipeline.h"
-#include "RawStreamReader.h"
+#include "PipelineMod.h"
+#include "ParametersStorage.h"
 
-#include "CapabilityManager.h"
-#include "VideoEncoderVCECaps.h"
+#include "AMFFactory.h"
 
 #include "VCEVersion.h"
 #include "VCEUtil.h"
@@ -50,6 +49,8 @@
 #include "VCELog.h"
 #include "VCEInput.h"
 #include "VCEOutput.h"
+
+#pragma warning(pop)
 
 #include "api_hook.h"
 
@@ -91,8 +92,7 @@ public:
 protected:
     std::wstring AccelTypeToString(amf::AMF_ACCELERATION_TYPE accelType);
     bool QueryIOCaps(amf::AMFIOCapsPtr& ioCaps);
-    bool QueryEncoderForCodec(const wchar_t *componentID, amf::AMFCapabilityManagerPtr& capsManager);
-    bool QueryEncoderCaps(amf::AMFCapabilityManagerPtr& capsManager);
+    bool QueryIOCaps(int encCodecId, amf::AMFCapsPtr& encoderCaps);
     AMF_RESULT readChapterFile(tstring chapfile);
 
     virtual AMF_RESULT checkParam(VCEParam *prm);
@@ -116,7 +116,7 @@ protected:
 
     amf::AMFContextPtr m_pContext;
 
-    AMFDataStreamPtr m_pStreamOut;
+    amf::AMFDataStreamPtr m_pStreamOut;
 
     sTrimParam *m_pTrimParam;
 

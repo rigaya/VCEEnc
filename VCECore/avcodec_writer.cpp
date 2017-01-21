@@ -1806,6 +1806,9 @@ uint32_t CAvcodecWriter::getH264PAFFFieldLength(uint8_t *ptr, uint32_t size) {
 }
 
 AMF_RESULT CAvcodecWriter::SubmitInput(amf::AMFData *pData) {
+    if (!pData) {
+        return AMF_EOF;
+    }
     return WriteNextFrame(pData);
 }
 

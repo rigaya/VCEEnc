@@ -52,8 +52,7 @@ AMF_RESULT VCEOutput::Init(const tstring& dstFile, const void *pOption, shared_p
         AddMessage(VCE_LOG_ERROR, _T("pipe output not supported.\n"));
         return AMF_FILE_NOT_OPEN;
     }
-    m_pDataStream = AMFDataStream::Create(tchar_to_wstring(dstFile).c_str(), AMF_FileWrite);
-    if (m_pDataStream.get() == nullptr) {
+    if (amf::AMFDataStream::OpenDataStream(tchar_to_wstring(dstFile).c_str(), amf::AMFSO_WRITE, amf::AMFFS_EXCLUSIVE, &m_pDataStream) != AMF_OK) {
         AddMessage(VCE_LOG_ERROR, _T("failed to open output file \"%s\".\n"), dstFile.c_str());
         return AMF_FILE_NOT_OPEN;
     }
@@ -75,7 +74,8 @@ AMF_RESULT VCEOutput::SubmitInput(amf::AMFData* pData) {
         amf::AMFBufferPtr pBuffer(pData);
 
         amf_size towrite = pBuffer->GetSize();
-        amf_size written = m_pDataStream->Write(pBuffer->GetNative(), towrite);
+        amf_size written = 0;
+        m_pDataStream->Write(pBuffer->GetNative(), towrite, &written);
 
         m_pEncSatusInfo->SetOutputData(written, 0x00);
     } else {
