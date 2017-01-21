@@ -485,6 +485,8 @@ typedef struct {
     int         nOutputBufSizeMB;
 
     VCEVuiInfo  vui;
+
+    int         bVBAQ;
 } VCEParam;
 
 static bool is_interlaced(VCE_PICSTRUCT nInterlaced) {

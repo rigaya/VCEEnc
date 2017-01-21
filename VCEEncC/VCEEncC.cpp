@@ -370,6 +370,7 @@ static tstring help() {
         _T("   --(no-)skip-frame            enable skip frame feature\n")
         _T("   --motion-est                 set motion estimation precision\n")
         _T("                                 full-pel, half-pel, q-pel(default)\n")
+        _T("   --vbaq                       enable VBAQ\n")
         _T("   --gop-len <int>              set length of gop (default: auto)\n")
         _T("   --tff                        set input as interlaced (tff)\n")
         _T("   --bff                        set input as interlaced (bff)\n"),
@@ -1370,6 +1371,10 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
             return -1;
         }
         pParams->nMotionEst = value;
+        return 0;
+    }
+    if (IS_OPTION("vbaq")) {
+        pParams->bVBAQ = 1;
         return 0;
     }
     if (IS_OPTION("gop-len")) {

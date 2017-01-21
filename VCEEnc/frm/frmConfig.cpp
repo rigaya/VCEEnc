@@ -831,6 +831,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     fcgCBDeblock->Checked             = cnf->vce.bDeblockFilter != 0;
     fcgCBSkipFrame->Checked           = cnf->vce.bEnableSkipFrame != 0;
     fcgCBTimerPeriodTuning->Checked   = cnf->vce.bTimerPeriodTuning != 0;
+    fcgCBVBAQ->Checked                = cnf->vce.bVBAQ != 0;
 
     SetCXIndex(fcgCXMotionEst,          get_cx_index(list_mv_presicion, cnf->vce.nMotionEst));
 
@@ -907,6 +908,7 @@ System::Void frmConfig::FrmToConf(CONF_GUIEX *cnf) {
 
     cnf->vce.bDeblockFilter                          = fcgCBDeblock->Checked;
     cnf->vce.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;
+    cnf->vce.bVBAQ                                   = fcgCBVBAQ->Checked;
 
     cnf->vce.nMotionEst                              = list_mv_presicion[fcgCXMotionEst->SelectedIndex].value;
 

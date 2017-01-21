@@ -1257,6 +1257,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
 
     m_Params.SetParam(AMF_VIDEO_ENCODER_ENFORCE_HRD,        true);
     //m_Params.SetParam(AMF_VIDEO_ENCODER_FILLER_DATA_ENABLE, false);
+    if (prm->bVBAQ) m_Params.SetParam(AMF_VIDEO_ENCODER_ENABLE_VBAQ, true);
 
     m_Params.SetParam(AMF_VIDEO_ENCODER_VBV_BUFFER_SIZE,                (amf_int64)prm->nVBVBufferSize * 1000);
     m_Params.SetParam(AMF_VIDEO_ENCODER_INITIAL_VBV_BUFFER_FULLNESS,    (amf_int64)prm->nInitialVBVPercent);
@@ -1602,6 +1603,9 @@ tstring VCECore::GetEncoderParam() {
     }
     if (GetPropertyBool(AMF_VIDEO_ENCODER_FILLER_DATA_ENABLE)) {
         others += _T("filler ");
+    }
+    if (GetPropertyBool(AMF_VIDEO_ENCODER_ENABLE_VBAQ)) {
+        others += _T("vbaq ");
     }
     if (others.length() > 0) {
         mes += strsprintf(_T("Others:        %s\n"), others.c_str());

@@ -842,6 +842,8 @@ private: System::Windows::Forms::ComboBox^  fcgCXAudioPriority;
 private: System::Windows::Forms::Label^  fcgLBAudioPriority;
 private: System::Windows::Forms::ComboBox^  fcgCXAudioDelayCut;
 private: System::Windows::Forms::Label^  fcgLBAudioDelayCut;
+private: System::Windows::Forms::Label^  fcgLBVBAQ;
+private: System::Windows::Forms::CheckBox^  fcgCBVBAQ;
 
 
 
@@ -1135,6 +1137,8 @@ private: System::Windows::Forms::Label^  fcgLBAudioDelayCut;
             this->fcgCBRunBatBeforeAudio = (gcnew System::Windows::Forms::CheckBox());
             this->fcgCXAudioPriority = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBAudioPriority = (gcnew System::Windows::Forms::Label());
+            this->fcgLBVBAQ = (gcnew System::Windows::Forms::Label());
+            this->fcgCBVBAQ = (gcnew System::Windows::Forms::CheckBox());
             this->fcgtoolStripSettings->SuspendLayout();
             this->fcgtabControlMux->SuspendLayout();
             this->fcgtabPageMP4->SuspendLayout();
@@ -1222,7 +1226,7 @@ private: System::Windows::Forms::Label^  fcgLBAudioDelayCut;
             this->fcgTSSettings->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgTSSettings.Image")));
             this->fcgTSSettings->ImageTransparentColor = System::Drawing::Color::Magenta;
             this->fcgTSSettings->Name = L"fcgTSSettings";
-            this->fcgTSSettings->Size = System::Drawing::Size(77, 22);
+            this->fcgTSSettings->Size = System::Drawing::Size(79, 22);
             this->fcgTSSettings->Text = L"プリセット";
             this->fcgTSSettings->DropDownItemClicked += gcnew System::Windows::Forms::ToolStripItemClickedEventHandler(this, &frmConfig::fcgTSSettings_DropDownItemClicked);
             this->fcgTSSettings->Click += gcnew System::EventHandler(this, &frmConfig::fcgTSSettings_Click);
@@ -1235,7 +1239,7 @@ private: System::Windows::Forms::Label^  fcgLBAudioDelayCut;
             this->fcgTSBBitrateCalc->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgTSBBitrateCalc.Image")));
             this->fcgTSBBitrateCalc->ImageTransparentColor = System::Drawing::Color::Magenta;
             this->fcgTSBBitrateCalc->Name = L"fcgTSBBitrateCalc";
-            this->fcgTSBBitrateCalc->Size = System::Drawing::Size(97, 22);
+            this->fcgTSBBitrateCalc->Size = System::Drawing::Size(96, 22);
             this->fcgTSBBitrateCalc->Text = L"ビットレート計算機";
             this->fcgTSBBitrateCalc->CheckedChanged += gcnew System::EventHandler(this, &frmConfig::fcgTSBBitrateCalc_CheckedChanged);
             // 
@@ -1953,6 +1957,8 @@ private: System::Windows::Forms::Label^  fcgLBAudioDelayCut;
             // 
             // tabPageVideoEnc
             // 
+            this->tabPageVideoEnc->Controls->Add(this->fcgLBVBAQ);
+            this->tabPageVideoEnc->Controls->Add(this->fcgCBVBAQ);
             this->tabPageVideoEnc->Controls->Add(this->fcgNUVBVBufSize);
             this->tabPageVideoEnc->Controls->Add(this->fcgLBSkipFrame);
             this->tabPageVideoEnc->Controls->Add(this->fcgLBVBVBufSize);
@@ -2657,12 +2663,12 @@ private: System::Windows::Forms::Label^  fcgLBAudioDelayCut;
             // 
             this->fcgCSExeFiles->Items->AddRange(gcnew cli::array< System::Windows::Forms::ToolStripItem^  >(1) { this->fcgTSExeFileshelp });
             this->fcgCSExeFiles->Name = L"fcgCSx264";
-            this->fcgCSExeFiles->Size = System::Drawing::Size(132, 26);
+            this->fcgCSExeFiles->Size = System::Drawing::Size(131, 26);
             // 
             // fcgTSExeFileshelp
             // 
             this->fcgTSExeFileshelp->Name = L"fcgTSExeFileshelp";
-            this->fcgTSExeFileshelp->Size = System::Drawing::Size(131, 22);
+            this->fcgTSExeFileshelp->Size = System::Drawing::Size(130, 22);
             this->fcgTSExeFileshelp->Text = L"helpを表示";
             this->fcgTSExeFileshelp->Click += gcnew System::EventHandler(this, &frmConfig::fcgTSExeFileshelp_Click);
             // 
@@ -3094,6 +3100,25 @@ private: System::Windows::Forms::Label^  fcgLBAudioDelayCut;
             this->fcgLBAudioPriority->Size = System::Drawing::Size(67, 15);
             this->fcgLBAudioPriority->TabIndex = 12;
             this->fcgLBAudioPriority->Text = L"音声優先度";
+            // 
+            // fcgLBVBAQ
+            // 
+            this->fcgLBVBAQ->AutoSize = true;
+            this->fcgLBVBAQ->Location = System::Drawing::Point(342, 295);
+            this->fcgLBVBAQ->Name = L"fcgLBVBAQ";
+            this->fcgLBVBAQ->Size = System::Drawing::Size(37, 14);
+            this->fcgLBVBAQ->TabIndex = 161;
+            this->fcgLBVBAQ->Text = L"VBAQ";
+            // 
+            // fcgCBVBAQ
+            // 
+            this->fcgCBVBAQ->AutoSize = true;
+            this->fcgCBVBAQ->Location = System::Drawing::Point(442, 297);
+            this->fcgCBVBAQ->Name = L"fcgCBVBAQ";
+            this->fcgCBVBAQ->Size = System::Drawing::Size(15, 14);
+            this->fcgCBVBAQ->TabIndex = 160;
+            this->fcgCBVBAQ->Tag = L"chValue";
+            this->fcgCBVBAQ->UseVisualStyleBackColor = true;
             // 
             // frmConfig
             // 
