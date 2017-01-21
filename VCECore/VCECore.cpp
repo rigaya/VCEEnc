@@ -1271,6 +1271,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     m_Params.SetParam(AMF_VIDEO_ENCODER_PEAK_BITRATE,                   (amf_int64)prm->nMaxBitrate * 1000);
     m_Params.SetParam(AMF_VIDEO_ENCODER_RATE_CONTROL_SKIP_FRAME_ENABLE, !!prm->bEnableSkipFrame);
     m_Params.SetParam(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD,            (amf_int64)prm->nRateControl);
+    m_Params.SetParam(AMF_VIDEO_ENCODER_RATE_CONTROL_PREANALYSIS_ENABLE,(amf_int64)prm->nPreAnalysis);
 
     //m_Params.SetParam(AMF_VIDEO_ENCODER_HEADER_INSERTION_SPACING,       (amf_int64)0);
     m_Params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN,                  (amf_int64)prm->nBframes);
@@ -1606,6 +1607,10 @@ tstring VCECore::GetEncoderParam() {
     }
     if (GetPropertyBool(AMF_VIDEO_ENCODER_ENABLE_VBAQ)) {
         others += _T("vbaq ");
+    }
+    auto nPreAnalysis = GetPropertyInt(AMF_VIDEO_ENCODER_RATE_CONTROL_PREANALYSIS_ENABLE);
+    if (nPreAnalysis != AMF_VIDEO_ENCODER_PREENCODE_DISABLED) {
+        others += tstring(_T("pre-analysis:")) + get_cx_desc(list_pre_analysis, nPreAnalysis) + _T(" ");
     }
     if (others.length() > 0) {
         mes += strsprintf(_T("Others:        %s\n"), others.c_str());

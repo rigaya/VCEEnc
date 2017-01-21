@@ -844,6 +844,8 @@ private: System::Windows::Forms::ComboBox^  fcgCXAudioDelayCut;
 private: System::Windows::Forms::Label^  fcgLBAudioDelayCut;
 private: System::Windows::Forms::Label^  fcgLBVBAQ;
 private: System::Windows::Forms::CheckBox^  fcgCBVBAQ;
+private: System::Windows::Forms::ComboBox^  fcgCXPreAnalysis;
+private: System::Windows::Forms::Label^  fcgLBPreAnalysis;
 
 
 
@@ -1139,6 +1141,8 @@ private: System::Windows::Forms::CheckBox^  fcgCBVBAQ;
             this->fcgLBAudioPriority = (gcnew System::Windows::Forms::Label());
             this->fcgLBVBAQ = (gcnew System::Windows::Forms::Label());
             this->fcgCBVBAQ = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgCXPreAnalysis = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgLBPreAnalysis = (gcnew System::Windows::Forms::Label());
             this->fcgtoolStripSettings->SuspendLayout();
             this->fcgtabControlMux->SuspendLayout();
             this->fcgtabPageMP4->SuspendLayout();
@@ -1957,6 +1961,8 @@ private: System::Windows::Forms::CheckBox^  fcgCBVBAQ;
             // 
             // tabPageVideoEnc
             // 
+            this->tabPageVideoEnc->Controls->Add(this->fcgCXPreAnalysis);
+            this->tabPageVideoEnc->Controls->Add(this->fcgLBPreAnalysis);
             this->tabPageVideoEnc->Controls->Add(this->fcgLBVBAQ);
             this->tabPageVideoEnc->Controls->Add(this->fcgCBVBAQ);
             this->tabPageVideoEnc->Controls->Add(this->fcgNUVBVBufSize);
@@ -3119,6 +3125,25 @@ private: System::Windows::Forms::CheckBox^  fcgCBVBAQ;
             this->fcgCBVBAQ->TabIndex = 160;
             this->fcgCBVBAQ->Tag = L"chValue";
             this->fcgCBVBAQ->UseVisualStyleBackColor = true;
+            // 
+            // fcgCXPreAnalysis
+            // 
+            this->fcgCXPreAnalysis->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXPreAnalysis->FormattingEnabled = true;
+            this->fcgCXPreAnalysis->Location = System::Drawing::Point(441, 321);
+            this->fcgCXPreAnalysis->Name = L"fcgCXPreAnalysis";
+            this->fcgCXPreAnalysis->Size = System::Drawing::Size(121, 22);
+            this->fcgCXPreAnalysis->TabIndex = 162;
+            this->fcgCXPreAnalysis->Tag = L"chValue";
+            // 
+            // fcgLBPreAnalysis
+            // 
+            this->fcgLBPreAnalysis->AutoSize = true;
+            this->fcgLBPreAnalysis->Location = System::Drawing::Point(342, 324);
+            this->fcgLBPreAnalysis->Name = L"fcgLBPreAnalysis";
+            this->fcgLBPreAnalysis->Size = System::Drawing::Size(51, 14);
+            this->fcgLBPreAnalysis->TabIndex = 163;
+            this->fcgLBPreAnalysis->Text = L"先行探索";
             // 
             // frmConfig
             // 

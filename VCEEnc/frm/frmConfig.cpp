@@ -616,6 +616,7 @@ System::Void frmConfig::InitComboBox() {
     setComboBox(fcgCXInterlaced,    list_interlaced);
     setComboBox(fcgCXAspectRatio,   list_aspect_ratio);
     setComboBox(fcgCXMotionEst,     list_mv_presicion);
+    setComboBox(fcgCXPreAnalysis,   list_pre_analysis);
 
     setComboBox(fcgCXAudioTempDir,  list_audtempdir);
     setComboBox(fcgCXMP4BoxTempDir, list_mp4boxtempdir);
@@ -832,6 +833,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     fcgCBSkipFrame->Checked           = cnf->vce.bEnableSkipFrame != 0;
     fcgCBTimerPeriodTuning->Checked   = cnf->vce.bTimerPeriodTuning != 0;
     fcgCBVBAQ->Checked                = cnf->vce.bVBAQ != 0;
+    SetCXIndex(fcgCXPreAnalysis,        get_cx_index(list_pre_analysis, cnf->vce.nPreAnalysis));
 
     SetCXIndex(fcgCXMotionEst,          get_cx_index(list_mv_presicion, cnf->vce.nMotionEst));
 
@@ -909,6 +911,7 @@ System::Void frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     cnf->vce.bDeblockFilter                          = fcgCBDeblock->Checked;
     cnf->vce.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;
     cnf->vce.bVBAQ                                   = fcgCBVBAQ->Checked;
+    cnf->vce.nPreAnalysis                            = list_pre_analysis[fcgCXPreAnalysis->SelectedIndex].value;
 
     cnf->vce.nMotionEst                              = list_mv_presicion[fcgCXMotionEst->SelectedIndex].value;
 

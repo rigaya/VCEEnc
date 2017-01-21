@@ -310,6 +310,14 @@ const CX_DESC list_interlaced[] = {
     { NULL, NULL }
 };
 
+const CX_DESC list_pre_analysis[] = {
+    { _T("none"),   AMF_VIDEO_ENCODER_PREENCODE_DISABLED },
+    { _T("full"),   AMF_VIDEO_ENCODER_PREENCODE_ENABLED },
+    { _T("half"),   AMF_VIDEO_ENCODER_PREENCODE_ENABLED_DOWNSCALEFACTOR_2 },
+    { _T("quater"), AMF_VIDEO_ENCODER_PREENCODE_ENABLED_DOWNSCALEFACTOR_4 },
+    { NULL, NULL }
+};
+
 const CX_DESC list_avsync[] = {
     { _T("through"),  VCE_AVSYNC_THROUGH   },
     { _T("forcecfr"), VCE_AVSYNC_FORCE_CFR },
@@ -487,6 +495,7 @@ typedef struct {
     VCEVuiInfo  vui;
 
     int         bVBAQ;
+    int         nPreAnalysis;
 } VCEParam;
 
 static bool is_interlaced(VCE_PICSTRUCT nInterlaced) {

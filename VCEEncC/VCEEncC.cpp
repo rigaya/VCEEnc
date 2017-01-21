@@ -371,6 +371,8 @@ static tstring help() {
         _T("   --motion-est                 set motion estimation precision\n")
         _T("                                 full-pel, half-pel, q-pel(default)\n")
         _T("   --vbaq                       enable VBAQ\n")
+        _T("   --pre-analysis               set pre-analysis mode\n")
+        _T("                                 none (default), full (best), half, quater (fast)\n")
         _T("   --gop-len <int>              set length of gop (default: auto)\n")
         _T("   --tff                        set input as interlaced (tff)\n")
         _T("   --bff                        set input as interlaced (bff)\n"),
@@ -1375,6 +1377,16 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
     }
     if (IS_OPTION("vbaq")) {
         pParams->bVBAQ = 1;
+        return 0;
+    }
+    if (IS_OPTION("pre-analysis")) {
+        i++;
+        int value = AMF_VIDEO_ENCODER_PREENCODE_DISABLED;
+        if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pre_analysis, strInput[i]))) {
+            PrintHelp(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            return -1;
+        }
+        pParams->nPreAnalysis = value;
         return 0;
     }
     if (IS_OPTION("gop-len")) {
