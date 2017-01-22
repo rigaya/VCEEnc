@@ -719,6 +719,7 @@ int bitstreamAppend(sBitstream *pBitstream, const uint8_t *data, uint32_t size) 
 const TCHAR *CodecIdToStr(uint32_t codecId) {
     switch (codecId) {
     case VCE_CODEC_H264:  return _T("H.264/AVC");
+    case VCE_CODEC_HEVC:  return _T("H.265/HEVC");
     case VCE_CODEC_MPEG2: return _T("MPEG2");
     case VCE_CODEC_VC1:   return _T("VC-1");
     case VCE_CODEC_WMV3:  return _T("WMV3");
