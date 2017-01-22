@@ -195,6 +195,18 @@ typedef struct {
 const CX_DESC list_empty[] = {
     { NULL, 0 }
 };
+const CX_DESC list_codec[] = {
+    { _T("h264"), VCE_CODEC_H264 },
+    { _T("hevc"), VCE_CODEC_HEVC },
+    { NULL, 0 }
+};
+const CX_DESC list_codec_all[] = {
+    { _T("h264"), VCE_CODEC_H264 },
+    { _T("avc"),  VCE_CODEC_H264 },
+    { _T("h265"), VCE_CODEC_HEVC },
+    { _T("hevc"), VCE_CODEC_HEVC },
+    { NULL, 0 }
+};
 
 const CX_DESC list_log_level[] = {
     { _T("trace"), VCE_LOG_TRACE },

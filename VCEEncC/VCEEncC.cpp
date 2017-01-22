@@ -343,6 +343,7 @@ static tstring help() {
         VCE_DEFAULT_AUDIO_IGNORE_DECODE_ERROR);
 #endif
     str += strsprintf(_T("\n")
+        _T("-c,--codec <string>             set codec: h264(default), hevc\n")
         _T("   --input-res <int>x<int>      set input resolution\n")
         _T("   --output-res <int>x<int>     output resolution\n")
         _T("                                if different from input, uses vpp resizing\n")
@@ -1158,6 +1159,16 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
             PrintHelp(strInput[0], _T("invalid option"), option_name);
             return -1;
         }
+        return 0;
+    }
+    if (IS_OPTION("codec")) {
+        i++;
+        int value = 0;
+        if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_codec_all, strInput[i]))) {
+            PrintHelp(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            return -1;
+        }
+        pParams->nCodecId = value;
         return 0;
     }
     if (IS_OPTION("level")) {
