@@ -1534,41 +1534,31 @@ AMF_RESULT CAvcodecWriter::AddH264HeaderToExtraData(const sBitstream *pBitstream
 
 //extradataにHEVCのヘッダーを追加する
 AMF_RESULT CAvcodecWriter::AddHEVCHeaderToExtraData(const sBitstream *pBitstream) {
-    uint8_t *ptr = pBitstream->Data;
-    uint8_t *vps_start_ptr = nullptr;
-    uint8_t *vps_fin_ptr = nullptr;
-    const int i_fin = pBitstream->DataOffset + pBitstream->DataLength - 3;
-    for (int i = pBitstream->DataOffset; i < i_fin; i++) {
-        if (ptr[i+0] == 0 && ptr[i+1] == 0 && ptr[i+2] == 1) {
-            uint8_t nalu_type = (ptr[i+3] & 0x7f) >> 1;
-            if (nalu_type == 32 && vps_start_ptr == nullptr) {
-                vps_start_ptr = ptr + i - (i > 0 && ptr[i-1] == 0);
-                i += 3;
-            } else if (nalu_type != 32 && vps_start_ptr && vps_fin_ptr == nullptr) {
-                vps_fin_ptr = ptr + i - (i > 0 && ptr[i-1] == 0);
-                break;
-            }
-        }
-    }
-    if (vps_fin_ptr == nullptr) {
-        vps_fin_ptr = ptr + pBitstream->DataOffset + pBitstream->DataLength;
-    }
-    if (vps_start_ptr) {
+    std::vector<nal_info> nal_list = parse_nal_unit_hevc(pBitstream->Data + pBitstream->DataOffset, pBitstream->DataLength);
+    auto hevc_vps_nal = std::find_if(nal_list.begin(), nal_list.end(), [](nal_info info) { return info.type == NALU_HEVC_VPS; });
+    auto hevc_sps_nal = std::find_if(nal_list.begin(), nal_list.end(), [](nal_info info) { return info.type == NALU_HEVC_SPS; });
+    auto hevc_pps_nal = std::find_if(nal_list.begin(), nal_list.end(), [](nal_info info) { return info.type == NALU_HEVC_PPS; });
+    bool header_check = (nal_list.end() != hevc_vps_nal) && (nal_list.end() != hevc_sps_nal) && (nal_list.end() != hevc_pps_nal);
+    if (header_check) {
 #if USE_AVCODECPAR
-        const uint32_t vps_length = (uint32_t)(vps_fin_ptr - vps_start_ptr);
-        uint8_t *new_ptr = (uint8_t *)av_malloc(m_Mux.video.pStream->codecpar->extradata_size + vps_length + AV_INPUT_BUFFER_PADDING_SIZE);
-        memcpy(new_ptr, vps_start_ptr, vps_length);
-        memcpy(new_ptr + vps_length, m_Mux.video.pStream->codecpar->extradata, m_Mux.video.pStream->codecpar->extradata_size);
-        m_Mux.video.pStream->codecpar->extradata_size += vps_length;
-        av_free(m_Mux.video.pStream->codecpar->extradata);
+        m_Mux.video.pStream->codecpar->extradata_size = hevc_vps_nal->size + hevc_sps_nal->size + hevc_pps_nal->size;
+        uint8_t *new_ptr = (uint8_t *)av_malloc(m_Mux.video.pStream->codecpar->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
+        memcpy(new_ptr, hevc_vps_nal->ptr, hevc_vps_nal->size);
+        memcpy(new_ptr + hevc_vps_nal->size, hevc_sps_nal->ptr, hevc_sps_nal->size);
+        memcpy(new_ptr + hevc_vps_nal->size + hevc_sps_nal->size, hevc_pps_nal->ptr, hevc_pps_nal->size);
+        if (m_Mux.video.pStream->codecpar->extradata) {
+            av_free(m_Mux.video.pStream->codecpar->extradata);
+        }
         m_Mux.video.pStream->codecpar->extradata = new_ptr;
 #else
-        const uint32_t vps_length = (uint32_t)(vps_fin_ptr - vps_start_ptr);
-        uint8_t *new_ptr = (uint8_t *)av_malloc(m_Mux.video.pCodecCtx->extradata_size + vps_length + AV_INPUT_BUFFER_PADDING_SIZE);
-        memcpy(new_ptr, vps_start_ptr, vps_length);
-        memcpy(new_ptr + vps_length, m_Mux.video.pCodecCtx->extradata, m_Mux.video.pCodecCtx->extradata_size);
-        m_Mux.video.pCodecCtx->extradata_size += vps_length;
-        av_free(m_Mux.video.pCodecCtx->extradata);
+        m_Mux.video.pCodecCtx->extradata_size = hevc_vps_nal->size + hevc_sps_nal->size + hevc_pps_nal->size;
+        uint8_t *new_ptr = (uint8_t *)av_malloc(m_Mux.video.pStream->codecpar->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
+        memcpy(new_ptr, hevc_vps_nal->ptr, hevc_vps_nal->size);
+        memcpy(new_ptr + hevc_vps_nal->size, hevc_sps_nal->ptr, hevc_sps_nal->size);
+        memcpy(new_ptr + hevc_vps_nal->size + hevc_sps_nal->size, hevc_pps_nal->ptr, hevc_pps_nal->size);
+        if (m_Mux.video.pCodecCtx->extradata) {
+            av_free(m_Mux.video.pCodecCtx->extradata);
+        }
         m_Mux.video.pCodecCtx->extradata = new_ptr;
 #endif
     }
@@ -1584,7 +1574,7 @@ AMF_RESULT CAvcodecWriter::WriteFileHeader(const sBitstream *pBitstream) {
             break;
         case AV_CODEC_ID_HEVC:
         default:
-            sts = AMF_NOT_SUPPORTED;
+            sts = AddHEVCHeaderToExtraData(pBitstream);
             break;
         }
     }

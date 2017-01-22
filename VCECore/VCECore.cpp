@@ -1303,7 +1303,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
 
         m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_DE_BLOCKING_FILTER_DISABLE,      !prm->bDeblockFilter);
 
-        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER,                   false);
+        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER,                   true);
     } else {
         PrintMes(VCE_LOG_ERROR, _T("Unsupported codec.\n"));
         return res;
