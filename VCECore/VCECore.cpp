@@ -1435,7 +1435,7 @@ AMF_RESULT VCECore::run() {
             }
             AMF_RESULT sts = AMF_OK;
             PipelineState state = PipelineStateRunning;
-            while ((state = GetState()) != PipelineStateRunning) {
+            while ((state = GetState()) == PipelineStateRunning) {
                 auto pAVCodecReader = std::dynamic_pointer_cast<CAvcodecReader>(m_pFileReader);
                 vector<AVPacket> packetList;
                 if (pAVCodecReader != nullptr) {
