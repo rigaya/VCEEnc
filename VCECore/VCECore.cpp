@@ -1193,7 +1193,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     }
 
     m_VCECodecId = prm->nCodecId;
-    if (AMF_OK != (res = g_AMFFactory.GetFactory()->CreateComponent(m_pContext, list_codecs[prm->nCodecId], &m_pEncoder))) {
+    if (AMF_OK != (res = g_AMFFactory.GetFactory()->CreateComponent(m_pContext, list_codec_key[prm->nCodecId], &m_pEncoder))) {
         PrintMes(VCE_LOG_ERROR, _T("Failed to AMFCreateComponent.\n"));
         return AMF_FAIL;
     }

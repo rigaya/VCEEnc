@@ -30,6 +30,7 @@
 #pragma warning(disable:4201)
 #pragma warning(disable:4100)
 #include "VideoEncoderVCE.h"
+#include "VideoEncoderHEVC.h"
 #include "VCEUtil.h"
 
 typedef AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM VCE_PICSTRUCT;
@@ -61,10 +62,11 @@ enum {
     VCE_CODEC_WMV3
 };
 
-static const wchar_t *list_codecs[] = {
+static const wchar_t *list_codec_key[] = {
     L"Unknown",
     AMFVideoEncoderVCE_AVC,
-    AMFVideoEncoderVCE_SVC
+    AMFVideoEncoderVCE_SVC,
+    AMFVideoEncoder_HEVC
 };
 
 enum {
