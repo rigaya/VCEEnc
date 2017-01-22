@@ -1428,33 +1428,42 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
     if (IS_OPTION("colormatrix")) {
         i++;
         int value;
-        if (PARSE_ERROR_FLAG != (value = get_value_from_chr(list_colormatrix, strInput[i])))
-            pParams->ColorMatrix = value;
+        if (PARSE_ERROR_FLAG != (value = get_value_from_chr(list_colormatrix, strInput[i]))) {
+            pParams->vui.colormatrix = value;
+            pParams->vui.infoPresent = true;
+        }
         return 0;
     }
     if (IS_OPTION("colorprim")) {
         i++;
         int value;
-        if (PARSE_ERROR_FLAG != (value = get_value_from_chr(list_colorprim, strInput[i])))
-            pParams->ColorPrim = value;
+        if (PARSE_ERROR_FLAG != (value = get_value_from_chr(list_colorprim, strInput[i]))) {
+            pParams->vui.colorprim = value;
+            pParams->vui.infoPresent = true;
+        }
         return 0;
     }
     if (IS_OPTION("transfer")) {
         i++;
         int value;
-        if (PARSE_ERROR_FLAG != (value = get_value_from_chr(list_transfer, strInput[i])))
-            pParams->Transfer = value;
+        if (PARSE_ERROR_FLAG != (value = get_value_from_chr(list_transfer, strInput[i]))) {
+            pParams->vui.transfer = value;
+            pParams->vui.infoPresent = true;
+        }
         return 0;
     }
     if (IS_OPTION("videoformat")) {
         i++;
         int value;
-        if (PARSE_ERROR_FLAG != (value = get_value_from_chr(list_videoformat, strInput[i])))
-            pParams->ColorMatrix = value;
+        if (PARSE_ERROR_FLAG != (value = get_value_from_chr(list_videoformat, strInput[i]))) {
+            pParams->vui.videoformat = value;
+            pParams->vui.infoPresent = true;
+        }
         return 0;
     }
     if (IS_OPTION("fullrange")) {
-        pParams->bFullrange = true;
+        pParams->vui.fullrange = true;
+        pParams->vui.infoPresent = true;
         return 0;
     }
 #endif

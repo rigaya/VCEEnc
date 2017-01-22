@@ -561,12 +561,8 @@ typedef struct {
     const TCHAR *pStrLogFile;
     const TCHAR *pFramePosListLog;
 
-    int VuiEnable;
-    int VideoFormat;
-    int ColorMatrix;
-    int ColorPrim;
-    int Transfer;
-    bool bFullrange;
+    int __reserved__[5];
+    bool bReserved;
 
     int     nVideoTrack;
     int     nVideoStreamId;

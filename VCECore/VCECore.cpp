@@ -747,11 +747,7 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
         writerPrm.vidPrm.nBPyramid = pParams->bBPyramid;
         writerPrm.vidPrm.nGopLength = pParams->nGOPLen;
         writerPrm.vidPrm.nRef = 1;
-        writerPrm.vidPrm.vui.colormatrix = pParams->ColorMatrix;
-        writerPrm.vidPrm.vui.colorprim = pParams->ColorPrim;
-        writerPrm.vidPrm.vui.transfer = pParams->Transfer;
-        writerPrm.vidPrm.vui.fullrange = pParams->bFullrange;
-        writerPrm.vidPrm.vui.infoPresent = pParams->VuiEnable;
+        writerPrm.vidPrm.vui = pParams->vui;
         writerPrm.vidPrm.bDtsUnavailable = true;
         writerPrm.vidPrm.bCFR = true;
         writerPrm.pOutputFormat = pParams->pAVMuxOutputFormat;

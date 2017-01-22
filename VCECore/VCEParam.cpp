@@ -67,8 +67,10 @@ void init_vce_param(VCEParam *prm) {
     prm->nAudioThread = VCE_AUDIO_THREAD_AUTO;
     prm->nOutputThread = VCE_OUTPUT_THREAD_AUTO;
 
-    prm->VideoFormat = get_value_from_chr(list_videoformat, _T("undef"));
-    prm->ColorMatrix = get_value_from_chr(list_colormatrix, _T("undef"));
-    prm->ColorPrim   = get_value_from_chr(list_colorprim,   _T("undef"));
-    prm->Transfer    = get_value_from_chr(list_transfer,    _T("undef"));
+    prm->vui.videoformat = get_value_from_chr(list_videoformat, _T("undef"));
+    prm->vui.colormatrix = get_value_from_chr(list_colormatrix, _T("undef"));
+    prm->vui.colorprim   = get_value_from_chr(list_colorprim,   _T("undef"));
+    prm->vui.transfer    = get_value_from_chr(list_transfer,    _T("undef"));
+    prm->vui.fullrange   = false;
+    prm->vui.infoPresent = false;
 }
