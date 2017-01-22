@@ -1201,8 +1201,8 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
             && 2 != _stscanf_s(strInput[i], _T("%d,%d"), &value[0], &value[1])
             && 2 != _stscanf_s(strInput[i], _T("%d/%d"), &value[0], &value[1])
             && 2 != _stscanf_s(strInput[i], _T("%d:%d"), &value[0], &value[1])) {
-            pInputInfo->AspectRatioW = 0;
-            pInputInfo->AspectRatioH = 0;
+            pParams->nPAR[0] = 0;
+            pParams->nPAR[1] = 0;
             PrintHelp(strInput[0], _T("Unknown value"), option_name, strInput[i]);
             return -1;
         }
@@ -1210,8 +1210,8 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
             value[0] = -value[0];
             value[1] = -value[1];
         }
-        pInputInfo->AspectRatioW = value[0];
-        pInputInfo->AspectRatioH = value[1];
+        pParams->nPAR[0] = value[0];
+        pParams->nPAR[1] = value[1];
         return 0;
     }
     if (IS_OPTION("cqp")) {

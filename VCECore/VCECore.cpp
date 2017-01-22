@@ -1390,6 +1390,9 @@ AMF_RESULT VCECore::init(VCEParam *prm, VCEInputInfo *inputInfo) {
         PrintMes(VCE_LOG_DEBUG, _T("timeBeginPeriod(1)\n"));
     }
 
+    m_inputInfo.AspectRatioW = prm->nPAR[0];
+    m_inputInfo.AspectRatioH = prm->nPAR[1];
+
     if (AMF_OK != (res = initInput(prm, &m_inputInfo))) {
         return res;
     }

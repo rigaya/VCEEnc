@@ -1047,6 +1047,11 @@ private: System::Windows::Forms::Label^  fcgLBHEVCPreAnalysis;
             this->fcgPNPreAnalysis = (gcnew System::Windows::Forms::Panel());
             this->fcgCXHEVCPreAnalysis = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBHEVCPreAnalysis = (gcnew System::Windows::Forms::Label());
+            this->fcgPNHEVCLevelProfile = (gcnew System::Windows::Forms::Panel());
+            this->fcgCXHEVCLevel = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgCXHEVCProfile = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgLBHEVCLevel = (gcnew System::Windows::Forms::Label());
+            this->fcgLBHEVCProfile = (gcnew System::Windows::Forms::Label());
             this->fcgPNBframes = (gcnew System::Windows::Forms::Panel());
             this->fcgLBBframes = (gcnew System::Windows::Forms::Label());
             this->fcgNUBframes = (gcnew System::Windows::Forms::NumericUpDown());
@@ -1056,11 +1061,6 @@ private: System::Windows::Forms::Label^  fcgLBHEVCPreAnalysis;
             this->fcgNUBDeltaQP = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgLBBRefDeltaQP = (gcnew System::Windows::Forms::Label());
             this->fcgNUBRefDeltaQP = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgPNHEVCLevelProfile = (gcnew System::Windows::Forms::Panel());
-            this->fcgCXHEVCLevel = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgCXHEVCProfile = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgLBHEVCLevel = (gcnew System::Windows::Forms::Label());
-            this->fcgLBHEVCProfile = (gcnew System::Windows::Forms::Label());
             this->fcgLBCodec = (gcnew System::Windows::Forms::Label());
             this->fcgCXCodec = (gcnew System::Windows::Forms::ComboBox());
             this->fcgCXPreAnalysis = (gcnew System::Windows::Forms::ComboBox());
@@ -1175,11 +1175,11 @@ private: System::Windows::Forms::Label^  fcgLBHEVCPreAnalysis;
             this->fcgtabControlVCE->SuspendLayout();
             this->tabPageVideoEnc->SuspendLayout();
             this->fcgPNPreAnalysis->SuspendLayout();
+            this->fcgPNHEVCLevelProfile->SuspendLayout();
             this->fcgPNBframes->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBframes))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBDeltaQP))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBRefDeltaQP))->BeginInit();
-            this->fcgPNHEVCLevelProfile->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVBVBufSize))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMax))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMin))->BeginInit();
@@ -2068,6 +2068,55 @@ private: System::Windows::Forms::Label^  fcgLBHEVCPreAnalysis;
             this->fcgLBHEVCPreAnalysis->TabIndex = 165;
             this->fcgLBHEVCPreAnalysis->Text = L"先行探索";
             // 
+            // fcgPNHEVCLevelProfile
+            // 
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCLevel);
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCProfile);
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCLevel);
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCProfile);
+            this->fcgPNHEVCLevelProfile->Location = System::Drawing::Point(329, 112);
+            this->fcgPNHEVCLevelProfile->Name = L"fcgPNHEVCLevelProfile";
+            this->fcgPNHEVCLevelProfile->Size = System::Drawing::Size(255, 63);
+            this->fcgPNHEVCLevelProfile->TabIndex = 166;
+            // 
+            // fcgCXHEVCLevel
+            // 
+            this->fcgCXHEVCLevel->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXHEVCLevel->FormattingEnabled = true;
+            this->fcgCXHEVCLevel->Location = System::Drawing::Point(112, 36);
+            this->fcgCXHEVCLevel->Name = L"fcgCXHEVCLevel";
+            this->fcgCXHEVCLevel->Size = System::Drawing::Size(121, 22);
+            this->fcgCXHEVCLevel->TabIndex = 86;
+            this->fcgCXHEVCLevel->Tag = L"chValue";
+            // 
+            // fcgCXHEVCProfile
+            // 
+            this->fcgCXHEVCProfile->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXHEVCProfile->FormattingEnabled = true;
+            this->fcgCXHEVCProfile->Location = System::Drawing::Point(112, 4);
+            this->fcgCXHEVCProfile->Name = L"fcgCXHEVCProfile";
+            this->fcgCXHEVCProfile->Size = System::Drawing::Size(121, 22);
+            this->fcgCXHEVCProfile->TabIndex = 85;
+            this->fcgCXHEVCProfile->Tag = L"chValue";
+            // 
+            // fcgLBHEVCLevel
+            // 
+            this->fcgLBHEVCLevel->AutoSize = true;
+            this->fcgLBHEVCLevel->Location = System::Drawing::Point(13, 39);
+            this->fcgLBHEVCLevel->Name = L"fcgLBHEVCLevel";
+            this->fcgLBHEVCLevel->Size = System::Drawing::Size(33, 14);
+            this->fcgLBHEVCLevel->TabIndex = 88;
+            this->fcgLBHEVCLevel->Text = L"レベル";
+            // 
+            // fcgLBHEVCProfile
+            // 
+            this->fcgLBHEVCProfile->AutoSize = true;
+            this->fcgLBHEVCProfile->Location = System::Drawing::Point(13, 7);
+            this->fcgLBHEVCProfile->Name = L"fcgLBHEVCProfile";
+            this->fcgLBHEVCProfile->Size = System::Drawing::Size(53, 14);
+            this->fcgLBHEVCProfile->TabIndex = 87;
+            this->fcgLBHEVCProfile->Text = L"プロファイル";
+            // 
             // fcgPNBframes
             // 
             this->fcgPNBframes->Controls->Add(this->fcgLBBframes);
@@ -2160,55 +2209,6 @@ private: System::Windows::Forms::Label^  fcgLBHEVCPreAnalysis;
             this->fcgNUBRefDeltaQP->TabIndex = 156;
             this->fcgNUBRefDeltaQP->Tag = L"chValue";
             this->fcgNUBRefDeltaQP->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
-            // fcgPNHEVCLevelProfile
-            // 
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCLevel);
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCProfile);
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCLevel);
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCProfile);
-            this->fcgPNHEVCLevelProfile->Location = System::Drawing::Point(329, 112);
-            this->fcgPNHEVCLevelProfile->Name = L"fcgPNHEVCLevelProfile";
-            this->fcgPNHEVCLevelProfile->Size = System::Drawing::Size(255, 63);
-            this->fcgPNHEVCLevelProfile->TabIndex = 166;
-            // 
-            // fcgCXHEVCLevel
-            // 
-            this->fcgCXHEVCLevel->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXHEVCLevel->FormattingEnabled = true;
-            this->fcgCXHEVCLevel->Location = System::Drawing::Point(112, 36);
-            this->fcgCXHEVCLevel->Name = L"fcgCXHEVCLevel";
-            this->fcgCXHEVCLevel->Size = System::Drawing::Size(121, 22);
-            this->fcgCXHEVCLevel->TabIndex = 86;
-            this->fcgCXHEVCLevel->Tag = L"chValue";
-            // 
-            // fcgCXHEVCProfile
-            // 
-            this->fcgCXHEVCProfile->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXHEVCProfile->FormattingEnabled = true;
-            this->fcgCXHEVCProfile->Location = System::Drawing::Point(112, 4);
-            this->fcgCXHEVCProfile->Name = L"fcgCXHEVCProfile";
-            this->fcgCXHEVCProfile->Size = System::Drawing::Size(121, 22);
-            this->fcgCXHEVCProfile->TabIndex = 85;
-            this->fcgCXHEVCProfile->Tag = L"chValue";
-            // 
-            // fcgLBHEVCLevel
-            // 
-            this->fcgLBHEVCLevel->AutoSize = true;
-            this->fcgLBHEVCLevel->Location = System::Drawing::Point(13, 39);
-            this->fcgLBHEVCLevel->Name = L"fcgLBHEVCLevel";
-            this->fcgLBHEVCLevel->Size = System::Drawing::Size(33, 14);
-            this->fcgLBHEVCLevel->TabIndex = 88;
-            this->fcgLBHEVCLevel->Text = L"レベル";
-            // 
-            // fcgLBHEVCProfile
-            // 
-            this->fcgLBHEVCProfile->AutoSize = true;
-            this->fcgLBHEVCProfile->Location = System::Drawing::Point(13, 7);
-            this->fcgLBHEVCProfile->Name = L"fcgLBHEVCProfile";
-            this->fcgLBHEVCProfile->Size = System::Drawing::Size(53, 14);
-            this->fcgLBHEVCProfile->TabIndex = 87;
-            this->fcgLBHEVCProfile->Text = L"プロファイル";
             // 
             // fcgLBCodec
             // 
@@ -2634,7 +2634,6 @@ private: System::Windows::Forms::Label^  fcgLBHEVCPreAnalysis;
             this->fcgGroupBoxAspectRatio->TabIndex = 27;
             this->fcgGroupBoxAspectRatio->TabStop = false;
             this->fcgGroupBoxAspectRatio->Text = L"アスペクト比";
-            this->fcgGroupBoxAspectRatio->Visible = false;
             // 
             // fcgLBAspectRatio
             // 
@@ -3324,13 +3323,13 @@ private: System::Windows::Forms::Label^  fcgLBHEVCPreAnalysis;
             this->tabPageVideoEnc->PerformLayout();
             this->fcgPNPreAnalysis->ResumeLayout(false);
             this->fcgPNPreAnalysis->PerformLayout();
+            this->fcgPNHEVCLevelProfile->ResumeLayout(false);
+            this->fcgPNHEVCLevelProfile->PerformLayout();
             this->fcgPNBframes->ResumeLayout(false);
             this->fcgPNBframes->PerformLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBframes))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBDeltaQP))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBRefDeltaQP))->EndInit();
-            this->fcgPNHEVCLevelProfile->ResumeLayout(false);
-            this->fcgPNHEVCLevelProfile->PerformLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVBVBufSize))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMax))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMin))->EndInit();

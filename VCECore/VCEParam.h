@@ -561,7 +561,8 @@ typedef struct {
     const TCHAR *pStrLogFile;
     const TCHAR *pFramePosListLog;
 
-    int __reserved__[5];
+    int nPAR[2];
+    int __reserved__[3];
     bool bReserved;
 
     int     nVideoTrack;

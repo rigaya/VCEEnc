@@ -839,11 +839,11 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetCXIndex(fcgCXHEVCLevel,         get_cx_index(list_hevc_level, cnf->vce.codecParam[VCE_CODEC_HEVC].nLevel));
     SetCXIndex(fcgCXHEVCProfile,       get_cx_index(list_hevc_profile, cnf->vce.codecParam[VCE_CODEC_HEVC].nProfile));
     SetCXIndex(fcgCXInterlaced,        get_cx_index(list_interlaced, cnf->vce.nPicStruct));
-    /*if (cnf->qsv.nPAR[0] * cnf->qsv.nPAR[1] <= 0)
-        cnf->qsv.nPAR[0] = cnf->qsv.nPAR[1] = 0;
-    SetCXIndex(fcgCXAspectRatio, (cnf->qsv.nPAR[0] < 0));
-    SetNUValue(fcgNUAspectRatioX, abs(cnf->qsv.nPAR[0]));
-    SetNUValue(fcgNUAspectRatioY, abs(cnf->qsv.nPAR[1]));*/
+    if (cnf->vce.nPAR[0] * cnf->vce.nPAR[1] <= 0)
+        cnf->vce.nPAR[0] = cnf->vce.nPAR[1] = 0;
+    SetCXIndex(fcgCXAspectRatio, (cnf->vce.nPAR[0] < 0));
+    SetNUValue(fcgNUAspectRatioX, abs(cnf->vce.nPAR[0]));
+    SetNUValue(fcgNUAspectRatioY, abs(cnf->vce.nPAR[1]));
 
     SetNUValue(fcgNUQPMax,               cnf->vce.nQPMax);
     SetNUValue(fcgNUQPMin,               cnf->vce.nQPMin);
@@ -956,12 +956,12 @@ System::Void frmConfig::FrmToConf(CONF_GUIEX *cnf) {
 
     cnf->vid.afs                    = fcgCBAFS->Checked;
     cnf->vid.auo_tcfile_out         = fcgCBAuoTcfileout->Checked;
-    /*cnf->qsv.nPAR[0]                = (int)fcgNUAspectRatioX->Value;
-    cnf->qsv.nPAR[1]                = (int)fcgNUAspectRatioY->Value;
+    cnf->vce.nPAR[0]                = (int)fcgNUAspectRatioX->Value;
+    cnf->vce.nPAR[1]                = (int)fcgNUAspectRatioY->Value;
     if (fcgCXAspectRatio->SelectedIndex == 1) {
-        cnf->qsv.nPAR[0] *= -1;
-        cnf->qsv.nPAR[1] *= -1;
-    }*/
+        cnf->vce.nPAR[0] *= -1;
+        cnf->vce.nPAR[1] *= -1;
+    }
 
     //拡張部
     cnf->oth.temp_dir               = fcgCXTempDir->SelectedIndex;
