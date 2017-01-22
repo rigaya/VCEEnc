@@ -111,7 +111,7 @@ void AuoLog::write_log(int log_level, const TCHAR *mes, bool file_only) {
     TCHAR *q = NULL;
     for (TCHAR *p = buffer.data(); (p = _tcstok_s(p, _T("\n"), &q)) != NULL; ) {
         static const TCHAR *const LOG_STRING[] ={ _T("trace"),  _T("debug"), _T("info"), _T("info"), _T("warn"), _T("error") };
-        _stprintf_s(buffer_line, len + 64, "qsv [%s]: %s", LOG_STRING[clamp(log_level, VCE_LOG_TRACE, VCE_LOG_ERROR) - VCE_LOG_TRACE], p);
+        _stprintf_s(buffer_line, len + 64, "vce [%s]: %s", LOG_STRING[clamp(log_level, VCE_LOG_TRACE, VCE_LOG_ERROR) - VCE_LOG_TRACE], p);
         write_log_line(log_level, buffer_line);
         p = NULL;
     }
