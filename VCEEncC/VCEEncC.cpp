@@ -371,7 +371,7 @@ static tstring help() {
         _T("   --(no-)skip-frame            enable skip frame feature\n")
         _T("   --motion-est                 set motion estimation precision\n")
         _T("                                 full-pel, half-pel, q-pel(default)\n")
-        _T("   --vbaq                       enable VBAQ\n")
+        _T("   --vbaq                       enable VBAQ (H.264 only)\n")
         _T("   --pre-analysis <string>      set pre-analysis mode\n")
         _T("                      H.264: none (default), full (best), half, quater (fast)\n")
         _T("                      HEVC:  none (default), auto\n")
