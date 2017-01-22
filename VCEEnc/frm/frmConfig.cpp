@@ -609,14 +609,19 @@ System::Void frmConfig::InitData(CONF_GUIEX *set_config, const SYSTEM_DATA *syst
 
 System::Void frmConfig::InitComboBox() {
     //コンボボックスに値を設定する
+    const int codecCount = check_if_vce_hevc_available() ? 2 : 1;
+    setComboBox(fcgCXCodec,         list_codec, codecCount);
     setComboBox(fcgCXEncMode,       list_vce_h264_rc_method);
     setComboBox(fcgCXQualityPreset, list_vce_quality_preset);
     setComboBox(fcgCXCodecLevel,    list_avc_level);
     setComboBox(fcgCXCodecProfile,  list_avc_profile);
+    setComboBox(fcgCXHEVCLevel,     list_hevc_level);
+    setComboBox(fcgCXHEVCProfile,   list_hevc_profile);
     setComboBox(fcgCXInterlaced,    list_interlaced);
     setComboBox(fcgCXAspectRatio,   list_aspect_ratio);
     setComboBox(fcgCXMotionEst,     list_mv_presicion);
-    setComboBox(fcgCXPreAnalysis,   list_pre_analysis);
+    setComboBox(fcgCXPreAnalysis,   list_pre_analysis_h264);
+    setComboBox(fcgCXHEVCPreAnalysis, list_pre_analysis_hevc);
 
     setComboBox(fcgCXAudioTempDir,  list_audtempdir);
     setComboBox(fcgCXMP4BoxTempDir, list_mp4boxtempdir);
@@ -690,6 +695,21 @@ System::Void frmConfig::fcgChangeEnabled(System::Object^  sender, System::EventA
     fcgNUMaxkbps->Enabled = cbr_vbr_mode;
     fcgLBMaxkbps->Enabled = cbr_vbr_mode;
     fcgLBMaxBitrate2->Enabled = cbr_vbr_mode;
+
+    this->ResumeLayout();
+    this->PerformLayout();
+}
+System::Void frmConfig::fcgCXCodec_SelectedIndexChanged(System::Object^  sender, System::EventArgs^  e) {
+    const int nCodecId = list_codec[fcgCXCodec->SelectedIndex].value;
+
+    this->SuspendLayout();
+
+    fcgPNHEVCLevelProfile->Visible = nCodecId == VCE_CODEC_HEVC;
+    fcgPNPreAnalysis->Visible = nCodecId == VCE_CODEC_HEVC;
+    bool bBframes = nCodecId != VCE_CODEC_HEVC;
+    fcgPNBframes->Visible = bBframes;
+    fcgLBQPB->Visible = bBframes;
+    fcgNUQPB->Visible = bBframes;
 
     this->ResumeLayout();
     this->PerformLayout();
@@ -802,6 +822,7 @@ System::Void frmConfig::InitForm() {
 System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     this->SuspendLayout();
 
+    SetCXIndex(fcgCXCodec,             get_cx_index(list_codec, cnf->vce.nCodecId));
     SetCXIndex(fcgCXEncMode,           get_cx_index(list_vce_h264_rc_method, cnf->vce.nRateControl));
     SetCXIndex(fcgCXQualityPreset,     get_cx_index(list_vce_quality_preset, cnf->vce.nQualityPreset));
     SetNUValue(fcgNUBitrate,           cnf->vce.nBitrate);
@@ -813,8 +834,10 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetNUValue(fcgNUGopLength,         cnf->vce.nGOPLen);
     SetNUValue(fcgNUBframes,           cnf->vce.nBframes);
     fcgCBBPyramid->Checked           = cnf->vce.bBPyramid != 0;
-    SetCXIndex(fcgCXCodecLevel,        get_cx_index(list_avc_level, cnf->vce.codecParam[cnf->vce.nCodecId].nLevel));
-    SetCXIndex(fcgCXCodecProfile,      get_cx_index(list_avc_profile, cnf->vce.codecParam[cnf->vce.nCodecId].nProfile));
+    SetCXIndex(fcgCXCodecLevel,        get_cx_index(list_avc_level, cnf->vce.codecParam[VCE_CODEC_H264].nLevel));
+    SetCXIndex(fcgCXCodecProfile,      get_cx_index(list_avc_profile, cnf->vce.codecParam[VCE_CODEC_H264].nProfile));
+    SetCXIndex(fcgCXHEVCLevel,         get_cx_index(list_hevc_level, cnf->vce.codecParam[VCE_CODEC_HEVC].nLevel));
+    SetCXIndex(fcgCXHEVCProfile,       get_cx_index(list_hevc_profile, cnf->vce.codecParam[VCE_CODEC_HEVC].nProfile));
     SetCXIndex(fcgCXInterlaced,        get_cx_index(list_interlaced, cnf->vce.nPicStruct));
     /*if (cnf->qsv.nPAR[0] * cnf->qsv.nPAR[1] <= 0)
         cnf->qsv.nPAR[0] = cnf->qsv.nPAR[1] = 0;
@@ -833,7 +856,13 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     fcgCBSkipFrame->Checked           = cnf->vce.bEnableSkipFrame != 0;
     fcgCBTimerPeriodTuning->Checked   = cnf->vce.bTimerPeriodTuning != 0;
     fcgCBVBAQ->Checked                = cnf->vce.bVBAQ != 0;
-    SetCXIndex(fcgCXPreAnalysis,        get_cx_index(list_pre_analysis, cnf->vce.nPreAnalysis));
+    if (cnf->vce.nCodecId == VCE_CODEC_H264) {
+        SetCXIndex(fcgCXPreAnalysis,     get_cx_index(get_pre_analysis_list(VCE_CODEC_H264), cnf->vce.nPreAnalysis));
+        SetCXIndex(fcgCXHEVCPreAnalysis, 0);
+    } else if (cnf->vce.nCodecId == VCE_CODEC_HEVC) {
+        SetCXIndex(fcgCXPreAnalysis,     0);
+        SetCXIndex(fcgCXHEVCPreAnalysis, get_cx_index(get_pre_analysis_list(VCE_CODEC_HEVC), cnf->vce.nPreAnalysis));
+    }
 
     SetCXIndex(fcgCXMotionEst,          get_cx_index(list_mv_presicion, cnf->vce.nMotionEst));
 
@@ -886,10 +915,13 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
 
 System::Void frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     //これもひたすら書くだけ。めんどい
+    cnf->vce.nCodecId                                = list_codec[fcgCXCodec->SelectedIndex].value;
     cnf->vce.nRateControl                            = list_vce_h264_rc_method[fcgCXEncMode->SelectedIndex].value;
     cnf->vce.nQualityPreset                          = list_vce_quality_preset[fcgCXQualityPreset->SelectedIndex].value;
-    cnf->vce.codecParam[cnf->vce.nCodecId].nProfile  = list_avc_profile[fcgCXCodecProfile->SelectedIndex].value;
-    cnf->vce.codecParam[cnf->vce.nCodecId].nLevel    = list_avc_level[fcgCXCodecLevel->SelectedIndex].value;
+    cnf->vce.codecParam[VCE_CODEC_H264].nProfile     = list_avc_profile[fcgCXCodecProfile->SelectedIndex].value;
+    cnf->vce.codecParam[VCE_CODEC_H264].nLevel       = list_avc_level[fcgCXCodecLevel->SelectedIndex].value;
+    cnf->vce.codecParam[VCE_CODEC_HEVC].nProfile     = list_hevc_profile[fcgCXCodecProfile->SelectedIndex].value;
+    cnf->vce.codecParam[VCE_CODEC_HEVC].nLevel       = list_hevc_level[fcgCXCodecLevel->SelectedIndex].value;
     cnf->vce.nBitrate                                = (int)fcgNUBitrate->Value;
     cnf->vce.nMaxBitrate                             = (int)fcgNUMaxkbps->Value;
     cnf->vce.nVBVBufferSize                          = (int)fcgNUVBVBufSize->Value;
@@ -905,13 +937,18 @@ System::Void frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     cnf->vce.nDeltaQPBFrame                          = (int)fcgNUBDeltaQP->Value;
     cnf->vce.nDeltaQPBFrameRef                       = (int)fcgNUBRefDeltaQP->Value;
 
-    cnf->vce.nPicStruct                              = (VCE_PICSTRUCT)list_interlaced[fcgCXInterlaced->SelectedIndex].value;
+    cnf->vce.nPicStruct                              = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME;
+    //cnf->vce.nPicStruct                              = (VCE_PICSTRUCT)list_interlaced[fcgCXInterlaced->SelectedIndex].value;
     cnf->vce.nSlices                                 = (int)fcgNUSlices->Value;
 
     cnf->vce.bDeblockFilter                          = fcgCBDeblock->Checked;
     cnf->vce.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;
     cnf->vce.bVBAQ                                   = fcgCBVBAQ->Checked;
-    cnf->vce.nPreAnalysis                            = list_pre_analysis[fcgCXPreAnalysis->SelectedIndex].value;
+    if (cnf->vce.nCodecId == VCE_CODEC_H264) {
+        cnf->vce.nPreAnalysis = get_pre_analysis_list(VCE_CODEC_H264)[fcgCXPreAnalysis->SelectedIndex].value;
+    } else if (cnf->vce.nCodecId == VCE_CODEC_HEVC) {
+        cnf->vce.nPreAnalysis = get_pre_analysis_list(VCE_CODEC_HEVC)[fcgCXHEVCPreAnalysis->SelectedIndex].value;
+    }
 
     cnf->vce.nMotionEst                              = list_mv_presicion[fcgCXMotionEst->SelectedIndex].value;
 
