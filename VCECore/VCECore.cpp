@@ -136,7 +136,8 @@ public:
         }
         return res;
     }
-    virtual AMF_RESULT Drain() {
+    virtual AMF_RESULT Drain(amf_int32 inputSlot) {
+        inputSlot;
         return m_pComponent->Drain();
     }
     virtual amf_int32 GetInputSlotCount() override {
