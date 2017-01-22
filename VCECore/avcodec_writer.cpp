@@ -268,9 +268,9 @@ tstring CAvcodecWriter::errorMesForCodec(const TCHAR *mes, AVCodecID targetCodec
 };
 
 AVCodecID CAvcodecWriter::getAVCodecId(uint32_t vceCodecId) {
-    for (int i = 0; i < _countof(VCE_DECODE_LIST); i++)
-        if (VCE_DECODE_LIST[i].vce_codec == vceCodecId)
-            return (AVCodecID)VCE_DECODE_LIST[i].codec_id;
+    for (int i = 0; i < _countof(VCE_ENCODE_LIST); i++)
+        if (VCE_ENCODE_LIST[i].vce_codec == vceCodecId)
+            return (AVCodecID)VCE_ENCODE_LIST[i].codec_id;
     return AV_CODEC_ID_NONE;
 }
 bool CAvcodecWriter::codecIDIsPCM(AVCodecID targetCodec) {

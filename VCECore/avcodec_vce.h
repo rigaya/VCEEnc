@@ -86,6 +86,10 @@ static const VCECodec VCE_DECODE_LIST[] = {
     //{ AV_CODEC_ID_VP8,           },
     //{ AV_CODEC_ID_VP9,           },
 };
+static const VCECodec VCE_ENCODE_LIST[] = {
+    { AV_CODEC_ID_H264,       VCE_CODEC_H264 },
+    { AV_CODEC_ID_HEVC,       VCE_CODEC_HEVC },
+};
 
 static const TCHAR *AVVCE_CODEC_AUTO = _T("auto");
 static const TCHAR *AVVCE_CODEC_COPY = _T("copy");
