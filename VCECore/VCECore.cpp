@@ -1549,7 +1549,7 @@ tstring VCECore::GetEncoderParam() {
         CodecIdToStr(m_VCECodecId),
         getPropertyDesc(AMF_PARAM_PROFILE(m_VCECodecId), get_profile_list(m_VCECodecId)).c_str(),
         getPropertyDesc(AMF_PARAM_PROFILE_LEVEL(m_VCECodecId), get_level_list(m_VCECodecId)).c_str());
-    const AMF_VIDEO_ENCODER_SCANTYPE_ENUM scan_type = (m_VCECodecId == VCE_CODEC_H264) ? AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE : (AMF_VIDEO_ENCODER_SCANTYPE_ENUM)GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE);
+    const AMF_VIDEO_ENCODER_SCANTYPE_ENUM scan_type = (m_VCECodecId == VCE_CODEC_H264) ? (AMF_VIDEO_ENCODER_SCANTYPE_ENUM)GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE) : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE;
     AMFRatio aspectRatio;
     pProperty->GetProperty(AMF_PARAM_ASPECT_RATIO(m_VCECodecId), &aspectRatio);
     mes += strsprintf(_T("               %dx%d%s %d:%d %0.3ffps (%d/%dfps)\n"),
