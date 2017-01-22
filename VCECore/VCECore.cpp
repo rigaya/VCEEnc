@@ -690,6 +690,12 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
         PrintMes(VCE_LOG_WARN, _T("Maximum Delta QP for Bframes is %d.\n"), VCE_MAX_B_DELTA_QP);
         prm->nDeltaQPBFrameRef = clamp(prm->nDeltaQPBFrameRef, -1 * VCE_MAX_B_DELTA_QP, VCE_MAX_B_DELTA_QP);
     }
+    if (prm->nBframes > 0 && prm->nCodecId == VCE_CODEC_HEVC) {
+        prm->nBframes = 0;
+        prm->bBPyramid = 0;
+        prm->nDeltaQPBFrame = 0;
+        prm->nDeltaQPBFrameRef = 0;
+    }
     prm->nQPMax = clamp(prm->nQPMax, 0, 51);
     prm->nQPMin = clamp(prm->nQPMin, 0, 51);
     prm->nQPI   = clamp(prm->nQPI,   0, 51);
