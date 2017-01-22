@@ -339,12 +339,63 @@ const CX_DESC list_vce_h264_rc_method[] = {
     { NULL, NULL }
 };
 
-const CX_DESC list_vce_quality_preset[] = {
-    { _T("balanced"), AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED },
-    { _T("fast"),     AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED    },
-    { _T("slow"),     AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY  },
+const CX_DESC list_vce_hevc_rc_method[] = {
+    { _T("CQP"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP },
+    { _T("CBR"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR },
+    { _T("VBR"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR },
     { NULL, NULL }
 };
+
+const CX_DESC list_vce_quality_preset[] = {
+    { _T("balanced"), 0 },
+    { _T("fast"),     1 },
+    { _T("slow"),     2 },
+    { NULL, NULL }
+};
+
+static const int H264_QUALITY_PRESET[3] = {
+    AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED,
+    AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED,
+    AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY
+};
+
+static const int HEVC_QUALITY_PRESET[3] = {
+    AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_BALANCED,
+    AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_SPEED,
+    AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_QUALITY
+};
+static const int *get_quality_preset(int nCodecId) {
+    switch (nCodecId) {
+    case VCE_CODEC_HEVC: return HEVC_QUALITY_PRESET;
+    case VCE_CODEC_H264: return H264_QUALITY_PRESET;
+    default:             return nullptr;
+    }
+}
+static const CX_DESC *get_rc_method(int nCodecId) {
+    switch (nCodecId) {
+    case VCE_CODEC_HEVC: return list_vce_hevc_rc_method;
+    case VCE_CODEC_H264: return list_vce_h264_rc_method;
+    default:             return list_empty;
+    }
+}
+static int get_quality_index(int nCodecId, int quality_preset) {
+    const int *preset = nullptr;
+    switch (nCodecId) {
+    case VCE_CODEC_HEVC:
+        preset = HEVC_QUALITY_PRESET;
+    case VCE_CODEC_H264:
+    default:
+        preset = H264_QUALITY_PRESET;
+    }
+    if (preset) {
+        for (int i = 0; i < 3; i++) {
+            if (preset[i] == quality_preset) {
+                return i;
+            }
+        }
+    }
+    return 0;
+}
 
 const CX_DESC list_interlaced[] = {
     { _T("Progressive"), AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME        },
@@ -353,11 +404,17 @@ const CX_DESC list_interlaced[] = {
     { NULL, NULL }
 };
 
-const CX_DESC list_pre_analysis[] = {
+const CX_DESC list_pre_analysis_h264[] = {
     { _T("none"),   AMF_VIDEO_ENCODER_PREENCODE_DISABLED },
     { _T("full"),   AMF_VIDEO_ENCODER_PREENCODE_ENABLED },
     { _T("half"),   AMF_VIDEO_ENCODER_PREENCODE_ENABLED_DOWNSCALEFACTOR_2 },
     { _T("quater"), AMF_VIDEO_ENCODER_PREENCODE_ENABLED_DOWNSCALEFACTOR_4 },
+    { NULL, NULL }
+};
+
+const CX_DESC list_pre_analysis_hevc[] = {
+    { _T("none"),   AMF_VIDEO_ENCODER_PREENCODE_DISABLED },
+    { _T("auto"),   AMF_VIDEO_ENCODER_HEVC_VBAQ_MODE_AUTO },
     { NULL, NULL }
 };
 
@@ -416,6 +473,11 @@ static inline const CX_DESC *get_profile_list(int CodecID) {
     default:                return list_empty;
     }
 }
+
+static inline const CX_DESC *get_pre_analysis_list(int CodecID) {
+    switch (CodecID) {
+    case VCE_CODEC_H264:    return list_pre_analysis_h264;
+    case VCE_CODEC_HEVC:    return list_pre_analysis_hevc;
     default:                return list_empty;
     }
 }
@@ -573,5 +635,64 @@ static const int VCE_MAX_B_DELTA_QP = 10;
 static const int VCE_OUTPUT_BUF_MB_MAX = 128;
 
 static const int VCE_DEFAULT_AUDIO_IGNORE_DECODE_ERROR = 10;
+
+#define AMF_PARAM(x) \
+static const wchar_t *AMF_PARAM_##x(int nCodecId) { \
+    switch (nCodecId) { \
+    case VCE_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_##x; \
+    case VCE_CODEC_H264: \
+    default:             return AMF_VIDEO_ENCODER_##x; \
+    } \
+};
+
+AMF_PARAM(FRAMESIZE);
+AMF_PARAM(FRAMERATE);
+AMF_PARAM(USAGE);
+AMF_PARAM(PROFILE);
+AMF_PARAM(PROFILE_LEVEL);
+AMF_PARAM(MAX_LTR_FRAMES);
+AMF_PARAM(MAX_NUM_REFRAMES);
+AMF_PARAM(QUALITY_PRESET);
+AMF_PARAM(ASPECT_RATIO);
+AMF_PARAM(SLICES_PER_FRAME);
+AMF_PARAM(RATE_CONTROL_METHOD);
+AMF_PARAM(VBV_BUFFER_SIZE);
+AMF_PARAM(INITIAL_VBV_BUFFER_FULLNESS);
+AMF_PARAM(RATE_CONTROL_PREANALYSIS_ENABLE);
+AMF_PARAM(ENABLE_VBAQ);
+AMF_PARAM(ENFORCE_HRD);
+AMF_PARAM(FILLER_DATA_ENABLE);
+AMF_PARAM(TARGET_BITRATE);
+AMF_PARAM(PEAK_BITRATE);
+AMF_PARAM(MAX_AU_SIZE);
+AMF_PARAM(QP_I);
+AMF_PARAM(QP_P);
+AMF_PARAM(RATE_CONTROL_SKIP_FRAME_ENABLE);
+AMF_PARAM(MOTION_HALF_PIXEL);
+AMF_PARAM(MOTION_QUARTERPIXEL);
+AMF_PARAM(END_OF_SEQUENCE);
+AMF_PARAM(FORCE_PICTURE_TYPE);
+AMF_PARAM(INSERT_AUD);
+static const wchar_t *AMF_PARAM_GOP_SIZE(int nCodecId) {
+    switch (nCodecId) {
+    case VCE_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_GOP_SIZE;
+    case VCE_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_IDR_PERIOD;
+    }
+}
+static const wchar_t *AMF_PARAM_MIN_QP(int nCodecId) {
+    switch (nCodecId) {
+    case VCE_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_MIN_QP_I;
+    case VCE_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_MIN_QP;
+    }
+}
+static const wchar_t *AMF_PARAM_MAX_QP(int nCodecId) {
+    switch (nCodecId) {
+    case VCE_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_MAX_QP_I;
+    case VCE_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_MAX_QP;
+    }
+}
 
 #pragma warning(pop)

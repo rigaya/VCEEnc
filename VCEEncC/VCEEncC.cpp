@@ -372,8 +372,9 @@ static tstring help() {
         _T("   --motion-est                 set motion estimation precision\n")
         _T("                                 full-pel, half-pel, q-pel(default)\n")
         _T("   --vbaq                       enable VBAQ\n")
-        _T("   --pre-analysis               set pre-analysis mode\n")
-        _T("                                 none (default), full (best), half, quater (fast)\n")
+        _T("   --pre-analysis <string>      set pre-analysis mode\n")
+        _T("                      H.264: none (default), full (best), half, quater (fast)\n")
+        _T("                      HEVC:  none (default), auto\n")
         _T("   --gop-len <int>              set length of gop (default: auto)\n")
         _T("   --tff                        set input as interlaced (tff)\n")
         _T("   --bff                        set input as interlaced (bff)\n"),
@@ -435,7 +436,7 @@ static void PrintHelp(const TCHAR *strAppName, const TCHAR *strErrorMessage, con
 }
 
 struct sArgsData {
-    tstring cachedlevel, cachedprofile;
+    tstring cachedlevel, cachedprofile, cachedPreAnalysis;
     uint32_t nParsedAudioFile = 0;
     uint32_t nParsedAudioEncode = 0;
     uint32_t nParsedAudioCopy = 0;
@@ -1393,13 +1394,13 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         return 0;
     }
     if (IS_OPTION("pre-analysis")) {
-        i++;
-        int value = AMF_VIDEO_ENCODER_PREENCODE_DISABLED;
-        if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pre_analysis, strInput[i]))) {
-            PrintHelp(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+        if (i+1 < nArgNum) {
+            i++;
+            argData->cachedPreAnalysis = strInput[i];
+        } else {
+            PrintHelp(strInput[0], _T("Invalid value"), option_name);
             return -1;
         }
-        pParams->nPreAnalysis = value;
         return 0;
     }
     if (IS_OPTION("gop-len")) {
@@ -1597,6 +1598,30 @@ int parse_args(VCEParam *pParams, VCEInputInfo *pInputInfo, int nArgNum, const T
         } else {
             PrintHelp(strInput[0], _T("Unknown value"), _T("profile"));
             return -1;
+        }
+    }
+    if (argsData.cachedPreAnalysis.length() > 0) {
+        const auto desc = get_pre_analysis_list(pParams->nCodecId);
+        int value = 0;
+        if (desc != nullptr && PARSE_ERROR_FLAG == (value = get_value_from_chr(desc, argsData.cachedPreAnalysis.c_str()))) {
+            PrintHelp(strInput[0], _T("Unknown value"), _T("pre-analysis"));
+            return -1;
+        }
+        pParams->nPreAnalysis = value;
+    }
+    if (pParams->nCodecId == VCE_CODEC_HEVC) {
+        int nH264RateControl = pParams->nRateControl;
+        switch (nH264RateControl) {
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR:
+            pParams->nRateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR;
+            break;
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR:
+            pParams->nRateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR;
+            break;
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP:
+        default:
+            pParams->nRateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP;
+            break;
         }
     }
     return 0;

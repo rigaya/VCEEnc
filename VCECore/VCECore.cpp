@@ -1234,8 +1234,6 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
         prm->codecParam[prm->nCodecId].nLevel = (prm->nCodecId == VCE_CODEC_HEVC) ? AMF_LEVEL_4_1 : 41;
     }
 
-    m_Params.SetParam(AMF_VIDEO_ENCODER_FORCE_PICTURE_TYPE, (amf_int64)AMF_VIDEO_ENCODER_PICTURE_TYPE_IDR);
-
     m_Params.SetParam(PARAM_NAME_INPUT_WIDTH,   m_inputInfo.srcWidth);
     m_Params.SetParam(PARAM_NAME_INPUT_HEIGHT,  m_inputInfo.srcHeight);
     m_Params.SetParam(PARAM_NAME_OUTPUT_WIDTH,  m_inputInfo.dstWidth);
@@ -1244,60 +1242,72 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     m_Params.SetParam(SETFRAMEPARAMFREQ_PARAM_NAME,   0);
     m_Params.SetParam(SETDYNAMICPARAMFREQ_PARAM_NAME, 0);
 
-    m_Params.SetParam(AMF_VIDEO_ENCODER_FRAMESIZE,          AMFConstructSize(m_inputInfo.dstWidth, m_inputInfo.dstHeight));
-    m_Params.SetParam(AMF_VIDEO_ENCODER_FRAMERATE,          AMFConstructRate(m_inputInfo.fps.num, m_inputInfo.fps.den));
-    m_Params.SetParam(AMF_VIDEO_ENCODER_USAGE,              (amf_int64)AMF_VIDEO_ENCODER_USAGE_TRANSCONDING);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_PROFILE,            (amf_int64)prm->codecParam[prm->nCodecId].nProfile);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_PROFILE_LEVEL,      (amf_int64)prm->codecParam[prm->nCodecId].nLevel);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)(is_interlaced(prm) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
-    m_Params.SetParam(AMF_VIDEO_ENCODER_QUALITY_PRESET,     (amf_int64)prm->nQualityPreset);
+    m_Params.SetParam(AMF_PARAM_FRAMESIZE(prm->nCodecId),      AMFConstructSize(m_inputInfo.dstWidth, m_inputInfo.dstHeight));
+    m_Params.SetParam(AMF_PARAM_FRAMERATE(prm->nCodecId),      AMFConstructRate(m_inputInfo.fps.num, m_inputInfo.fps.den));
+    m_Params.SetParam(AMF_PARAM_ASPECT_RATIO(prm->nCodecId),   AMFConstructRatio(m_inputInfo.AspectRatioW, m_inputInfo.AspectRatioH));
+    m_Params.SetParam(AMF_PARAM_USAGE(prm->nCodecId),          (amf_int64)((prm->nCodecId == VCE_CODEC_HEVC) ? AMF_VIDEO_ENCODER_HEVC_USAGE_TRANSCONDING : AMF_VIDEO_ENCODER_USAGE_TRANSCONDING));
+    m_Params.SetParam(AMF_PARAM_PROFILE(prm->nCodecId),        (amf_int64)prm->codecParam[prm->nCodecId].nProfile);
+    m_Params.SetParam(AMF_PARAM_PROFILE_LEVEL(prm->nCodecId),  (amf_int64)prm->codecParam[prm->nCodecId].nLevel);
+    m_Params.SetParam(AMF_PARAM_QUALITY_PRESET(prm->nCodecId), (amf_int64)get_quality_preset(prm->nCodecId)[prm->nQualityPreset]);
+    m_Params.SetParam(AMF_PARAM_QP_I(prm->nCodecId),           (amf_int64)prm->nQPI);
+    m_Params.SetParam(AMF_PARAM_QP_P(prm->nCodecId),           (amf_int64)prm->nQPP);
+    m_Params.SetParam(AMF_PARAM_TARGET_BITRATE(prm->nCodecId), (amf_int64)prm->nBitrate * 1000);
+    m_Params.SetParam(AMF_PARAM_PEAK_BITRATE(prm->nCodecId),   (amf_int64)prm->nMaxBitrate * 1000);
+    m_Params.SetParam(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(prm->nCodecId),  !!prm->bEnableSkipFrame);
+    m_Params.SetParam(AMF_PARAM_RATE_CONTROL_METHOD(prm->nCodecId),             (amf_int64)prm->nRateControl);
+    m_Params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->nCodecId), (amf_int64)prm->nPreAnalysis);
+    m_Params.SetParam(AMF_PARAM_VBV_BUFFER_SIZE(prm->nCodecId),                 (amf_int64)prm->nVBVBufferSize * 1000);
+    m_Params.SetParam(AMF_PARAM_INITIAL_VBV_BUFFER_FULLNESS(prm->nCodecId),     (amf_int64)prm->nInitialVBVPercent);
 
-    m_Params.SetParam(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP,     (amf_int64)prm->nDeltaQPBFrame);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrameRef);
+    m_Params.SetParam(AMF_PARAM_ENFORCE_HRD(prm->nCodecId),        true);
+    //m_Params.SetParam(AMF_PARAM_FILLER_DATA_ENABLE(prm->nCodecId), false);
+    if (prm->bVBAQ) m_Params.SetParam(AMF_PARAM_ENABLE_VBAQ(prm->nCodecId), true);
+    m_Params.SetParam(AMF_PARAM_SLICES_PER_FRAME(prm->nCodecId),               (amf_int64)prm->nSlices);
+    m_Params.SetParam(AMF_PARAM_GOP_SIZE(prm->nCodecId),                       (amf_int64)nGOPLen);
 
-    m_Params.SetParam(AMF_VIDEO_ENCODER_ENFORCE_HRD,        true);
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_FILLER_DATA_ENABLE, false);
-    if (prm->bVBAQ) m_Params.SetParam(AMF_VIDEO_ENCODER_ENABLE_VBAQ, true);
+    //m_Params.SetParam(AMF_PARAM_END_OF_SEQUENCE(prm->nCodecId),                false);
+    m_Params.SetParam(AMF_PARAM_INSERT_AUD(prm->nCodecId),                     false);
+    if (prm->nCodecId == VCE_CODEC_H264) {
+        m_Params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)(is_interlaced(prm) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
+        
+        m_Params.SetParam(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP,     (amf_int64)prm->nDeltaQPBFrame);
+        m_Params.SetParam(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrameRef);
 
-    m_Params.SetParam(AMF_VIDEO_ENCODER_VBV_BUFFER_SIZE,                (amf_int64)prm->nVBVBufferSize * 1000);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_INITIAL_VBV_BUFFER_FULLNESS,    (amf_int64)prm->nInitialVBVPercent);
+        m_Params.SetParam(AMF_VIDEO_ENCODER_MIN_QP,                                (amf_int64)prm->nQPMin);
+        m_Params.SetParam(AMF_VIDEO_ENCODER_MAX_QP,                                (amf_int64)prm->nQPMax);
+        m_Params.SetParam(AMF_VIDEO_ENCODER_QP_B,                                  (amf_int64)prm->nQPB);
 
-    m_Params.SetParam(AMF_VIDEO_ENCODER_MIN_QP,                         (amf_int64)prm->nQPMin);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_MAX_QP,                         (amf_int64)prm->nQPMax);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_QP_I,                           (amf_int64)prm->nQPI);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_QP_P,                           (amf_int64)prm->nQPP);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_QP_B,                           (amf_int64)prm->nQPB);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_TARGET_BITRATE,                 (amf_int64)prm->nBitrate * 1000);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_PEAK_BITRATE,                   (amf_int64)prm->nMaxBitrate * 1000);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_RATE_CONTROL_SKIP_FRAME_ENABLE, !!prm->bEnableSkipFrame);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD,            (amf_int64)prm->nRateControl);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_RATE_CONTROL_PREANALYSIS_ENABLE,(amf_int64)prm->nPreAnalysis);
+        //m_Params.SetParam(AMF_VIDEO_ENCODER_HEADER_INSERTION_SPACING,       (amf_int64)0);
+        m_Params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN,                  (amf_int64)prm->nBframes);
+        m_Params.SetParam(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE,             prm->nBframes > 0 && !!prm->bBPyramid);
+        ////m_Params.SetParam(AMF_VIDEO_ENCODER_INTRA_REFRESH_NUM_MBS_PER_SLOT, false);
 
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_HEADER_INSERTION_SPACING,       (amf_int64)0);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN,                  (amf_int64)prm->nBframes);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_DE_BLOCKING_FILTER,             !!prm->bDeblockFilter);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE,             prm->nBframes > 0 && !!prm->bBPyramid);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_IDR_PERIOD,                     (amf_int64)nGOPLen);
-    ////m_Params.SetParam(AMF_VIDEO_ENCODER_INTRA_REFRESH_NUM_MBS_PER_SLOT, false);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_SLICES_PER_FRAME,               (amf_int64)prm->nSlices);
+        m_Params.SetParam(AMF_PARAM_MOTION_HALF_PIXEL(prm->nCodecId),              !!(prm->nMotionEst & VCE_MOTION_EST_HALF));
+        m_Params.SetParam(AMF_PARAM_MOTION_QUARTERPIXEL(prm->nCodecId),            !!(prm->nMotionEst & VCE_MOTION_EST_QUATER));
 
-    m_Params.SetParam(AMF_VIDEO_ENCODER_MOTION_HALF_PIXEL,              !!(prm->nMotionEst & VCE_MOTION_EST_HALF));
-    m_Params.SetParam(AMF_VIDEO_ENCODER_MOTION_QUARTERPIXEL,            !!(prm->nMotionEst & VCE_MOTION_EST_QUATER));
+        //m_Params.SetParam(AMF_VIDEO_ENCODER_FORCE_PICTURE_TYPE,             (amf_int64)AMF_VIDEO_ENCODER_PICTURE_TYPE_NONE);
+        m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_SPS, false);
+        m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_PPS, false);
+        //m_Params.SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE,                (amf_int64)prm->nPicStruct);
+        //m_Params.SetParam(AMF_VIDEO_ENCODER_MARK_CURRENT_WITH_LTR_INDEX,    false);
+        //m_Params.SetParam(AMF_VIDEO_ENCODER_FORCE_LTR_REFERENCE_BITFIELD,   (amf_int64)0);
 
+        //m_Params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE, AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE_ENUM);
+        //m_Params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_MARKED_LTR_INDEX, (amf_int64)-1);
+        //m_Params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_REFERENCED_LTR_INDEX_BITFIELD, (amf_int64)0);
+    } else if (prm->nCodecId == VCE_CODEC_HEVC) {
+        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_I,                        (amf_int64)prm->nQPMin);
+        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_I,                        (amf_int64)prm->nQPMax);
+        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_P,                        (amf_int64)prm->nQPMin);
+        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_P,                        (amf_int64)prm->nQPMax);
 
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_END_OF_SEQUENCE,                false);
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_END_OF_STREAM,                  false);
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_FORCE_PICTURE_TYPE,             (amf_int64)AMF_VIDEO_ENCODER_PICTURE_TYPE_NONE);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_AUD, false);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_SPS, false);
-    m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_PPS, false);
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE,                (amf_int64)prm->nPicStruct);
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_MARK_CURRENT_WITH_LTR_INDEX,    false);
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_FORCE_LTR_REFERENCE_BITFIELD,   (amf_int64)0);
+        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_DE_BLOCKING_FILTER_DISABLE,      !prm->bDeblockFilter);
 
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE, AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE_ENUM);
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_MARKED_LTR_INDEX, (amf_int64)-1);
-    //m_Params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_REFERENCED_LTR_INDEX_BITFIELD, (amf_int64)0);
+        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER,                   false);
+    } else {
+        PrintMes(VCE_LOG_ERROR, _T("Unsupported codec.\n"));
+        return res;
+    }
 
     // Usage is preset that will set many parameters
     PushParamsToPropertyStorage(&m_Params, ParamEncoderUsage, m_pEncoder);
@@ -1503,14 +1513,14 @@ tstring VCECore::GetEncoderParam() {
     getGPUInfo("Advanced Micro Device", gpu_info, _countof(gpu_info));
 
     AMFSize frameSize;
-    pProperty->GetProperty(AMF_VIDEO_ENCODER_FRAMESIZE, &frameSize);
+    pProperty->GetProperty(AMF_PARAM_FRAMESIZE(m_VCECodecId), &frameSize);
 
     AMFRate frameRate;
-    pProperty->GetProperty(AMF_VIDEO_ENCODER_FRAMERATE, &frameRate);
+    pProperty->GetProperty(AMF_PARAM_FRAMERATE(m_VCECodecId), &frameRate);
 
     uint32_t nMotionEst = 0x0;
-    nMotionEst |= GetPropertyInt(AMF_VIDEO_ENCODER_MOTION_HALF_PIXEL) ? VCE_MOTION_EST_HALF : 0;
-    nMotionEst |= GetPropertyInt(AMF_VIDEO_ENCODER_MOTION_QUARTERPIXEL) ? VCE_MOTION_EST_QUATER | VCE_MOTION_EST_HALF : 0;
+    nMotionEst |= GetPropertyInt(AMF_PARAM_MOTION_HALF_PIXEL(m_VCECodecId)) ? VCE_MOTION_EST_HALF : 0;
+    nMotionEst |= GetPropertyInt(AMF_PARAM_MOTION_QUARTERPIXEL(m_VCECodecId)) ? VCE_MOTION_EST_QUATER | VCE_MOTION_EST_HALF : 0;
 
     std::wstring deviceName = (m_deviceDX9.GetDevice() == nullptr) ? m_deviceDX11.GetDisplayDeviceName() : m_deviceDX9.GetDisplayDeviceName();
     deviceName = str_replace(deviceName, L" (TM)", L"");
@@ -1526,12 +1536,15 @@ tstring VCECore::GetEncoderParam() {
     }
     mes += strsprintf(_T("Output:        %s  %s @ Level %s\n"),
         CodecIdToStr(m_VCECodecId),
-        getPropertyDesc(AMF_VIDEO_ENCODER_PROFILE, get_profile_list(m_VCECodecId)).c_str(),
-        getPropertyDesc(AMF_VIDEO_ENCODER_PROFILE_LEVEL, get_level_list(m_VCECodecId)).c_str());
-    const AMF_VIDEO_ENCODER_SCANTYPE_ENUM scan_type = (AMF_VIDEO_ENCODER_SCANTYPE_ENUM)GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE);
-    mes += strsprintf(_T("               %dx%d%s %0.3ffps (%d/%dfps)\n"),
+        getPropertyDesc(AMF_PARAM_PROFILE(m_VCECodecId), get_profile_list(m_VCECodecId)).c_str(),
+        getPropertyDesc(AMF_PARAM_PROFILE_LEVEL(m_VCECodecId), get_level_list(m_VCECodecId)).c_str());
+    const AMF_VIDEO_ENCODER_SCANTYPE_ENUM scan_type = (m_VCECodecId == VCE_CODEC_H264) ? AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE : (AMF_VIDEO_ENCODER_SCANTYPE_ENUM)GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE);
+    AMFRatio aspectRatio;
+    pProperty->GetProperty(AMF_PARAM_ASPECT_RATIO(m_VCECodecId), &aspectRatio);
+    mes += strsprintf(_T("               %dx%d%s %d:%d %0.3ffps (%d/%dfps)\n"),
         frameSize.width, frameSize.height,
         scan_type == AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED ? _T("i") : _T("p"),
+        aspectRatio.num, aspectRatio.den,
         frameRate.num / (double)frameRate.den, frameRate.num, frameRate.den);
     if (m_pFileWriter) {
         auto mesSplitted = split(m_pFileWriter->GetOutputMessage(), _T("\n"));
@@ -1551,66 +1564,84 @@ tstring VCECore::GetEncoderParam() {
             }
         }
     }
-    mes += strsprintf(_T("Quality:       %s\n"), getPropertyDesc(AMF_VIDEO_ENCODER_QUALITY_PRESET, list_vce_quality_preset).c_str());
-    if (GetPropertyInt(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD) == AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP) {
+    const int quality_preset = GetPropertyInt(AMF_PARAM_QUALITY_PRESET(m_VCECodecId));
+    mes += strsprintf(_T("Quality:       %s\n"), list_vce_quality_preset[get_quality_index(m_VCECodecId, quality_preset)].desc);
+    if (GetPropertyInt(AMF_PARAM_RATE_CONTROL_METHOD(m_VCECodecId)) == get_rc_method(m_VCECodecId)[0].value) {
         mes += strsprintf(_T("CQP:           I:%d, P:%d"),
-            GetPropertyInt(AMF_VIDEO_ENCODER_QP_I),
-            GetPropertyInt(AMF_VIDEO_ENCODER_QP_P));
-        if (GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN)) {
+            GetPropertyInt(AMF_PARAM_QP_I(m_VCECodecId)),
+            GetPropertyInt(AMF_PARAM_QP_P(m_VCECodecId)));
+        if (m_VCECodecId == VCE_CODEC_H264 && GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN)) {
             mes += strsprintf(_T(", B:%d"), GetPropertyInt(AMF_VIDEO_ENCODER_QP_B));
         }
         mes += _T("\n");
     } else {
         mes += strsprintf(_T("%s:           %d kbps, Max %d kbps\n"),
-            getPropertyDesc(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD, list_vce_h264_rc_method).c_str(),
-            GetPropertyInt(AMF_VIDEO_ENCODER_TARGET_BITRATE) / 1000,
-            GetPropertyInt(AMF_VIDEO_ENCODER_PEAK_BITRATE) / 1000);
+            getPropertyDesc(AMF_PARAM_RATE_CONTROL_METHOD(m_VCECodecId), get_rc_method(m_VCECodecId)).c_str(),
+            GetPropertyInt(AMF_PARAM_TARGET_BITRATE(m_VCECodecId)) / 1000,
+            GetPropertyInt(AMF_PARAM_PEAK_BITRATE(m_VCECodecId)) / 1000);
         mes += strsprintf(_T("QP:            Min: %d, Max: %d\n"),
-            GetPropertyInt(AMF_VIDEO_ENCODER_MIN_QP),
-            GetPropertyInt(AMF_VIDEO_ENCODER_MAX_QP));
+            GetPropertyInt(AMF_PARAM_MIN_QP(m_VCECodecId)),
+            GetPropertyInt(AMF_PARAM_MAX_QP(m_VCECodecId)));
     }
-    mes += strsprintf(_T("VBV Bufsize:   %d kbps\n"), GetPropertyInt(AMF_VIDEO_ENCODER_VBV_BUFFER_SIZE) / 1000);
-    mes += strsprintf(_T("Bframes:       %d frames, b-pyramid: %s\n"),
-        GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN),
-        (GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN) && GetPropertyInt(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE) ? _T("on") : _T("off")));
-    if (GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN)) {
-        mes += strsprintf(_T("Delta QP:      Bframe: %d, RefBframe: %d\n"), GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP), GetPropertyInt(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP));
+    mes += strsprintf(_T("VBV Bufsize:   %d kbps\n"), GetPropertyInt(AMF_PARAM_VBV_BUFFER_SIZE(m_VCECodecId)) / 1000);
+    if (m_VCECodecId == VCE_CODEC_H264 && GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN)) {
+        mes += strsprintf(_T("Bframes:       %d frames, b-pyramid: %s\n"),
+            GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN),
+            (GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN) && GetPropertyInt(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE) ? _T("on") : _T("off")));
+        if (GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN)) {
+            mes += strsprintf(_T("Delta QP:      Bframe: %d, RefBframe: %d\n"), GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP), GetPropertyInt(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP));
+        }
+    } else {
+        mes += strsprintf(_T("Bframes:       0 frames\n"));
     }
     mes += strsprintf(_T("Motion Est:    %s\n"), get_cx_desc(list_mv_presicion, nMotionEst));
-    mes += strsprintf(_T("Slices:        %d\n"), GetPropertyInt(AMF_VIDEO_ENCODER_SLICES_PER_FRAME));
-    mes += strsprintf(_T("GOP Len:       %d frames\n"), GetPropertyInt(AMF_VIDEO_ENCODER_IDR_PERIOD));
+    mes += strsprintf(_T("Slices:        %d\n"), GetPropertyInt(AMF_PARAM_SLICES_PER_FRAME(m_VCECodecId)));
+    mes += strsprintf(_T("GOP Len:       %d frames\n"), GetPropertyInt(AMF_PARAM_GOP_SIZE(m_VCECodecId)));
     tstring others;
-    if (GetPropertyBool(AMF_VIDEO_ENCODER_RATE_CONTROL_SKIP_FRAME_ENABLE)) {
+    if (GetPropertyBool(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(m_VCECodecId))) {
         others += _T("skip_frame ");
     }
-    if (!GetPropertyBool(AMF_VIDEO_ENCODER_DE_BLOCKING_FILTER)) {
-        others += _T("no_deblock ");
-    } else {
-        others += _T("deblock ");
+    bool bDeblock = true;
+    switch (m_VCECodecId) {
+    case VCE_CODEC_HEVC:
+        bDeblock = GetPropertyBool(AMF_VIDEO_ENCODER_DE_BLOCKING_FILTER);
+        break;
+    case VCE_CODEC_H264:
+        bDeblock = !GetPropertyBool(AMF_VIDEO_ENCODER_HEVC_DE_BLOCKING_FILTER_DISABLE);
+        break;
+    default:
+        break;
     }
+    others += (bDeblock) ? _T("deblock ") : _T("no_deblock ");
     if (m_pVCELog->getLogLevel() <= VCE_LOG_DEBUG) {
-        if (GetPropertyBool(AMF_VIDEO_ENCODER_INSERT_AUD)) {
+        if (GetPropertyBool(AMF_PARAM_INSERT_AUD(m_VCECodecId))) {
             others += _T("aud ");
         }
-        if (GetPropertyBool(AMF_VIDEO_ENCODER_INSERT_SPS)) {
-            others += _T("sps ");
-        }
-        if (GetPropertyBool(AMF_VIDEO_ENCODER_INSERT_PPS)) {
-            others += _T("pps ");
+        if (m_VCECodecId == VCE_CODEC_H264) {
+            if (GetPropertyBool(AMF_VIDEO_ENCODER_INSERT_SPS)) {
+                others += _T("sps ");
+            }
+            if (GetPropertyBool(AMF_VIDEO_ENCODER_INSERT_PPS)) {
+                others += _T("pps ");
+            }
+        } else if (m_VCECodecId == VCE_CODEC_HEVC) {
+            if (GetPropertyBool(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER)) {
+                others += _T("sps pps vps ");
+            }
         }
     }
-    if (GetPropertyBool(AMF_VIDEO_ENCODER_ENFORCE_HRD)) {
+    if (GetPropertyBool(AMF_PARAM_ENFORCE_HRD(m_VCECodecId))) {
         others += _T("hrd ");
     }
-    if (GetPropertyBool(AMF_VIDEO_ENCODER_FILLER_DATA_ENABLE)) {
+    if (GetPropertyBool(AMF_PARAM_FILLER_DATA_ENABLE(m_VCECodecId))) {
         others += _T("filler ");
     }
-    if (GetPropertyBool(AMF_VIDEO_ENCODER_ENABLE_VBAQ)) {
+    if (GetPropertyBool(AMF_PARAM_ENABLE_VBAQ(m_VCECodecId))) {
         others += _T("vbaq ");
     }
-    auto nPreAnalysis = GetPropertyInt(AMF_VIDEO_ENCODER_RATE_CONTROL_PREANALYSIS_ENABLE);
-    if (nPreAnalysis != AMF_VIDEO_ENCODER_PREENCODE_DISABLED) {
-        others += tstring(_T("pre-analysis:")) + get_cx_desc(list_pre_analysis, nPreAnalysis) + _T(" ");
+    int nPreAnalysis = GetPropertyInt(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(m_VCECodecId));
+    if (nPreAnalysis != 0) {
+        others += tstring(_T("pre-analysis:")) + get_cx_desc(get_pre_analysis_list(m_VCECodecId), nPreAnalysis) + _T(" ");
     }
     if (others.length() > 0) {
         mes += strsprintf(_T("Others:        %s\n"), others.c_str());
