@@ -289,7 +289,7 @@ const CX_DESC list_mv_presicion[] = {
     { NULL, NULL }
 };
 
-const CX_DESC list_vce_rc_method[] = {
+const CX_DESC list_vce_h264_rc_method[] = {
     { _T("CQP"), AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP          },
     { _T("CBR"), AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR                  },
     { _T("VBR"), AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR },

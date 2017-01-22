@@ -1562,7 +1562,7 @@ tstring VCECore::GetEncoderParam() {
         mes += _T("\n");
     } else {
         mes += strsprintf(_T("%s:           %d kbps, Max %d kbps\n"),
-            getPropertyDesc(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD, list_vce_rc_method).c_str(),
+            getPropertyDesc(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD, list_vce_h264_rc_method).c_str(),
             GetPropertyInt(AMF_VIDEO_ENCODER_TARGET_BITRATE) / 1000,
             GetPropertyInt(AMF_VIDEO_ENCODER_PEAK_BITRATE) / 1000);
         mes += strsprintf(_T("QP:            Min: %d, Max: %d\n"),

@@ -609,7 +609,7 @@ System::Void frmConfig::InitData(CONF_GUIEX *set_config, const SYSTEM_DATA *syst
 
 System::Void frmConfig::InitComboBox() {
     //コンボボックスに値を設定する
-    setComboBox(fcgCXEncMode,       list_vce_rc_method);
+    setComboBox(fcgCXEncMode,       list_vce_h264_rc_method);
     setComboBox(fcgCXQualityPreset, list_vce_quality_preset);
     setComboBox(fcgCXCodecLevel,    list_avc_level);
     setComboBox(fcgCXCodecProfile,  list_avc_profile);
@@ -670,7 +670,7 @@ System::Void frmConfig::InitStgFileList() {
 }
 
 System::Void frmConfig::fcgChangeEnabled(System::Object^  sender, System::EventArgs^  e) {
-    int vce_rc_method = list_vce_rc_method[fcgCXEncMode->SelectedIndex].value;
+    int vce_rc_method = list_vce_h264_rc_method[fcgCXEncMode->SelectedIndex].value;
     bool cqp_mode = (vce_rc_method == 0);
     bool cbr_vbr_mode = (vce_rc_method == 3 || vce_rc_method == 4);
 
@@ -802,7 +802,7 @@ System::Void frmConfig::InitForm() {
 System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     this->SuspendLayout();
 
-    SetCXIndex(fcgCXEncMode,           get_cx_index(list_vce_rc_method, cnf->vce.nRateControl));
+    SetCXIndex(fcgCXEncMode,           get_cx_index(list_vce_h264_rc_method, cnf->vce.nRateControl));
     SetCXIndex(fcgCXQualityPreset,     get_cx_index(list_vce_quality_preset, cnf->vce.nQualityPreset));
     SetNUValue(fcgNUBitrate,           cnf->vce.nBitrate);
     SetNUValue(fcgNUMaxkbps,           cnf->vce.nMaxBitrate);
@@ -886,7 +886,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
 
 System::Void frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     //これもひたすら書くだけ。めんどい
-    cnf->vce.nRateControl                            = list_vce_rc_method[fcgCXEncMode->SelectedIndex].value;
+    cnf->vce.nRateControl                            = list_vce_h264_rc_method[fcgCXEncMode->SelectedIndex].value;
     cnf->vce.nQualityPreset                          = list_vce_quality_preset[fcgCXQualityPreset->SelectedIndex].value;
     cnf->vce.codecParam[cnf->vce.nCodecId].nProfile  = list_avc_profile[fcgCXCodecProfile->SelectedIndex].value;
     cnf->vce.codecParam[cnf->vce.nCodecId].nLevel    = list_avc_level[fcgCXCodecLevel->SelectedIndex].value;
