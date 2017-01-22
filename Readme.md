@@ -18,6 +18,11 @@ VCEが載ったハードウェア
   AMD製 GPU Radeon HD 7xxx以降  
   AMD製 APU Trinity世代(第2世代)以降  
 
+| VCEEnc | 必要なグラフィックスドライバのバージョン |
+|:---|:---|
+| VCEEnc 3.00以降 | AMD ドライバ 17.1.1 (16.50.2611) 以降|
+
+
 ## VCEEnc 使用にあたっての注意事項
 無保証です。自己責任で使用してください。  
 VCEEncを使用したことによる、いかなる損害・トラブルについても責任を負いません。
@@ -25,15 +30,17 @@ VCEEncを使用したことによる、いかなる損害・トラブルにつ�
 
 ## 使用出来る主な機能
 #### VCEEnc/VCEEncC共通
-- VCEEncを使用したエンコード
+- VCEを使用したエンコード
    - H.264/AVC
+   - HEVC (Polaris以降)
 - VCEEncの各エンコードモード
    - CQP       固定量子化量
    - CBR       固定ビットレート
    - VBR       可変ビットレート
-- H.264 Level / Profileの指定
-  - 最大ビットレート等の指定
-  - 最大GOP長の指定
+- H.264/HEVC Level / Profileの指定
+- 最大ビットレート等の指定
+- 最大GOP長の指定
+- SAR比の設定
 
 #### VCEEnc (Aviutlプラグイン)
 - 音声エンコード
@@ -50,8 +57,8 @@ VCEEncを使用したことによる、いかなる損害・トラブルにつ�
 
 ## ソースコードについて
 - MITライセンスです。
-- 本ソフトウェアはAMD Media SDKのサンプルコードをベースに作成されており、
-  AMD Media SDKのソースを含みます。
+- 本ソフトウェアは[AMD Media Framework](http://gpuopen.com/gaming-product/advanced-media-framework/)のサンプルコードをベースに作成されており、
+  AMD Media Frameworkのソースを含みます。
   詳細は各ソースのヘッダ部分や、VCEEnc_license.txtをご覧ください。
 - 本ソフトウェアでは、
   [ffmpeg](https://ffmpeg.org/),
