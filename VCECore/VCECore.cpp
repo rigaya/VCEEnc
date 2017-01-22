@@ -692,6 +692,7 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
         prm->nDeltaQPBFrameRef = clamp(prm->nDeltaQPBFrameRef, -1 * VCE_MAX_B_DELTA_QP, VCE_MAX_B_DELTA_QP);
     }
     if (prm->nBframes > 0 && prm->nCodecId == VCE_CODEC_HEVC) {
+        PrintMes(VCE_LOG_WARN, _T("Bframes is not supported with HEVC encoding, disabled.\n"));
         prm->nBframes = 0;
         prm->bBPyramid = 0;
         prm->nDeltaQPBFrame = 0;
