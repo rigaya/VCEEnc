@@ -278,6 +278,7 @@ void bitstreamClear(sBitstream *pBitstream);
 const TCHAR *CodecIdToStr(uint32_t codecId);
 
 bool check_if_vce_available();
+bool check_if_vce_hevc_available();
 
 struct nal_info {
     const uint8_t *ptr;

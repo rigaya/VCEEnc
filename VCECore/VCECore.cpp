@@ -1659,3 +1659,29 @@ bool check_if_vce_available() {
     g_AMFFactory.Terminate();
     return ret;
 }
+
+bool check_if_vce_hevc_available() {
+    bool ret = g_AMFFactory.Init() == AMF_OK;
+    if (ret) {
+        amf::AMFContextPtr p_context;
+        ret = g_AMFFactory.GetFactory()->CreateContext(&p_context) == AMF_OK;
+        if (ret) {
+            DeviceDX9 device;
+            ret = device.Init(true, 0, false, 1280, 720) == AMF_OK;
+            if (ret) {
+                ret = p_context->InitDX9(device.GetDevice()) == AMF_OK;
+            }
+            amf::AMFComponentPtr p_encoder;
+            ret = g_AMFFactory.GetFactory()->CreateComponent(p_context, list_codec_key[VCE_CODEC_HEVC], &p_encoder) == AMF_OK;
+            if (p_encoder) {
+                p_encoder->Terminate();
+            }
+            device.Terminate();
+            if (p_context) {
+                p_context->Terminate();
+            }
+        }
+    }
+    g_AMFFactory.Terminate();
+    return ret;
+}
