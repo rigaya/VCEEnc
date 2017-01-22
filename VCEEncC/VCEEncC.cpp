@@ -383,9 +383,11 @@ static tstring help() {
 
     str += PrintMultipleListOptions(_T("--level <string>"), _T("set codec level"),
         { { _T("H.264"), list_avc_level,   0 },
+          { _T("HEVC"),  list_hevc_level,  0 },
         });
     str += PrintMultipleListOptions(_T("--profile <string>"), _T("set codec profile"),
         { { _T("H.264"), list_avc_profile,   0 },
+          { _T("HEVC"),  list_hevc_profile,  0 },
         });
 
     str += strsprintf(_T("\n")
@@ -1571,7 +1573,7 @@ int parse_args(VCEParam *pParams, VCEInputInfo *pInputInfo, int nArgNum, const T
             if (PARSE_ERROR_FLAG != (value = get_value_from_chr(desc, argsData.cachedlevel.c_str()))) {
                 pParams->codecParam[pParams->nCodecId].nLevel = value;
                 bParsed = true;
-            } else {
+            } else if (pParams->nCodecId == VCE_CODEC_H264) {
                 double val_float = 0.0;
                 if (1 == _stscanf_s(argsData.cachedlevel.c_str(), _T("%lf"), &val_float)) {
                     value = (int)(val_float * 10 + 0.5);

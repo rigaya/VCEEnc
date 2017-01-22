@@ -1231,7 +1231,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     }
     //VCEにはlevelを自動で設定してくれる機能はないようで、"0"などとするとエラー終了してしまう。
     if (prm->codecParam[prm->nCodecId].nLevel == 0) {
-        prm->codecParam[prm->nCodecId].nLevel = 41;
+        prm->codecParam[prm->nCodecId].nLevel = (prm->nCodecId == VCE_CODEC_HEVC) ? AMF_LEVEL_4_1 : 41;
     }
 
     m_Params.SetParam(AMF_VIDEO_ENCODER_FORCE_PICTURE_TYPE, (amf_int64)AMF_VIDEO_ENCODER_PICTURE_TYPE_IDR);

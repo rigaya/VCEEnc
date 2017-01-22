@@ -246,6 +246,35 @@ const CX_DESC list_avc_level[] = {
     { NULL, NULL }
 };
 
+const CX_DESC list_hevc_profile[] = {
+    { _T("main"),     AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN },
+    { NULL, NULL }
+};
+
+const CX_DESC list_hevc_tier[] = {
+    { _T("main"),     AMF_VIDEO_ENCODER_HEVC_TIER_MAIN },
+    { _T("high"),     AMF_VIDEO_ENCODER_HEVC_TIER_HIGH },
+    { NULL, NULL }
+};
+
+const CX_DESC list_hevc_level[] = {
+    { _T("auto"), 0 },
+    { _T("1"),    AMF_LEVEL_1 },
+    { _T("2"),    AMF_LEVEL_2 },
+    { _T("2.1"),  AMF_LEVEL_2_1 },
+    { _T("3"),    AMF_LEVEL_3 },
+    { _T("3.1"),  AMF_LEVEL_3_1 },
+    { _T("4"),    AMF_LEVEL_4 },
+    { _T("4.1"),  AMF_LEVEL_4_1 },
+    { _T("5"),    AMF_LEVEL_5 },
+    { _T("5.1"),  AMF_LEVEL_5_1 },
+    { _T("5.2"),  AMF_LEVEL_5_2 },
+    { _T("6"),    AMF_LEVEL_6 },
+    { _T("6.1"),  AMF_LEVEL_6_1 },
+    { _T("6.2"),  AMF_LEVEL_6_2 },
+    { NULL, NULL }
+};
+
 const int COLOR_VALUE_AUTO = USHRT_MAX;
 const int HD_HEIGHT_THRESHOLD = 720;
 const int HD_INDEX = 2;
@@ -375,6 +404,7 @@ static const TCHAR *get_chr_from_value(const CX_DESC *list, int v) {
 static inline const CX_DESC *get_level_list(int CodecID) {
     switch (CodecID) {
     case VCE_CODEC_H264:    return list_avc_level;
+    case VCE_CODEC_HEVC:    return list_hevc_level;
     default:                return list_empty;
     }
 }
@@ -382,6 +412,10 @@ static inline const CX_DESC *get_level_list(int CodecID) {
 static inline const CX_DESC *get_profile_list(int CodecID) {
     switch (CodecID) {
     case VCE_CODEC_H264:    return list_avc_profile;
+    case VCE_CODEC_HEVC:    return list_hevc_profile;
+    default:                return list_empty;
+    }
+}
     default:                return list_empty;
     }
 }
