@@ -1504,7 +1504,7 @@ AMF_RESULT CAvcodecWriter::SetSPSPPSToExtraData(amf::AMFBufferPtr pExtradata) {
 }
 
 AMF_RESULT CAvcodecWriter::AddH264HeaderToExtraData(const sBitstream *pBitstream) {
-    std::vector<nal_info> nal_list = parse_nal_unit(pBitstream->Data + pBitstream->DataOffset, pBitstream->DataLength);
+    std::vector<nal_info> nal_list = parse_nal_unit_h264(pBitstream->Data + pBitstream->DataOffset, pBitstream->DataLength);
     auto h264_sps_nal = std::find_if(nal_list.begin(), nal_list.end(), [](nal_info info) { return info.type == NALU_H264_SPS; });
     auto h264_pps_nal = std::find_if(nal_list.begin(), nal_list.end(), [](nal_info info) { return info.type == NALU_H264_PPS; });
     bool header_check = (nal_list.end() != h264_sps_nal) && (nal_list.end() != h264_pps_nal);
@@ -1926,8 +1926,11 @@ AMF_RESULT CAvcodecWriter::VCECheckStreamAVParser(sBitstream *pBitstream) {
 
 AMF_RESULT CAvcodecWriter::WriteNextFrameInternal(sBitstream *pBitstream, int64_t *pWrittenDts) {
     VCECheckStreamAVParser(pBitstream);
-    std::vector<nal_info> nal_list = parse_nal_unit(pBitstream->Data + pBitstream->DataOffset, pBitstream->DataLength);
-    if (nal_list[0].type == NALU_H264_AUD) {
+    std::vector<nal_info> nal_list = (m_Mux.video.pCodecCtx->codec_id == AV_CODEC_ID_HEVC)
+        ? parse_nal_unit_hevc(pBitstream->Data + pBitstream->DataOffset, pBitstream->DataLength)
+        : parse_nal_unit_h264(pBitstream->Data + pBitstream->DataOffset, pBitstream->DataLength);
+    bool bFirstAud = (m_Mux.video.pCodecCtx->codec_id == AV_CODEC_ID_HEVC) ? nal_list[0].type == NALU_HEVC_AUD : nal_list[0].type == NALU_H264_AUD;
+    if (bFirstAud) {
         pBitstream->DataOffset += nal_list[0].size;
         pBitstream->DataLength -= nal_list[0].size;
     }
