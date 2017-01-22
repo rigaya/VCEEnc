@@ -140,9 +140,8 @@ static int getFreeAudioTrack(const VCEParam *pParams) {
 }
 
 static bool check_if_vce_supported() {
-    tstring mes;
     if (!check_if_vce_available()) {
-        _ftprintf(stderr, _T("VCE check failed!\n"), mes.c_str());
+        _ftprintf(stderr, _T("VCE check failed!\n"));
         return false;
     }
     return true;
