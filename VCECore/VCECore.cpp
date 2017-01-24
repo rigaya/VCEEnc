@@ -1009,7 +1009,10 @@ AMF_RESULT VCECore::initDecoder(VCEParam *prm) {
         PrintMes(VCE_LOG_ERROR, _T("Input codec \"%s\" not supported.\n"), CodecIdToStr(inputCodec));
         return AMF_NOT_SUPPORTED;
     }
-    const auto codec_uvd_name = VCE_CODEC_UVD_NAME.at(inputCodec);
+    auto codec_uvd_name = VCE_CODEC_UVD_NAME.at(inputCodec);
+    if (inputCodec == VCE_CODEC_HEVC && m_inputInfo.format == amf::AMF_SURFACE_P010) {
+        codec_uvd_name = AMFVideoDecoderHW_H265_MAIN10;
+    }
     auto res = g_AMFFactory.GetFactory()->CreateComponent(m_pContext, codec_uvd_name, &m_pDecoder);
     if (res != AMF_OK) {
         PrintMes(VCE_LOG_ERROR, _T("Failed to create decoder context: %d\n"), res);
@@ -1031,7 +1034,7 @@ AMF_RESULT VCECore::initDecoder(VCEParam *prm) {
     memcpy(buffer->GetNative(), header.Data, header.DataLength);
     m_pDecoder->SetProperty(AMF_VIDEO_DECODER_EXTRADATA, amf::AMFVariant(buffer));
 
-    if (AMF_OK != (res = m_pDecoder->Init(formatOut, m_inputInfo.srcWidth, m_inputInfo.srcHeight))) {
+    if (AMF_OK != (res = m_pDecoder->Init(m_inputInfo.format, m_inputInfo.srcWidth, m_inputInfo.srcHeight))) {
         PrintMes(VCE_LOG_ERROR, _T("Failed to init decoder: %d\n"), res);
         return res;
     }
