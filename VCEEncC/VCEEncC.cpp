@@ -373,7 +373,7 @@ static tstring help() {
         _T("                                 full-pel, half-pel, q-pel(default)\n")
         _T("   --vbaq                       enable VBAQ (H.264 only)\n")
         _T("   --pre-analysis <string>      set pre-analysis mode\n")
-        _T("                      H.264: none (default), full (best), half, quater (fast)\n")
+        _T("                      H.264: none (default), full (best), half, quarter (fast)\n")
         _T("                      HEVC:  none (default), auto\n")
         _T("   --gop-len <int>              set length of gop (default: auto)\n")
         _T("   --tff                        set input as interlaced (tff)\n")
