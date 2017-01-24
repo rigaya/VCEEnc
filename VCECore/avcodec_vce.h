@@ -83,7 +83,7 @@ static const VCECodec VCE_DECODE_LIST[] = {
     { AV_CODEC_ID_HEVC,       VCE_CODEC_HEVC       },
     { AV_CODEC_ID_MPEG2VIDEO, VCE_CODEC_MPEG2      },
     { AV_CODEC_ID_VC1,        VCE_CODEC_VC1        },
-    { AV_CODEC_ID_WMV3,       VCE_CODEC_WMV3       },
+    //{ AV_CODEC_ID_WMV3,       VCE_CODEC_WMV3       },
     //{ AV_CODEC_ID_VP8,           },
     //{ AV_CODEC_ID_VP9,           },
 };
