@@ -562,7 +562,8 @@ typedef struct {
     const TCHAR *pFramePosListLog;
 
     int nPAR[2];
-    int __reserved__[3];
+    int nRefFrames;
+    int __reserved__[2];
     bool bReserved;
 
     int     nVideoTrack;
@@ -620,6 +621,7 @@ static const int VCE_DEFAULT_QPI = 22;
 static const int VCE_DEFAULT_QPP = 24;
 static const int VCE_DEFAULT_QPB = 27;
 static const int VCE_DEFAULT_BFRAMES = 0;
+static const int VCE_DEFAULT_REF_FRAMES = 2;
 static const int VCE_DEFAULT_MAX_BITRATE = 20000;
 static const int VCE_DEFAULT_VBV_BUFSIZE = 20000;
 static const int VCE_DEFAULT_SLICES = 1;

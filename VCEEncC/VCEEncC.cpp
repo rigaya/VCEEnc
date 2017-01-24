@@ -365,6 +365,7 @@ static tstring help() {
         _T("   --(no-)b-pyramid             enable b-pyramid feature\n")
         _T("   --b-deltaqp <int>            set qp offset for non-ref b frames\n")
         _T("   --bref-deltaqp <int>         set qp offset for ref b frames\n")
+        _T("   --ref <int>                  set number of reference frames\n")
         _T("   --max-bitrate <int>          set max bitrate (kbps) (default: %d)\n")
         _T("   --vbv-bufsize <int>          set vbv buffer size (kbps) (default: %d)\n")
         _T("   --slices <int>               set number of slices per frame (default: %d)\n")
@@ -1330,6 +1331,16 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
             return -1;
         }
         pParams->nDeltaQPBFrameRef = value;
+        return 0;
+    }
+    if (IS_OPTION("ref")) {
+        i++;
+        int value = 0;
+        if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
+            PrintHelp(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            return -1;
+        }
+        pParams->nRefFrames = value;
         return 0;
     }
     if (IS_OPTION("max-bitrate")) {

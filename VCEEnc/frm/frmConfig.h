@@ -857,6 +857,8 @@ private: System::Windows::Forms::Panel^  fcgPNBframes;
 private: System::Windows::Forms::Panel^  fcgPNPreAnalysis;
 private: System::Windows::Forms::ComboBox^  fcgCXHEVCPreAnalysis;
 private: System::Windows::Forms::Label^  fcgLBHEVCPreAnalysis;
+private: System::Windows::Forms::NumericUpDown^  fcgNURefFrames;
+private: System::Windows::Forms::Label^  fcgLBRefFrames;
 
 
 
@@ -1165,6 +1167,8 @@ private: System::Windows::Forms::Label^  fcgLBHEVCPreAnalysis;
             this->fcgCBRunBatBeforeAudio = (gcnew System::Windows::Forms::CheckBox());
             this->fcgCXAudioPriority = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBAudioPriority = (gcnew System::Windows::Forms::Label());
+            this->fcgNURefFrames = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgLBRefFrames = (gcnew System::Windows::Forms::Label());
             this->fcgtoolStripSettings->SuspendLayout();
             this->fcgtabControlMux->SuspendLayout();
             this->fcgtabPageMP4->SuspendLayout();
@@ -1203,6 +1207,7 @@ private: System::Windows::Forms::Label^  fcgLBHEVCPreAnalysis;
             this->fcgtabPageAudioMain->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrate))->BeginInit();
             this->fcgtabPageAudioOther->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNURefFrames))->BeginInit();
             this->SuspendLayout();
             // 
             // fcgtoolStripSettings
@@ -1986,6 +1991,8 @@ private: System::Windows::Forms::Label^  fcgLBHEVCPreAnalysis;
             // 
             // tabPageVideoEnc
             // 
+            this->tabPageVideoEnc->Controls->Add(this->fcgNURefFrames);
+            this->tabPageVideoEnc->Controls->Add(this->fcgLBRefFrames);
             this->tabPageVideoEnc->Controls->Add(this->fcgPNPreAnalysis);
             this->tabPageVideoEnc->Controls->Add(this->fcgPNHEVCLevelProfile);
             this->tabPageVideoEnc->Controls->Add(this->fcgPNBframes);
@@ -3281,6 +3288,26 @@ private: System::Windows::Forms::Label^  fcgLBHEVCPreAnalysis;
             this->fcgLBAudioPriority->TabIndex = 12;
             this->fcgLBAudioPriority->Text = L"音声優先度";
             // 
+            // fcgNURefFrames
+            // 
+            this->fcgNURefFrames->Location = System::Drawing::Point(442, 209);
+            this->fcgNURefFrames->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 16, 0, 0, 0 });
+            this->fcgNURefFrames->Name = L"fcgNURefFrames";
+            this->fcgNURefFrames->Size = System::Drawing::Size(70, 21);
+            this->fcgNURefFrames->TabIndex = 169;
+            this->fcgNURefFrames->Tag = L"chValue";
+            this->fcgNURefFrames->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            this->fcgNURefFrames->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 0 });
+            // 
+            // fcgLBRefFrames
+            // 
+            this->fcgLBRefFrames->AutoSize = true;
+            this->fcgLBRefFrames->Location = System::Drawing::Point(342, 211);
+            this->fcgLBRefFrames->Name = L"fcgLBRefFrames";
+            this->fcgLBRefFrames->Size = System::Drawing::Size(51, 14);
+            this->fcgLBRefFrames->TabIndex = 170;
+            this->fcgLBRefFrames->Text = L"参照距離";
+            // 
             // frmConfig
             // 
             this->AutoScaleDimensions = System::Drawing::SizeF(96, 96);
@@ -3359,6 +3386,7 @@ private: System::Windows::Forms::Label^  fcgLBHEVCPreAnalysis;
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrate))->EndInit();
             this->fcgtabPageAudioOther->ResumeLayout(false);
             this->fcgtabPageAudioOther->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNURefFrames))->EndInit();
             this->ResumeLayout(false);
             this->PerformLayout();
 

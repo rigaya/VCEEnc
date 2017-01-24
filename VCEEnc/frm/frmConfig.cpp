@@ -851,6 +851,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetNUValue(fcgNUBRefDeltaQP,         cnf->vce.nDeltaQPBFrameRef);
 
     SetNUValue(fcgNUSlices,             cnf->vce.nSlices);
+    SetNUValue(fcgNURefFrames,          cnf->vce.nRefFrames);
 
     fcgCBDeblock->Checked             = cnf->vce.bDeblockFilter != 0;
     fcgCBSkipFrame->Checked           = cnf->vce.bEnableSkipFrame != 0;
@@ -940,6 +941,7 @@ System::Void frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     cnf->vce.nPicStruct                              = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME;
     //cnf->vce.nPicStruct                              = (VCE_PICSTRUCT)list_interlaced[fcgCXInterlaced->SelectedIndex].value;
     cnf->vce.nSlices                                 = (int)fcgNUSlices->Value;
+    cnf->vce.nRefFrames                              = (int)fcgNURefFrames->Value;
 
     cnf->vce.bDeblockFilter                          = fcgCBDeblock->Checked;
     cnf->vce.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;

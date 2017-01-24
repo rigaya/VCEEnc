@@ -53,6 +53,7 @@ void init_vce_param(VCEParam *prm) {
     prm->nQPMax = 51;
     prm->nDeltaQPBFrame = 6;
     prm->nDeltaQPBFrameRef = 4;
+    prm->nRefFrames = VCE_DEFAULT_REF_FRAMES;
 
     prm->nBframes = VCE_DEFAULT_BFRAMES;
     prm->bBPyramid = FALSE;
