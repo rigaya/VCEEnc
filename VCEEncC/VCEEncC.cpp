@@ -39,6 +39,7 @@
 static tstring GetVCEEncVersion() {
     static const TCHAR *const ENABLED_INFO[] = { _T("disabled"), _T("enabled") };
     tstring version = strsprintf(_T("VCEEncC (%s) %s by rigaya, build %s %s\n"), BUILD_ARCH_STR, VER_STR_FILEVERSION_TCHAR, _T(__DATE__), _T(__TIME__));
+    version += _T("reader: raw");
     if (ENABLE_AVISYNTH_READER)    version += _T(", avs");
     if (ENABLE_VAPOURSYNTH_READER) version += _T(", vpy");
     if (ENABLE_AVCODEC_VCE_READER) version += strsprintf(_T(", avvce [%s]"), getAVVCESupportedCodecList().c_str());
