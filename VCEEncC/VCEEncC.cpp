@@ -46,7 +46,7 @@ static tstring GetVCEEncVersion() {
 }
 
 static void PrintVersion() {
-    _ftprintf(stdout, _T("%s"), GetVCEEncVersion().c_str());
+    _ftprintf(stdout, _T("%s\n"), GetVCEEncVersion().c_str());
 }
 
 //適当に改行しながら表示する
