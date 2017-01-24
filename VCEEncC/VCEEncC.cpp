@@ -41,7 +41,7 @@ static tstring GetVCEEncVersion() {
     tstring version = strsprintf(_T("VCEEncC (%s) %s by rigaya, build %s %s\n"), BUILD_ARCH_STR, VER_STR_FILEVERSION_TCHAR, _T(__DATE__), _T(__TIME__));
     if (ENABLE_AVISYNTH_READER)    version += _T(", avs");
     if (ENABLE_VAPOURSYNTH_READER) version += _T(", vpy");
-    if (ENABLE_AVCODEC_VCE_READER) version += strsprintf(_T(", avqsv [%s]"), getAVVCESupportedCodecList().c_str());
+    if (ENABLE_AVCODEC_VCE_READER) version += strsprintf(_T(", avvce [%s]"), getAVVCESupportedCodecList().c_str());
     return version;
 }
 
@@ -407,7 +407,7 @@ static tstring help() {
         _T("   --log <string>               output log to file (txt or html).\n")
         _T("   --log-level <int>            set log level\n")
         _T("                                 error, warn, info(default), debug\n")
-        _T("   --log-framelist <string>     output frame info for avqsv reader (for debug)\n")
+        _T("   --log-framelist <string>     output frame info for avvce reader (for debug)\n")
         );
     return str;
 }
