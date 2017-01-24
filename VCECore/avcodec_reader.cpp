@@ -850,11 +850,12 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
 
         //QSVでデコード可能かチェック
         if (0 == (m_nInputCodec = getQSVFourcc(m_Demux.video.pCodecCtx->codec_id))) {
-            AddMessage(VCE_LOG_ERROR, _T("codec "));
+            tstring mes = _T("codec ");
             if (m_Demux.video.pCodecCtx->codec && m_Demux.video.pCodecCtx->codec->name) {
-                AddMessage(VCE_LOG_ERROR, char_to_tstring(m_Demux.video.pCodecCtx->codec->name) + _T(" "));
+                mes += char_to_tstring(m_Demux.video.pCodecCtx->codec->name) + _T(" ");
             }
-            AddMessage(VCE_LOG_ERROR, _T("unable to decode by vce.\n"));
+            mes += _T("unable to be decoded by vce.\n");
+            AddMessage(VCE_LOG_ERROR, mes);
             return AMF_INVALID_POINTER;
         }
         AddMessage(VCE_LOG_DEBUG, _T("can be decoded by vce.\n"));
@@ -862,6 +863,11 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
         if (m_Demux.video.pCodecCtx->codec_id == AV_CODEC_ID_WMV3 && m_Demux.video.pCodecCtx->profile != 3) {
             AddMessage(VCE_LOG_ERROR, _T("unable to decode by vce.\n"));
             return AMF_INVALID_POINTER;
+        }
+
+        //HEVC入力の際に大量にメッセージが出て劇的に遅くなることがあるのを回避
+        if (m_Demux.video.pCodecCtx->codec_id == AV_CODEC_ID_HEVC) {
+            m_Demux.video.pCodecCtx->log_level_offset = AV_LOG_ERROR;
         }
 
         //必要ならbitstream filterを初期化

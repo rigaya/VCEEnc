@@ -71,6 +71,7 @@ typedef struct VCECodec {
 
 static const std::map<uint32_t, const WCHAR *> VCE_CODEC_UVD_NAME = {
     { VCE_CODEC_H264,  AMFVideoDecoderUVD_H264_AVC },
+    { VCE_CODEC_HEVC,  AMFVideoDecoderHW_H265_HEVC },
     { VCE_CODEC_MPEG2, AMFVideoDecoderUVD_MPEG2    },
     { VCE_CODEC_VC1,   AMFVideoDecoderUVD_VC1      },
     { VCE_CODEC_WMV3,  AMFVideoDecoderUVD_WMV3     }
@@ -79,7 +80,7 @@ static const std::map<uint32_t, const WCHAR *> VCE_CODEC_UVD_NAME = {
 //QSVでデコード可能なコーデックのリスト
 static const VCECodec VCE_DECODE_LIST[] = { 
     { AV_CODEC_ID_H264,       VCE_CODEC_H264       },
-    //{ AV_CODEC_ID_HEVC,         },
+    { AV_CODEC_ID_HEVC,       VCE_CODEC_HEVC       },
     { AV_CODEC_ID_MPEG2VIDEO, VCE_CODEC_MPEG2      },
     { AV_CODEC_ID_VC1,        VCE_CODEC_VC1        },
     { AV_CODEC_ID_WMV3,       VCE_CODEC_WMV3       },
