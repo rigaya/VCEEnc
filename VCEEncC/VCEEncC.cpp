@@ -365,10 +365,11 @@ static tstring help() {
         _T("   --(no-)b-pyramid             enable b-pyramid feature\n")
         _T("   --b-deltaqp <int>            set qp offset for non-ref b frames\n")
         _T("   --bref-deltaqp <int>         set qp offset for ref b frames\n")
-        _T("   --ref <int>                  set number of reference frames\n")
+        _T("   --ref <int>                  set num of reference frames (default: %d)\n")
+        _T("   --ltr <int>                  set num of long term reference frames (default: %d)\n")
         _T("   --max-bitrate <int>          set max bitrate (kbps) (default: %d)\n")
         _T("   --vbv-bufsize <int>          set vbv buffer size (kbps) (default: %d)\n")
-        _T("   --slices <int>               set number of slices per frame (default: %d)\n")
+        _T("   --slices <int>               set num of slices per frame (default: %d)\n")
         _T("   --(no-)skip-frame            enable skip frame feature\n")
         _T("   --motion-est                 set motion estimation precision\n")
         _T("                                 full-pel, half-pel, q-pel(default)\n")
@@ -380,6 +381,7 @@ static tstring help() {
         _T("   --tff                        set input as interlaced (tff)\n")
         _T("   --bff                        set input as interlaced (bff)\n"),
         VCE_DEFAULT_QPI, VCE_DEFAULT_QPP, VCE_DEFAULT_QPB, VCE_DEFAULT_BFRAMES,
+        VCE_DEFAULT_REF_FRAMES, VCE_DEFAULT_LTR_FRAMES,
         VCE_DEFAULT_MAX_BITRATE, VCE_DEFAULT_VBV_BUFSIZE, VCE_DEFAULT_SLICES
     );
 
@@ -1341,6 +1343,16 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
             return -1;
         }
         pParams->nRefFrames = value;
+        return 0;
+    }
+    if (IS_OPTION("ltr")) {
+        i++;
+        int value = 0;
+        if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
+            PrintHelp(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            return -1;
+        }
+        pParams->nLTRFrames = value;
         return 0;
     }
     if (IS_OPTION("max-bitrate")) {

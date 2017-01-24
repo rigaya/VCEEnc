@@ -563,7 +563,8 @@ typedef struct {
 
     int nPAR[2];
     int nRefFrames;
-    int __reserved__[2];
+    int nLTRFrames;
+    int __reserved__[1];
     bool bReserved;
 
     int     nVideoTrack;
@@ -622,6 +623,7 @@ static const int VCE_DEFAULT_QPP = 24;
 static const int VCE_DEFAULT_QPB = 27;
 static const int VCE_DEFAULT_BFRAMES = 0;
 static const int VCE_DEFAULT_REF_FRAMES = 2;
+static const int VCE_DEFAULT_LTR_FRAMES = 0;
 static const int VCE_DEFAULT_MAX_BITRATE = 20000;
 static const int VCE_DEFAULT_VBV_BUFSIZE = 20000;
 static const int VCE_DEFAULT_SLICES = 1;

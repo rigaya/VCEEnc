@@ -852,6 +852,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
 
     SetNUValue(fcgNUSlices,             cnf->vce.nSlices);
     SetNUValue(fcgNURefFrames,          cnf->vce.nRefFrames);
+    SetNUValue(fcgNULTRFrames,          cnf->vce.nLTRFrames);
 
     fcgCBDeblock->Checked             = cnf->vce.bDeblockFilter != 0;
     fcgCBSkipFrame->Checked           = cnf->vce.bEnableSkipFrame != 0;
@@ -942,6 +943,7 @@ System::Void frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     //cnf->vce.nPicStruct                              = (VCE_PICSTRUCT)list_interlaced[fcgCXInterlaced->SelectedIndex].value;
     cnf->vce.nSlices                                 = (int)fcgNUSlices->Value;
     cnf->vce.nRefFrames                              = (int)fcgNURefFrames->Value;
+    cnf->vce.nLTRFrames                              = (int)fcgNULTRFrames->Value;
 
     cnf->vce.bDeblockFilter                          = fcgCBDeblock->Checked;
     cnf->vce.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;

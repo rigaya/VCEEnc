@@ -1262,6 +1262,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     m_Params.SetParam(AMF_PARAM_TARGET_BITRATE(prm->nCodecId), (amf_int64)prm->nBitrate * 1000);
     m_Params.SetParam(AMF_PARAM_PEAK_BITRATE(prm->nCodecId),   (amf_int64)prm->nMaxBitrate * 1000);
     m_Params.SetParam(AMF_PARAM_MAX_NUM_REFRAMES(prm->nCodecId), (amf_int64)prm->nRefFrames);
+    m_Params.SetParam(AMF_PARAM_MAX_LTR_FRAMES(prm->nCodecId), (amf_int64)prm->nLTRFrames);
     m_Params.SetParam(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(prm->nCodecId),  !!prm->bEnableSkipFrame);
     m_Params.SetParam(AMF_PARAM_RATE_CONTROL_METHOD(prm->nCodecId),             (amf_int64)prm->nRateControl);
     m_Params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->nCodecId), (amf_int64)prm->nPreAnalysis);
@@ -1607,6 +1608,7 @@ tstring VCECore::GetEncoderParam() {
         mes += strsprintf(_T("Bframes:       0 frames\n"));
     }
     mes += strsprintf(_T("Ref frames:    %d frames\n"), GetPropertyInt(AMF_PARAM_MAX_NUM_REFRAMES(m_VCECodecId)));
+    mes += strsprintf(_T("LTR frames:    %d frames\n"), GetPropertyInt(AMF_PARAM_MAX_LTR_FRAMES(m_VCECodecId)));
     mes += strsprintf(_T("Motion Est:    %s\n"), get_cx_desc(list_mv_presicion, nMotionEst));
     mes += strsprintf(_T("Slices:        %d\n"), GetPropertyInt(AMF_PARAM_SLICES_PER_FRAME(m_VCECodecId)));
     mes += strsprintf(_T("GOP Len:       %d frames\n"), GetPropertyInt(AMF_PARAM_GOP_SIZE(m_VCECodecId)));
