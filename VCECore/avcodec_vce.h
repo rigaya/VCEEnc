@@ -74,7 +74,7 @@ static const std::map<uint32_t, const WCHAR *> VCE_CODEC_UVD_NAME = {
     { VCE_CODEC_HEVC,  AMFVideoDecoderHW_H265_HEVC },
     { VCE_CODEC_MPEG2, AMFVideoDecoderUVD_MPEG2    },
     { VCE_CODEC_VC1,   AMFVideoDecoderUVD_VC1      },
-    { VCE_CODEC_WMV3,  AMFVideoDecoderUVD_WMV3     }
+    //{ VCE_CODEC_WMV3,  AMFVideoDecoderUVD_WMV3     }
 };
 
 //QSVでデコード可能なコーデックのリスト
