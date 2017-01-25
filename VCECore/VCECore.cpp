@@ -1686,7 +1686,8 @@ tstring VCECore::GetEncoderParam() {
 
     mes += strsprintf(_T("VCEEnc %s (%s) / %s (%s)\n"), VER_STR_FILEVERSION_TCHAR, BUILD_ARCH_STR, getOSVersion().c_str(), is_64bit_os() ? _T("x64") : _T("x86"));
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
-    mes += strsprintf(_T("GPU:           %s [%s]\n"), wstring_to_tstring(deviceName).c_str(), gpu_info);
+    mes += strsprintf(_T("GPU:           %s [%s, AMF %d.%d]\n"), wstring_to_tstring(deviceName).c_str(), gpu_info,
+        (int)AMF_GET_MAJOR_VERSION(g_AMFFactory.AMFQueryVersion()), (int)AMF_GET_MINOR_VERSION(g_AMFFactory.AMFQueryVersion()));
     mes += strsprintf(_T("Input Info:    %s\n"), m_pFileReader->GetInputInfoStr().c_str());
     if (m_inputInfo.crop.left || m_inputInfo.crop.up || m_inputInfo.crop.right || m_inputInfo.crop.bottom) {
         mes += strsprintf(_T("Crop:          %d,%d,%d,%d\n"), m_inputInfo.crop.left, m_inputInfo.crop.up, m_inputInfo.crop.right, m_inputInfo.crop.bottom);
