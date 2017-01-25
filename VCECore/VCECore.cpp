@@ -667,18 +667,6 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
         PrintMes(VCE_LOG_WARN, _T("Maximum consecutive B frames is %d.\n"), VCE_MAX_BFRAMES);
         prm->nBframes = VCE_MAX_BFRAMES;
     }
-    if (prm->nBitrate > VCE_MAX_BITRATE) {
-        PrintMes(VCE_LOG_WARN, _T("Maximum bitrate is %d.\n"), VCE_MAX_BITRATE);
-        prm->nBitrate = VCE_MAX_BITRATE;
-    }
-    if (prm->nMaxBitrate > VCE_MAX_BITRATE) {
-        PrintMes(VCE_LOG_WARN, _T("Maximum max bitrate is %d.\n"), VCE_MAX_BITRATE);
-        prm->nMaxBitrate = VCE_MAX_BITRATE;
-    }
-    if (prm->nVBVBufferSize > VCE_MAX_BITRATE) {
-        PrintMes(VCE_LOG_WARN, _T("Maximum vbv buffer size is %d.\n"), VCE_MAX_BITRATE);
-        prm->nVBVBufferSize = VCE_MAX_BITRATE;
-    }
     if (prm->nGOPLen > VCE_MAX_GOP_LEN) {
         PrintMes(VCE_LOG_WARN, _T("Maximum GOP len is %d.\n"), VCE_MAX_GOP_LEN);
         prm->nGOPLen = VCE_MAX_GOP_LEN;

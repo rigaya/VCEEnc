@@ -630,7 +630,6 @@ static const int VCE_DEFAULT_VBV_BUFSIZE = 20000;
 static const int VCE_DEFAULT_SLICES = 1;
 
 static const int VCE_MAX_BFRAMES = 3;
-static const int VCE_MAX_BITRATE = 100000;
 static const int VCE_MAX_GOP_LEN = 1000;
 static const int VCE_MAX_B_DELTA_QP = 10;
 
