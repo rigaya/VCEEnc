@@ -1199,12 +1199,156 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
         PrintMes(VCE_LOG_DEBUG, _T("GPU Info  %s [%s]\n"), wstring_to_string(deviceName).c_str(), gpu_info);
     }
 
+    const amf::AMF_SURFACE_FORMAT formatIn = amf::AMF_SURFACE_NV12;
     m_VCECodecId = prm->nCodecId;
     if (AMF_OK != (res = g_AMFFactory.GetFactory()->CreateComponent(m_pContext, list_codec_key[prm->nCodecId], &m_pEncoder))) {
         PrintMes(VCE_LOG_ERROR, _T("Failed to AMFCreateComponent.\n"));
         return AMF_FAIL;
     }
     PrintMes(VCE_LOG_DEBUG, _T("initialized Encoder component.\n"));
+
+    amf::AMFCapsPtr encoderCaps;
+    if (m_pEncoder->GetCaps(&encoderCaps) == AMF_OK) {
+        //パラメータチェック
+        amf::AMF_ACCELERATION_TYPE accelType = encoderCaps->GetAccelerationType();
+        if (accelType != amf::AMF_ACCEL_GPU && accelType != amf::AMF_ACCEL_HARDWARE) {
+            PrintMes(VCE_LOG_ERROR, _T("HW Acceleration of %s is not supported on this platform.\n"), CodecIdToStr(prm->nCodecId));
+            return AMF_FAIL;
+        }
+
+        int maxProfile = 0;
+        encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_PROFILE(prm->nCodecId), &maxProfile);
+        PrintMes(VCE_LOG_DEBUG, _T("Max Profile: %s.\n"), get_cx_desc(get_profile_list(prm->nCodecId), maxProfile));
+        if (prm->codecParam[prm->nCodecId].nProfile > maxProfile) {
+            PrintMes(VCE_LOG_ERROR, _T("Max supported %s Level on this platform is %s (%s specified).\n"),
+                CodecIdToStr(prm->nCodecId),
+                get_cx_desc(get_profile_list(prm->nCodecId), maxProfile),
+                get_cx_desc(get_profile_list(prm->nCodecId), prm->codecParam[prm->nCodecId].nProfile));
+            return AMF_FAIL;
+        }
+
+        int maxLevel = 0;
+        encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_LEVEL(prm->nCodecId), &maxLevel);
+        PrintMes(VCE_LOG_DEBUG, _T("Max Level: %d.\n"), get_cx_desc(get_level_list(prm->nCodecId), maxLevel));
+        if (prm->codecParam[prm->nCodecId].nLevel > maxLevel) {
+            PrintMes(VCE_LOG_ERROR, _T("Max supported %s Level on this platform is %s (%s specified).\n"),
+                CodecIdToStr(prm->nCodecId),
+                get_cx_desc(get_level_list(prm->nCodecId), maxLevel),
+                get_cx_desc(get_level_list(prm->nCodecId), prm->codecParam[prm->nCodecId].nLevel));
+            return AMF_FAIL;
+        }
+
+        if (prm->nRateControl != get_rc_method(m_VCECodecId)[0].value) {
+            int maxBitrate = 0;
+            encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_BITRATE(prm->nCodecId), &maxBitrate);
+            maxBitrate /= 1000;
+            if (prm->nBitrate > maxBitrate) {
+                PrintMes(VCE_LOG_WARN, _T("Max supported %s bitrate on this platform is %d (%d specified).\n"),
+                    CodecIdToStr(prm->nCodecId),
+                    maxBitrate, prm->nBitrate);
+                prm->nBitrate = maxBitrate;
+                prm->nMaxBitrate = maxBitrate;
+            }
+            if (prm->nMaxBitrate > maxBitrate) {
+                PrintMes(VCE_LOG_WARN, _T("Max supported %s bitrate on this platform is %d (%d specified).\n"),
+                    CodecIdToStr(prm->nCodecId),
+                    maxBitrate, prm->nMaxBitrate);
+                prm->nMaxBitrate = maxBitrate;
+            }
+        }
+        int maxRef = 0, minRef = 0;
+        encoderCaps->GetProperty(AMF_PARAM_CAP_MIN_REFERENCE_FRAMES(prm->nCodecId), &minRef);
+        encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_REFERENCE_FRAMES(prm->nCodecId), &maxRef);
+        if (prm->nRefFrames < minRef || maxRef < prm->nRefFrames) {
+            PrintMes(VCE_LOG_WARN, _T("%s reference frames should be in range of %d - %d (%d specified).\n"),
+                CodecIdToStr(prm->nCodecId),
+                minRef, maxRef, prm->nRefFrames);
+            prm->nRefFrames = clamp(prm->nRefFrames, minRef, maxRef);
+        }
+
+        if (prm->nCodecId == VCE_CODEC_H264) {
+            bool bBPictureSupported = false;
+            encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_BFRAMES, &bBPictureSupported);
+            if (prm->nBframes > 0 && !bBPictureSupported) {
+                PrintMes(VCE_LOG_WARN, _T("Bframes is not supported with HEVC encoding, disabled.\n"));
+                prm->nBframes = 0;
+                prm->bBPyramid = 0;
+                prm->nDeltaQPBFrame = 0;
+                prm->nDeltaQPBFrameRef = 0;
+            }
+
+        } else if (prm->nCodecId == VCE_CODEC_HEVC) {
+            //いまはなにもなし
+        }
+
+        amf::AMFIOCapsPtr inputCaps;
+        if (encoderCaps->GetInputCaps(&inputCaps) == AMF_OK) {
+            int minWidth, maxWidth;
+            inputCaps->GetWidthRange(&minWidth, &maxWidth);
+            if (m_inputInfo.srcWidth < minWidth || maxWidth < m_inputInfo.srcWidth) {
+                PrintMes(VCE_LOG_ERROR, _T("Input width should be in range of %d - %d (%d specified).\n"),
+                    minWidth, maxWidth, m_inputInfo.srcWidth);
+                return AMF_FAIL;
+            }
+
+            int minHeight, maxHeight;
+            inputCaps->GetHeightRange(&minHeight, &maxHeight);
+            if (m_inputInfo.srcHeight < minHeight || maxHeight < m_inputInfo.srcHeight) {
+                PrintMes(VCE_LOG_ERROR, _T("Input height should be in range of %d - %d (%d specified).\n"),
+                    minHeight, maxHeight, m_inputInfo.srcHeight);
+                return AMF_FAIL;
+            }
+
+            bool formatSupported = false;
+            int numOfFormats = inputCaps->GetNumOfFormats();
+            for (int i = 0; i < numOfFormats; i++) {
+                amf::AMF_SURFACE_FORMAT format;
+                amf_bool native = false;
+                if (inputCaps->GetFormatAt(i, &format, &native) == AMF_OK) {
+                    formatSupported = true;
+                    break;
+                }
+            }
+            if (!formatSupported) {
+                PrintMes(VCE_LOG_ERROR, _T("Input format %s not supported on this platform.\n"), g_AMFFactory.GetTrace()->SurfaceGetFormatName(formatIn));
+                return AMF_FAIL;
+            }
+        }
+
+        amf::AMFIOCapsPtr outputCaps;
+        if (encoderCaps->GetOutputCaps(&outputCaps) == AMF_OK) {
+            int minWidth, maxWidth;
+            outputCaps->GetWidthRange(&minWidth, &maxWidth);
+            if (m_inputInfo.dstWidth < minWidth || maxWidth < m_inputInfo.dstWidth) {
+                PrintMes(VCE_LOG_ERROR, _T("Output width should be in range of %d - %d (%d specified).\n"),
+                    minWidth, maxWidth, m_inputInfo.dstWidth);
+                return AMF_FAIL;
+            }
+
+            int minHeight, maxHeight;
+            outputCaps->GetHeightRange(&minHeight, &maxHeight);
+            if (m_inputInfo.dstHeight < minHeight || maxHeight < m_inputInfo.dstWidth) {
+                PrintMes(VCE_LOG_ERROR, _T("Output height should be in range of %d - %d (%d specified).\n"),
+                    minHeight, maxHeight, m_inputInfo.dstHeight);
+                return AMF_FAIL;
+            }
+
+            bool formatSupported = false;
+            int numOfFormats = outputCaps->GetNumOfFormats();
+            for (int i = 0; i < numOfFormats; i++) {
+                amf::AMF_SURFACE_FORMAT format;
+                amf_bool native = false;
+                if (outputCaps->GetFormatAt(i, &format, &native) == AMF_OK) {
+                    formatSupported = true;
+                    break;
+                }
+            }
+            if (!formatSupported) {
+                PrintMes(VCE_LOG_ERROR, _T("Output format %s not supported on this platform.\n"), g_AMFFactory.GetTrace()->SurfaceGetFormatName(formatIn));
+                return AMF_FAIL;
+            }
+        }
+    }
 
     m_Params.SetParamDescription(PARAM_NAME_INPUT,         ParamCommon, L"Input file name", NULL);
     m_Params.SetParamDescription(PARAM_NAME_INPUT_WIDTH,   ParamCommon, L"Input Frame width (integer, default = 0)", ParamConverterInt64);
@@ -1323,7 +1467,6 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     // override some usage parameters
     PushParamsToPropertyStorage(&m_Params, ParamEncoderStatic, m_pEncoder);
 
-    const amf::AMF_SURFACE_FORMAT formatIn = amf::AMF_SURFACE_NV12;
     if (AMF_OK != (res = m_pEncoder->Init(formatIn, m_inputInfo.dstWidth, m_inputInfo.dstHeight))) {
         PrintMes(VCE_LOG_ERROR, _T("Failed to initalize encoder.\n"));
         return res;
