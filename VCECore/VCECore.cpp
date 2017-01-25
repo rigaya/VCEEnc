@@ -1422,17 +1422,19 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     m_Params.SetParam(AMF_PARAM_INSERT_AUD(prm->nCodecId),                     false);
     if (prm->nCodecId == VCE_CODEC_H264) {
         m_Params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)(is_interlaced(prm) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
-        
-        m_Params.SetParam(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP,     (amf_int64)prm->nDeltaQPBFrame);
-        m_Params.SetParam(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrameRef);
+
+        m_Params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN, (amf_int64)prm->nBframes);
+        if (prm->nBframes > 0) {
+            m_Params.SetParam(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrame);
+            m_Params.SetParam(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrameRef);
+            m_Params.SetParam(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE, prm->nBframes > 0 && !!prm->bBPyramid);
+            m_Params.SetParam(AMF_VIDEO_ENCODER_QP_B, (amf_int64)prm->nQPB);
+        }
 
         m_Params.SetParam(AMF_VIDEO_ENCODER_MIN_QP,                                (amf_int64)prm->nQPMin);
         m_Params.SetParam(AMF_VIDEO_ENCODER_MAX_QP,                                (amf_int64)prm->nQPMax);
-        m_Params.SetParam(AMF_VIDEO_ENCODER_QP_B,                                  (amf_int64)prm->nQPB);
 
         //m_Params.SetParam(AMF_VIDEO_ENCODER_HEADER_INSERTION_SPACING,       (amf_int64)0);
-        m_Params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN,                  (amf_int64)prm->nBframes);
-        m_Params.SetParam(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE,             prm->nBframes > 0 && !!prm->bBPyramid);
         ////m_Params.SetParam(AMF_VIDEO_ENCODER_INTRA_REFRESH_NUM_MBS_PER_SLOT, false);
 
         m_Params.SetParam(AMF_PARAM_MOTION_HALF_PIXEL(prm->nCodecId),              !!(prm->nMotionEst & VCE_MOTION_EST_HALF));
