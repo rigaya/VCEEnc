@@ -279,6 +279,7 @@ const TCHAR *CodecIdToStr(uint32_t codecId);
 
 bool check_if_vce_available();
 bool check_if_vce_hevc_available();
+tstring check_vce_features(int nCodecId);
 
 struct nal_info {
     const uint8_t *ptr;

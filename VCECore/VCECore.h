@@ -89,10 +89,11 @@ public:
 
     static const wchar_t* PARAM_NAME_ADAPTERID;
     static const wchar_t* PARAM_NAME_CAPABILITY;
+
+    static tstring QueryIOCaps(amf::AMFIOCapsPtr& ioCaps);
+    static tstring QueryIOCaps(int encCodecId, amf::AMFCapsPtr& encoderCaps);
 protected:
-    std::wstring AccelTypeToString(amf::AMF_ACCELERATION_TYPE accelType);
-    bool QueryIOCaps(amf::AMFIOCapsPtr& ioCaps);
-    bool QueryIOCaps(int encCodecId, amf::AMFCapsPtr& encoderCaps);
+    static tstring AccelTypeToString(amf::AMF_ACCELERATION_TYPE accelType);
     AMF_RESULT readChapterFile(tstring chapfile);
 
     virtual AMF_RESULT checkParam(VCEParam *prm);

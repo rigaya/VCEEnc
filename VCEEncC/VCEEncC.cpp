@@ -207,6 +207,7 @@ static tstring help() {
         _T("-o,--output-file <filename>     set ouput file name\n")
         _T("\n")
         _T("   --check-vce                  check for vce support on system.\n")
+        _T("   --check-features             check features of vce support on system.\n")
 #if ENABLE_AVCODEC_VCE_READER
         _T("   --check-avversion            show dll version\n")
         _T("   --check-codecs               show codecs available\n")
@@ -1560,6 +1561,15 @@ int parse_args(VCEParam *pParams, VCEInputInfo *pInputInfo, int nArgNum, const T
                 exit(0);
             }
             exit(1);
+        }
+        if (IS_OPTION("check-features")) {
+            _ftprintf(stderr, _T("H.264 Encoder Capability\n"));
+            _ftprintf(stderr, _T("%s\n"), check_vce_features(VCE_CODEC_H264).c_str());
+            _ftprintf(stderr, _T("\n"));
+            _ftprintf(stderr, _T("HEVC Encoder Capability\n"));
+            _ftprintf(stderr, _T("%s\n"), check_vce_features(VCE_CODEC_HEVC).c_str());
+            _ftprintf(stderr, _T("\n"));
+            exit(0);
         }
 #if ENABLE_AVCODEC_VCE_READER
         if (IS_OPTION("check-avversion")) {
