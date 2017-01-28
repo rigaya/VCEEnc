@@ -1868,6 +1868,8 @@ tstring check_vce_features(int nCodecId) {
             ret = g_AMFFactory.GetFactory()->CreateComponent(p_context, list_codec_key[nCodecId], &p_encoder) == AMF_OK;
             if (ret) {
                 amf::AMFCapsPtr encoderCaps;
+                //HEVCでのAMFComponent::GetCaps()は、AMFComponent::Init()を呼んでおかないと成功しない
+                p_encoder->Init(amf::AMF_SURFACE_NV12, 1280, 720);
                 auto sts = p_encoder->GetCaps(&encoderCaps);
                 if (sts == AMF_OK) {
                     str = VCECore::QueryIOCaps(nCodecId, encoderCaps);

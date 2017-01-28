@@ -27,9 +27,9 @@
 
 #pragma once
 
-#define VER_FILEVERSION             0,3,1,0
-#define VER_STR_FILEVERSION          "3.01"
-#define VER_STR_FILEVERSION_TCHAR _T("3.01")
+#define VER_FILEVERSION             0,3,2,0
+#define VER_STR_FILEVERSION          "3.02"
+#define VER_STR_FILEVERSION_TCHAR _T("3.02")
 
 #define VCE_AMD_APP_SDK "3.0"
 
