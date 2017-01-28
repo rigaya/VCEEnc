@@ -1762,10 +1762,10 @@ tstring VCECore::GetEncoderParam() {
     }
     bool bDeblock = true;
     switch (m_VCECodecId) {
-    case VCE_CODEC_HEVC:
+    case VCE_CODEC_H264:
         bDeblock = GetPropertyBool(AMF_VIDEO_ENCODER_DE_BLOCKING_FILTER);
         break;
-    case VCE_CODEC_H264:
+    case VCE_CODEC_HEVC:
         bDeblock = !GetPropertyBool(AMF_VIDEO_ENCODER_HEVC_DE_BLOCKING_FILTER_DISABLE);
         break;
     default:
