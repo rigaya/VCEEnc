@@ -680,7 +680,9 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
         prm->nDeltaQPBFrameRef = clamp(prm->nDeltaQPBFrameRef, -1 * VCE_MAX_B_DELTA_QP, VCE_MAX_B_DELTA_QP);
     }
     if (prm->bVBAQ && prm->nCodecId == VCE_CODEC_HEVC) {
+#ifndef VCE_AUO
         PrintMes(VCE_LOG_WARN, _T("VBAQ is not supported with HEVC encoding, disabled.\n"));
+#endif
         prm->bVBAQ = 0;
     }
 #ifndef VCE_AUO
