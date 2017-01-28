@@ -858,6 +858,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     fcgCBSkipFrame->Checked           = cnf->vce.bEnableSkipFrame != 0;
     fcgCBTimerPeriodTuning->Checked   = cnf->vce.bTimerPeriodTuning != 0;
     fcgCBVBAQ->Checked                = cnf->vce.bVBAQ != 0;
+    fcgCBFullrange->Checked           = cnf->vce.vui.infoPresent != 0 && cnf->vce.vui.fullrange != 0;
     if (cnf->vce.nCodecId == VCE_CODEC_H264) {
         SetCXIndex(fcgCXPreAnalysis,     get_cx_index(get_pre_analysis_list(VCE_CODEC_H264), cnf->vce.nPreAnalysis));
         SetCXIndex(fcgCXHEVCPreAnalysis, 0);
@@ -948,6 +949,9 @@ System::Void frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     cnf->vce.bDeblockFilter                          = fcgCBDeblock->Checked;
     cnf->vce.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;
     cnf->vce.bVBAQ                                   = fcgCBVBAQ->Checked;
+    cnf->vce.vui.infoPresent                         = 0;
+    cnf->vce.vui.infoPresent                        |= fcgCBFullrange->Checked ? 1 : 0;
+    cnf->vce.vui.fullrange                           = fcgCBFullrange->Checked;
     if (cnf->vce.nCodecId == VCE_CODEC_H264) {
         cnf->vce.nPreAnalysis = get_pre_analysis_list(VCE_CODEC_H264)[fcgCXPreAnalysis->SelectedIndex].value;
     } else if (cnf->vce.nCodecId == VCE_CODEC_HEVC) {

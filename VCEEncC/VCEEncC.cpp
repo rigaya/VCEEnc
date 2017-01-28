@@ -399,6 +399,7 @@ static tstring help() {
     str += strsprintf(_T("\n")
         _T("   --sar <int>:<int>            set Sample Aspect Ratio\n")
         _T("   --dar <int>:<int>            set Display Aspect Ratio\n")
+        _T("   --fullrange                  set yuv is fullrange (H.264 only)\n")
         _T("\n")
         _T("   --crop <int>,<int>,<int>,<int>\n")
         _T("                                set crop pixels of left, up, right, bottom.\n")
@@ -1447,6 +1448,11 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
     }
     if (IS_OPTION("bff")) {
         pParams->nPicStruct = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD;
+        return 0;
+    }
+    if (IS_OPTION("fullrange")) {
+        pParams->vui.infoPresent = TRUE;
+        pParams->vui.fullrange = TRUE;
         return 0;
     }
 #if 0

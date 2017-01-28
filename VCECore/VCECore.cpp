@@ -683,6 +683,12 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
         PrintMes(VCE_LOG_WARN, _T("VBAQ is not supported with HEVC encoding, disabled.\n"));
         prm->bVBAQ = 0;
     }
+#ifndef VCE_AUO
+    if (prm->vui.infoPresent && prm->vui.fullrange && prm->nCodecId != VCE_CODEC_H264) {
+        PrintMes(VCE_LOG_WARN, _T("fullrange flag is only supported with H.264 encoding, disabled.\n"));
+        prm->vui.fullrange = FALSE;
+    }
+#endif
     if (prm->nBframes > 0 && prm->nCodecId == VCE_CODEC_HEVC) {
         PrintMes(VCE_LOG_WARN, _T("Bframes is not supported with HEVC encoding, disabled.\n"));
         prm->nBframes = 0;
@@ -1438,6 +1444,11 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
         //m_Params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE, AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE_ENUM);
         //m_Params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_MARKED_LTR_INDEX, (amf_int64)-1);
         //m_Params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_REFERENCED_LTR_INDEX_BITFIELD, (amf_int64)0);
+        if (prm->vui.infoPresent) {
+            if (prm->vui.fullrange) {
+                m_Params.SetParam(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR, true);
+            }
+        }
     } else if (prm->nCodecId == VCE_CODEC_HEVC) {
         m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_I,                        (amf_int64)prm->nQPMin);
         m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_I,                        (amf_int64)prm->nQPMax);
@@ -1783,6 +1794,11 @@ tstring VCECore::GetEncoderParam() {
     }
     if (GetPropertyBool(AMF_PARAM_FILLER_DATA_ENABLE(m_VCECodecId))) {
         others += _T("filler ");
+    }
+    if (m_VCECodecId == VCE_CODEC_H264) {
+        if (GetPropertyBool(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR)) {
+            others += _T("fullrange ");
+        }
     }
     if (GetPropertyBool(AMF_PARAM_ENABLE_VBAQ(m_VCECodecId))) {
         others += _T("vbaq ");
