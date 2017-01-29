@@ -49,7 +49,7 @@ enum {
     VCE_INPUT_AVS,
     VCE_INPUT_VPY,
     VCE_INPUT_VPY_MT,
-    VCE_INPUT_AVCODEC_VCE,
+    VCE_INPUT_AVVCE,
 };
 
 enum {

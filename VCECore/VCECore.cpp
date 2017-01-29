@@ -450,7 +450,7 @@ AMF_RESULT VCECore::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo)
                     ".mpg", ".mpeg", "m2v", ".vob", ".vro", ".flv", ".ogm",
                     ".webm", ".vp8", ".vp9",
                     ".wmv" })) {
-            pParams->nInputType = VCE_INPUT_AVCODEC_VCE;
+            pParams->nInputType = VCE_INPUT_AVVCE;
 #endif //ENABLE_AVCODEC_VCE_READER
         } else {
             pParams->nInputType = VCE_INPUT_RAW;
@@ -486,7 +486,7 @@ AMF_RESULT VCECore::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo)
         m_pFileReader.reset(new VCEInputVpy());
 #endif
 #if ENABLE_AVCODEC_VCE_READER
-    } else if (pParams->nInputType == VCE_INPUT_AVCODEC_VCE) {
+    } else if (pParams->nInputType == VCE_INPUT_AVVCE) {
         avcodecReaderPrm.srcFile = pParams->pInputFile;
         avcodecReaderPrm.bReadVideo = true;
         avcodecReaderPrm.nVideoTrack = (int8_t)pParams->nVideoTrack;
@@ -632,7 +632,7 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
         PrintMes(VCE_LOG_ERROR, _T("crop size is too big.\n"));
         return AMF_FAIL;
     }
-    if (prm->nInputType == VCE_INPUT_AVCODEC_VCE && (m_inputInfo.crop.left | m_inputInfo.crop.right | m_inputInfo.crop.bottom | m_inputInfo.crop.up)) {
+    if (prm->nInputType == VCE_INPUT_AVVCE && (m_inputInfo.crop.left | m_inputInfo.crop.right | m_inputInfo.crop.bottom | m_inputInfo.crop.up)) {
         PrintMes(VCE_LOG_ERROR, _T("crop not available with avvce readder.\n"));
         return AMF_NOT_SUPPORTED;
     }
@@ -886,7 +886,7 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
     if (pParams->nAudioSelectCount + pParams->nSubtitleSelectCount > (int)streamTrackUsed.size()) {
         PrintMes(VCE_LOG_DEBUG, _T("Output: Audio file output enabled.\n"));
         auto pAVCodecReader = std::dynamic_pointer_cast<CAvcodecReader>(m_pFileReader);
-        if (pParams->nInputType != VCE_INPUT_AVCODEC_VCE || pAVCodecReader == nullptr) {
+        if (pParams->nInputType != VCE_INPUT_AVVCE || pAVCodecReader == nullptr) {
             PrintMes(VCE_LOG_ERROR, _T("Audio output is only supported with transcoding (avqsv reader).\n"));
             return AMF_NOT_SUPPORTED;
         } else {
