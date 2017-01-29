@@ -1639,14 +1639,14 @@ int parse_args(VCEParam *pParams, VCEInputInfo *pInputInfo, int nArgNum, const T
         bool bParsed = false;
         if (desc != nullptr) {
             if (PARSE_ERROR_FLAG != (value = get_value_from_chr(desc, argsData.cachedlevel.c_str()))) {
-                pParams->codecParam[pParams->nCodecId].nLevel = value;
+                pParams->codecParam[pParams->nCodecId].nLevel = (int16_t)value;
                 bParsed = true;
             } else if (pParams->nCodecId == VCE_CODEC_H264) {
                 double val_float = 0.0;
                 if (1 == _stscanf_s(argsData.cachedlevel.c_str(), _T("%lf"), &val_float)) {
                     value = (int)(val_float * 10 + 0.5);
                     if (value == desc[get_cx_index(desc, value)].value) {
-                        pParams->codecParam[pParams->nCodecId].nLevel = value;
+                        pParams->codecParam[pParams->nCodecId].nLevel = (int16_t)value;
                         bParsed = true;
                     }
                 }
@@ -1661,7 +1661,7 @@ int parse_args(VCEParam *pParams, VCEInputInfo *pInputInfo, int nArgNum, const T
         const auto desc = get_profile_list(pParams->nCodecId);
         int value = 0;
         if (desc != nullptr && PARSE_ERROR_FLAG != (value = get_value_from_chr(desc, argsData.cachedprofile.c_str()))) {
-            pParams->codecParam[pParams->nCodecId].nProfile = value;
+            pParams->codecParam[pParams->nCodecId].nProfile = (int16_t)value;
         } else {
             PrintHelp(strInput[0], _T("Unknown value"), _T("profile"));
             return -1;
@@ -1671,7 +1671,7 @@ int parse_args(VCEParam *pParams, VCEInputInfo *pInputInfo, int nArgNum, const T
         const auto desc = get_tier_list(pParams->nCodecId);
         int value = 0;
         if (desc != nullptr && PARSE_ERROR_FLAG != (value = get_value_from_chr(desc, argsData.cachedtier.c_str()))) {
-            pParams->codecParam[pParams->nCodecId].nTier = value;
+            pParams->codecParam[pParams->nCodecId].nTier = (int16_t)value;
         } else {
             PrintHelp(strInput[0], _T("Unknown value"), _T("tier"));
             return -1;
