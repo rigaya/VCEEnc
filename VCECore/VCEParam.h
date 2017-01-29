@@ -50,6 +50,8 @@ enum {
     VCE_INPUT_VPY,
     VCE_INPUT_VPY_MT,
     VCE_INPUT_AVVCE,
+    VCE_INPUT_AVSW,
+    VCE_INPUT_AVANY
 };
 
 enum {
@@ -59,7 +61,9 @@ enum {
     VCE_CODEC_HEVC,
     VCE_CODEC_MPEG2,
     VCE_CODEC_VC1,
-    VCE_CODEC_WMV3
+    VCE_CODEC_WMV3,
+    VCE_CODEC_VP8,
+    VCE_CODEC_VP9
 };
 
 static const wchar_t *list_codec_key[] = {
