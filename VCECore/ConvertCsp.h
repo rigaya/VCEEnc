@@ -34,10 +34,37 @@ enum VCE_CSP {
     VCE_CSP_NA,
     VCE_CSP_NV12,
     VCE_CSP_YV12,
+    VCE_CSP_YV12_09,
+    VCE_CSP_YV12_10,
+    VCE_CSP_YV12_12,
+    VCE_CSP_YV12_14,
+    VCE_CSP_YV12_16,
     VCE_CSP_YUY2,
+    VCE_CSP_YUV444,
+    VCE_CSP_YUV444_09,
+    VCE_CSP_YUV444_10,
+    VCE_CSP_YUV444_12,
+    VCE_CSP_YUV444_14,
+    VCE_CSP_YUV444_16,
 };
 
-static const TCHAR *VCE_CSP_NAMES[] = { _T("Invalid"), _T("nv12"), _T("yv12"), _T("yuy2") };
+static const TCHAR *VCE_CSP_NAMES[] = {
+    _T("Invalid"),
+    _T("nv12"),
+    _T("yv12"),
+    _T("yv12 (9bit)"),
+    _T("yv12 (10bit)"),
+    _T("yv12 (12bit)"),
+    _T("yv12 (14bit)"),
+    _T("yv12 (16bit)"),
+    _T("yuy2"),
+    _T("yuv444"),
+    _T("yuv444 (9bit)"),
+    _T("yuv444 (10bit)"),
+    _T("yuv444 (12bit)"),
+    _T("yuv444 (14bit)"),
+    _T("yuv444 (16bit)")
+};
 
 typedef struct ConvertCSP {
     VCE_CSP csp_from, csp_to;
