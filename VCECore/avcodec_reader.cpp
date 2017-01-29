@@ -878,9 +878,9 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
                     return AMF_INVALID_POINTER;
                 }
                 AddMessage(VCE_LOG_DEBUG, _T("initialized h264_mp4toannexb filter.\n"));
-            //} else if (m_nInputCodec == MFX_CODEC_HEVC) {
-            //    m_Demux.video.bUseHEVCmp42AnnexB = true;
-            //    AddMessage(VCE_LOG_DEBUG, _T("enabled HEVCmp42AnnexB filter.\n"));
+            } else if (m_nInputCodec == VCE_CODEC_HEVC) {
+                m_Demux.video.bUseHEVCmp42AnnexB = true;
+                AddMessage(VCE_LOG_DEBUG, _T("enabled HEVCmp42AnnexB filter.\n"));
             }
         //} else if ((m_nInputCodec != MFX_CODEC_VP8 && m_nInputCodec != MFX_CODEC_VP9) && m_Demux.video.pCodecCtx->extradata == NULL && m_Demux.video.pCodecCtx->extradata_size == 0) {
         //    AddMessage(VCE_LOG_ERROR, _T("video header not extracted by libavcodec.\n"));
