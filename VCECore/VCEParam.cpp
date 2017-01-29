@@ -68,6 +68,7 @@ void init_vce_param(VCEParam *prm) {
     prm->nInputThread = VCE_INPUT_THREAD_AUTO;
     prm->nAudioThread = VCE_AUDIO_THREAD_AUTO;
     prm->nOutputThread = VCE_OUTPUT_THREAD_AUTO;
+    prm->nAudioIgnoreDecodeError = VCE_DEFAULT_AUDIO_IGNORE_DECODE_ERROR;
 
     prm->vui.videoformat = get_value_from_chr(list_videoformat, _T("undef"));
     prm->vui.colormatrix = get_value_from_chr(list_colormatrix, _T("undef"));
