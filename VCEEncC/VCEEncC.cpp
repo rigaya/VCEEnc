@@ -236,7 +236,7 @@ static tstring help() {
 #if ENABLE_AVCODEC_VCE_READER
     str += strsprintf(
         _T("   --avvce                      set input to use avcodec + vce\n")
-        _T("   --avvce-analyze <int>        set time (sec) which reader analyze input file.\n")
+        _T("   --input-analyze <int>        set time (sec) which reader analyze input file.\n")
         _T("                                 default: 5 (seconds).\n")
         _T("                                 could be only used with avvce reader.\n")
         _T("                                 use if reader fails to detect audio stream.\n")
@@ -489,14 +489,14 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         pParams->nInputType = VCE_INPUT_AVVCE;
         return 0;
     }
-    if (IS_OPTION("avvce-analyze")) {
+    if (IS_OPTION("input-analyze") || IS_OPTION("avvce-analyze")) {
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
             PrintHelp(strInput[0], _T("Unknown value"), option_name, strInput[i]);
             return -1;
         } else if (value < 0) {
-            PrintHelp(strInput[0], _T("avvce-analyze requires non-negative value."), option_name);
+            PrintHelp(strInput[0], _T("input-analyze requires non-negative value."), option_name);
             return -1;
         } else {
             pParams->nAVDemuxAnalyzeSec = (std::min)(value, USHRT_MAX);
