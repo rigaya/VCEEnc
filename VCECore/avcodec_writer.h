@@ -126,7 +126,8 @@ typedef struct AVMuxAudio {
     uint64_t              pnStreamChannelOut[MAX_SPLIT_CHANNELS];    //出力音声のチャンネル
 
     //AACの変換用
-    AVBitStreamFilterContext *pAACBsfc;         //必要なら使用するbitstreamfilter
+    AVBSFContext         *pAACBsfc;             //必要なら使用するbitstreamfilter
+    int                   nAACBsfErrorFromStart; //開始直後からのbitstream filter errorの数
 
     int                   nOutputSamples;       //出力音声の出力済みsample数
     int64_t               nLastPtsIn;           //入力音声の前パケットのpts
@@ -357,7 +358,7 @@ private:
     tstring errorMesForCodec(const TCHAR *mes, AVCodecID targetCodec);
 
     //AAC音声にBitstreamフィルターを適用する
-    void applyBitstreamFilterAAC(AVPacket *pkt, AVMuxAudio *pMuxAudio);
+    int applyBitstreamFilterAAC(AVPacket *pkt, AVMuxAudio *pMuxAudio);
 
     //H.264ストリームからPAFFのフィールドの長さを返す
     uint32_t getH264PAFFFieldLength(uint8_t *ptr, uint32_t size);
