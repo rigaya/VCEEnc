@@ -388,9 +388,11 @@ static int get_quality_index(int nCodecId, int quality_preset) {
     switch (nCodecId) {
     case VCE_CODEC_HEVC:
         preset = HEVC_QUALITY_PRESET;
+        break;
     case VCE_CODEC_H264:
     default:
         preset = H264_QUALITY_PRESET;
+        break;
     }
     if (preset) {
         for (int i = 0; i < 3; i++) {
