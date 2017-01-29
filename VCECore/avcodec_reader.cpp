@@ -29,6 +29,7 @@
 #include <io.h>
 #include <algorithm>
 #include <numeric>
+#include <map>
 #include <cctype>
 #include <cmath>
 #include <climits>
@@ -36,11 +37,6 @@
 #include "avcodec_reader.h"
 #include "avcodec_vce_log.h"
 #include "Surface.h"
-
-#ifdef LIBVA_SUPPORT
-#include "qsv_hw_va.h"
-#include "qsv_allocator.h"
-#endif //#if LIBVA_SUPPORT
 
 #if ENABLE_AVCODEC_VCE_READER
 
@@ -848,22 +844,28 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
 
         memset(&m_inputFrameInfo, 0, sizeof(m_inputFrameInfo));
 
-        //QSVでデコード可能かチェック
-        if (0 == (m_nInputCodec = getQSVFourcc(m_Demux.video.pCodecCtx->codec_id))) {
-            tstring mes = _T("codec ");
-            if (m_Demux.video.pCodecCtx->codec && m_Demux.video.pCodecCtx->codec->name) {
-                mes += char_to_tstring(m_Demux.video.pCodecCtx->codec->name) + _T(" ");
+        //VCEでデコード可能かチェック
+        bool bDecodecVCE = false;
+        if (input_prm->nVideoDecodeSW != AV_DECODE_MODE_SW) {
+            if (0 == (m_nInputCodec = getQSVFourcc(m_Demux.video.pCodecCtx->codec_id))
+                //wmv3はAdvanced Profile (3)のみの対応
+                || m_Demux.video.pCodecCtx->codec_id == AV_CODEC_ID_WMV3 && m_Demux.video.pCodecCtx->profile != 3) {
+                if (input_prm->nVideoDecodeSW == AV_DECODE_MODE_HW) {
+                    //avvceが指定されている場合にはエラー終了する
+                    tstring mes = _T("codec ");
+                    if (m_Demux.video.pCodecCtx->codec && m_Demux.video.pCodecCtx->codec->name) {
+                        mes += char_to_tstring(m_Demux.video.pCodecCtx->codec->name) + _T(" ");
+                    }
+                    mes += _T("unable to be decoded by hw.\n");
+                    AddMessage(VCE_LOG_ERROR, mes);
+                    return AMF_INVALID_POINTER;
+                }
+            } else {
+                bDecodecVCE = true;
+                AddMessage(VCE_LOG_DEBUG, _T("can be decoded by hw.\n"));
             }
-            mes += _T("unable to be decoded by vce.\n");
-            AddMessage(VCE_LOG_ERROR, mes);
-            return AMF_INVALID_POINTER;
         }
-        AddMessage(VCE_LOG_DEBUG, _T("can be decoded by vce.\n"));
-        //wmv3はAdvanced Profile (3)のみの対応
-        if (m_Demux.video.pCodecCtx->codec_id == AV_CODEC_ID_WMV3 && m_Demux.video.pCodecCtx->profile != 3) {
-            AddMessage(VCE_LOG_ERROR, _T("unable to decode by vce.\n"));
-            return AMF_INVALID_POINTER;
-        }
+        m_strReaderName = (bDecodecVCE) ? _T("avvce") : _T("avsw");
 
         //HEVC入力の際に大量にメッセージが出て劇的に遅くなることがあるのを回避
         if (m_Demux.video.pCodecCtx->codec_id == AV_CODEC_ID_HEVC) {
@@ -882,9 +884,11 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
                 m_Demux.video.bUseHEVCmp42AnnexB = true;
                 AddMessage(VCE_LOG_DEBUG, _T("enabled HEVCmp42AnnexB filter.\n"));
             }
-        //} else if ((m_nInputCodec != MFX_CODEC_VP8 && m_nInputCodec != MFX_CODEC_VP9) && m_Demux.video.pCodecCtx->extradata == NULL && m_Demux.video.pCodecCtx->extradata_size == 0) {
-        //    AddMessage(VCE_LOG_ERROR, _T("video header not extracted by libavcodec.\n"));
-        //    return AMF_NOT_SUPPORTED;
+        } else if (bDecodecVCE
+            && (m_nInputCodec != VCE_CODEC_VP8 && m_nInputCodec != VCE_CODEC_VP9)
+            && m_Demux.video.pCodecCtx->extradata == NULL && m_Demux.video.pCodecCtx->extradata_size == 0) {
+            AddMessage(VCE_LOG_ERROR, _T("video header not extracted by libavcodec.\n"));
+            return AMF_NOT_SUPPORTED;
         }
         AddMessage(VCE_LOG_DEBUG, _T("start predecode.\n"));
 
@@ -1001,6 +1005,60 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
         const auto aspectRatio = m_Demux.video.pCodecCtx->sample_aspect_ratio;
         const bool bAspectRatioUnknown = aspectRatio.num * aspectRatio.den <= 0;
 
+
+        if (!bDecodecVCE) {
+            if (nullptr == (m_Demux.video.pCodec = avcodec_find_decoder(m_Demux.video.pCodecCtx->codec_id))) {
+                AddMessage(VCE_LOG_ERROR, errorMesForCodec(_T("Failed to find decoder"), m_Demux.video.pCodecCtx->codec_id).c_str());
+                return AMF_NOT_SUPPORTED;
+            }
+            cpu_info_t cpu_info;
+            if (get_cpu_info(&cpu_info)) {
+                m_Demux.video.pCodecCtx->thread_count = cpu_info.logical_cores;
+            }
+            if (0 > (ret = avcodec_open2(m_Demux.video.pCodecCtx, m_Demux.video.pCodec, nullptr))) {
+                AddMessage(VCE_LOG_ERROR, _T("Failed to open decoder for %s: %s\n"), char_to_tstring(avcodec_get_name(m_Demux.video.pCodecCtx->codec_id)).c_str(), qsv_av_err2str(ret).c_str());
+                return AMF_UNEXPECTED;
+            }
+            const std::map<AVPixelFormat, VCE_CSP> CSP_CONV = {
+                { AV_PIX_FMT_YUV420P,     VCE_CSP_YV12 },
+                { AV_PIX_FMT_YUVJ420P,    VCE_CSP_YV12 },
+                { AV_PIX_FMT_NV12,        VCE_CSP_NV12 },
+                { AV_PIX_FMT_NV21,        VCE_CSP_NV12 },
+                { AV_PIX_FMT_YUV422P,     VCE_CSP_NA },
+                { AV_PIX_FMT_YUVJ422P,    VCE_CSP_NA },
+                { AV_PIX_FMT_YUYV422,     VCE_CSP_YUY2 },
+                { AV_PIX_FMT_UYVY422,     VCE_CSP_NA },
+                { AV_PIX_FMT_NV16,        VCE_CSP_NA },
+                { AV_PIX_FMT_YUV444P,     VCE_CSP_YUV444 },
+                { AV_PIX_FMT_YUVJ444P,    VCE_CSP_YUV444 },
+                { AV_PIX_FMT_YUV420P16LE, VCE_CSP_YV12_16 },
+                { AV_PIX_FMT_YUV420P14LE, VCE_CSP_YV12_14 },
+                { AV_PIX_FMT_YUV420P12LE, VCE_CSP_YV12_12 },
+                { AV_PIX_FMT_YUV420P10LE, VCE_CSP_YV12_10 },
+                { AV_PIX_FMT_YUV420P9LE,  VCE_CSP_YV12_09 },
+                { AV_PIX_FMT_NV20LE,      VCE_CSP_NA },
+                { AV_PIX_FMT_YUV422P16LE, VCE_CSP_NA },
+                { AV_PIX_FMT_YUV422P14LE, VCE_CSP_NA },
+                { AV_PIX_FMT_YUV422P12LE, VCE_CSP_NA },
+                { AV_PIX_FMT_YUV422P10LE, VCE_CSP_NA },
+                { AV_PIX_FMT_YUV444P16LE, VCE_CSP_YUV444_16 },
+                { AV_PIX_FMT_YUV444P14LE, VCE_CSP_YUV444_14 },
+                { AV_PIX_FMT_YUV444P12LE, VCE_CSP_YUV444_12 },
+                { AV_PIX_FMT_YUV444P10LE, VCE_CSP_YUV444_10 },
+                { AV_PIX_FMT_YUV444P9LE,  VCE_CSP_YUV444_09 }
+            };
+            auto pixCspConv = CSP_CONV.find(m_Demux.video.pCodecCtx->pix_fmt);
+            if (pixCspConv == CSP_CONV.end()
+                || nullptr == (m_sConvert = get_convert_csp_func(pixCspConv->second, VCE_CSP_NV12, false))) {
+                AddMessage(VCE_LOG_ERROR, _T("invalid colorformat.\n"));
+                return AMF_INVALID_FORMAT;
+            }
+            if (nullptr == (m_Demux.video.pFrame = av_frame_alloc())) {
+                AddMessage(VCE_LOG_ERROR, _T("Failed to allocate frame for decoder.\n"));
+                return AMF_OUT_OF_MEMORY;
+            }
+        }
+
         //情報を格納
         m_inputFrameInfo.format       = pixfmtData->surfaceFormat;
         m_inputFrameInfo.srcWidth     = m_Demux.video.pCodecCtx->width;
@@ -1011,7 +1069,8 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
         //インタレの可能性があるときは、MFX_PICSTRUCT_UNKNOWNを返すようにする
         m_inputFrameInfo.nPicStruct   = m_Demux.frames.getPicStruct();
 
-        tstring mes = strsprintf(_T("avcodec video: %s, %dx%d, %d/%d fps"), CodecIdToStr(m_nInputCodec),
+        const tstring codecStr = (const TCHAR *)((bDecodecVCE) ? CodecIdToStr(m_nInputCodec) : char_to_tstring(avcodec_get_name(m_Demux.video.pCodecCtx->codec_id))).c_str();
+        tstring mes = strsprintf(_T("%s: %s, %dx%d, %d/%d fps"), m_strReaderName.c_str(), codecStr.c_str(),
             m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcHeight, m_inputFrameInfo.fps.num, m_inputFrameInfo.fps.den);
         if (input_prm->fSeekSec > 0.0f) {
             mes += strsprintf(_T("\n               seek: %s"), print_time(input_prm->fSeekSec).c_str());
@@ -1023,10 +1082,11 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
         //スレッド関連初期化
         m_Demux.thread.pQueueInfo = nullptr;
         m_Demux.thread.bAbortInput = false;
-        m_Demux.thread.nInputThread = input_prm->nInputThread;
-        if (m_Demux.thread.nInputThread == VCE_INPUT_THREAD_AUTO) {
-            m_Demux.thread.nInputThread = 0;
-        }
+        auto nPrmInputThread = input_prm->nInputThread;
+        m_Demux.thread.nInputThread = ((nPrmInputThread == VCE_INPUT_THREAD_AUTO) | (m_Demux.video.pCodec != nullptr)) ? 0 : nPrmInputThread;;
+        //if (m_Demux.thread.nInputThread == VCE_INPUT_THREAD_AUTO) {
+        //    m_Demux.thread.nInputThread = 0;
+        //}
         if (m_Demux.thread.nInputThread) {
             m_Demux.thread.thInput = std::thread(&CAvcodecReader::ThreadFuncRead, this);
             //はじめcapacityを無限大にセットしたので、この段階で制限をかける
@@ -1345,9 +1405,69 @@ AMF_RESULT CAvcodecReader::GetNextBitstream(amf::AMFData **ppData) {
 }
 
 AMF_RESULT CAvcodecReader::QueryOutput(amf::AMFData **ppData) {
-    if (m_Demux.qVideoPkt.size() == 0) {
-        //m_Demux.qVideoPkt.size() == 0となるのは、最後まで読み込んだときか、中断した時しかありえない
-        return AMF_EOF;
+    AMF_RESULT res = AMF_OK;
+    if (m_Demux.video.pCodec) {
+        //動画のデコードを行う
+        amf::AMFSurfacePtr pSurface;
+        res = m_pContext->AllocSurface(amf::AMF_MEMORY_HOST, m_inputFrameInfo.format,
+            m_inputFrameInfo.srcWidth - m_inputFrameInfo.crop.left - m_inputFrameInfo.crop.right,
+            m_inputFrameInfo.srcHeight - m_inputFrameInfo.crop.bottom - m_inputFrameInfo.crop.up,
+            &pSurface);
+        if (res != AMF_OK) {
+            AddMessage(VCE_LOG_ERROR, _T("AMFContext::AllocSurface(amf::AMF_MEMORY_HOST) failed.\n"));
+            return res;
+        }
+        int got_frame = 0;
+        while (!got_frame) {
+            AVPacket pkt;
+            av_init_packet(&pkt);
+            if (!m_Demux.thread.thInput.joinable() //入力スレッドがなければ、自分で読み込む
+                && m_Demux.qVideoPkt.get_keep_length() > 0) { //keep_length == 0なら読み込みは終了していて、これ以上読み込む必要はない
+                if (0 == getSample(&pkt)) {
+                    m_Demux.qVideoPkt.push(pkt);
+                }
+            }
+
+            bool bGetPacket = false;
+            for (int i = 0; false == (bGetPacket = m_Demux.qVideoPkt.front_copy_and_pop_no_lock(&pkt)) && m_Demux.qVideoPkt.size() > 0; i++) {
+                m_Demux.qVideoPkt.wait_for_push();
+            }
+            if (!bGetPacket) {
+                pkt.data = nullptr;
+                pkt.size = 0;
+            }
+            int ret = avcodec_decode_video2(m_Demux.video.pCodecCtx, m_Demux.video.pFrame, &got_frame, &pkt);
+            av_packet_unref(&pkt);
+            if (ret < 0) {
+                AddMessage(VCE_LOG_ERROR, _T("failed to decode video: %s.\n"), qsv_av_err2str(ret).c_str());
+                return AMF_FAIL;
+            }
+            if (!bGetPacket && !got_frame) {
+                //最後まで読み込んだ
+                return AMF_EOF;
+            }
+        }
+        //フレームデータをコピー
+        const auto plane = pSurface->GetPlaneAt(0);
+        const int dst_stride = plane->GetHPitch();
+
+        void *dst_array[3];
+        dst_array[0] = plane->GetNative();
+        dst_array[1] = (uint8_t *)dst_array[0] + dst_stride * (m_inputFrameInfo.srcHeight - m_inputFrameInfo.crop.c[1] - m_inputFrameInfo.crop.c[3]);
+        dst_array[2] = (uint8_t *)dst_array[1] + dst_stride * (m_inputFrameInfo.srcHeight - m_inputFrameInfo.crop.c[1] - m_inputFrameInfo.crop.c[3]); //YUV444出力時
+
+        bool m_bInterlaced;
+        m_sConvert->func[!!m_Demux.video.pFrame->interlaced_frame](dst_array, (const void **)m_Demux.video.pFrame->data, m_inputFrameInfo.srcWidth, m_Demux.video.pFrame->linesize[0], m_Demux.video.pFrame->linesize[1], dst_stride, m_inputFrameInfo.srcHeight, m_inputFrameInfo.dstHeight, m_inputFrameInfo.crop.c);
+        if (got_frame) {
+            av_frame_unref(m_Demux.video.pFrame);
+        }
+        *ppData = pSurface.Detach();
+    } else {
+        if (m_Demux.qVideoPkt.size() == 0) {
+            //m_Demux.qVideoPkt.size() == 0となるのは、最後まで読み込んだときか、中断した時しかありえない
+            return AMF_EOF;
+        }
+        res = GetNextBitstream(ppData);
     }
     //進捗のみ表示
     m_pEncSatusInfo->m_nInputFrames++;
@@ -1356,7 +1476,7 @@ AMF_RESULT CAvcodecReader::QueryOutput(amf::AMFData **ppData) {
         progressPercent = m_Demux.frames.duration() * (m_Demux.video.pCodecCtx->pkt_timebase.num / (double)m_Demux.video.pCodecCtx->pkt_timebase.den) / (m_Demux.format.pFormatCtx->duration * (1.0 / (double)AV_TIME_BASE)) * 100.0;
     }
     m_pEncSatusInfo->UpdateDisplay(0, progressPercent);
-    return GetNextBitstream(ppData);
+    return res;
 }
 
 //動画ストリームの1フレーム分のデータをbitstreamに追加する (リーダー側のデータは残す)

@@ -638,6 +638,8 @@ typedef struct AVDemuxVideo {
                                                      //実際に使用するかどうかはこのフラグをチェックする
     bool                      bReadVideo;
     AVCodecContext           *pCodecCtx;             //動画のcodecContext, 動画を読み込むかどうかの判定には使用しないこと (bReadVideoを使用)
+    AVCodec                  *pCodec;                //動画のデコーダ (使用しない場合はnullptr)
+    AVFrame                  *pFrame;                //動画デコード用のフレーム
     int                       nIndex;                //動画のストリームID
     int64_t                   nStreamFirstKeyPts;    //動画ファイルの最初のpts
     uint32_t                  nStreamPtsInvalid;     //動画ファイルのptsが無効 (H.264/ES, 等)
@@ -687,10 +689,26 @@ typedef struct AVDemuxer {
     CQueueSPSP<AVPacket>     qStreamPktL2;
 } AVDemuxer;
 
+enum AVDecodeMode {
+    AV_DECODE_MODE_ANY = 0,
+    AV_DECODE_MODE_HW,
+    AV_DECODE_MODE_SW
+};
+
+static AVDecodeMode decodeModeFromInputFmtType(int inputFmt) {
+    switch (inputFmt) {
+    case VCE_INPUT_AVVCE: return AV_DECODE_MODE_HW;
+    case VCE_INPUT_AVSW:  return AV_DECODE_MODE_SW;
+    case VCE_INPUT_AVANY:
+    default: return AV_DECODE_MODE_ANY;
+    }
+}
+
 typedef struct AvcodecReaderPrm {
     const TCHAR   *srcFile;                 //入力ファイル名
     uint8_t        memType;                 //使用するメモリの種類
     bool           bReadVideo;              //映像の読み込みを行うかどうか
+    AVDecodeMode   nVideoDecodeSW;          //動画のデコード方法
     int8_t         nVideoTrack;             //動画トラックの選択
     int            nVideoStreamId;          //動画StreamIdの選択
     uint32_t       nReadAudio;              //音声の読み込みを行うかどうか (AVVCE_AUDIO_xxx)

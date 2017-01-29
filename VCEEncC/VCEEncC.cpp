@@ -236,9 +236,10 @@ static tstring help() {
 #if ENABLE_AVCODEC_VCE_READER
     str += strsprintf(
         _T("   --avvce                      set input to use avcodec + vce\n")
+        _T("   --avsw                       set input to use avcodec + sw decoder\n")
         _T("   --input-analyze <int>        set time (sec) which reader analyze input file.\n")
         _T("                                 default: 5 (seconds).\n")
-        _T("                                 could be only used with avvce reader.\n")
+        _T("                                 could be only used with avvce/avsw reader.\n")
         _T("                                 use if reader fails to detect audio stream.\n")
         _T("   --video-track <int>          set video track to encode in track id\n")
         _T("                                 1 (default)  highest resolution video track\n")
@@ -251,7 +252,7 @@ static tstring help() {
         _T("   --audio-source <string>      input extra audio file\n")
         _T("   --audio-file [<int>?][<string>:]<string>\n")
         _T("                                extract audio into file.\n")
-        _T("                                 could be only used with avvce reader.\n")
+        _T("                                 could be only used with avvce/avsw reader.\n")
         _T("                                 below are optional,\n")
         _T("                                  in [<int>?], specify track number to extract.\n")
         _T("                                  in [<string>?], specify output format.\n")
@@ -269,7 +270,7 @@ static tstring help() {
         _T("                                 set \"raw\" for H.264/ES output.\n")
         _T("   --audio-copy [<int>[,...]]   mux audio with video during output.\n")
         _T("                                 could be only used with\n")
-        _T("                                 avvce reader and avcodec muxer.\n")
+        _T("                                 avvce/avsw reader and avcodec muxer.\n")
         _T("                                 by default copies all audio tracks.\n")
         _T("                                 \"--audio-copy 1,2\" will extract\n")
         _T("                                 audio track #1 and #2.\n")
@@ -329,7 +330,7 @@ static tstring help() {
         _T("   --chapter <string>           set chapter from file specified.\n")
         _T("   --sub-copy [<int>[,...]]     copy subtitle to output file.\n")
         _T("                                 these could be only used with\n")
-        _T("                                 avvce reader and avcodec muxer.\n")
+        _T("                                 avvce/avsw reader and avcodec muxer.\n")
         _T("                                 below are optional,\n")
         _T("                                  in [<int>?], specify track number to copy.\n")
         _T("\n")
@@ -341,7 +342,7 @@ static tstring help() {
         _T("-m,--mux-option <string1>:<string2>\n")
         _T("                                set muxer option name and value.\n")
         _T("                                 these could be only used with\n")
-        _T("                                 avvce reader and avcodec muxer.\n"),
+        _T("                                 avvce/avsw reader and avcodec muxer.\n"),
         VCE_DEFAULT_AUDIO_IGNORE_DECODE_ERROR);
 #endif
     str += strsprintf(_T("\n")
@@ -414,7 +415,7 @@ static tstring help() {
         _T("   --log <string>               output log to file (txt or html).\n")
         _T("   --log-level <int>            set log level\n")
         _T("                                 error, warn, info(default), debug\n")
-        _T("   --log-framelist <string>     output frame info for avvce reader (for debug)\n")
+        _T("   --log-framelist <string>     output frame info for avvce/avsw reader (for debug)\n")
         );
     return str;
 }
@@ -487,6 +488,10 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
     }
     if (IS_OPTION("avvce")) {
         pParams->nInputType = VCE_INPUT_AVVCE;
+        return 0;
+    }
+    if (IS_OPTION("avsw")) {
+        pParams->nInputType = VCE_INPUT_AVSW;
         return 0;
     }
     if (IS_OPTION("input-analyze") || IS_OPTION("avvce-analyze")) {

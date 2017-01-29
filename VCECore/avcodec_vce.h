@@ -38,6 +38,7 @@
 extern "C" {
 #include <libavutil/avutil.h>
 #include <libavutil/error.h>
+#include <libavutil/frame.h>
 #include <libavutil/opt.h>
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
@@ -121,6 +122,10 @@ static inline int log_level_av2vce(int level) {
 static inline int log_level_vce2av(int level) {
     return clamp(AV_LOG_INFO - level * 8, AV_LOG_QUIET, AV_LOG_TRACE);
 }
+
+static tstring errorMesForCodec(const TCHAR *mes, AVCodecID targetCodec) {
+    return mes + tstring(_T(" for ")) + char_to_tstring(avcodec_get_name(targetCodec)) + tstring(_T(".\n"));
+};
 
 static const AVRational VCE_NATIVE_TIMEBASE = { 1, VCE_TIMEBASE };
 static const TCHAR *AVCODEC_DLL_NAME[] = {

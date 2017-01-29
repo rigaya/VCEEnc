@@ -434,6 +434,8 @@ AMF_RESULT VCECore::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo)
     if (pParams->nInputType == VCE_INPUT_NONE) {
         if (check_ext(pParams->pInputFile, { ".y4m" })) {
             pParams->nInputType = VCE_INPUT_Y4M;
+        } else if (check_ext(pParams->pInputFile, { ".yuv" })) {
+            pParams->nInputType = VCE_INPUT_RAW;
 #if ENABLE_AVISYNTH_READER
         } else if (check_ext(pParams->pInputFile, { ".avs" })) {
             pParams->nInputType = VCE_INPUT_AVS;
@@ -443,17 +445,11 @@ AMF_RESULT VCECore::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo)
             pParams->nInputType = VCE_INPUT_VPY;
 #endif
 #if ENABLE_AVCODEC_VCE_READER
-        } else if (usingAVProtocols(tchar_to_string(pParams->pInputFile, CP_UTF8), 0)
-            || check_ext(pParams->pInputFile, { ".mp4", ".m4v", ".mkv", ".mov",
-                    ".mts", ".m2ts", ".ts", ".264", ".h264", ".x264", ".avc", ".avc1",
-                    ".265", ".h265", ".hevc",
-                    ".mpg", ".mpeg", "m2v", ".vob", ".vro", ".flv", ".ogm",
-                    ".webm", ".vp8", ".vp9",
-                    ".wmv" })) {
-            pParams->nInputType = VCE_INPUT_AVVCE;
-#endif //ENABLE_AVCODEC_VCE_READER
         } else {
+            pParams->nInputType = VCE_INPUT_AVANY;
+#else
             pParams->nInputType = VCE_INPUT_RAW;
+#endif
         }
     }
 
@@ -486,9 +482,12 @@ AMF_RESULT VCECore::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo)
         m_pFileReader.reset(new VCEInputVpy());
 #endif
 #if ENABLE_AVCODEC_VCE_READER
-    } else if (pParams->nInputType == VCE_INPUT_AVVCE) {
+    } else if (pParams->nInputType == VCE_INPUT_AVVCE
+            || pParams->nInputType == VCE_INPUT_AVSW
+            || pParams->nInputType == VCE_INPUT_AVANY) {
         avcodecReaderPrm.srcFile = pParams->pInputFile;
         avcodecReaderPrm.bReadVideo = true;
+        avcodecReaderPrm.nVideoDecodeSW = decodeModeFromInputFmtType(pParams->nInputType);
         avcodecReaderPrm.nVideoTrack = (int8_t)pParams->nVideoTrack;
         avcodecReaderPrm.nVideoStreamId = pParams->nVideoStreamId;
         avcodecReaderPrm.bReadChapter = !!pParams->bCopyChapter;
@@ -886,8 +885,8 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
     if (pParams->nAudioSelectCount + pParams->nSubtitleSelectCount > (int)streamTrackUsed.size()) {
         PrintMes(VCE_LOG_DEBUG, _T("Output: Audio file output enabled.\n"));
         auto pAVCodecReader = std::dynamic_pointer_cast<CAvcodecReader>(m_pFileReader);
-        if (pParams->nInputType != VCE_INPUT_AVVCE || pAVCodecReader == nullptr) {
-            PrintMes(VCE_LOG_ERROR, _T("Audio output is only supported with transcoding (avqsv reader).\n"));
+        if (pAVCodecReader == nullptr) {
+            PrintMes(VCE_LOG_ERROR, _T("Audio output is only supported with transcoding (avvce/avsw reader).\n"));
             return AMF_NOT_SUPPORTED;
         } else {
             auto inutAudioInfoList = pAVCodecReader->GetInputStreamInfo();
