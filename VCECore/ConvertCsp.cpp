@@ -140,7 +140,7 @@ static const ConvertCSP funcList[] = {
     { VCE_CSP_NA, VCE_CSP_NA, 0, false, 0x0, 0 },
 };
 
-static uint32_t nvenc_get_availableSIMD() {
+static uint32_t vce_get_availableSIMD() {
     int CPUInfo[4];
     __cpuid(CPUInfo, 1);
     uint32_t simd = NONE;
@@ -167,7 +167,7 @@ static uint32_t nvenc_get_availableSIMD() {
 }
 
 const ConvertCSP* get_convert_csp_func(VCE_CSP csp_from, VCE_CSP csp_to, bool uv_only) {
-    uint32_t availableSIMD = nvenc_get_availableSIMD();
+    uint32_t availableSIMD = vce_get_availableSIMD();
     const ConvertCSP *convert = nullptr;
     for (int i = 0; i < _countof(funcList); i++) {
         if (csp_from != funcList[i].csp_from)
