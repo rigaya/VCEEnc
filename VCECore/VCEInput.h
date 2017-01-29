@@ -164,6 +164,6 @@ protected:
     tstring m_strReaderName;
     tstring m_strInputInfo;
     amf::AMFContextPtr m_pContext;
-    const ConvertCSP *m_pConvertCsp;
+    const ConvertCSP *m_sConvert;
     sTrimParam m_sTrimParam;
 };

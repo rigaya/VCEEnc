@@ -219,12 +219,12 @@ AMF_RESULT VCEInputVpy::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pSta
 
     for (auto csp : valid_csp_list) {
         if (csp.fmtID == vsvideoinfo->format->id) {
-            m_pConvertCsp = get_convert_csp_func(csp.in, csp.out, false);
+            m_sConvert = get_convert_csp_func(csp.in, csp.out, false);
             break;
         }
     }
 
-    if (nullptr == m_pConvertCsp) {
+    if (nullptr == m_sConvert) {
         AddMessage(VCE_LOG_ERROR, _T("invalid colorformat.\n"));
         return AMF_FAIL;
     }
@@ -259,7 +259,7 @@ AMF_RESULT VCEInputVpy::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pSta
 
     tstring mes = strsprintf(_T("VapourSynth%s%s %s->%s[%s], %dx%d%s, %d/%d fps"),
         (m_bVpyMT) ? _T("MT") : _T(""), rev_info.c_str(),
-        VCE_CSP_NAMES[m_pConvertCsp->csp_from], VCE_CSP_NAMES[m_pConvertCsp->csp_to], get_simd_str(m_pConvertCsp->simd),
+        VCE_CSP_NAMES[m_sConvert->csp_from], VCE_CSP_NAMES[m_sConvert->csp_to], get_simd_str(m_sConvert->simd),
         m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcHeight, is_interlaced(m_inputFrameInfo.nPicStruct) ? _T("i") : _T("p"), m_inputFrameInfo.fps.num, m_inputFrameInfo.fps.den);
 
     AddMessage(VCE_LOG_DEBUG, _T("%s\n"), mes.c_str());
@@ -321,7 +321,7 @@ AMF_RESULT VCEInputVpy::QueryOutput(amf::AMFData** ppData) {
     void *dst_ptr[2];
     dst_ptr[0] = (uint8_t *)plane->GetNative();
     dst_ptr[1] = (uint8_t *)dst_ptr[0] + dst_height * dst_stride;
-    m_pConvertCsp->func[is_interlaced(m_inputFrameInfo.nPicStruct) ? 1 : 0](dst_ptr, src_ptr, m_inputFrameInfo.srcWidth, m_sVSapi->getStride(src_frame, 0), m_sVSapi->getStride(src_frame, 1), dst_stride, m_inputFrameInfo.srcHeight, dst_height, m_inputFrameInfo.crop.c);
+    m_sConvert->func[is_interlaced(m_inputFrameInfo.nPicStruct) ? 1 : 0](dst_ptr, src_ptr, m_inputFrameInfo.srcWidth, m_sVSapi->getStride(src_frame, 0), m_sVSapi->getStride(src_frame, 1), dst_stride, m_inputFrameInfo.srcHeight, dst_height, m_inputFrameInfo.crop.c);
     m_pEncSatusInfo->m_nInputFrames++;
     m_nCopyOfInputFrames = m_pEncSatusInfo->m_nInputFrames;
 

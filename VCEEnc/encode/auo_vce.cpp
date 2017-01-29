@@ -182,12 +182,12 @@ AMF_RESULT VCEInputAuo::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> pSta
 
     setup_afsvideo(m_param.oip, m_param.sys_dat, m_param.conf, m_param.pe);
 
-    if (nullptr == (m_pConvertCsp = get_convert_csp_func(VCE_CSP_YUY2, VCE_CSP_NV12, false))) {
+    if (nullptr == (m_sConvert = get_convert_csp_func(VCE_CSP_YUY2, VCE_CSP_NV12, false))) {
         AddMessage(VCE_LOG_ERROR, _T("Failed to find converter for yuy2 -> nv12.\n"));
         return AMF_FAIL;
     }
     tstring mes = strsprintf(_T("auo: %s->%s[%s], %dx%d%s, %d/%d fps"),
-        VCE_CSP_NAMES[m_pConvertCsp->csp_from], VCE_CSP_NAMES[m_pConvertCsp->csp_to], get_simd_str(m_pConvertCsp->simd),
+        VCE_CSP_NAMES[m_sConvert->csp_from], VCE_CSP_NAMES[m_sConvert->csp_to], get_simd_str(m_sConvert->simd),
         m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcHeight, is_interlaced(m_inputFrameInfo.nPicStruct) ? _T("i") : _T("p"), m_inputFrameInfo.fps.num, m_inputFrameInfo.fps.den);
     AddMessage(VCE_LOG_DEBUG, _T("%s\n"), mes.c_str());
     m_strInputInfo += mes;
@@ -255,7 +255,7 @@ AMF_RESULT VCEInputAuo::QueryOutput(amf::AMFData** ppData) {
     dst_ptr[0] = (uint8_t *)plane->GetNative();
     dst_ptr[1] = (uint8_t *)dst_ptr[0] + dst_height * dst_stride;
     int crop[4] = { 0 };
-    m_pConvertCsp->func[is_interlaced(m_inputFrameInfo.nPicStruct) ? 1 : 0](dst_ptr, &frame, m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcWidth * 2, 0, dst_stride, m_inputFrameInfo.srcHeight, dst_height, crop);
+    m_sConvert->func[is_interlaced(m_inputFrameInfo.nPicStruct) ? 1 : 0](dst_ptr, &frame, m_inputFrameInfo.srcWidth, m_inputFrameInfo.srcWidth * 2, 0, dst_stride, m_inputFrameInfo.srcHeight, dst_height, crop);
 
     m_pEncSatusInfo->m_nInputFrames++;
     if (!(m_pEncSatusInfo->m_nInputFrames & 7))

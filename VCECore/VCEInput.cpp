@@ -47,7 +47,7 @@ VCEInput::VCEInput() :
     m_strReaderName(_T("general reader")),
     m_strInputInfo(),
     m_pContext(nullptr),
-    m_pConvertCsp(nullptr),
+    m_sConvert(nullptr),
     m_sTrimParam() {
 
 }
@@ -64,7 +64,7 @@ AMF_RESULT VCEInput::Terminate() {
     m_message.clear();
     m_strInputInfo.clear();
     m_pContext = nullptr;
-    m_pConvertCsp = nullptr;
+    m_sConvert = nullptr;
     memset(&m_sTrimParam, 0, sizeof(m_sTrimParam));
     return AMF_OK;
 }
