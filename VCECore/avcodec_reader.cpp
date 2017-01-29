@@ -726,10 +726,11 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
         vector<int> mediaStreams;
         if (input_prm->nReadAudio) {
             auto audioStreams = getStreamIndex(AVMEDIA_TYPE_AUDIO, &videoStreams);
-            if (audioStreams.size() == 0) {
-                AddMessage(VCE_LOG_ERROR, _T("--audio-encode/--audio-copy/--audio-file is set, but no audio stream found.\n"));
-                return AMF_NOT_FOUND;
-            }
+            //他のファイルから音声を読み込む場合もあるので、ここでチェックはできない
+            //if (audioStreams.size() == 0) {
+            //    AddMessage(VCE_LOG_ERROR, _T("--audio-encode/--audio-copy/--audio-file is set, but no audio stream found.\n"));
+            //    return AMF_NOT_FOUND;
+            //}
             m_Demux.format.nAudioTracks = (int)audioStreams.size();
             vector_cat(mediaStreams, audioStreams);
         }
