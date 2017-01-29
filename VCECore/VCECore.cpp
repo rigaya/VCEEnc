@@ -1322,7 +1322,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
 
             int minHeight, maxHeight;
             outputCaps->GetHeightRange(&minHeight, &maxHeight);
-            if (m_inputInfo.dstHeight < minHeight || maxHeight < m_inputInfo.dstWidth) {
+            if (m_inputInfo.dstHeight < minHeight || maxHeight < m_inputInfo.dstHeight) {
                 PrintMes(VCE_LOG_ERROR, _T("Output height should be in range of %d - %d (%d specified).\n"),
                     minHeight, maxHeight, m_inputInfo.dstHeight);
                 return AMF_FAIL;
