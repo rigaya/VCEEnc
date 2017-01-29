@@ -396,6 +396,9 @@ static tstring help() {
         { { _T("H.264"), list_avc_profile,   0 },
           { _T("HEVC"),  list_hevc_profile,  0 },
         });
+    str += PrintMultipleListOptions(_T("--tier <string>"), _T("set codec tier"),
+        { { _T("HEVC"),  list_hevc_tier, 0 },
+        });
 
     str += strsprintf(_T("\n")
         _T("   --sar <int>:<int>            set Sample Aspect Ratio\n")
@@ -443,7 +446,7 @@ static void PrintHelp(const TCHAR *strAppName, const TCHAR *strErrorMessage, con
 }
 
 struct sArgsData {
-    tstring cachedlevel, cachedprofile, cachedPreAnalysis;
+    tstring cachedlevel, cachedprofile, cachedtier, cachedPreAnalysis;
     uint32_t nParsedAudioFile = 0;
     uint32_t nParsedAudioEncode = 0;
     uint32_t nParsedAudioCopy = 0;
@@ -1205,6 +1208,16 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         }
         return 0;
     }
+    if (IS_OPTION("tier")) {
+        if (i+1 < nArgNum) {
+            i++;
+            argData->cachedtier = strInput[i];
+        } else {
+            PrintHelp(strInput[0], _T("Invalid value"), option_name);
+            return -1;
+        }
+        return 0;
+    }
     if (IS_OPTION("sar") || IS_OPTION("dar")) {
         i++;
         int value[2] = { 0 };
@@ -1651,6 +1664,16 @@ int parse_args(VCEParam *pParams, VCEInputInfo *pInputInfo, int nArgNum, const T
             pParams->codecParam[pParams->nCodecId].nProfile = value;
         } else {
             PrintHelp(strInput[0], _T("Unknown value"), _T("profile"));
+            return -1;
+        }
+    }
+    if (argsData.cachedtier.length() > 0) {
+        const auto desc = get_tier_list(pParams->nCodecId);
+        int value = 0;
+        if (desc != nullptr && PARSE_ERROR_FLAG != (value = get_value_from_chr(desc, argsData.cachedtier.c_str()))) {
+            pParams->codecParam[pParams->nCodecId].nTier = value;
+        } else {
+            PrintHelp(strInput[0], _T("Unknown value"), _T("tier"));
             return -1;
         }
     }

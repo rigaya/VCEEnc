@@ -481,6 +481,13 @@ static inline const CX_DESC *get_profile_list(int CodecID) {
     }
 }
 
+static inline const CX_DESC *get_tier_list(int CodecID) {
+    switch (CodecID) {
+    case VCE_CODEC_HEVC:    return list_hevc_tier;
+    default:                return list_empty;
+    }
+}
+
 static inline const CX_DESC *get_pre_analysis_list(int CodecID) {
     switch (CodecID) {
     case VCE_CODEC_H264:    return list_pre_analysis_h264;
@@ -514,8 +521,10 @@ typedef struct {
 } VCEInputInfo;
 
 typedef struct {
-    int     nProfile;
-    int     nLevel;
+    int16_t nProfile;
+    int16_t nTier;
+    int16_t nLevel;
+    int16_t nReserved;
 } VCECodecParam;
 
 typedef struct {

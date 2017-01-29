@@ -1451,6 +1451,8 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
             }
         }
     } else if (prm->nCodecId == VCE_CODEC_HEVC) {
+        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_TIER,                            (amf_int64)prm->codecParam[prm->nCodecId].nTier);
+
         m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_I,                        (amf_int64)prm->nQPMin);
         m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_I,                        (amf_int64)prm->nQPMax);
         m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_P,                        (amf_int64)prm->nQPMin);
@@ -1692,10 +1694,11 @@ tstring VCECore::GetEncoderParam() {
     if (m_inputInfo.crop.left || m_inputInfo.crop.up || m_inputInfo.crop.right || m_inputInfo.crop.bottom) {
         mes += strsprintf(_T("Crop:          %d,%d,%d,%d\n"), m_inputInfo.crop.left, m_inputInfo.crop.up, m_inputInfo.crop.right, m_inputInfo.crop.bottom);
     }
-    mes += strsprintf(_T("Output:        %s  %s @ Level %s\n"),
+    mes += strsprintf(_T("Output:        %s  %s @ Level %s%s\n"),
         CodecIdToStr(m_VCECodecId),
         getPropertyDesc(AMF_PARAM_PROFILE(m_VCECodecId), get_profile_list(m_VCECodecId)).c_str(),
-        getPropertyDesc(AMF_PARAM_PROFILE_LEVEL(m_VCECodecId), get_level_list(m_VCECodecId)).c_str());
+        getPropertyDesc(AMF_PARAM_PROFILE_LEVEL(m_VCECodecId), get_level_list(m_VCECodecId)).c_str(),
+        (m_VCECodecId == VCE_CODEC_HEVC) ? (tstring(_T(" (")) + getPropertyDesc(AMF_VIDEO_ENCODER_HEVC_TIER, get_tier_list(m_VCECodecId)) + _T(" tier)")).c_str() : _T(""));
     const AMF_VIDEO_ENCODER_SCANTYPE_ENUM scan_type = (m_VCECodecId == VCE_CODEC_H264) ? (AMF_VIDEO_ENCODER_SCANTYPE_ENUM)GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE) : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE;
     AMFRatio aspectRatio;
     pProperty->GetProperty(AMF_PARAM_ASPECT_RATIO(m_VCECodecId), &aspectRatio);
