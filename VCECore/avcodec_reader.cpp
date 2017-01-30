@@ -1111,6 +1111,9 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
             m_Demux.qVideoPkt.set_capacity(256);
         }
     } else {
+        //スレッド関連初期化 (スレッドは使用しないが、pQueueInfoはnullにしておく必要がある)
+        m_Demux.thread.pQueueInfo = nullptr;
+        m_Demux.thread.bAbortInput = false;
         //音声との同期とかに使うので、動画の情報を格納する
         m_Demux.video.nAvgFramerate = av_make_q(input_prm->nVideoAvgFramerate.first, input_prm->nVideoAvgFramerate.second);
 
