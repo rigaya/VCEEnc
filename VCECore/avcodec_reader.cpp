@@ -932,11 +932,13 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
         }
 
         //parserはseek後に初期化すること
-        if (nullptr == (m_Demux.video.pParserCtx = av_parser_init(m_Demux.video.pCodecCtx->codec_id))) {
+        m_Demux.video.pParserCtx = av_parser_init(m_Demux.video.pCodecCtx->codec_id);
+        if (m_Demux.video.pParserCtx) {
+            m_Demux.video.pParserCtx->flags |= PARSER_FLAG_COMPLETE_FRAMES;
+        } else if (bDecodecVCE) {
             AddMessage(VCE_LOG_ERROR, _T("failed to init parser for %s.\n"), char_to_tstring(m_Demux.video.pCodecCtx->codec->name).c_str());
-            return AMF_INVALID_POINTER;
+            return AMF_FAIL;
         }
-        m_Demux.video.pParserCtx->flags |= PARSER_FLAG_COMPLETE_FRAMES;
 
         if (AMF_OK != (sts = getFirstFramePosAndFrameRate(input_prm->pTrimList, input_prm->nTrimCount))) {
             AddMessage(VCE_LOG_ERROR, _T("failed to get first frame position.\n"));
