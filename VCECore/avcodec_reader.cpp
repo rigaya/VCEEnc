@@ -1401,7 +1401,7 @@ AMF_RESULT CAvcodecReader::GetNextBitstream(amf::AMFData **ppData) {
         m_Demux.qVideoPkt.wait_for_push();
     }
     AMF_RESULT sts = AMF_EOF;
-    if (bGetPacket) {
+    if (bGetPacket && pkt.size > 0) {
         amf::AMFBufferPtr pictureBuffer;
         AMF_RESULT ar = m_pContext->AllocBuffer(amf::AMF_MEMORY_HOST, pkt.size, &pictureBuffer);
         if (ar != AMF_OK) {
@@ -1509,7 +1509,7 @@ AMF_RESULT CAvcodecReader::GetNextBitstreamNoDelete(amf::AMFData **ppData) {
         m_Demux.qVideoPkt.wait_for_push();
     }
     AMF_RESULT sts = AMF_EOF;
-    if (bGetPacket) {
+    if (bGetPacket && pkt.size > 0) {
         amf::AMFBufferPtr pictureBuffer;
         AMF_RESULT ar = m_pContext->AllocBuffer(amf::AMF_MEMORY_HOST, pkt.size, &pictureBuffer);
         if (ar != AMF_OK) {
