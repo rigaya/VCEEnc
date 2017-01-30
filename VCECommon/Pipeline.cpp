@@ -402,8 +402,9 @@ void InputSlot::Run()
             {
                 res = SubmitInput(data, 50, false);
             }
-            else if (ErrorOccurred())
+            else if (res != AMF_OK)
             {
+                OnError();
                 break;
             }
             else
@@ -620,6 +621,11 @@ AMF_RESULT OutputSlot::Poll()
         else if(res == AMF_OK)
         {
             res = AMF_REPEAT;
+        }
+        else if (res != AMF_OK && data == NULL)
+        {
+            OnError();
+            break;
         }
         if(data == NULL)
         {
