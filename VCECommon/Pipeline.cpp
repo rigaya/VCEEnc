@@ -60,8 +60,8 @@ public:
     virtual ~Slot(){}
 
     virtual void Stop();
-    void SetError();
-    bool ErrorOccurred();
+    void OnError();
+    bool IsError();
     virtual bool StopRequested();
     virtual bool IsEof(){return m_bEof;}
     virtual void OnEof();
@@ -118,7 +118,7 @@ public:
    
     bool IsEof();
 
-    bool ErrorOccurred();
+    bool IsError();
     void OnEof();
     void Restart();
 
@@ -255,7 +255,7 @@ PipelineState Pipeline::GetState()
     bool bError = false;
     for (ConnectorList::iterator it = m_connectors.begin();
         it != m_connectors.end() && !bError; it++) {
-        if ((*it)->ErrorOccurred()) {
+        if ((*it)->IsError()) {
             bError = true;
         }
     }
@@ -366,11 +366,11 @@ void Slot::OnEof()
     m_pConnector->OnEof();
 }
 //-------------------------------------------------------------------------------------------------
-void Slot::SetError()
+void Slot::OnError()
 {
     m_bError = true;
 }
-bool Slot::ErrorOccurred()
+bool Slot::IsError()
 {
     return m_bError;
 }
@@ -497,7 +497,7 @@ AMF_RESULT InputSlot::SubmitInput(amf::AMFData* pData, amf_ulong ulTimeout, bool
                 else if(res != AMF_EOF)
                 {
                     //LOG_ERROR(L"SubmitInput() returned error: " << amf::AMFGetResultText(res));
-                    SetError();
+                    OnError();
                 }
 
                 break;
@@ -540,7 +540,7 @@ void OutputSlot::Run()
                 m_waiter.Wait(1);
             }
         }
-        else if (ErrorOccurred())
+        else if (IsError())
         {
             break;
         }
@@ -691,14 +691,14 @@ void PipelineConnector::Start()
 
 }
 //-------------------------------------------------------------------------------------------------
-bool PipelineConnector::ErrorOccurred() {
+bool PipelineConnector::IsError() {
     for (amf_size i = 0; i < m_InputSlots.size(); i++) {
-        if (m_InputSlots[i]->ErrorOccurred()) {
+        if (m_InputSlots[i]->IsError()) {
             return true;
         }
     }
     for (amf_size i = 0; i < m_OutputSlots.size(); i++) {
-        if (m_OutputSlots[i]->ErrorOccurred()) {
+        if (m_OutputSlots[i]->IsError()) {
             return true;
         }
     }
