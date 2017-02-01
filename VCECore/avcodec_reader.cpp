@@ -1469,13 +1469,14 @@ AMF_RESULT CAvcodecReader::QueryOutput(amf::AMFData **ppData) {
         //フレームデータをコピー
         const auto plane = pSurface->GetPlaneAt(0);
         const int dst_stride = plane->GetHPitch();
+        const int dst_height = plane->GetVPitch();
 
         void *dst_array[3];
         dst_array[0] = plane->GetNative();
-        dst_array[1] = (uint8_t *)dst_array[0] + dst_stride * (m_inputFrameInfo.srcHeight - m_inputFrameInfo.crop.c[1] - m_inputFrameInfo.crop.c[3]);
-        dst_array[2] = (uint8_t *)dst_array[1] + dst_stride * (m_inputFrameInfo.srcHeight - m_inputFrameInfo.crop.c[1] - m_inputFrameInfo.crop.c[3]); //YUV444出力時
+        dst_array[1] = (uint8_t *)dst_array[0] + dst_stride * dst_height;
+        dst_array[2] = (uint8_t *)dst_array[1] + dst_stride * dst_height; //YUV444出力時
 
-        m_sConvert->func[!!m_Demux.video.pFrame->interlaced_frame](dst_array, (const void **)m_Demux.video.pFrame->data, m_inputFrameInfo.srcWidth, m_Demux.video.pFrame->linesize[0], m_Demux.video.pFrame->linesize[1], dst_stride, m_inputFrameInfo.srcHeight, m_inputFrameInfo.dstHeight, m_inputFrameInfo.crop.c);
+        m_sConvert->func[!!m_Demux.video.pFrame->interlaced_frame](dst_array, (const void **)m_Demux.video.pFrame->data, m_inputFrameInfo.srcWidth, m_Demux.video.pFrame->linesize[0], m_Demux.video.pFrame->linesize[1], dst_stride, m_inputFrameInfo.srcHeight, dst_height, m_inputFrameInfo.crop.c);
         if (got_frame) {
             av_frame_unref(m_Demux.video.pFrame);
         }
