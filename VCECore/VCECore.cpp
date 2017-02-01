@@ -678,9 +678,9 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
         PrintMes(VCE_LOG_WARN, _T("Maximum Delta QP for Bframes is %d.\n"), VCE_MAX_B_DELTA_QP);
         prm->nDeltaQPBFrameRef = clamp(prm->nDeltaQPBFrameRef, -1 * VCE_MAX_B_DELTA_QP, VCE_MAX_B_DELTA_QP);
     }
-    if (prm->bVBAQ && prm->nCodecId == VCE_CODEC_HEVC) {
+    if (prm->bVBAQ && prm->nCodecId == VCE_CODEC_HEVC && prm->nRateControl == AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP) {
 #ifndef VCE_AUO
-        PrintMes(VCE_LOG_WARN, _T("VBAQ is not supported with HEVC encoding, disabled.\n"));
+        PrintMes(VCE_LOG_WARN, _T("VBAQ is not supported with CQP + HEVC encoding, disabled.\n"));
 #endif
         prm->bVBAQ = 0;
     }
