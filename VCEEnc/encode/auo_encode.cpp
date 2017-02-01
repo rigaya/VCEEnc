@@ -266,7 +266,18 @@ void set_enc_prm(CONF_GUIEX *conf, PRM_ENC *pe, const OUTPUT_INFO *oip, const SY
     PathCombineLong(pe->temp_filename, _countof(pe->temp_filename), pe->temp_filename, filename_replace);
 
     //ESしか出せないので拡張子を変更
-    change_ext(pe->temp_filename, _countof(pe->temp_filename), ".264");
+    //check_muxer_to_be_usedの前に拡張子を変更しないと音声なしのときにmuxされない
+    const char *ext = ".tmp";
+    switch (conf->vce.nCodecId) {
+    case VCE_CODEC_H264:    ext = ".264"; break;
+    case VCE_CODEC_MPEG2:   ext = ".m2v"; break;
+    case VCE_CODEC_VC1:     ext = ".vc1"; break;
+    case VCE_CODEC_HEVC:    ext = ".265"; break;
+    case VCE_CODEC_VP8:     ext = ".vp8"; break;
+    case VCE_CODEC_VP9:     ext = ".vp9"; break;
+    default:                break;
+    }
+    change_ext(pe->temp_filename, _countof(pe->temp_filename), ext);
 
     pe->muxer_to_be_used = check_muxer_to_be_used(conf, sys_dat, pe->temp_filename, pe->video_out_type, (oip->flag & OUTPUT_INFO_FLAG_AUDIO) != 0);
     

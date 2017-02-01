@@ -178,9 +178,6 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
     if (pe->video_out_type == VIDEO_OUTPUT_DISABLED)
         return AUO_RESULT_SUCCESS;
 
-    //H.264/ESしか出せないので拡張子を変更
-    change_ext(pe->temp_filename, _countof(pe->temp_filename), ".264");
-
     VCEInputAuoParam auoParam = { 0 };
     auoParam.conf = conf;
     auoParam.oip = oip;
