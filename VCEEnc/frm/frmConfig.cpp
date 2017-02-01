@@ -923,8 +923,8 @@ System::Void frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     cnf->vce.nQualityPreset                          = list_vce_quality_preset[fcgCXQualityPreset->SelectedIndex].value;
     cnf->vce.codecParam[VCE_CODEC_H264].nProfile     = (int16_t)list_avc_profile[fcgCXCodecProfile->SelectedIndex].value;
     cnf->vce.codecParam[VCE_CODEC_H264].nLevel       = (int16_t)list_avc_level[fcgCXCodecLevel->SelectedIndex].value;
-    cnf->vce.codecParam[VCE_CODEC_HEVC].nProfile     = (int16_t)list_hevc_profile[fcgCXCodecProfile->SelectedIndex].value;
-    cnf->vce.codecParam[VCE_CODEC_HEVC].nLevel       = (int16_t)list_hevc_level[fcgCXCodecLevel->SelectedIndex].value;
+    cnf->vce.codecParam[VCE_CODEC_HEVC].nProfile     = (int16_t)list_hevc_profile[fcgCXHEVCProfile->SelectedIndex].value;
+    cnf->vce.codecParam[VCE_CODEC_HEVC].nLevel       = (int16_t)list_hevc_level[fcgCXHEVCLevel->SelectedIndex].value;
     cnf->vce.nBitrate                                = (int)fcgNUBitrate->Value;
     cnf->vce.nMaxBitrate                             = (int)fcgNUMaxkbps->Value;
     cnf->vce.nVBVBufferSize                          = (int)fcgNUVBVBufSize->Value;
