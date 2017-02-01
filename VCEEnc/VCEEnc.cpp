@@ -265,6 +265,8 @@ void init_CONF_GUIEX(CONF_GUIEX *conf, BOOL use_10bit) {
     ZeroMemory(conf, sizeof(CONF_GUIEX));
     init_vce_param(&conf->vce);
     conf->aud.encoder = g_sys_dat.exstg->s_local.default_audio_encoder;
+    conf->vid.resize_w = 1920;
+    conf->vid.resize_h = 1080;
     conf->size_all = CONF_INITIALIZED;
 }
 #pragma warning( pop )

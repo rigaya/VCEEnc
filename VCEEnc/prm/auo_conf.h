@@ -87,6 +87,9 @@ const int CMDEX_MAX_LEN = 2048;    //追加コマンドラインの最大長
 typedef struct {
     BOOL afs;                      //自動フィールドシフトの使用
     BOOL auo_tcfile_out;           //auo側でタイムコードを出力する
+    BOOL enable_resize;
+    int  resize_w;
+    int  resize_h;
 } CONF_VIDEO; //動画用設定
 
 typedef struct {

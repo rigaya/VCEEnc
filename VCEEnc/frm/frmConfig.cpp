@@ -873,6 +873,9 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
         SetCXIndex(fcgCXTempDir,             cnf->oth.temp_dir);
         fcgCBAFS->Checked                  = cnf->vid.afs != 0;
         fcgCBAuoTcfileout->Checked         = cnf->vid.auo_tcfile_out != 0;
+        fcgCBResize->Checked               = cnf->vid.enable_resize != 0;
+        SetNUValue(fcgNUResizeW,             cnf->vid.resize_w);
+        SetNUValue(fcgNUResizeH,             cnf->vid.resize_h);
 
         //音声
         fcgCBAudioOnly->Checked            = cnf->oth.out_audio_only != 0;
@@ -975,6 +978,9 @@ System::Void frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     cnf->oth.temp_dir               = fcgCXTempDir->SelectedIndex;
     cnf->vid.afs                    = fcgCBAFS->Checked;
     cnf->vid.auo_tcfile_out         = fcgCBAuoTcfileout->Checked;
+    cnf->vid.enable_resize          = fcgCBResize->Checked;
+    cnf->vid.resize_w               = (int)fcgNUResizeW->Value;
+    cnf->vid.resize_h               = (int)fcgNUResizeH->Value;
 
     //音声部
     cnf->aud.encoder                = fcgCXAudioEncoder->SelectedIndex;

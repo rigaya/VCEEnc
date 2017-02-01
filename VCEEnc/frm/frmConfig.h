@@ -864,6 +864,13 @@ private: System::Windows::Forms::Label^  fcgLBLTRFrames;
 private: System::Windows::Forms::CheckBox^  fcgCBFullrange;
 private: System::Windows::Forms::Label^  fcgLBFullrange;
 private: System::Windows::Forms::Panel^  fcgPNH264Features;
+private: System::Windows::Forms::CheckBox^  fcgCBResize;
+private: System::Windows::Forms::GroupBox^  fcggroupboxResize;
+private: System::Windows::Forms::Label^  fcgLBResize;
+private: System::Windows::Forms::NumericUpDown^  fcgNUResizeH;
+
+private: System::Windows::Forms::NumericUpDown^  fcgNUResizeW;
+
 
 
 
@@ -1051,6 +1058,11 @@ private: System::Windows::Forms::Panel^  fcgPNH264Features;
             this->fcgTTEx = (gcnew System::Windows::Forms::ToolTip(this->components));
             this->fcgtabControlVCE = (gcnew System::Windows::Forms::TabControl());
             this->tabPageVideoEnc = (gcnew System::Windows::Forms::TabPage());
+            this->fcgPNH264Features = (gcnew System::Windows::Forms::Panel());
+            this->fcgLBVBAQ = (gcnew System::Windows::Forms::Label());
+            this->fcgCBFullrange = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgCBVBAQ = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgLBFullrange = (gcnew System::Windows::Forms::Label());
             this->fcgNULTRFrames = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgLBLTRFrames = (gcnew System::Windows::Forms::Label());
             this->fcgNURefFrames = (gcnew System::Windows::Forms::NumericUpDown());
@@ -1076,8 +1088,6 @@ private: System::Windows::Forms::Panel^  fcgPNH264Features;
             this->fcgCXCodec = (gcnew System::Windows::Forms::ComboBox());
             this->fcgCXPreAnalysis = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBPreAnalysis = (gcnew System::Windows::Forms::Label());
-            this->fcgLBVBAQ = (gcnew System::Windows::Forms::Label());
-            this->fcgCBVBAQ = (gcnew System::Windows::Forms::CheckBox());
             this->fcgNUVBVBufSize = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgLBSkipFrame = (gcnew System::Windows::Forms::Label());
             this->fcgLBVBVBufSize = (gcnew System::Windows::Forms::Label());
@@ -1176,9 +1186,11 @@ private: System::Windows::Forms::Panel^  fcgPNH264Features;
             this->fcgCBRunBatBeforeAudio = (gcnew System::Windows::Forms::CheckBox());
             this->fcgCXAudioPriority = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBAudioPriority = (gcnew System::Windows::Forms::Label());
-            this->fcgLBFullrange = (gcnew System::Windows::Forms::Label());
-            this->fcgCBFullrange = (gcnew System::Windows::Forms::CheckBox());
-            this->fcgPNH264Features = (gcnew System::Windows::Forms::Panel());
+            this->fcggroupboxResize = (gcnew System::Windows::Forms::GroupBox());
+            this->fcgNUResizeW = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUResizeH = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgLBResize = (gcnew System::Windows::Forms::Label());
+            this->fcgCBResize = (gcnew System::Windows::Forms::CheckBox());
             this->fcgtoolStripSettings->SuspendLayout();
             this->fcgtabControlMux->SuspendLayout();
             this->fcgtabPageMP4->SuspendLayout();
@@ -1188,6 +1200,7 @@ private: System::Windows::Forms::Panel^  fcgPNH264Features;
             this->fcgtabPageBat->SuspendLayout();
             this->fcgtabControlVCE->SuspendLayout();
             this->tabPageVideoEnc->SuspendLayout();
+            this->fcgPNH264Features->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNULTRFrames))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNURefFrames))->BeginInit();
             this->fcgPNPreAnalysis->SuspendLayout();
@@ -1219,7 +1232,9 @@ private: System::Windows::Forms::Panel^  fcgPNH264Features;
             this->fcgtabPageAudioMain->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrate))->BeginInit();
             this->fcgtabPageAudioOther->SuspendLayout();
-            this->fcgPNH264Features->SuspendLayout();
+            this->fcggroupboxResize->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUResizeW))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUResizeH))->BeginInit();
             this->SuspendLayout();
             // 
             // fcgtoolStripSettings
@@ -2060,6 +2075,55 @@ private: System::Windows::Forms::Panel^  fcgPNH264Features;
             this->tabPageVideoEnc->Text = L"動画エンコード";
             this->tabPageVideoEnc->UseVisualStyleBackColor = true;
             // 
+            // fcgPNH264Features
+            // 
+            this->fcgPNH264Features->Controls->Add(this->fcgLBVBAQ);
+            this->fcgPNH264Features->Controls->Add(this->fcgCBFullrange);
+            this->fcgPNH264Features->Controls->Add(this->fcgCBVBAQ);
+            this->fcgPNH264Features->Controls->Add(this->fcgLBFullrange);
+            this->fcgPNH264Features->Location = System::Drawing::Point(326, 314);
+            this->fcgPNH264Features->Name = L"fcgPNH264Features";
+            this->fcgPNH264Features->Size = System::Drawing::Size(258, 56);
+            this->fcgPNH264Features->TabIndex = 175;
+            // 
+            // fcgLBVBAQ
+            // 
+            this->fcgLBVBAQ->AutoSize = true;
+            this->fcgLBVBAQ->Location = System::Drawing::Point(16, 6);
+            this->fcgLBVBAQ->Name = L"fcgLBVBAQ";
+            this->fcgLBVBAQ->Size = System::Drawing::Size(37, 14);
+            this->fcgLBVBAQ->TabIndex = 161;
+            this->fcgLBVBAQ->Text = L"VBAQ";
+            // 
+            // fcgCBFullrange
+            // 
+            this->fcgCBFullrange->AutoSize = true;
+            this->fcgCBFullrange->Location = System::Drawing::Point(116, 34);
+            this->fcgCBFullrange->Name = L"fcgCBFullrange";
+            this->fcgCBFullrange->Size = System::Drawing::Size(15, 14);
+            this->fcgCBFullrange->TabIndex = 174;
+            this->fcgCBFullrange->Tag = L"chValue";
+            this->fcgCBFullrange->UseVisualStyleBackColor = true;
+            // 
+            // fcgCBVBAQ
+            // 
+            this->fcgCBVBAQ->AutoSize = true;
+            this->fcgCBVBAQ->Location = System::Drawing::Point(116, 7);
+            this->fcgCBVBAQ->Name = L"fcgCBVBAQ";
+            this->fcgCBVBAQ->Size = System::Drawing::Size(15, 14);
+            this->fcgCBVBAQ->TabIndex = 160;
+            this->fcgCBVBAQ->Tag = L"chValue";
+            this->fcgCBVBAQ->UseVisualStyleBackColor = true;
+            // 
+            // fcgLBFullrange
+            // 
+            this->fcgLBFullrange->AutoSize = true;
+            this->fcgLBFullrange->Location = System::Drawing::Point(16, 33);
+            this->fcgLBFullrange->Name = L"fcgLBFullrange";
+            this->fcgLBFullrange->Size = System::Drawing::Size(55, 14);
+            this->fcgLBFullrange->TabIndex = 173;
+            this->fcgLBFullrange->Text = L"fullrange";
+            // 
             // fcgNULTRFrames
             // 
             this->fcgNULTRFrames->Location = System::Drawing::Point(442, 228);
@@ -2309,25 +2373,6 @@ private: System::Windows::Forms::Panel^  fcgPNH264Features;
             this->fcgLBPreAnalysis->Size = System::Drawing::Size(51, 14);
             this->fcgLBPreAnalysis->TabIndex = 163;
             this->fcgLBPreAnalysis->Text = L"先行探索";
-            // 
-            // fcgLBVBAQ
-            // 
-            this->fcgLBVBAQ->AutoSize = true;
-            this->fcgLBVBAQ->Location = System::Drawing::Point(16, 6);
-            this->fcgLBVBAQ->Name = L"fcgLBVBAQ";
-            this->fcgLBVBAQ->Size = System::Drawing::Size(37, 14);
-            this->fcgLBVBAQ->TabIndex = 161;
-            this->fcgLBVBAQ->Text = L"VBAQ";
-            // 
-            // fcgCBVBAQ
-            // 
-            this->fcgCBVBAQ->AutoSize = true;
-            this->fcgCBVBAQ->Location = System::Drawing::Point(116, 7);
-            this->fcgCBVBAQ->Name = L"fcgCBVBAQ";
-            this->fcgCBVBAQ->Size = System::Drawing::Size(15, 14);
-            this->fcgCBVBAQ->TabIndex = 160;
-            this->fcgCBVBAQ->Tag = L"chValue";
-            this->fcgCBVBAQ->UseVisualStyleBackColor = true;
             // 
             // fcgNUVBVBufSize
             // 
@@ -2836,6 +2881,8 @@ private: System::Windows::Forms::Panel^  fcgPNH264Features;
             // 
             // tabPageExOpt
             // 
+            this->tabPageExOpt->Controls->Add(this->fcgCBResize);
+            this->tabPageExOpt->Controls->Add(this->fcggroupboxResize);
             this->tabPageExOpt->Controls->Add(this->fcgCBAuoTcfileout);
             this->tabPageExOpt->Controls->Add(this->fcgLBTempDir);
             this->tabPageExOpt->Controls->Add(this->fcgBTCustomTempDir);
@@ -3341,35 +3388,58 @@ private: System::Windows::Forms::Panel^  fcgPNH264Features;
             this->fcgLBAudioPriority->TabIndex = 12;
             this->fcgLBAudioPriority->Text = L"音声優先度";
             // 
-            // fcgLBFullrange
+            // fcggroupboxResize
             // 
-            this->fcgLBFullrange->AutoSize = true;
-            this->fcgLBFullrange->Location = System::Drawing::Point(16, 33);
-            this->fcgLBFullrange->Name = L"fcgLBFullrange";
-            this->fcgLBFullrange->Size = System::Drawing::Size(55, 14);
-            this->fcgLBFullrange->TabIndex = 173;
-            this->fcgLBFullrange->Text = L"fullrange";
+            this->fcggroupboxResize->Controls->Add(this->fcgLBResize);
+            this->fcggroupboxResize->Controls->Add(this->fcgNUResizeH);
+            this->fcggroupboxResize->Controls->Add(this->fcgNUResizeW);
+            this->fcggroupboxResize->Location = System::Drawing::Point(12, 127);
+            this->fcggroupboxResize->Name = L"fcggroupboxResize";
+            this->fcggroupboxResize->Size = System::Drawing::Size(200, 54);
+            this->fcggroupboxResize->TabIndex = 74;
+            this->fcggroupboxResize->TabStop = false;
             // 
-            // fcgCBFullrange
+            // fcgNUResizeW
             // 
-            this->fcgCBFullrange->AutoSize = true;
-            this->fcgCBFullrange->Location = System::Drawing::Point(116, 34);
-            this->fcgCBFullrange->Name = L"fcgCBFullrange";
-            this->fcgCBFullrange->Size = System::Drawing::Size(15, 14);
-            this->fcgCBFullrange->TabIndex = 174;
-            this->fcgCBFullrange->Tag = L"chValue";
-            this->fcgCBFullrange->UseVisualStyleBackColor = true;
+            this->fcgNUResizeW->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 16, 0, 0, 0 });
+            this->fcgNUResizeW->Location = System::Drawing::Point(18, 23);
+            this->fcgNUResizeW->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 4320, 0, 0, 0 });
+            this->fcgNUResizeW->Name = L"fcgNUResizeW";
+            this->fcgNUResizeW->Size = System::Drawing::Size(70, 21);
+            this->fcgNUResizeW->TabIndex = 172;
+            this->fcgNUResizeW->Tag = L"chValue";
+            this->fcgNUResizeW->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
             // 
-            // fcgPNH264Features
+            // fcgNUResizeH
             // 
-            this->fcgPNH264Features->Controls->Add(this->fcgLBVBAQ);
-            this->fcgPNH264Features->Controls->Add(this->fcgCBFullrange);
-            this->fcgPNH264Features->Controls->Add(this->fcgCBVBAQ);
-            this->fcgPNH264Features->Controls->Add(this->fcgLBFullrange);
-            this->fcgPNH264Features->Location = System::Drawing::Point(326, 314);
-            this->fcgPNH264Features->Name = L"fcgPNH264Features";
-            this->fcgPNH264Features->Size = System::Drawing::Size(258, 56);
-            this->fcgPNH264Features->TabIndex = 175;
+            this->fcgNUResizeH->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 16, 0, 0, 0 });
+            this->fcgNUResizeH->Location = System::Drawing::Point(116, 23);
+            this->fcgNUResizeH->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 2160, 0, 0, 0 });
+            this->fcgNUResizeH->Name = L"fcgNUResizeH";
+            this->fcgNUResizeH->Size = System::Drawing::Size(70, 21);
+            this->fcgNUResizeH->TabIndex = 173;
+            this->fcgNUResizeH->Tag = L"chValue";
+            this->fcgNUResizeH->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            // 
+            // fcgLBResize
+            // 
+            this->fcgLBResize->AutoSize = true;
+            this->fcgLBResize->Location = System::Drawing::Point(97, 25);
+            this->fcgLBResize->Name = L"fcgLBResize";
+            this->fcgLBResize->Size = System::Drawing::Size(13, 14);
+            this->fcgLBResize->TabIndex = 174;
+            this->fcgLBResize->Text = L"x";
+            // 
+            // fcgCBResize
+            // 
+            this->fcgCBResize->AutoSize = true;
+            this->fcgCBResize->Location = System::Drawing::Point(24, 126);
+            this->fcgCBResize->Name = L"fcgCBResize";
+            this->fcgCBResize->Size = System::Drawing::Size(58, 18);
+            this->fcgCBResize->TabIndex = 75;
+            this->fcgCBResize->Tag = L"chValue";
+            this->fcgCBResize->Text = L"リサイズ";
+            this->fcgCBResize->UseVisualStyleBackColor = true;
             // 
             // frmConfig
             // 
@@ -3411,6 +3481,8 @@ private: System::Windows::Forms::Panel^  fcgPNH264Features;
             this->fcgtabControlVCE->ResumeLayout(false);
             this->tabPageVideoEnc->ResumeLayout(false);
             this->tabPageVideoEnc->PerformLayout();
+            this->fcgPNH264Features->ResumeLayout(false);
+            this->fcgPNH264Features->PerformLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNULTRFrames))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNURefFrames))->EndInit();
             this->fcgPNPreAnalysis->ResumeLayout(false);
@@ -3451,8 +3523,10 @@ private: System::Windows::Forms::Panel^  fcgPNH264Features;
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrate))->EndInit();
             this->fcgtabPageAudioOther->ResumeLayout(false);
             this->fcgtabPageAudioOther->PerformLayout();
-            this->fcgPNH264Features->ResumeLayout(false);
-            this->fcgPNH264Features->PerformLayout();
+            this->fcggroupboxResize->ResumeLayout(false);
+            this->fcggroupboxResize->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUResizeW))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUResizeH))->EndInit();
             this->ResumeLayout(false);
             this->PerformLayout();
 

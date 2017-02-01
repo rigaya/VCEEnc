@@ -160,7 +160,7 @@ static AUO_RESULT exit_audio_parallel_control(const OUTPUT_INFO *oip, PRM_ENC *p
     return vid_ret;
 }
 
-void set_conf_vce_prm(VCEInputInfo *pInfo, const OUTPUT_INFO *oip) {
+void set_conf_vce_prm(VCEInputInfo *pInfo, const OUTPUT_INFO *oip, const CONF_VIDEO *conf_vid) {
     pInfo->srcWidth = oip->w;
     pInfo->srcHeight = oip->h;
 
@@ -169,6 +169,11 @@ void set_conf_vce_prm(VCEInputInfo *pInfo, const OUTPUT_INFO *oip) {
 
     pInfo->frames = oip->n;
     pInfo->format = amf::AMF_SURFACE_NV12;
+
+    if (conf_vid->enable_resize) {
+        pInfo->dstWidth  = conf_vid->resize_w;
+        pInfo->dstHeight = conf_vid->resize_h;
+    }
 }
 
 #pragma warning( push )
@@ -187,7 +192,7 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
 
     VCEInputInfo info = { 0 };
     info.pPrivateParam = &auoParam;
-    set_conf_vce_prm(&info, oip);
+    set_conf_vce_prm(&info, oip, &conf->vid);
 
     tstring pe_tempfile = char_to_tstring(pe->temp_filename);
     conf->vce.pOutputFile = pe_tempfile.data();
