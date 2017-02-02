@@ -97,6 +97,8 @@ protected:
     AMF_RESULT readChapterFile(tstring chapfile);
 
     virtual AMF_RESULT checkParam(VCEParam *prm);
+    virtual AMF_RESULT initDeviceDX9(VCEParam *prm);
+    virtual AMF_RESULT initDeviceDX11(VCEParam *prm);
     virtual AMF_RESULT initDevice(VCEParam *prm);
     virtual AMF_RESULT initDecoder(VCEParam *prm);
     virtual AMF_RESULT initConverter(VCEParam *prm);

@@ -959,37 +959,58 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
 #endif //ENABLE_AVCODEC_VCE_READER
     return sts;
 }
-
-AMF_RESULT VCECore::initDevice(VCEParam *prm) {
+AMF_RESULT VCECore::initDeviceDX9(VCEParam *prm) {
     AMF_RESULT res = AMF_OK;
+    if (AMF_OK != (res = m_deviceDX9.Init(true, prm->nAdapterId, false, m_inputInfo.srcWidth, m_inputInfo.srcHeight))) {
+        return res;
+    }
+    PrintMes(VCE_LOG_DEBUG, _T("initialized DX9 device.\n"));
+    if (AMF_OK != (res = m_pContext->InitDX9(m_deviceDX9.GetDevice()))) {
+        return res;
+    }
+    return res;
+}
 
-    if (prm->memoryTypeIn == amf::AMF_MEMORY_DX9) {
-        if (AMF_OK != (res = m_deviceDX9.Init(true, prm->nAdapterId, false, m_inputInfo.srcWidth, m_inputInfo.srcHeight))) {
-            PrintMes(VCE_LOG_ERROR, _T("Failed to initialize DX9 device.\n"));
-            return AMF_FAIL;
-        }
-        PrintMes(VCE_LOG_DEBUG, _T("initialized DX9 device.\n"));
-        if (AMF_OK != (res = m_pContext->InitDX9(m_deviceDX9.GetDevice()))) {
-            PrintMes(VCE_LOG_ERROR, _T("Failed to InitDX9.\n"));
-            return AMF_FAIL;
-        }
-        PrintMes(VCE_LOG_DEBUG, _T("initialized context for DX9.\n"));
-    } else if (prm->memoryTypeIn == amf::AMF_MEMORY_DX11) {
-        if (AMF_OK != (res = m_deviceDX11.Init(prm->nAdapterId, false))) {
-            PrintMes(VCE_LOG_ERROR, _T("Failed to initialize DX11 device.\n"));
-            return AMF_FAIL;
-        }
-        PrintMes(VCE_LOG_DEBUG, _T("initialized DX11 device.\n"));
-        if (AMF_OK != (res = m_pContext->InitDX11(m_deviceDX11.GetDevice()))) {
-            PrintMes(VCE_LOG_ERROR, _T("Failed to InitDX11.\n"));
-            return AMF_FAIL;
-        }
-        PrintMes(VCE_LOG_DEBUG, _T("initialized context for DX11.\n"));
-    } else {
-        PrintMes(VCE_LOG_ERROR, _T("Invalid memory type.\n"));
+AMF_RESULT VCECore::initDeviceDX11(VCEParam *prm) {
+    AMF_RESULT res = AMF_OK;
+    if (AMF_OK != (res = m_deviceDX11.Init(prm->nAdapterId, false))) {
+        return AMF_FAIL;
+    }
+    PrintMes(VCE_LOG_DEBUG, _T("initialized DX11 device.\n"));
+    if (AMF_OK != (res = m_pContext->InitDX11(m_deviceDX11.GetDevice()))) {
+        PrintMes(VCE_LOG_ERROR, _T("Failed to InitDX11.\n"));
         return AMF_FAIL;
     }
     return res;
+}
+
+AMF_RESULT VCECore::initDevice(VCEParam *prm) {
+    AMF_RESULT res = AMF_FAIL;
+    if (prm->memoryTypeIn == amf::AMF_MEMORY_UNKNOWN
+        || prm->memoryTypeIn == amf::AMF_MEMORY_DX9) {
+        if (AMF_OK == (res = initDeviceDX9(prm))) {
+            PrintMes(VCE_LOG_DEBUG, _T("initialized context for DX9.\n"));
+            prm->memoryTypeIn = amf::AMF_MEMORY_DX9;
+            return AMF_OK;
+        }
+        if (prm->memoryTypeIn == amf::AMF_MEMORY_DX9) {
+            PrintMes(VCE_LOG_ERROR, _T("Failed to initialize DX9 device.\n"));
+            return res;
+        }
+        PrintMes(VCE_LOG_DEBUG, _T("Failed to initialize DX9 device, try DX11.\n"));
+    }
+    if (prm->memoryTypeIn == amf::AMF_MEMORY_UNKNOWN
+        || prm->memoryTypeIn == amf::AMF_MEMORY_DX11) {
+        if (AMF_OK == (res = initDeviceDX11(prm))) {
+            PrintMes(VCE_LOG_DEBUG, _T("initialized context for DX11.\n"));
+            prm->memoryTypeIn = amf::AMF_MEMORY_DX11;
+            return AMF_OK;
+        }
+        PrintMes(VCE_LOG_ERROR, _T("Failed to initialize DX11 device.\n"));
+        return res;
+    }
+    PrintMes(VCE_LOG_ERROR, _T("Unsupported memory type.\n"));
+    return AMF_NOT_SUPPORTED;
 }
 
 #pragma warning(push)
@@ -1857,10 +1878,17 @@ tstring check_vce_features(int nCodecId) {
         amf::AMFContextPtr p_context;
         ret = g_AMFFactory.GetFactory()->CreateContext(&p_context) == AMF_OK;
         if (ret) {
-            DeviceDX9 device;
-            ret = device.Init(true, 0, false, 1280, 720) == AMF_OK;
+            DeviceDX9 device9;
+            DeviceDX11 device11;
+            ret = device9.Init(true, 0, false, 1280, 720) == AMF_OK;
             if (ret) {
-                ret = p_context->InitDX9(device.GetDevice()) == AMF_OK;
+                ret = p_context->InitDX9(device9.GetDevice()) == AMF_OK;
+            }
+            if (!ret) {
+                ret = device11.Init(0, false) == AMF_OK;
+                if (ret) {
+                    ret = p_context->InitDX11(device11.GetDevice()) == AMF_OK;
+                }
             }
             amf::AMFComponentPtr p_encoder;
             ret = g_AMFFactory.GetFactory()->CreateComponent(p_context, list_codec_key[nCodecId], &p_encoder) == AMF_OK;
@@ -1880,7 +1908,8 @@ tstring check_vce_features(int nCodecId) {
             if (p_encoder) {
                 p_encoder->Terminate();
             }
-            device.Terminate();
+            device9.Terminate();
+            device11.Terminate();
             if (p_context) {
                 p_context->Terminate();
             }

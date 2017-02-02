@@ -30,7 +30,7 @@
 
 void init_vce_param(VCEParam *prm) {
     memset(prm, 0, sizeof(prm[0]));
-    prm->memoryTypeIn = amf::AMF_MEMORY_DX9;
+    prm->memoryTypeIn = amf::AMF_MEMORY_UNKNOWN;
     prm->nCodecId     = VCE_CODEC_H264;
     prm->nUsage       = AMF_VIDEO_ENCODER_USAGE_TRANSCONDING;
     prm->codecParam[VCE_CODEC_H264].nLevel   = (int16_t)list_avc_level[0].value;
