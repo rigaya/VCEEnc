@@ -845,10 +845,58 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
 
         memset(&m_inputFrameInfo, 0, sizeof(m_inputFrameInfo));
 
+#define NO_HIGH_BIT_DEPTH_HW_DECODE 1
+
+        struct pixfmtInfo {
+            AVPixelFormat pix_fmt;
+            uint16_t bit_depth;
+            amf::AMF_SURFACE_FORMAT surfaceFormat;
+        };
+
+        static const pixfmtInfo pixfmtDataList[] = {
+            { AV_PIX_FMT_YUV420P,      8, amf::AMF_SURFACE_NV12 },
+            { AV_PIX_FMT_YUVJ420P,     8, amf::AMF_SURFACE_NV12 },
+            { AV_PIX_FMT_NV12,         8, amf::AMF_SURFACE_NV12 },
+            { AV_PIX_FMT_NV21,         8, amf::AMF_SURFACE_NV12 },
+            { AV_PIX_FMT_YUV422P,      8, amf::AMF_SURFACE_UNKNOWN },
+            { AV_PIX_FMT_YUVJ422P,     8, amf::AMF_SURFACE_UNKNOWN },
+            { AV_PIX_FMT_YUYV422,      8, amf::AMF_SURFACE_YUY2 },
+            { AV_PIX_FMT_UYVY422,      8, amf::AMF_SURFACE_YUY2 },
+            { AV_PIX_FMT_NV16,         8, amf::AMF_SURFACE_UNKNOWN },
+            { AV_PIX_FMT_YUV444P,      8, amf::AMF_SURFACE_UNKNOWN },
+            { AV_PIX_FMT_YUVJ444P,     8, amf::AMF_SURFACE_UNKNOWN },
+            { AV_PIX_FMT_YUV420P16LE, 16, amf::AMF_SURFACE_P010 },
+            { AV_PIX_FMT_YUV420P14LE, 14, amf::AMF_SURFACE_P010 },
+            { AV_PIX_FMT_YUV420P12LE, 12, amf::AMF_SURFACE_P010 },
+            { AV_PIX_FMT_YUV420P10LE, 10, amf::AMF_SURFACE_P010 },
+            { AV_PIX_FMT_YUV420P9LE,   9, amf::AMF_SURFACE_P010 },
+            { AV_PIX_FMT_NV20LE,      10, amf::AMF_SURFACE_UNKNOWN },
+            { AV_PIX_FMT_YUV422P16LE, 16, amf::AMF_SURFACE_UNKNOWN },
+            { AV_PIX_FMT_YUV422P14LE, 14, amf::AMF_SURFACE_UNKNOWN },
+            { AV_PIX_FMT_YUV422P12LE, 12, amf::AMF_SURFACE_UNKNOWN },
+            { AV_PIX_FMT_YUV422P10LE, 10, amf::AMF_SURFACE_UNKNOWN },
+            { AV_PIX_FMT_YUV444P16LE, 16, amf::AMF_SURFACE_UNKNOWN },
+            { AV_PIX_FMT_YUV444P14LE, 14, amf::AMF_SURFACE_UNKNOWN },
+            { AV_PIX_FMT_YUV444P12LE, 12, amf::AMF_SURFACE_UNKNOWN },
+            { AV_PIX_FMT_YUV444P10LE, 10, amf::AMF_SURFACE_UNKNOWN }
+        };
+
+        const auto pixfmt = m_Demux.video.pCodecCtx->pix_fmt;
+        const auto pixfmtData = std::find_if(pixfmtDataList, pixfmtDataList + _countof(pixfmtDataList), [pixfmt](const pixfmtInfo& tableData) {
+            return tableData.pix_fmt == pixfmt;
+        });
+        if (pixfmtData == (pixfmtDataList + _countof(pixfmtDataList)) || pixfmtData->surfaceFormat == amf::AMF_SURFACE_UNKNOWN) {
+            AddMessage(VCE_LOG_ERROR, _T("Invalid pixel format from input file.\n"));
+            return AMF_FAIL;
+        }
+
         //VCEでデコード可能かチェック
         bool bDecodecVCE = false;
         if (input_prm->nVideoDecodeSW != AV_DECODE_MODE_SW) {
-            if (0 == (m_nInputCodec = getQSVFourcc(m_Demux.video.pCodecCtx->codec_id))
+            if (   0 == (m_nInputCodec = getQSVFourcc(m_Demux.video.pCodecCtx->codec_id))
+#if NO_HIGH_BIT_DEPTH_HW_DECODE
+                || pixfmtData->surfaceFormat != amf::AMF_SURFACE_NV12
+#endif
                 //wmv3はAdvanced Profile (3)のみの対応
                 || m_Demux.video.pCodecCtx->codec_id == AV_CODEC_ID_WMV3 && m_Demux.video.pCodecCtx->profile != 3) {
                 if (input_prm->nVideoDecodeSW == AV_DECODE_MODE_HW) {
@@ -861,6 +909,7 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
                     AddMessage(VCE_LOG_ERROR, mes);
                     return AMF_INVALID_POINTER;
                 }
+                m_nInputCodec = VCE_CODEC_NONE;
             } else {
                 bDecodecVCE = true;
                 AddMessage(VCE_LOG_DEBUG, _T("can be decoded by hw.\n"));
@@ -976,49 +1025,6 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
         m_inputFrameInfo.fps.num = m_Demux.video.nAvgFramerate.num;
         m_inputFrameInfo.fps.den = m_Demux.video.nAvgFramerate.den;
 
-        struct pixfmtInfo {
-            AVPixelFormat pix_fmt;
-            uint16_t bit_depth;
-            amf::AMF_SURFACE_FORMAT surfaceFormat;
-        };
-
-        static const pixfmtInfo pixfmtDataList[] = {
-            { AV_PIX_FMT_YUV420P,      8, amf::AMF_SURFACE_NV12    },
-            { AV_PIX_FMT_YUVJ420P,     8, amf::AMF_SURFACE_NV12    },
-            { AV_PIX_FMT_NV12,         8, amf::AMF_SURFACE_NV12    },
-            { AV_PIX_FMT_NV21,         8, amf::AMF_SURFACE_NV12    },
-            { AV_PIX_FMT_YUV422P,      8, amf::AMF_SURFACE_UNKNOWN },
-            { AV_PIX_FMT_YUVJ422P,     8, amf::AMF_SURFACE_UNKNOWN },
-            { AV_PIX_FMT_YUYV422,      8, amf::AMF_SURFACE_YUY2    },
-            { AV_PIX_FMT_UYVY422,      8, amf::AMF_SURFACE_YUY2    },
-            { AV_PIX_FMT_NV16,         8, amf::AMF_SURFACE_UNKNOWN },
-            { AV_PIX_FMT_YUV444P,      8, amf::AMF_SURFACE_UNKNOWN },
-            { AV_PIX_FMT_YUVJ444P,     8, amf::AMF_SURFACE_UNKNOWN },
-            { AV_PIX_FMT_YUV420P16LE, 16, amf::AMF_SURFACE_NV12 },
-            { AV_PIX_FMT_YUV420P14LE, 14, amf::AMF_SURFACE_NV12 },
-            { AV_PIX_FMT_YUV420P12LE, 12, amf::AMF_SURFACE_NV12 },
-            { AV_PIX_FMT_YUV420P10LE, 10, amf::AMF_SURFACE_NV12 },
-            { AV_PIX_FMT_YUV420P9LE,   9, amf::AMF_SURFACE_NV12 },
-            { AV_PIX_FMT_NV20LE,      10, amf::AMF_SURFACE_UNKNOWN },
-            { AV_PIX_FMT_YUV422P16LE, 16, amf::AMF_SURFACE_UNKNOWN },
-            { AV_PIX_FMT_YUV422P14LE, 14, amf::AMF_SURFACE_UNKNOWN },
-            { AV_PIX_FMT_YUV422P12LE, 12, amf::AMF_SURFACE_UNKNOWN },
-            { AV_PIX_FMT_YUV422P10LE, 10, amf::AMF_SURFACE_UNKNOWN },
-            { AV_PIX_FMT_YUV444P16LE, 16, amf::AMF_SURFACE_UNKNOWN },
-            { AV_PIX_FMT_YUV444P14LE, 14, amf::AMF_SURFACE_UNKNOWN },
-            { AV_PIX_FMT_YUV444P12LE, 12, amf::AMF_SURFACE_UNKNOWN },
-            { AV_PIX_FMT_YUV444P10LE, 10, amf::AMF_SURFACE_UNKNOWN }
-        };
-
-        const auto pixfmt = m_Demux.video.pCodecCtx->pix_fmt;
-        const auto pixfmtData = std::find_if(pixfmtDataList, pixfmtDataList + _countof(pixfmtDataList), [pixfmt](const pixfmtInfo& tableData) {
-            return tableData.pix_fmt == pixfmt;
-        });
-        if (pixfmtData == (pixfmtDataList + _countof(pixfmtDataList)) || pixfmtData->surfaceFormat == amf::AMF_SURFACE_UNKNOWN) {
-            AddMessage(VCE_LOG_DEBUG, _T("Invalid pixel format from input file.\n"));
-            return AMF_OK;
-        }
-
         const auto aspectRatio = m_Demux.video.pCodecCtx->sample_aspect_ratio;
         const bool bAspectRatioUnknown = aspectRatio.num * aspectRatio.den <= 0;
 
@@ -1077,7 +1083,7 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
         }
 
         //情報を格納
-        m_inputFrameInfo.format       = pixfmtData->surfaceFormat;
+        m_inputFrameInfo.format       = (NO_HIGH_BIT_DEPTH_HW_DECODE) ? amf::AMF_SURFACE_NV12 : pixfmtData->surfaceFormat;
         m_inputFrameInfo.srcWidth     = m_Demux.video.pCodecCtx->width;
         m_inputFrameInfo.srcHeight    = m_Demux.video.pCodecCtx->height;
         m_inputFrameInfo.AspectRatioW = ((bAspectRatioUnknown) ? 0 : aspectRatio.num);
