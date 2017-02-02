@@ -33,9 +33,9 @@ void init_vce_param(VCEParam *prm) {
     prm->memoryTypeIn = amf::AMF_MEMORY_UNKNOWN;
     prm->nCodecId     = VCE_CODEC_H264;
     prm->nUsage       = AMF_VIDEO_ENCODER_USAGE_TRANSCONDING;
-    prm->codecParam[VCE_CODEC_H264].nLevel   = (int16_t)list_avc_level[0].value;
+    prm->codecParam[VCE_CODEC_H264].nLevel   = 0;
     prm->codecParam[VCE_CODEC_H264].nProfile = (int16_t)list_avc_profile[2].value;
-    prm->codecParam[VCE_CODEC_HEVC].nLevel   = AMF_LEVEL_4_1;
+    prm->codecParam[VCE_CODEC_HEVC].nLevel   = 0;
     prm->codecParam[VCE_CODEC_HEVC].nProfile = AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN;
     prm->codecParam[VCE_CODEC_HEVC].nTier    = AMF_VIDEO_ENCODER_HEVC_TIER_MAIN;
     prm->nPicStruct = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME;
@@ -43,8 +43,8 @@ void init_vce_param(VCEParam *prm) {
     prm->bTimerPeriodTuning = TRUE;
 
     prm->nBitrate    = 5000;
-    prm->nMaxBitrate = VCE_DEFAULT_MAX_BITRATE;
-    prm->nVBVBufferSize = VCE_DEFAULT_VBV_BUFSIZE;
+    prm->nMaxBitrate = 0;
+    prm->nVBVBufferSize = 0;
     prm->nInitialVBVPercent = 64;
 
     prm->nQPI = VCE_DEFAULT_QPI;

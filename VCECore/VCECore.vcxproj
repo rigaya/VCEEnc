@@ -59,6 +59,8 @@
     <ClCompile Include="cpu_info.cpp" />
     <ClCompile Include="gpuz_info.cpp" />
     <ClCompile Include="gpu_info.cpp" />
+    <ClCompile Include="h264_level.cpp" />
+    <ClCompile Include="hevc_level.cpp" />
     <ClCompile Include="VCECore.cpp" />
     <ClCompile Include="VCEInput.cpp" />
     <ClCompile Include="VCEInputAvs.cpp" />
@@ -82,6 +84,8 @@
     <ClInclude Include="cpu_info.h" />
     <ClInclude Include="gpuz_info.h" />
     <ClInclude Include="gpu_info.h" />
+    <ClInclude Include="h264_level.h" />
+    <ClInclude Include="hevc_level.h" />
     <ClInclude Include="VCECore.h" />
     <ClInclude Include="VCEInput.h" />
     <ClInclude Include="VCEInputAvs.h" />

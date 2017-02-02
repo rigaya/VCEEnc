@@ -55,6 +55,9 @@
 #include "EncoderParamsAVC.h"
 #include "EncoderParamsHEVC.h"
 
+#include "h264_level.h"
+#include "hevc_level.h"
+
 const wchar_t* VCECore::PARAM_NAME_INPUT = L"INPUT";
 const wchar_t* VCECore::PARAM_NAME_INPUT_WIDTH = L"WIDTH";
 const wchar_t* VCECore::PARAM_NAME_INPUT_HEIGHT = L"HEIGHT";
@@ -1393,8 +1396,38 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
         nGOPLen = (int)(m_inputInfo.fps.num / (double)m_inputInfo.fps.den + 0.5) * 10;
     }
     //VCEにはlevelを自動で設定してくれる機能はないようで、"0"などとするとエラー終了してしまう。
-    if (prm->codecParam[prm->nCodecId].nLevel == 0) {
-        prm->codecParam[prm->nCodecId].nLevel = (prm->nCodecId == VCE_CODEC_HEVC) ? AMF_LEVEL_4_1 : 41;
+    if (prm->codecParam[prm->nCodecId].nLevel == 0 || prm->nMaxBitrate == 0) {
+        int level = prm->codecParam[prm->nCodecId].nLevel;
+        int max_bitrate_kbps = prm->nMaxBitrate;
+        int vbv_bufsize_kbps = prm->nVBVBufferSize;
+        if (prm->nCodecId == VCE_CODEC_H264) {
+            const int profile = prm->codecParam[prm->nCodecId].nProfile;
+            if (level == 0) {
+                level = calc_h264_auto_level(m_inputInfo.dstWidth, m_inputInfo.dstHeight, prm->nRefFrames, false,
+                    m_inputInfo.fps.num, m_inputInfo.fps.den, profile, max_bitrate_kbps, vbv_bufsize_kbps);
+            }
+            get_h264_vbv_value(&max_bitrate_kbps, &vbv_bufsize_kbps, level, profile);
+        } else if (prm->nCodecId == VCE_CODEC_HEVC) {
+            const bool high_tier = prm->codecParam[prm->nCodecId].nTier == AMF_VIDEO_ENCODER_HEVC_TIER_HIGH;
+            if (level == 0) {
+                level = calc_hevc_auto_level(m_inputInfo.dstWidth, m_inputInfo.dstHeight, //m_stEncConfig.encodeCodecConfig.hevcConfig.maxNumRefFramesInDPB,
+                    m_inputInfo.fps.num, m_inputInfo.fps.den, high_tier, max_bitrate_kbps);
+            }
+            max_bitrate_kbps = get_hevc_max_bitrate(level, high_tier);
+            vbv_bufsize_kbps = max_bitrate_kbps;
+        } else {
+            max_bitrate_kbps = VCE_DEFAULT_MAX_BITRATE;
+            vbv_bufsize_kbps = VCE_DEFAULT_VBV_BUFSIZE;
+        }
+        if (prm->codecParam[prm->nCodecId].nLevel == 0) {
+            prm->codecParam[prm->nCodecId].nLevel = (int16_t)level;
+        }
+        if (prm->nMaxBitrate == 0) {
+            prm->nMaxBitrate = max_bitrate_kbps;
+        }
+        if (prm->nVBVBufferSize == 0) {
+            prm->nVBVBufferSize = vbv_bufsize_kbps;
+        }
     }
 
     m_Params.SetParam(PARAM_NAME_INPUT_WIDTH,   m_inputInfo.srcWidth);

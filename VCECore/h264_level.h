@@ -25,33 +25,10 @@
 //
 // ------------------------------------------------------------------------------------------
 
-#pragma once
+#ifndef __H264_LEVEL_H__
+#define __H264_LEVEL_H__
 
-#define VER_FILEVERSION             0,3,4,0
-#define VER_STR_FILEVERSION          "3.04"
-#define VER_STR_FILEVERSION_TCHAR _T("3.04")
+int calc_h264_auto_level(int width, int height, int ref, bool interlaced, int fps_num, int fps_den, int profile, int vbv_max, int vbv_buf);
+void get_h264_vbv_value(int *vbv_max, int *vbv_buf, int level, int profile);
 
-#define VCE_AMD_APP_SDK "3.0"
-
-#define ENABLE_OPENCL 1
-
-#define ENABLE_AVCODEC_OUT_THREAD 1
-#define ENABLE_AVCODEC_AUDPROCESS_THREAD 0
-
-#ifdef _M_IX86
-#define BUILD_ARCH_STR _T("x86")
-#else
-#define BUILD_ARCH_STR _T("x64")
-#endif
-
-#define ENABLE_LIBASS_SUBBURN 0
-
-#if defined(VCE_AUO)
-#define ENABLE_VAPOURSYNTH_READER 0
-#define ENABLE_AVISYNTH_READER 0
-#define ENABLE_AVCODEC_VCE_READER 0
-#else
-#define ENABLE_VAPOURSYNTH_READER 1
-#define ENABLE_AVISYNTH_READER 1
-#define ENABLE_AVCODEC_VCE_READER 1
-#endif
+#endif //__H264_LEVEL_H__
