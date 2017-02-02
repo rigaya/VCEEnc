@@ -1492,11 +1492,11 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
             return res;
         }
     }
-    if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementEncoder(m_pEncoder, &m_Params, 0, 0, true)), 10, CT_Direct))) {
+    if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementEncoder(m_pEncoder, &m_Params, 0, 0, true)), 30, CT_Direct))) {
         PrintMes(VCE_LOG_ERROR, _T("failed to connect encoder to pipeline.\n"));
         return res;
     }
-    if (AMF_OK != (res = Connect(m_pFileWriter, 5, CT_ThreadPoll))) {
+    if (AMF_OK != (res = Connect(m_pFileWriter, 10, CT_ThreadPoll))) {
         PrintMes(VCE_LOG_ERROR, _T("failed to connect output to pipeline.\n"));
         return res;
     }

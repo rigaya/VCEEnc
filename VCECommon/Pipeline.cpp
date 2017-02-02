@@ -469,6 +469,7 @@ AMF_RESULT InputSlot::SubmitInput(amf::AMFData* pData, amf_ulong ulTimeout, bool
             }
             else if(res == AMF_INPUT_FULL  || res == AMF_DECODER_NO_FREE_SURFACES)
             {
+                m_waiter.Wait(10);
                 if(poll)
                 {
                     res = m_pConnector->PollAll(); // no poll thread: poll right here
@@ -476,10 +477,6 @@ AMF_RESULT InputSlot::SubmitInput(amf::AMFData* pData, amf_ulong ulTimeout, bool
                     {
                         break;
                     }
-                }
-                else
-                {
-                    m_waiter.Wait(1); // wait till Poll thread clears input
                 }
             }
             else if(res == AMF_REPEAT)
