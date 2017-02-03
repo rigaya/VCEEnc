@@ -1721,9 +1721,6 @@ tstring VCECore::GetEncoderParam() {
     getCPUInfo(cpu_info);
     getGPUInfo("Advanced Micro Device", gpu_info, _countof(gpu_info));
 
-    AMFSize frameSize;
-    pProperty->GetProperty(AMF_PARAM_FRAMESIZE(m_VCECodecId), &frameSize);
-
     AMFRate frameRate;
     pProperty->GetProperty(AMF_PARAM_FRAMERATE(m_VCECodecId), &frameRate);
 
@@ -1753,7 +1750,7 @@ tstring VCECore::GetEncoderParam() {
     AMFRatio aspectRatio;
     pProperty->GetProperty(AMF_PARAM_ASPECT_RATIO(m_VCECodecId), &aspectRatio);
     mes += strsprintf(_T("               %dx%d%s %d:%d %0.3ffps (%d/%dfps)\n"),
-        frameSize.width, frameSize.height,
+        m_inputInfo.dstWidth, m_inputInfo.dstHeight,
         scan_type == AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED ? _T("i") : _T("p"),
         aspectRatio.num, aspectRatio.den,
         frameRate.num / (double)frameRate.den, frameRate.num, frameRate.den);
