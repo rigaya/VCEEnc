@@ -141,14 +141,6 @@ static int getFreeAudioTrack(const VCEParam *pParams) {
 #endif //_MSC_VER
 }
 
-static bool check_if_vce_supported() {
-    if (!check_if_vce_available()) {
-        _ftprintf(stderr, _T("VCE check failed!\n"));
-        return false;
-    }
-    return true;
-}
-
 
 static const TCHAR *short_opt_to_long(TCHAR short_opt) {
     const TCHAR *option_name = nullptr;
@@ -158,6 +150,9 @@ static const TCHAR *short_opt_to_long(TCHAR short_opt) {
         break;
     case _T('c'):
         option_name = _T("codec");
+        break;
+    case _T('d'):
+        option_name = _T("device");
         break;
     case _T('f'):
         option_name = _T("format");
@@ -207,8 +202,10 @@ static tstring help() {
         _T("-i,--input-file <filename>      set input file name\n")
         _T("-o,--output-file <filename>     set ouput file name\n")
         _T("\n")
-        _T("   --check-vce                  check for vce support on system.\n")
-        _T("   --check-features             check features of vce support on system.\n")
+        _T("   --check-vce [<int>]          check for vce support for default device.\n")
+        _T("                                 as an option, you can specify device id to check.\n")
+        _T("   --check-features [<int>]     check features of vce support for default device.\n")
+        _T("                                 as an option, you can specify device id to check.\n")
 #if ENABLE_AVCODEC_VCE_READER
         _T("   --check-avversion            show dll version\n")
         _T("   --check-codecs               show codecs available\n")
@@ -1594,18 +1591,29 @@ int parse_args(VCEParam *pParams, VCEInputInfo *pInputInfo, int nArgNum, const T
             return 1;
         }
         if (IS_OPTION("check-vce")) {
-            if (check_if_vce_supported()) {
+            int nDeviceId = 0;
+            int value = 0;
+            if (1 == _stscanf_s(strInput[i+1], _T("%d"), &value)) {
+                nDeviceId = value;
+            }
+            if (check_if_vce_available(VCE_CODEC_H264, nDeviceId)) {
                 _ftprintf(stderr, _T("VCE available.\n"));
                 exit(0);
             }
+            _ftprintf(stderr, _T("VCE unavailable.\n"));
             exit(1);
         }
         if (IS_OPTION("check-features")) {
+            int nDeviceId = 0;
+            int value = 0;
+            if (1 == _stscanf_s(strInput[i+1], _T("%d"), &value)) {
+                nDeviceId = value;
+            }
             _ftprintf(stderr, _T("H.264 Encoder Capability\n"));
-            _ftprintf(stderr, _T("%s\n"), check_vce_features(VCE_CODEC_H264).c_str());
+            _ftprintf(stderr, _T("%s\n"), check_vce_features(VCE_CODEC_H264, nDeviceId).c_str());
             _ftprintf(stderr, _T("\n"));
             _ftprintf(stderr, _T("HEVC Encoder Capability\n"));
-            _ftprintf(stderr, _T("%s\n"), check_vce_features(VCE_CODEC_HEVC).c_str());
+            _ftprintf(stderr, _T("%s\n"), check_vce_features(VCE_CODEC_HEVC, nDeviceId).c_str());
             _ftprintf(stderr, _T("\n"));
             exit(0);
         }
@@ -1769,10 +1777,6 @@ int _tmain(int argc, TCHAR **argv) {
     VCEParam prm;
     init_vce_param(&prm);
     if (parse_args(&prm, &inputInfo, argc, argvCopy.data())) {
-        return 1;
-    }
-
-    if (!check_if_vce_supported()) {
         return 1;
     }
 

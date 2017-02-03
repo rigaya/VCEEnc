@@ -1872,29 +1872,31 @@ AMF_RESULT VCECore::PrintResult() {
     return AMF_OK;
 }
 
-bool check_if_vce_available() {
-    bool ret = g_AMFFactory.Init() == AMF_OK;
-    g_AMFFactory.Terminate();
-    return ret;
-}
-
-bool check_if_vce_hevc_available() {
+bool check_if_vce_available(int nCodecId, int nDeviceId) {
     bool ret = g_AMFFactory.Init() == AMF_OK;
     if (ret) {
         amf::AMFContextPtr p_context;
         ret = g_AMFFactory.GetFactory()->CreateContext(&p_context) == AMF_OK;
         if (ret) {
-            DeviceDX9 device;
-            ret = device.Init(true, 0, false, 1280, 720) == AMF_OK;
+            DeviceDX9 device9;
+            DeviceDX11 device11;
+            ret = device9.Init(true, nDeviceId, false, 1280, 720) == AMF_OK;
             if (ret) {
-                ret = p_context->InitDX9(device.GetDevice()) == AMF_OK;
+                ret = p_context->InitDX9(device9.GetDevice()) == AMF_OK;
+            }
+            if (!ret) {
+                ret = device11.Init(nDeviceId, false) == AMF_OK;
+                if (ret) {
+                    ret = p_context->InitDX11(device11.GetDevice()) == AMF_OK;
+                }
             }
             amf::AMFComponentPtr p_encoder;
-            ret = g_AMFFactory.GetFactory()->CreateComponent(p_context, list_codec_key[VCE_CODEC_HEVC], &p_encoder) == AMF_OK;
+            ret = g_AMFFactory.GetFactory()->CreateComponent(p_context, list_codec_key[nCodecId], &p_encoder) == AMF_OK;
             if (p_encoder) {
                 p_encoder->Terminate();
             }
-            device.Terminate();
+            device9.Terminate();
+            device11.Terminate();
             if (p_context) {
                 p_context->Terminate();
             }
@@ -1904,7 +1906,7 @@ bool check_if_vce_hevc_available() {
     return ret;
 }
 
-tstring check_vce_features(int nCodecId) {
+tstring check_vce_features(int nCodecId, int nDeviceId) {
     tstring str;
     bool ret = g_AMFFactory.Init() == AMF_OK;
     if (ret) {
@@ -1913,12 +1915,12 @@ tstring check_vce_features(int nCodecId) {
         if (ret) {
             DeviceDX9 device9;
             DeviceDX11 device11;
-            ret = device9.Init(true, 0, false, 1280, 720) == AMF_OK;
+            ret = device9.Init(true, nDeviceId, false, 1280, 720) == AMF_OK;
             if (ret) {
                 ret = p_context->InitDX9(device9.GetDevice()) == AMF_OK;
             }
             if (!ret) {
-                ret = device11.Init(0, false) == AMF_OK;
+                ret = device11.Init(nDeviceId, false) == AMF_OK;
                 if (ret) {
                     ret = p_context->InitDX11(device11.GetDevice()) == AMF_OK;
                 }

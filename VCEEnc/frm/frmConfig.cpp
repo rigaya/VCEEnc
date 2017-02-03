@@ -609,7 +609,7 @@ System::Void frmConfig::InitData(CONF_GUIEX *set_config, const SYSTEM_DATA *syst
 
 System::Void frmConfig::InitComboBox() {
     //コンボボックスに値を設定する
-    const int codecCount = check_if_vce_hevc_available() ? 2 : 1;
+    const int codecCount = check_if_vce_available(VCE_CODEC_HEVC) ? 2 : 1;
     setComboBox(fcgCXCodec,         list_codec, codecCount);
     setComboBox(fcgCXEncMode,       list_vce_h264_rc_method);
     setComboBox(fcgCXQualityPreset, list_vce_quality_preset);
@@ -791,7 +791,7 @@ System::Void frmConfig::InitForm() {
     //タイトル表示
     this->Text = String(AUO_FULL_NAME).ToString();
     //バージョン情報,コンパイル日時
-    fcgpictureBoxVCEEnabled->Visible = check_if_vce_available();
+    fcgpictureBoxVCEEnabled->Visible = check_if_vce_available(VCE_CODEC_H264);
     fcgLBVersion->Text     = String(AUO_VERSION_NAME).ToString();
     fcgLBVersionDate->Text = L"build " + String(__DATE__).ToString() + L" " + String(__TIME__).ToString();
     //ツールチップ
