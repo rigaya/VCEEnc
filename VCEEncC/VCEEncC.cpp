@@ -346,6 +346,7 @@ static tstring help() {
         VCE_DEFAULT_AUDIO_IGNORE_DECODE_ERROR);
 #endif
     str += strsprintf(_T("\n")
+        _T("-d,--device <int>               set device id to use, default = 0\n")
         _T("-c,--codec <string>             set codec: h264(default), hevc\n")
         _T("   --input-res <int>x<int>      set input resolution\n")
         _T("   --output-res <int>x<int>     output resolution\n")
@@ -469,6 +470,16 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
     if (IS_OPTION("output-file")) {
         i++;
         pParams->pOutputFile = _tcsdup(strInput[i]);
+        return 0;
+    }
+    if (IS_OPTION("device")) {
+        i++;
+        int value = 0;
+        if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
+            PrintHelp(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            return -1;
+        }
+        pParams->nAdapterId = value;
         return 0;
     }
     if (IS_OPTION("raw")) {
