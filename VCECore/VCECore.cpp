@@ -1732,8 +1732,8 @@ tstring VCECore::GetEncoderParam() {
     nMotionEst |= GetPropertyInt(AMF_PARAM_MOTION_QUARTERPIXEL(m_VCECodecId)) ? VCE_MOTION_EST_QUATER | VCE_MOTION_EST_HALF : 0;
 
     std::wstring deviceName = (m_deviceDX9.GetDevice() == nullptr) ? m_deviceDX11.GetDisplayDeviceName() : m_deviceDX9.GetDisplayDeviceName();
-    deviceName = str_replace(deviceName, L" (TM)", L"");
-    deviceName = str_replace(deviceName, L" (R)", L"");
+    deviceName = str_replace(deviceName, L"(TM)", L"");
+    deviceName = str_replace(deviceName, L"(R)", L"");
     deviceName = str_replace(deviceName, L" Series", L"");
 
     mes += strsprintf(_T("VCEEnc %s (%s) / %s (%s)\n"), VER_STR_FILEVERSION_TCHAR, BUILD_ARCH_STR, getOSVersion().c_str(), is_64bit_os() ? _T("x64") : _T("x86"));
