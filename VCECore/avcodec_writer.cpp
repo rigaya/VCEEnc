@@ -972,7 +972,7 @@ AMF_RESULT CAvcodecWriter::InitAudio(AVMuxAudio *pMuxAudio, AVOutputStreamPrm *p
                 }
                 av_packet_unref(&outpkt);
             }
-            AddMessage(VCE_LOG_ERROR, _T("successfully attached packet sample from AAC\n."));
+            AddMessage(VCE_LOG_DEBUG, _T("successfully attached packet sample from AAC\n."));
         }
     }
 
