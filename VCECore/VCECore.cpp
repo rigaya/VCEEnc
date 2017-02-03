@@ -662,6 +662,13 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
         PrintMes(VCE_LOG_ERROR, _T("Invalid output frame size - non mod%d (height: %d).\n"), h_mul, m_inputInfo.dstHeight);
         return AMF_FAIL;
     }
+    if (   m_inputInfo.dstWidth  == m_inputInfo.dstWidth
+        && m_inputInfo.dstHeight == m_inputInfo.srcHeight) {
+        if (m_inputInfo.AspectRatioW * m_inputInfo.AspectRatioH == 0) {
+            m_inputInfo.AspectRatioW = srcInfo.AspectRatioW;
+            m_inputInfo.AspectRatioH = srcInfo.AspectRatioH;
+        }
+    }
     if (prm->nCodecId == VCE_CODEC_NONE) {
         prm->nCodecId = VCE_CODEC_H264;
     }
@@ -1588,8 +1595,10 @@ AMF_RESULT VCECore::init(VCEParam *prm, VCEInputInfo *inputInfo) {
         PrintMes(VCE_LOG_DEBUG, _T("timeBeginPeriod(1)\n"));
     }
 
-    m_inputInfo.AspectRatioW = prm->nPAR[0];
-    m_inputInfo.AspectRatioH = prm->nPAR[1];
+    if (prm->nPAR[0] * prm->nPAR[1] > 0) {
+        m_inputInfo.AspectRatioW = prm->nPAR[0];
+        m_inputInfo.AspectRatioH = prm->nPAR[1];
+    }
 
     if (AMF_OK != (res = initInput(prm, &m_inputInfo))) {
         return res;
