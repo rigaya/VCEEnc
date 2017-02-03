@@ -677,7 +677,7 @@ System::Void frmConfig::InitStgFileList() {
 System::Void frmConfig::fcgChangeEnabled(System::Object^  sender, System::EventArgs^  e) {
     int vce_rc_method = list_vce_h264_rc_method[fcgCXEncMode->SelectedIndex].value;
     bool cqp_mode = (vce_rc_method == 0);
-    bool cbr_vbr_mode = (vce_rc_method == 3 || vce_rc_method == 4);
+    bool cbr_vbr_mode = (vce_rc_method == 1 || vce_rc_method == 2);
 
     this->SuspendLayout();
 
