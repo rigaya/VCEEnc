@@ -87,8 +87,8 @@ void CAvcodecReader::CloseVideo(AVDemuxVideo *pVideo) {
         av_parser_close(pVideo->pParserCtx);
     }
     //close bitstreamfilter
-    if (pVideo->pH264Bsfc) {
-        av_bsf_free(&pVideo->pH264Bsfc);
+    if (pVideo->pBsfcCtx) {
+        av_bsf_free(&pVideo->pBsfcCtx);
     }
     
     if (pVideo->pExtradata) {
@@ -940,16 +940,16 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
                     AddMessage(VCE_LOG_ERROR, _T("failed to find %s.\n"), char_to_tstring(filtername).c_str());
                     return AMF_NOT_FOUND;
                 }
-                if (0 > (ret = av_bsf_alloc(filter, &m_Demux.video.pH264Bsfc))) {
+                if (0 > (ret = av_bsf_alloc(filter, &m_Demux.video.pBsfcCtx))) {
                     AddMessage(VCE_LOG_ERROR, _T("failed to allocate memory for %s: %s.\n"), char_to_tstring(filter->name).c_str(), qsv_av_err2str(ret).c_str());
                     return AMF_OUT_OF_MEMORY;
                 }
-                if (0 > (ret = avcodec_parameters_from_context(m_Demux.video.pH264Bsfc->par_in, m_Demux.video.pCodecCtx))) {
+                if (0 > (ret = avcodec_parameters_from_context(m_Demux.video.pBsfcCtx->par_in, m_Demux.video.pCodecCtx))) {
                     AddMessage(VCE_LOG_ERROR, _T("failed to set parameter for %s: %s.\n"), char_to_tstring(filter->name).c_str(), qsv_av_err2str(ret).c_str());
                     return AMF_FAIL;
                 }
-                m_Demux.video.pH264Bsfc->time_base_in = m_Demux.video.pCodecCtx->time_base;
-                if (0 > (ret = av_bsf_init(m_Demux.video.pH264Bsfc))) {
+                m_Demux.video.pBsfcCtx->time_base_in = m_Demux.video.pCodecCtx->time_base;
+                if (0 > (ret = av_bsf_init(m_Demux.video.pBsfcCtx))) {
                     AddMessage(VCE_LOG_ERROR, _T("failed to init %s: %s.\n"), char_to_tstring(filter->name).c_str(), qsv_av_err2str(ret).c_str());
                     return AMF_FAIL;
                 }
@@ -1267,18 +1267,18 @@ int CAvcodecReader::getSample(AVPacket *pkt, bool bTreatFirstPacketAsKeyframe) {
         //trimからわかるフレーム数の上限値よりfixedNumがある程度の量の処理を進めたら読み込みを打ち切る
         && m_Demux.frames.fixedNum() - TRIM_OVERREAD_FRAMES < getVideoTrimMaxFramIdx()) {
         if (pkt->stream_index == m_Demux.video.nIndex) {
-            if (m_Demux.video.pH264Bsfc) {
-                auto ret = av_bsf_send_packet(m_Demux.video.pH264Bsfc, pkt);
+            if (m_Demux.video.pBsfcCtx) {
+                auto ret = av_bsf_send_packet(m_Demux.video.pBsfcCtx, pkt);
                 if (ret < 0) {
                     av_packet_unref(pkt);
-                    AddMessage(VCE_LOG_ERROR, _T("failed to send packet to %s bitstream filter: %s.\n"), char_to_tstring(m_Demux.video.pH264Bsfc->filter->name).c_str(), qsv_av_err2str(ret).c_str());
+                    AddMessage(VCE_LOG_ERROR, _T("failed to send packet to %s bitstream filter: %s.\n"), char_to_tstring(m_Demux.video.pBsfcCtx->filter->name).c_str(), qsv_av_err2str(ret).c_str());
                     return 1;
                 }
-                ret = av_bsf_receive_packet(m_Demux.video.pH264Bsfc, pkt);
+                ret = av_bsf_receive_packet(m_Demux.video.pBsfcCtx, pkt);
                 if (ret == AVERROR(EAGAIN)) {
                     continue; //もっとpacketを送らないとダメ
                 } else if (ret < 0 && ret != AVERROR_EOF) {
-                    AddMessage(VCE_LOG_ERROR, _T("failed to run %s bitstream filter: %s.\n"), char_to_tstring(m_Demux.video.pH264Bsfc->filter->name).c_str(), qsv_av_err2str(ret).c_str());
+                    AddMessage(VCE_LOG_ERROR, _T("failed to run %s bitstream filter: %s.\n"), char_to_tstring(m_Demux.video.pBsfcCtx->filter->name).c_str(), qsv_av_err2str(ret).c_str());
                     return 1;
                 }
             }
@@ -1662,11 +1662,11 @@ AMF_RESULT CAvcodecReader::GetHeader(sBitstream *bitstream) {
         memcpy(m_Demux.video.pExtradata, m_Demux.video.pCodecCtx->extradata, m_Demux.video.nExtradataSize);
         memset(m_Demux.video.pExtradata + m_Demux.video.nExtradataSize, 0, FF_INPUT_BUFFER_PADDING_SIZE);
 
-        if (m_Demux.video.pH264Bsfc && m_Demux.video.pExtradata[0] == 1) {
+        if (m_Demux.video.pBsfcCtx && m_Demux.video.pExtradata[0] == 1) {
             int ret = 0;
-            auto pBsf = av_bsf_get_by_name(m_Demux.video.pH264Bsfc->filter->name);
+            auto pBsf = av_bsf_get_by_name(m_Demux.video.pBsfcCtx->filter->name);
             if (pBsf == nullptr) {
-                AddMessage(VCE_LOG_ERROR, _T("failed find %s.\n"), char_to_tstring(m_Demux.video.pH264Bsfc->filter->name).c_str());
+                AddMessage(VCE_LOG_ERROR, _T("failed find %s.\n"), char_to_tstring(m_Demux.video.pBsfcCtx->filter->name).c_str());
                 return AMF_FAIL;
             }
             AVBSFContext *pBsfCtx = nullptr;
