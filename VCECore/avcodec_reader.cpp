@@ -924,29 +924,36 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
 
         //必要ならbitstream filterを初期化
         if (m_Demux.video.pCodecCtx->extradata && m_Demux.video.pCodecCtx->extradata[0] == 1) {
-            if (m_nInputCodec == VCE_CODEC_H264) {
-                auto filter = av_bsf_get_by_name("h264_mp4toannexb");
-                if (filter == nullptr) {
-                    AddMessage(VCE_LOG_ERROR, _T("failed to find h264_mp4toannexb.\n"));
+            if (m_nInputCodec == VCE_CODEC_H264 || m_nInputCodec == VCE_CODEC_HEVC) {
+                const char *filtername = nullptr;
+                switch (m_nInputCodec) {
+                case VCE_CODEC_H264: filtername = "h264_mp4toannexb"; break;
+                case VCE_CODEC_HEVC: filtername = "hevc_mp4toannexb"; break;
+                default: break;
+                }
+                if (filtername == nullptr) {
+                    AddMessage(VCE_LOG_ERROR, _T("failed to set bitstream filter.\n"));
                     return AMF_FAIL;
                 }
+                auto filter = av_bsf_get_by_name(filtername);
+                if (filter == nullptr) {
+                    AddMessage(VCE_LOG_ERROR, _T("failed to find %s.\n"), char_to_tstring(filtername).c_str());
+                    return AMF_NOT_FOUND;
+                }
                 if (0 > (ret = av_bsf_alloc(filter, &m_Demux.video.pH264Bsfc))) {
-                    AddMessage(VCE_LOG_ERROR, _T("failed to allocate memory for h264_mp4toannexb: %s.\n"), qsv_av_err2str(ret).c_str());
+                    AddMessage(VCE_LOG_ERROR, _T("failed to allocate memory for %s: %s.\n"), char_to_tstring(filter->name).c_str(), qsv_av_err2str(ret).c_str());
                     return AMF_OUT_OF_MEMORY;
                 }
                 if (0 > (ret = avcodec_parameters_from_context(m_Demux.video.pH264Bsfc->par_in, m_Demux.video.pCodecCtx))) {
-                    AddMessage(VCE_LOG_ERROR, _T("failed to set parameter for h264_mp4toannexb: %s.\n"), qsv_av_err2str(ret).c_str());
+                    AddMessage(VCE_LOG_ERROR, _T("failed to set parameter for %s: %s.\n"), char_to_tstring(filter->name).c_str(), qsv_av_err2str(ret).c_str());
                     return AMF_FAIL;
                 }
                 m_Demux.video.pH264Bsfc->time_base_in = m_Demux.video.pCodecCtx->time_base;
                 if (0 > (ret = av_bsf_init(m_Demux.video.pH264Bsfc))) {
-                    AddMessage(VCE_LOG_ERROR, _T("failed to init h264_mp4toannexb: %s.\n"), qsv_av_err2str(ret).c_str());
+                    AddMessage(VCE_LOG_ERROR, _T("failed to init %s: %s.\n"), char_to_tstring(filter->name).c_str(), qsv_av_err2str(ret).c_str());
                     return AMF_FAIL;
                 }
-                AddMessage(VCE_LOG_DEBUG, _T("initialized h264_mp4toannexb filter.\n"));
-            } else if (m_nInputCodec == VCE_CODEC_HEVC) {
-                m_Demux.video.bUseHEVCmp42AnnexB = true;
-                AddMessage(VCE_LOG_DEBUG, _T("enabled HEVCmp42AnnexB filter.\n"));
+                AddMessage(VCE_LOG_DEBUG, _T("initialized %s filter.\n"), char_to_tstring(filter->name).c_str());
             }
         } else if (bDecodecVCE
             && (m_nInputCodec != VCE_CODEC_VP8 && m_nInputCodec != VCE_CODEC_VP9)
@@ -1264,14 +1271,14 @@ int CAvcodecReader::getSample(AVPacket *pkt, bool bTreatFirstPacketAsKeyframe) {
                 auto ret = av_bsf_send_packet(m_Demux.video.pH264Bsfc, pkt);
                 if (ret < 0) {
                     av_packet_unref(pkt);
-                    AddMessage(VCE_LOG_ERROR, _T("failed to send packet to h264_mp4toannexb bitstream filter: %s.\n"), qsv_av_err2str(ret).c_str());
+                    AddMessage(VCE_LOG_ERROR, _T("failed to send packet to %s bitstream filter: %s.\n"), char_to_tstring(m_Demux.video.pH264Bsfc->filter->name).c_str(), qsv_av_err2str(ret).c_str());
                     return 1;
                 }
                 ret = av_bsf_receive_packet(m_Demux.video.pH264Bsfc, pkt);
                 if (ret == AVERROR(EAGAIN)) {
                     continue; //もっとpacketを送らないとダメ
                 } else if (ret < 0 && ret != AVERROR_EOF) {
-                    AddMessage(VCE_LOG_ERROR, _T("failed to run h264_mp4toannexb bitstream filter: %s.\n"), qsv_av_err2str(ret).c_str());
+                    AddMessage(VCE_LOG_ERROR, _T("failed to run %s bitstream filter: %s.\n"), char_to_tstring(m_Demux.video.pH264Bsfc->filter->name).c_str(), qsv_av_err2str(ret).c_str());
                     return 1;
                 }
             }
@@ -1655,39 +1662,45 @@ AMF_RESULT CAvcodecReader::GetHeader(sBitstream *bitstream) {
         memcpy(m_Demux.video.pExtradata, m_Demux.video.pCodecCtx->extradata, m_Demux.video.nExtradataSize);
         memset(m_Demux.video.pExtradata + m_Demux.video.nExtradataSize, 0, FF_INPUT_BUFFER_PADDING_SIZE);
 
-        if (m_Demux.video.bUseHEVCmp42AnnexB) {
-            hevcMp42Annexb(NULL);
-        } else if (m_Demux.video.pH264Bsfc && m_Demux.video.pExtradata[0] == 1) {
+        if (m_Demux.video.pH264Bsfc && m_Demux.video.pExtradata[0] == 1) {
             int ret = 0;
-            auto pBsf = av_bsf_get_by_name("h264_mp4toannexb");
+            auto pBsf = av_bsf_get_by_name(m_Demux.video.pH264Bsfc->filter->name);
             if (pBsf == nullptr) {
-                AddMessage(VCE_LOG_ERROR, _T("failed find h264_mp4toannexb.\n"));
+                AddMessage(VCE_LOG_ERROR, _T("failed find %s.\n"), char_to_tstring(m_Demux.video.pH264Bsfc->filter->name).c_str());
                 return AMF_FAIL;
             }
             AVBSFContext *pBsfCtx = nullptr;
             if (0 > (ret = av_bsf_alloc(pBsf, &pBsfCtx))) {
-                AddMessage(VCE_LOG_ERROR, _T("failed alloc memory for h264_mp4toannexb: %s.\n"), qsv_av_err2str(ret).c_str());
+                AddMessage(VCE_LOG_ERROR, _T("failed alloc memory for %s: %s.\n"), char_to_tstring(pBsf->name).c_str(), qsv_av_err2str(ret).c_str());
                 return AMF_OUT_OF_MEMORY;
             }
             if (0 > (ret = avcodec_parameters_from_context(pBsfCtx->par_in, m_Demux.video.pCodecCtx))) {
-                AddMessage(VCE_LOG_ERROR, _T("failed alloc get param for h264_mp4toannexb: %s.\n"), qsv_av_err2str(ret).c_str());
+                AddMessage(VCE_LOG_ERROR, _T("failed alloc get param for %s: %s.\n"), char_to_tstring(pBsf->name).c_str(), qsv_av_err2str(ret).c_str());
                 return AMF_FAIL;
             }
             if (0 > (ret = av_bsf_init(pBsfCtx))) {
-                AddMessage(VCE_LOG_ERROR, _T("failed init h264_mp4toannexb: %s.\n"), qsv_av_err2str(ret).c_str());
+                AddMessage(VCE_LOG_ERROR, _T("failed init %s: %s.\n"), char_to_tstring(pBsf->name).c_str(), qsv_av_err2str(ret).c_str());
                 return AMF_FAIL;
             }
-            uint8_t IDR[] ={ 0x00, 0x00, 0x00, 0x01, 0x65 };
-            AVPacket pkt ={ 0 };
+            uint8_t H264_IDR[] = { 0x00, 0x00, 0x00, 0x01, 0x65 };
+            uint8_t HEVC_IDR[] = { 0x00, 0x00, 0x00, 0x01, 19<<1 };
+            AVPacket pkt = { 0 };
             av_init_packet(&pkt);
-            pkt.data = IDR;
-            pkt.size = sizeof(IDR);
+            switch (m_Demux.video.pCodecCtx->codec_id) {
+            case AV_CODEC_ID_H264: pkt.data = H264_IDR; pkt.size = sizeof(H264_IDR); break;
+            case AV_CODEC_ID_HEVC: pkt.data = HEVC_IDR; pkt.size = sizeof(HEVC_IDR); break;
+            default: break;
+            }
+            if (pkt.data == nullptr) {
+                AddMessage(VCE_LOG_ERROR, _T("invalid codec to run %s.\n"), char_to_tstring(pBsf->name).c_str());
+                return AMF_FAIL;
+            }
             for (AVPacket *inpkt = &pkt; 0 == av_bsf_send_packet(pBsfCtx, inpkt); inpkt = nullptr) {
                 ret = av_bsf_receive_packet(pBsfCtx, &pkt);
                 if (ret == 0)
                     break;
                 if (ret != AVERROR(EAGAIN) && !(inpkt && ret == AVERROR_EOF)) {
-                    AddMessage(VCE_LOG_ERROR, _T("failed to run h264_mp4toannexb.\n"));
+                    AddMessage(VCE_LOG_ERROR, _T("failed to run %s.\n"), char_to_tstring(pBsf->name).c_str());
                     return AMF_FAIL;
                 }
             }
