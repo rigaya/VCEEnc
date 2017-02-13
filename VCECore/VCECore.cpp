@@ -1464,8 +1464,8 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     m_Params.SetParam(AMF_PARAM_VBV_BUFFER_SIZE(prm->nCodecId),                 (amf_int64)prm->nVBVBufferSize * 1000);
     m_Params.SetParam(AMF_PARAM_INITIAL_VBV_BUFFER_FULLNESS(prm->nCodecId),     (amf_int64)prm->nInitialVBVPercent);
 
-    m_Params.SetParam(AMF_PARAM_ENFORCE_HRD(prm->nCodecId),        true);
     //m_Params.SetParam(AMF_PARAM_FILLER_DATA_ENABLE(prm->nCodecId), false);
+    m_Params.SetParam(AMF_PARAM_ENFORCE_HRD(prm->nCodecId),        prm->bEnforceHRD != 0);
     if (prm->bVBAQ) m_Params.SetParam(AMF_PARAM_ENABLE_VBAQ(prm->nCodecId), true);
     m_Params.SetParam(AMF_PARAM_SLICES_PER_FRAME(prm->nCodecId),               (amf_int64)prm->nSlices);
     m_Params.SetParam(AMF_PARAM_GOP_SIZE(prm->nCodecId),                       (amf_int64)nGOPLen);

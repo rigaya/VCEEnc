@@ -569,7 +569,7 @@ typedef struct {
     int     nBframes;
     int     bBPyramid;
     int     nMotionEst;
-    int     bEnforceHDR;
+    int     bEnforceHRD;
     int     nIDRPeriod;
     int     nGOPLen;
     const TCHAR *pInputFile;

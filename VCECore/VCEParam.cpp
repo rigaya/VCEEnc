@@ -76,4 +76,6 @@ void init_vce_param(VCEParam *prm) {
     prm->vui.transfer    = get_value_from_chr(list_transfer,    _T("undef"));
     prm->vui.fullrange   = false;
     prm->vui.infoPresent = false;
+
+    prm->bEnforceHRD = FALSE;
 }

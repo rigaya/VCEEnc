@@ -407,6 +407,8 @@ static tstring help() {
         _T("\n")
         _T("   --crop <int>,<int>,<int>,<int>\n")
         _T("                                set crop pixels of left, up, right, bottom.\n")
+        _T("\n")
+        _T("   --enforce-hrd                enforce hrd compatibility of bitstream\n")
     );
     //str += PrintListOptions(_T("--videoformat <string>"), list_videoformat, 0);
     //str += PrintListOptions(_T("--colormatrix <string>"), list_colormatrix, 0);
@@ -1519,6 +1521,10 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         return 0;
     }
 #endif
+    if (IS_OPTION("enforce-hrd")) {
+        pParams->bEnforceHRD = TRUE;
+        return 0;
+    }
     if (IS_OPTION("log")) {
         i++;
         pParams->pStrLogFile = _tcsdup(strInput[i]);
