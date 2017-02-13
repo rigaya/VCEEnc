@@ -78,4 +78,5 @@ void init_vce_param(VCEParam *prm) {
     prm->vui.infoPresent = false;
 
     prm->bEnforceHRD = FALSE;
+    prm->bFiller = FALSE;
 }

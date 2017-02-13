@@ -580,7 +580,7 @@ typedef struct {
     int nPAR[2];
     int nRefFrames;
     int nLTRFrames;
-    int __reserved__[1];
+    int bFiller;
     bool bReserved;
 
     int     nVideoTrack;

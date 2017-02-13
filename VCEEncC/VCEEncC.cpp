@@ -409,6 +409,7 @@ static tstring help() {
         _T("                                set crop pixels of left, up, right, bottom.\n")
         _T("\n")
         _T("   --enforce-hrd                enforce hrd compatibility of bitstream\n")
+        _T("   --filler                     use filler data\n")
     );
     //str += PrintListOptions(_T("--videoformat <string>"), list_videoformat, 0);
     //str += PrintListOptions(_T("--colormatrix <string>"), list_colormatrix, 0);
@@ -1521,6 +1522,10 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         return 0;
     }
 #endif
+    if (IS_OPTION("filler")) {
+        pParams->bFiller = TRUE;
+        return 0;
+    }
     if (IS_OPTION("enforce-hrd")) {
         pParams->bEnforceHRD = TRUE;
         return 0;
