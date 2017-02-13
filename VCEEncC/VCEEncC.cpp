@@ -407,8 +407,6 @@ static tstring help() {
         _T("\n")
         _T("   --crop <int>,<int>,<int>,<int>\n")
         _T("                                set crop pixels of left, up, right, bottom.\n")
-        //_T("\n")
-        //_T("   --fullrange                  set stream as fullrange yuv\n")
     );
     //str += PrintListOptions(_T("--videoformat <string>"), list_videoformat, 0);
     //str += PrintListOptions(_T("--colormatrix <string>"), list_colormatrix, 0);
@@ -1518,11 +1516,6 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
             pParams->vui.videoformat = value;
             pParams->vui.infoPresent = true;
         }
-        return 0;
-    }
-    if (IS_OPTION("fullrange")) {
-        pParams->vui.fullrange = true;
-        pParams->vui.infoPresent = true;
         return 0;
     }
 #endif
