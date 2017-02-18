@@ -1657,6 +1657,19 @@ AMF_RESULT CAvcodecReader::GetHeader(sBitstream *bitstream) {
                 }
             }
             av_bsf_free(&pBsfCtx);
+            //VCEのHEVCデコーダはヘッダにSPS/PPS/VPS以外が入っているとエラー終了してしまう
+            if (m_Demux.video.pCodecCtx->codec_id == AV_CODEC_ID_HEVC) {
+                const auto nal_units = parse_nal_unit_hevc(pkt.data, pkt.size);
+                pkt.size = 0;
+                for (auto nal_unit : nal_units) {
+                    if (   nal_unit.type == NALU_HEVC_PPS
+                        || nal_unit.type == NALU_HEVC_SPS
+                        || nal_unit.type == NALU_HEVC_VPS) {
+                        memcpy(pkt.data + pkt.size, nal_unit.ptr, nal_unit.size);
+                        pkt.size += nal_unit.size;
+                    }
+                }
+            }
             if (m_Demux.video.nExtradataSize < pkt.size) {
                 m_Demux.video.pExtradata = (uint8_t *)av_realloc(m_Demux.video.pExtradata, m_Demux.video.pCodecCtx->extradata_size + FF_INPUT_BUFFER_PADDING_SIZE);
             }
