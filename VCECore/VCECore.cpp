@@ -1213,6 +1213,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
         deviceName = str_replace(deviceName, L" (TM)", L"");
         deviceName = str_replace(deviceName, L" (R)", L"");
         deviceName = str_replace(deviceName, L" Series", L"");
+        deviceName = str_replace(deviceName, L" Graphics", L"");
         getCPUInfo(cpuInfo, _countof(cpuInfo));
         getGPUInfo("Advanced Micro Devices", gpu_info, _countof(gpu_info));
         PrintMes(VCE_LOG_DEBUG, _T("VCEEnc    %s (%s)\n"), VER_STR_FILEVERSION_TCHAR, BUILD_ARCH_STR);
@@ -1741,6 +1742,7 @@ tstring VCECore::GetEncoderParam() {
     deviceName = str_replace(deviceName, L"(TM)", L"");
     deviceName = str_replace(deviceName, L"(R)", L"");
     deviceName = str_replace(deviceName, L" Series", L"");
+    deviceName = str_replace(deviceName, L" Graphics", L"");
 
     mes += strsprintf(_T("VCEEnc %s (%s) / %s (%s)\n"), VER_STR_FILEVERSION_TCHAR, BUILD_ARCH_STR, getOSVersion().c_str(), is_64bit_os() ? _T("x64") : _T("x86"));
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
