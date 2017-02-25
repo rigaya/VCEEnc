@@ -54,6 +54,8 @@
 
 #include "api_hook.h"
 
+const TCHAR *AMFRetString(AMF_RESULT ret);
+
 #if ENABLE_AVCODEC_VCE_READER
 struct AVChapter;
 #endif //#if ENABLE_AVCODEC_VCE_READER

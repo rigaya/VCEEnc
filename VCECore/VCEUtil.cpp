@@ -726,3 +726,92 @@ const TCHAR *CodecIdToStr(uint32_t codecId) {
     default:              return _T("Unknown");
     }
 }
+
+const TCHAR *AMFRetString(AMF_RESULT ret) {
+#define AMFRESULT_TO_STR(x) case x: return _T( #x );
+    switch (ret) {
+        AMFRESULT_TO_STR(AMF_OK)
+        AMFRESULT_TO_STR(AMF_FAIL)
+
+        // common errors
+        AMFRESULT_TO_STR(AMF_UNEXPECTED)
+
+        AMFRESULT_TO_STR(AMF_ACCESS_DENIED)
+        AMFRESULT_TO_STR(AMF_INVALID_ARG)
+        AMFRESULT_TO_STR(AMF_OUT_OF_RANGE)
+
+        AMFRESULT_TO_STR(AMF_OUT_OF_MEMORY)
+        AMFRESULT_TO_STR(AMF_INVALID_POINTER)
+
+        AMFRESULT_TO_STR(AMF_NO_INTERFACE)
+        AMFRESULT_TO_STR(AMF_NOT_IMPLEMENTED)
+        AMFRESULT_TO_STR(AMF_NOT_SUPPORTED)
+        AMFRESULT_TO_STR(AMF_NOT_FOUND)
+
+        AMFRESULT_TO_STR(AMF_ALREADY_INITIALIZED)
+        AMFRESULT_TO_STR(AMF_NOT_INITIALIZED)
+
+        AMFRESULT_TO_STR(AMF_INVALID_FORMAT)// invalid data format
+
+        AMFRESULT_TO_STR(AMF_WRONG_STATE)
+        AMFRESULT_TO_STR(AMF_FILE_NOT_OPEN)// cannot open file
+
+                                            // device common codes
+        AMFRESULT_TO_STR(AMF_NO_DEVICE)
+
+        // device directx
+        AMFRESULT_TO_STR(AMF_DIRECTX_FAILED)
+        // device opencl 
+        AMFRESULT_TO_STR(AMF_OPENCL_FAILED)
+        // device opengl 
+        AMFRESULT_TO_STR(AMF_GLX_FAILED)//failed to use GLX
+                                        // device XV 
+        AMFRESULT_TO_STR(AMF_XV_FAILED) //failed to use Xv extension
+                                        // device alsa
+        AMFRESULT_TO_STR(AMF_ALSA_FAILED)//failed to use ALSA
+
+                                            // component common codes
+
+                                            //result codes
+        AMFRESULT_TO_STR(AMF_EOF)
+        AMFRESULT_TO_STR(AMF_REPEAT)
+        AMFRESULT_TO_STR(AMF_INPUT_FULL)//returned by AMFComponent::SubmitInput if input queue is full
+        AMFRESULT_TO_STR(AMF_RESOLUTION_CHANGED)//resolution changed client needs to Drain/Terminate/Init
+        AMFRESULT_TO_STR(AMF_RESOLUTION_UPDATED)//resolution changed in adaptive mode. New ROI will be set on output on newly decoded frames
+
+                                                //error codes
+        AMFRESULT_TO_STR(AMF_INVALID_DATA_TYPE)//invalid data type
+        AMFRESULT_TO_STR(AMF_INVALID_RESOLUTION)//invalid resolution (width or height)
+        AMFRESULT_TO_STR(AMF_CODEC_NOT_SUPPORTED)//codec not supported
+        AMFRESULT_TO_STR(AMF_SURFACE_FORMAT_NOT_SUPPORTED)//surface format not supported
+        AMFRESULT_TO_STR(AMF_SURFACE_MUST_BE_SHARED)//surface should be shared (DX11: (MiscFlags & D3D11_RESOURCE_MISC_SHARED) == 0) DX9: No shared handle found)
+
+                                                    // component video decoder
+        AMFRESULT_TO_STR(AMF_DECODER_NOT_PRESENT)//failed to create the decoder
+        AMFRESULT_TO_STR(AMF_DECODER_SURFACE_ALLOCATION_FAILED)//failed to create the surface for decoding
+        AMFRESULT_TO_STR(AMF_DECODER_NO_FREE_SURFACES)
+
+        // component video encoder
+        AMFRESULT_TO_STR(AMF_ENCODER_NOT_PRESENT)//failed to create the encoder
+
+                                                    // component video processor
+
+                                                    // component video conveter
+
+                                                    // component dem
+        AMFRESULT_TO_STR(AMF_DEM_ERROR)
+        AMFRESULT_TO_STR(AMF_DEM_PROPERTY_READONLY)
+        AMFRESULT_TO_STR(AMF_DEM_REMOTE_DISPLAY_CREATE_FAILED)
+        AMFRESULT_TO_STR(AMF_DEM_START_ENCODING_FAILED)
+        AMFRESULT_TO_STR(AMF_DEM_QUERY_OUTPUT_FAILED)
+
+        // component TAN
+        AMFRESULT_TO_STR(AMF_TAN_CLIPPING_WAS_REQUIRED) // Resulting data was truncated to meet output type's value limits.
+        AMFRESULT_TO_STR(AMF_TAN_UNSUPPORTED_VERSION) // Not supported version requested) solely for TANCreateContext().
+
+        AMFRESULT_TO_STR(AMF_NEED_MORE_INPUT)//returned by AMFComponent::SubmitInput did not produce buffer
+    default:
+        return _T("Unknown");
+    }
+#undef AMFRESULT_TO_STR
+}
