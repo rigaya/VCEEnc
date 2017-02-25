@@ -972,25 +972,30 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
 AMF_RESULT VCECore::initDeviceDX9(VCEParam *prm) {
     AMF_RESULT res = AMF_OK;
     if (AMF_OK != (res = m_deviceDX9.Init(true, prm->nAdapterId, false, m_inputInfo.srcWidth, m_inputInfo.srcHeight))) {
+        PrintMes(VCE_LOG_ERROR, _T("m_deviceDX9.Init() failed: %s.\n"), AMFRetString(res));
         return res;
     }
     PrintMes(VCE_LOG_DEBUG, _T("initialized DX9 device.\n"));
     if (AMF_OK != (res = m_pContext->InitDX9(m_deviceDX9.GetDevice()))) {
+        PrintMes(VCE_LOG_ERROR, _T("InitDX9: fail: %s.\n"), AMFRetString(res));
         return res;
     }
+    PrintMes(VCE_LOG_DEBUG, _T("InitDX9: success.\n"));
     return res;
 }
 
 AMF_RESULT VCECore::initDeviceDX11(VCEParam *prm) {
     AMF_RESULT res = AMF_OK;
     if (AMF_OK != (res = m_deviceDX11.Init(prm->nAdapterId, false))) {
+        PrintMes(VCE_LOG_ERROR, _T("m_deviceDX11.Init() failed: %s.\n"), AMFRetString(res));
         return AMF_FAIL;
     }
     PrintMes(VCE_LOG_DEBUG, _T("initialized DX11 device.\n"));
     if (AMF_OK != (res = m_pContext->InitDX11(m_deviceDX11.GetDevice()))) {
-        PrintMes(VCE_LOG_ERROR, _T("Failed to InitDX11.\n"));
+        PrintMes(VCE_LOG_ERROR, _T("InitDX9: fail: %s.\n"), AMFRetString(res));
         return AMF_FAIL;
     }
+    PrintMes(VCE_LOG_DEBUG, _T("InitDX11: success.\n"));
     return res;
 }
 
@@ -1004,10 +1009,10 @@ AMF_RESULT VCECore::initDevice(VCEParam *prm) {
             return AMF_OK;
         }
         if (prm->memoryTypeIn == amf::AMF_MEMORY_DX9) {
-            PrintMes(VCE_LOG_ERROR, _T("Failed to initialize DX9 device.\n"));
+            PrintMes(VCE_LOG_ERROR, _T("Failed to initialize DX9 device: %s.\n"), AMFRetString(res));
             return res;
         }
-        PrintMes(VCE_LOG_DEBUG, _T("Failed to initialize DX9 device, try DX11.\n"));
+        PrintMes(VCE_LOG_DEBUG, _T("Failed to initialize DX9 device (%s), try DX11.\n"), AMFRetString(res));
     }
     if (prm->memoryTypeIn == amf::AMF_MEMORY_UNKNOWN
         || prm->memoryTypeIn == amf::AMF_MEMORY_DX11) {
@@ -1016,7 +1021,7 @@ AMF_RESULT VCECore::initDevice(VCEParam *prm) {
             prm->memoryTypeIn = amf::AMF_MEMORY_DX11;
             return AMF_OK;
         }
-        PrintMes(VCE_LOG_ERROR, _T("Failed to initialize DX11 device.\n"));
+        PrintMes(VCE_LOG_ERROR, _T("Failed to initialize DX11 device: %s.\n"), AMFRetString(res));
         return res;
     }
     PrintMes(VCE_LOG_ERROR, _T("Unsupported memory type.\n"));
@@ -1029,6 +1034,7 @@ AMF_RESULT VCECore::initDecoder(VCEParam *prm) {
 #if ENABLE_AVCODEC_VCE_READER
     auto inputCodec = m_pFileReader->getInputCodec();
     if (inputCodec == VCE_CODEC_NONE) {
+        PrintMes(VCE_LOG_DEBUG, _T("decoder not required.\n"));
         return AMF_OK;
     }
     if (VCE_CODEC_UVD_NAME.find(inputCodec) == VCE_CODEC_UVD_NAME.end()) {
@@ -1039,32 +1045,39 @@ AMF_RESULT VCECore::initDecoder(VCEParam *prm) {
     if (inputCodec == VCE_CODEC_HEVC && m_inputInfo.format == amf::AMF_SURFACE_P010) {
         codec_uvd_name = AMFVideoDecoderHW_H265_MAIN10;
     }
+    PrintMes(VCE_LOG_DEBUG, _T("decoder: use codec \"%s\".\n"), wstring_to_tstring(codec_uvd_name).c_str());
     auto res = g_AMFFactory.GetFactory()->CreateComponent(m_pContext, codec_uvd_name, &m_pDecoder);
     if (res != AMF_OK) {
-        PrintMes(VCE_LOG_ERROR, _T("Failed to create decoder context: %d\n"), res);
+        PrintMes(VCE_LOG_ERROR, _T("Failed to create decoder context: %s\n"), AMFRetString(res));
         return AMF_FAIL;
     }
+    PrintMes(VCE_LOG_DEBUG, _T("created decoder context.\n"));
 
     if (AMF_OK != (res = m_pDecoder->SetProperty(AMF_TIMESTAMP_MODE, amf_int64(AMF_TS_PRESENTATION)))) {
-        PrintMes(VCE_LOG_ERROR, _T("Failed to set deocder: %d\n"), res);
+        PrintMes(VCE_LOG_ERROR, _T("Failed to set deocder: %s\n"), AMFRetString(res));
         return AMF_FAIL;
     }
     sBitstream header = { 0 };
     if (AMF_OK != (res = m_pFileReader->GetHeader(&header))) {
-        PrintMes(VCE_LOG_ERROR, _T("Failed to get video header: %d\n"), res);
+        PrintMes(VCE_LOG_ERROR, _T("Failed to get video header: %s\n"), AMFRetString(res));
         return AMF_FAIL;
     }
+    PrintMes(VCE_LOG_DEBUG, _T("set codec header to decoder: %d bytes.\n"), header.DataLength);
+
     amf::AMFBufferPtr buffer;
     m_pContext->AllocBuffer(amf::AMF_MEMORY_HOST, header.DataLength, &buffer);
 
     memcpy(buffer->GetNative(), header.Data, header.DataLength);
     m_pDecoder->SetProperty(AMF_VIDEO_DECODER_EXTRADATA, amf::AMFVariant(buffer));
 
+    PrintMes(VCE_LOG_DEBUG, _T("initialize decoder: %dx%d, %s.\n"),
+        m_inputInfo.srcWidth, m_inputInfo.srcHeight,
+        wstring_to_tstring(g_AMFFactory.GetTrace()->SurfaceGetFormatName(m_inputInfo.format)).c_str());
     if (AMF_OK != (res = m_pDecoder->Init(m_inputInfo.format, m_inputInfo.srcWidth, m_inputInfo.srcHeight))) {
-        PrintMes(VCE_LOG_ERROR, _T("Failed to init decoder: %d\n"), res);
+        PrintMes(VCE_LOG_ERROR, _T("Failed to init decoder: %s\n"), AMFRetString(res));
         return res;
     }
-    PrintMes(VCE_LOG_DEBUG, _T("Initialized decoder\n"), res);
+    PrintMes(VCE_LOG_DEBUG, _T("Initialized decoder\n"));
     return res;
 #else
     return AMF_OK;
@@ -1074,22 +1087,29 @@ AMF_RESULT VCECore::initDecoder(VCEParam *prm) {
 
 AMF_RESULT VCECore::initConverter(VCEParam *prm) {
     if (m_inputInfo.dstWidth == m_inputInfo.srcWidth && m_inputInfo.dstHeight == m_inputInfo.srcHeight && m_inputInfo.format == formatOut) {
+        PrintMes(VCE_LOG_DEBUG, _T("converter not required.\n"));
         return AMF_OK;
     }
     auto res = g_AMFFactory.GetFactory()->CreateComponent(m_pContext, AMFVideoConverter, &m_pConverter);
     if (res != AMF_OK) {
-        PrintMes(VCE_LOG_ERROR, _T("Failed to create converter context: %d\n"), res);
+        PrintMes(VCE_LOG_ERROR, _T("Failed to create converter context: %s\n"), AMFRetString(res));
         return AMF_FAIL;
     }
+    PrintMes(VCE_LOG_DEBUG, _T("created converter context.\n"));
 
     res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_MEMORY_TYPE, prm->memoryTypeIn);
     res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_FORMAT, formatOut);
-    res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_SIZE,   AMFConstructSize(m_inputInfo.dstWidth, m_inputInfo.dstHeight));
+    res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_SIZE, AMFConstructSize(m_inputInfo.dstWidth, m_inputInfo.dstHeight));
     res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_SCALE, AMF_VIDEO_CONVERTER_SCALE_BICUBIC);
+    PrintMes(VCE_LOG_DEBUG, _T("initialize converter by mem type %s, format out %s, output size %dx%x.\n"),
+        wstring_to_tstring(g_AMFFactory.GetTrace()->GetMemoryTypeName(prm->memoryTypeIn)).c_str(),
+        wstring_to_tstring(g_AMFFactory.GetTrace()->SurfaceGetFormatName(formatOut)).c_str(),
+        m_inputInfo.dstWidth, m_inputInfo.dstHeight);
     if (AMF_OK != (res = m_pConverter->Init(formatOut, m_inputInfo.srcWidth, m_inputInfo.srcHeight))) {
-        PrintMes(VCE_LOG_ERROR, _T("Failed to init converter: %d\n"), res);
+        PrintMes(VCE_LOG_ERROR, _T("Failed to init converter: %s\n"), AMFRetString(res));
         return res;
     }
+    PrintMes(VCE_LOG_DEBUG, _T("initialized converter.\n"));
     return res;
 }
 
@@ -1225,7 +1245,7 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
     const amf::AMF_SURFACE_FORMAT formatIn = amf::AMF_SURFACE_NV12;
     m_VCECodecId = prm->nCodecId;
     if (AMF_OK != (res = g_AMFFactory.GetFactory()->CreateComponent(m_pContext, list_codec_key[prm->nCodecId], &m_pEncoder))) {
-        PrintMes(VCE_LOG_ERROR, _T("Failed to AMFCreateComponent.\n"));
+        PrintMes(VCE_LOG_ERROR, _T("Failed to AMFCreateComponent: %s.\n"), AMFRetString(res));
         return AMF_FAIL;
     }
     PrintMes(VCE_LOG_DEBUG, _T("initialized Encoder component.\n"));
@@ -1526,40 +1546,43 @@ AMF_RESULT VCECore::initEncoder(VCEParam *prm) {
 
     // Usage is preset that will set many parameters
     PushParamsToPropertyStorage(&m_Params, ParamEncoderUsage, m_pEncoder);
+    PrintMes(VCE_LOG_DEBUG, _T("pushed usage params.\n"));
     // override some usage parameters
     PushParamsToPropertyStorage(&m_Params, ParamEncoderStatic, m_pEncoder);
+    PrintMes(VCE_LOG_DEBUG, _T("pushed static params.\n"));
 
     if (AMF_OK != (res = m_pEncoder->Init(formatIn, m_inputInfo.dstWidth, m_inputInfo.dstHeight))) {
-        PrintMes(VCE_LOG_ERROR, _T("Failed to initalize encoder.\n"));
+        PrintMes(VCE_LOG_ERROR, _T("Failed to initalize encoder: %s.\n"), AMFRetString(res));
         return res;
     }
     PrintMes(VCE_LOG_DEBUG, _T("initalized encoder.\n"));
 
     PushParamsToPropertyStorage(&m_Params, ParamEncoderDynamic, m_pEncoder);
+    PrintMes(VCE_LOG_DEBUG, _T("pushed dynamic params.\n"));
 
     // Connect pipeline
     if (AMF_OK != (res = Connect(m_pFileReader, 4, CT_Direct))) {
-        PrintMes(VCE_LOG_ERROR, _T("failed to connect input to pipeline.\n"));
+        PrintMes(VCE_LOG_ERROR, _T("failed to connect input to pipeline: %s\n"), AMFRetString(res));
         return res;
     }
     if (m_pDecoder) {
         if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementAMFComponent(m_pDecoder)), 4, CT_Direct))) {
-            PrintMes(VCE_LOG_ERROR, _T("failed to connect deocder to pipeline.\n"));
+            PrintMes(VCE_LOG_ERROR, _T("failed to connect deocder to pipeline: %s\n"), AMFRetString(res));
             return res;
         }
     }
     if (m_pConverter) {
         if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementAMFComponent(m_pConverter)), 4, CT_Direct))) {
-            PrintMes(VCE_LOG_ERROR, _T("failed to connect converter to pipeline.\n"));
+            PrintMes(VCE_LOG_ERROR, _T("failed to connect converter to pipeline: %s\n"), AMFRetString(res));
             return res;
         }
     }
     if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementEncoder(m_pEncoder, &m_Params, 0, 0, true)), 30, CT_Direct))) {
-        PrintMes(VCE_LOG_ERROR, _T("failed to connect encoder to pipeline.\n"));
+        PrintMes(VCE_LOG_ERROR, _T("failed to connect encoder to pipeline: %s\n"), AMFRetString(res));
         return res;
     }
     if (AMF_OK != (res = Connect(m_pFileWriter, 10, CT_ThreadPoll))) {
-        PrintMes(VCE_LOG_ERROR, _T("failed to connect output to pipeline.\n"));
+        PrintMes(VCE_LOG_ERROR, _T("failed to connect output to pipeline: %s\n"), AMFRetString(res));
         return res;
     }
     PrintMes(VCE_LOG_DEBUG, _T("connected elements to pipeline.\n"));
@@ -1577,13 +1600,13 @@ AMF_RESULT VCECore::init(VCEParam *prm, VCEInputInfo *inputInfo) {
     AMF_RESULT ret = g_AMFFactory.Init();
 
     if (ret != AMF_OK) {
-        PrintMes(VCE_LOG_ERROR, _T("Failed to initalize VCE"));
+        PrintMes(VCE_LOG_ERROR, _T("Failed to initalize VCE: %s"), AMFRetString(ret));
         return AMF_NO_DEVICE;
     }
 
     AMF_RESULT res = g_AMFFactory.GetFactory()->CreateContext(&m_pContext);
     if (res != AMF_OK) {
-        PrintMes(VCE_LOG_ERROR, _T("Failed to create AMF Context.\n"));
+        PrintMes(VCE_LOG_ERROR, _T("Failed to create AMF Context: %s.\n"), AMFRetString(ret));
         return res;
     }
     PrintMes(VCE_LOG_DEBUG, _T("Created AMF Context.\n"));
@@ -1688,7 +1711,7 @@ AMF_RESULT VCECore::run() {
     }
     res = Pipeline::Start();
     if (res != AMF_OK) {
-        PrintMes(VCE_LOG_ERROR, _T("failed to start pipeline\n"));
+        PrintMes(VCE_LOG_ERROR, _T("failed to start pipeline: %s\n"), AMFRetString(res));
         return res;
     }
     PrintMes(VCE_LOG_DEBUG, _T("started pipeline.\n"));
