@@ -1601,10 +1601,10 @@ int parse_args(VCEParam *pParams, VCEInputInfo *pInputInfo, int nArgNum, const T
                 nDeviceId = value;
             }
             if (check_if_vce_available(VCE_CODEC_H264, nDeviceId)) {
-                _ftprintf(stderr, _T("VCE available.\n"));
+                _ftprintf(stdout, _T("VCE available.\n"));
                 exit(0);
             }
-            _ftprintf(stderr, _T("VCE unavailable.\n"));
+            _ftprintf(stdout, _T("VCE unavailable.\n"));
             exit(1);
         }
         if (IS_OPTION("check-features")) {
@@ -1613,12 +1613,12 @@ int parse_args(VCEParam *pParams, VCEInputInfo *pInputInfo, int nArgNum, const T
             if (1 == _stscanf_s(strInput[i+1], _T("%d"), &value)) {
                 nDeviceId = value;
             }
-            _ftprintf(stderr, _T("H.264 Encoder Capability\n"));
-            _ftprintf(stderr, _T("%s\n"), check_vce_features(VCE_CODEC_H264, nDeviceId).c_str());
-            _ftprintf(stderr, _T("\n"));
-            _ftprintf(stderr, _T("HEVC Encoder Capability\n"));
-            _ftprintf(stderr, _T("%s\n"), check_vce_features(VCE_CODEC_HEVC, nDeviceId).c_str());
-            _ftprintf(stderr, _T("\n"));
+            _ftprintf(stdout, _T("H.264 Encoder Capability\n"));
+            _ftprintf(stdout, _T("%s\n"), check_vce_features(VCE_CODEC_H264, nDeviceId).c_str());
+            _ftprintf(stdout, _T("\n"));
+            _ftprintf(stdout, _T("HEVC Encoder Capability\n"));
+            _ftprintf(stdout, _T("%s\n"), check_vce_features(VCE_CODEC_HEVC, nDeviceId).c_str());
+            _ftprintf(stdout, _T("\n"));
             exit(0);
         }
 #if ENABLE_AVCODEC_VCE_READER
