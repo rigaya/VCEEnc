@@ -972,12 +972,12 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
 AMF_RESULT VCECore::initDeviceDX9(VCEParam *prm) {
     AMF_RESULT res = AMF_OK;
     if (AMF_OK != (res = m_deviceDX9.Init(true, prm->nAdapterId, false, m_inputInfo.srcWidth, m_inputInfo.srcHeight))) {
-        PrintMes(VCE_LOG_ERROR, _T("m_deviceDX9.Init() failed: %s.\n"), AMFRetString(res));
+        PrintMes(VCE_LOG_DEBUG, _T("m_deviceDX9.Init() failed: %s.\n"), AMFRetString(res));
         return res;
     }
     PrintMes(VCE_LOG_DEBUG, _T("initialized DX9 device.\n"));
     if (AMF_OK != (res = m_pContext->InitDX9(m_deviceDX9.GetDevice()))) {
-        PrintMes(VCE_LOG_ERROR, _T("InitDX9: fail: %s.\n"), AMFRetString(res));
+        PrintMes(VCE_LOG_DEBUG, _T("InitDX9: fail: %s.\n"), AMFRetString(res));
         return res;
     }
     PrintMes(VCE_LOG_DEBUG, _T("InitDX9: success.\n"));
@@ -987,12 +987,12 @@ AMF_RESULT VCECore::initDeviceDX9(VCEParam *prm) {
 AMF_RESULT VCECore::initDeviceDX11(VCEParam *prm) {
     AMF_RESULT res = AMF_OK;
     if (AMF_OK != (res = m_deviceDX11.Init(prm->nAdapterId, false))) {
-        PrintMes(VCE_LOG_ERROR, _T("m_deviceDX11.Init() failed: %s.\n"), AMFRetString(res));
+        PrintMes(VCE_LOG_DEBUG, _T("m_deviceDX11.Init() failed: %s.\n"), AMFRetString(res));
         return AMF_FAIL;
     }
     PrintMes(VCE_LOG_DEBUG, _T("initialized DX11 device.\n"));
     if (AMF_OK != (res = m_pContext->InitDX11(m_deviceDX11.GetDevice()))) {
-        PrintMes(VCE_LOG_ERROR, _T("InitDX9: fail: %s.\n"), AMFRetString(res));
+        PrintMes(VCE_LOG_DEBUG, _T("InitDX11: fail: %s.\n"), AMFRetString(res));
         return AMF_FAIL;
     }
     PrintMes(VCE_LOG_DEBUG, _T("InitDX11: success.\n"));
