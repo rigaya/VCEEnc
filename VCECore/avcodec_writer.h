@@ -415,7 +415,7 @@ private:
     int AudioResampleFrame(AVMuxAudio *pMuxAudio, AVFrame **frame);
 
     //音声をエンコード
-    int AudioEncodeFrame(AVMuxAudio *pMuxAudio, AVPacket *pEncPkt, const AVFrame *frame, int *got_result);
+    vector<AVPktMuxData> AudioEncodeFrame(AVMuxAudio *pMuxAudio, const AVFrame *frame);
 
     //字幕パケットを書き出す
     AMF_RESULT SubtitleTranscode(const AVMuxSub *pMuxSub, AVPacket *pkt);
@@ -425,6 +425,9 @@ private:
 
     //パケットを実際に書き出す
     void WriteNextPacketProcessed(AVPktMuxData *pktData);
+
+    //パケットを実際に書き出す
+    void WriteNextPacketProcessed(AVPktMuxData *pktData, int64_t *pWrittenDts);
 
     //パケットを実際に書き出す
     void WriteNextPacketProcessed(AVMuxAudio *pMuxAudio, AVPacket *pkt, int samples, int64_t *pWrittenDts);
