@@ -537,7 +537,7 @@ AMF_RESULT CAvcodecWriter::InitVideo(const AvcodecWriterPrm *prm) {
 
     m_Mux.video.bDtsUnavailable   = prm->bVideoDtsUnavailable;
     m_Mux.video.nInputFirstKeyPts = prm->nVideoInputFirstKeyPts;
-    m_Mux.video.pInputCodecCtx    = prm->pVideoInputCodecCtx;
+    m_Mux.video.pStreamIn    = prm->pStreamIn;
     m_Mux.video.bCFR              = prm->vidPrm.bCFR;
 
     m_Mux.video.pCodecCtx->flags |= CODEC_FLAG_GLOBAL_HEADER;
@@ -1312,12 +1312,12 @@ AMF_RESULT CAvcodecWriter::Init(const tstring& dstFile, const void *pOption, sha
         if (m_Mux.format.nOutputBufferSize == 0) {
             //出力バッファが0とされている場合、libavformat用の内部バッファも量を減らす
             m_Mux.format.nAVOutBufferSize = 128 * 1024;
-            if (prm->pVideoInputCodecCtx) {
+            if (prm->pStreamIn) {
                 m_Mux.format.nAVOutBufferSize *= 4;
             }
         } else {
             m_Mux.format.nAVOutBufferSize = 1024 * 1024;
-            if (prm->pVideoInputCodecCtx) {
+            if (prm->pStreamIn) {
                 m_Mux.format.nAVOutBufferSize *= 8;
             } else {
                 //動画を出力しない(音声のみの場合)場合、バッファを減らす
@@ -1980,7 +1980,7 @@ AMF_RESULT CAvcodecWriter::WriteNextFrameInternal(sBitstream *pBitstream, int64_
         pkt.size = bytesToWrite;
 
         const AVRational fpsTimebase = av_div_q({1, 1 + bIsPAFF}, m_Mux.video.nFPS);
-        const AVRational inputTimebase = (m_Mux.video.bCFR) ? fpsTimebase : ((m_Mux.video.pInputCodecCtx) ? m_Mux.video.pInputCodecCtx->pkt_timebase : VCE_NATIVE_TIMEBASE);
+        const AVRational inputTimebase = (m_Mux.video.bCFR) ? fpsTimebase : ((m_Mux.video.pStreamIn) ? m_Mux.video.pStreamIn->time_base : VCE_NATIVE_TIMEBASE);
         const AVRational streamTimebase = m_Mux.video.pStreamOut->codec->pkt_timebase;
         pkt.stream_index = m_Mux.video.pStreamOut->index;
         pkt.flags = !!((pBitstream->DataFlag & 1) && (i == 0));
@@ -2544,7 +2544,7 @@ AMF_RESULT CAvcodecWriter::SubtitleTranscode(const AVMuxSub *pMuxSub, AVPacket *
 AMF_RESULT CAvcodecWriter::SubtitleWritePacket(AVPacket *pkt) {
     //字幕を処理する
     const AVMuxSub *pMuxSub = getSubPacketStreamData(pkt);
-    const AVRational vid_pkt_timebase = (m_Mux.video.pInputCodecCtx) ? m_Mux.video.pInputCodecCtx->pkt_timebase : av_inv_q(m_Mux.video.nFPS);
+    const AVRational vid_pkt_timebase = (m_Mux.video.pStreamIn) ? m_Mux.video.pStreamIn->time_base : av_inv_q(m_Mux.video.nFPS);
     const int64_t pts_adjust = av_rescale_q(m_Mux.video.nInputFirstKeyPts, vid_pkt_timebase, pMuxSub->pCodecCtxIn->pkt_timebase);
     //ptsが存在しない場合はないものとすると、AdjustTimestampTrimmedの結果がAV_NOPTS_VALUEとなるのは、
     //Trimによりカットされたときのみ

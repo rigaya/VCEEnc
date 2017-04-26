@@ -767,7 +767,7 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
         writerPrm.bVideoDtsUnavailable = false;
         writerPrm.pQueueInfo = nullptr;
         writerPrm.nVideoInputFirstKeyPts = 0;
-        writerPrm.pVideoInputCodecCtx = nullptr;
+        writerPrm.pStreamIn = nullptr;
         //writerPrm.pQueueInfo = (m_pPerfMonitor) ? m_pPerfMonitor->GetQueueInfoPtr() : nullptr;
         if (pParams->pMuxOpt) {
             writerPrm.vMuxOpt = *pParams->pMuxOpt;
@@ -789,7 +789,7 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
                 writerPrm.chapterList = pAVCodecReader->GetChapterList();
             }
             writerPrm.nVideoInputFirstKeyPts = pAVCodecReader->GetVideoFirstKeyPts();
-            writerPrm.pVideoInputCodecCtx = pAVCodecReader->GetInputVideoCodecCtx();
+            writerPrm.pStreamIn = pAVCodecReader->GetInputVideoStream();
         }
         if (pParams->nAVMux & (VCEENC_MUX_AUDIO | VCEENC_MUX_SUBTITLE)) {
             PrintMes(VCE_LOG_DEBUG, _T("Output: Audio/Subtitle muxing enabled.\n"));
@@ -813,7 +813,7 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
                     //もしavqsvリーダーでないなら、音声リーダーから情報を取得する必要がある
                     if (pAVCodecReader == nullptr) {
                         writerPrm.nVideoInputFirstKeyPts = pAVCodecAudioReader->GetVideoFirstKeyPts();
-                        writerPrm.pVideoInputCodecCtx = pAVCodecAudioReader->GetInputVideoCodecCtx();
+                        writerPrm.pStreamIn = pAVCodecAudioReader->GetInputVideoStream();
                     }
                 }
             }
@@ -947,7 +947,7 @@ AMF_RESULT VCECore::initOutput(VCEParam *pParams) {
                     writerAudioPrm.trimList = m_pTrimParam->list;
                 }
                 writerAudioPrm.nVideoInputFirstKeyPts = pAVCodecReader->GetVideoFirstKeyPts();
-                writerAudioPrm.pVideoInputCodecCtx = pAVCodecReader->GetInputVideoCodecCtx();
+                writerAudioPrm.pStreamIn = pAVCodecReader->GetInputVideoStream();
 
                 auto pWriter = std::make_shared<CAvcodecWriter>();
                 sts = pWriter->Init(pAudioSelect->pAudioExtractFilename, &writerAudioPrm, m_pVCELog, m_pEncSatusInfo);
