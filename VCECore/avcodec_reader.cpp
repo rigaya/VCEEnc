@@ -378,7 +378,7 @@ AMF_RESULT CAvcodecReader::getFirstFramePosAndFrameRate(const sTrim *pTrimList, 
         uint64_t den;
     } estimatedAvgFps = { 0 }, nAvgFramerate64 = { 0 }, fpsDecoder64 = { (uint64_t)fpsDecoder.num, (uint64_t)fpsDecoder.den };
     if (mostPopularDuration.first == 0) {
-        m_Demux.video.nStreamPtsInvalid |= AVVCE_PTS_ALL_INVALID;
+        m_Demux.video.nStreamPtsInvalid |= RGY_PTS_ALL_INVALID;
     } else {
         //avgFpsとtargetFpsが近いかどうか
         auto fps_near = [](double avgFps, double targetFps) { return std::abs(1 - avgFps / targetFps) < 0.5; };
@@ -402,7 +402,7 @@ AMF_RESULT CAvcodecReader::getFirstFramePosAndFrameRate(const sTrim *pTrimList, 
         AddMessage(VCE_LOG_DEBUG, _T("estimatedAvgFps: %I64u/%I64u\n"), estimatedAvgFps.num, estimatedAvgFps.den);
     }
 
-    if (m_Demux.video.nStreamPtsInvalid & AVVCE_PTS_ALL_INVALID) {
+    if (m_Demux.video.nStreamPtsInvalid & RGY_PTS_ALL_INVALID) {
         //ptsとdurationをpkt_timebaseで適当に作成する
         nAvgFramerate64 = (fpsDecoderInvalid) ? estimatedAvgFps : fpsDecoder64;
     } else {
@@ -489,7 +489,7 @@ AMF_RESULT CAvcodecReader::getFirstFramePosAndFrameRate(const sTrim *pTrimList, 
                 if (pkt1 != NULL) {
                     //1パケット目はたまにおかしいので、可能なら2パケット目を使用する
                     av_copy_packet(&streamInfo->pktSample, (pkt2) ? pkt2 : pkt1);
-                    if (m_Demux.video.nStreamPtsInvalid & AVVCE_PTS_ALL_INVALID) {
+                    if (m_Demux.video.nStreamPtsInvalid & RGY_PTS_ALL_INVALID) {
                         streamInfo->nDelayOfStream = 0;
                     } else {
                         //その音声の属する動画フレーム番号
@@ -1343,7 +1343,7 @@ int CAvcodecReader::getSample(AVPacket *pkt, bool bTreatFirstPacketAsKeyframe) {
     //動画の終端を表す最後のptsを挿入する
     int64_t videoFinPts = 0;
     const int nFrameNum = m_Demux.frames.frameNum();
-    if (m_Demux.video.nStreamPtsInvalid & AVVCE_PTS_ALL_INVALID) {
+    if (m_Demux.video.nStreamPtsInvalid & RGY_PTS_ALL_INVALID) {
         videoFinPts = nFrameNum * m_Demux.frames.list(0).duration;
     } else if (nFrameNum) {
         const FramePos *lastFrame = &m_Demux.frames.list(nFrameNum - 1);
@@ -1582,7 +1582,7 @@ void CAvcodecReader::GetAudioDataPacketsWhenNoVideoRead() {
                     //およそ1フレーム分のパケットを設定する
                     int64_t pts = m_Demux.video.nSampleGetCount;
                     m_Demux.frames.add(framePos(pts, pts, 1, 0, m_Demux.video.nSampleGetCount, AV_PKT_FLAG_KEY));
-                    if (m_Demux.frames.getStreamPtsStatus() == AVVCE_PTS_UNKNOWN) {
+                    if (m_Demux.frames.getStreamPtsStatus() == RGY_PTS_UNKNOWN) {
                         m_Demux.frames.checkPtsStatus();
                     }
                     CheckAndMoveStreamPacketList();
