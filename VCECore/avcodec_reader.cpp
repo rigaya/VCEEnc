@@ -472,7 +472,7 @@ AMF_RESULT CAvcodecReader::getFirstFramePosAndFrameRate(const sTrim *pTrimList, 
             return AMF_UNEXPECTED;
         }
         for (auto streamInfo = m_Demux.stream.begin(); streamInfo != m_Demux.stream.end(); streamInfo++) {
-            if (avcodec_get_type(streamInfo->pCodecCtx->codec_id) == AVMEDIA_TYPE_AUDIO) {
+            if (avcodec_get_type(streamInfo->pStream->codecpar->codec_id) == AVMEDIA_TYPE_AUDIO) {
                 AddMessage(VCE_LOG_DEBUG, _T("checking for stream #%d\n"), streamInfo->nIndex);
                 const AVPacket *pkt1 = nullptr; //最初のパケット
                 const AVPacket *pkt2 = nullptr; //2番目のパケット
@@ -493,7 +493,7 @@ AMF_RESULT CAvcodecReader::getFirstFramePosAndFrameRate(const sTrim *pTrimList, 
                         streamInfo->nDelayOfStream = 0;
                     } else {
                         //その音声の属する動画フレーム番号
-                        const int vidIndex = getVideoFrameIdx(pkt1->pts, streamInfo->pCodecCtx->pkt_timebase, 0);
+                        const int vidIndex = getVideoFrameIdx(pkt1->pts, streamInfo->pStream->time_base, 0);
                         AddMessage(VCE_LOG_DEBUG, _T("audio track %d first pts: %I64d\n"), streamInfo->nTrackId, pkt1->pts);
                         AddMessage(VCE_LOG_DEBUG, _T("      first pts videoIdx: %d\n"), vidIndex);
                         if (vidIndex >= 0) {
@@ -507,7 +507,7 @@ AMF_RESULT CAvcodecReader::getFirstFramePosAndFrameRate(const sTrim *pTrimList, 
                             streamInfo->nDelayOfStream = delayOfStream;
                             AddMessage(VCE_LOG_DEBUG, _T("audio track %d delay: %d (timebase=%d/%d)\n"),
                                 streamInfo->nIndex, streamInfo->nTrackId,
-                                streamInfo->nDelayOfStream, streamInfo->pCodecCtx->pkt_timebase.num, streamInfo->pCodecCtx->pkt_timebase.den);
+                                streamInfo->nDelayOfStream, streamInfo->pStream->time_base.num, streamInfo->pStream->time_base.den);
                         }
                     }
                 } else {
@@ -747,7 +747,6 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
                         : iTrack + input_prm->nAudioTrackStart; //音声は1, 2, 3
                     stream.nIndex = mediaStreams[iTrack];
                     stream.nSubStreamId = iSubStream;
-                    stream.pCodecCtx = m_Demux.format.pFormatCtx->streams[stream.nIndex]->codec;
                     stream.pStream = m_Demux.format.pFormatCtx->streams[stream.nIndex];
                     if (pAudioSelect) {
                         memcpy(stream.pnStreamChannelSelect, pAudioSelect->pnStreamChannelSelect, sizeof(stream.pnStreamChannelSelect));
@@ -757,7 +756,7 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
                     AddMessage(VCE_LOG_DEBUG, _T("found %s stream, stream idx %d, trackID %d.%d, %s, frame_size %d, timebase %d/%d\n"),
                         get_media_type_string(codecId).c_str(),
                         stream.nIndex, stream.nTrackId, stream.nSubStreamId, char_to_tstring(avcodec_get_name(codecId)).c_str(),
-                        stream.pCodecCtx->frame_size, stream.pCodecCtx->pkt_timebase.num, stream.pCodecCtx->pkt_timebase.den);
+                        stream.pStream->codecpar->frame_size, stream.pStream->time_base.num, stream.pStream->time_base.den);
                 }
             }
         }
@@ -1134,10 +1133,10 @@ AMF_RESULT CAvcodecReader::init(shared_ptr<VCELog> pLog, shared_ptr<VCEStatus> p
         tstring mes;
         for (const auto& stream : m_Demux.stream) {
             if (mes.length()) mes += _T(", ");
-            tstring codec_name = char_to_tstring(avcodec_get_name(stream.pCodecCtx->codec_id));
+            tstring codec_name = char_to_tstring(avcodec_get_name(stream.pStream->codecpar->codec_id));
             mes += codec_name;
             AddMessage(VCE_LOG_DEBUG, _T("avcodec %s: %s from %s\n"),
-                get_media_type_string(stream.pCodecCtx->codec_id).c_str(), codec_name.c_str(), input_prm->srcFile);
+                get_media_type_string(stream.pStream->codecpar->codec_id).c_str(), codec_name.c_str(), input_prm->srcFile);
         }
         m_strInputInfo += _T("avcodec audio: ") + mes;
     }
@@ -1180,11 +1179,11 @@ int CAvcodecReader::getVideoFrameIdx(int64_t pts, AVRational timebase, int iStar
 
 int64_t CAvcodecReader::convertTimebaseVidToStream(int64_t pts, const AVDemuxStream *pStream) {
     const AVRational vid_pkt_timebase = (m_Demux.video.pStream) ? m_Demux.video.pStream->time_base : av_inv_q(m_Demux.video.nAvgFramerate);
-    return av_rescale_q(pts, vid_pkt_timebase, pStream->pCodecCtx->pkt_timebase);
+    return av_rescale_q(pts, vid_pkt_timebase, pStream->pStream->time_base);
 }
 
 bool CAvcodecReader::checkStreamPacketToAdd(const AVPacket *pkt, AVDemuxStream *pStream) {
-    pStream->nLastVidIndex = getVideoFrameIdx(pkt->pts, pStream->pCodecCtx->pkt_timebase, pStream->nLastVidIndex);
+    pStream->nLastVidIndex = getVideoFrameIdx(pkt->pts, pStream->pStream->time_base, pStream->nLastVidIndex);
 
     //該当フレームが-1フレーム未満なら、その音声はこの動画には含まれない
     if (pStream->nLastVidIndex < -1) {
@@ -1578,7 +1577,7 @@ void CAvcodecReader::GetAudioDataPacketsWhenNoVideoRead() {
                 uint64_t pktt = (pkt.pts == AV_NOPTS_VALUE) ? pkt.dts : pkt.pts;
                 uint64_t pkt_dist = pktt - pStream->pktSample.pts;
                 //1フレーム分のサンプルを取得したら終了
-                if (pkt_dist * (double)pStream->pCodecCtx->pkt_timebase.num / (double)pStream->pCodecCtx->pkt_timebase.den > vidEstDurationSec) {
+                if (pkt_dist * (double)pStream->pStream->time_base.num / (double)pStream->pStream->time_base.den > vidEstDurationSec) {
                     //およそ1フレーム分のパケットを設定する
                     int64_t pts = m_Demux.video.nSampleGetCount;
                     m_Demux.frames.add(framePos(pts, pts, 1, 0, m_Demux.video.nSampleGetCount, AV_PKT_FLAG_KEY));
@@ -1616,7 +1615,7 @@ void CAvcodecReader::CheckAndMoveStreamPacketList() {
         auto pkt = m_Demux.qStreamPktL1.front();
         AVDemuxStream *pStream = getPacketStreamData(&pkt);
         //音声のptsが映像の終わりのptsを行きすぎたらやめる
-        if (0 < av_compare_ts(pkt.pts, pStream->pCodecCtx->pkt_timebase, m_Demux.frames.list(m_Demux.frames.fixedNum()).pts, vid_pkt_timebase)) {
+        if (0 < av_compare_ts(pkt.pts, pStream->pStream->time_base, m_Demux.frames.list(m_Demux.frames.fixedNum()).pts, vid_pkt_timebase)) {
             break;
         }
         if (checkStreamPacketToAdd(&pkt, pStream)) {
