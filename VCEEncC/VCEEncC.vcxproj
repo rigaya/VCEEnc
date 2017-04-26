@@ -163,7 +163,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;..\dtl</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -189,7 +189,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugStatic|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;..\dtl</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -216,7 +216,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;..\dtl</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -240,7 +240,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugStatic|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;..\dtl</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -266,7 +266,7 @@
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;..\dtl</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -295,7 +295,7 @@
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
       <Optimization>MinSpace</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;..\dtl</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -328,7 +328,7 @@
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
       <Optimization>MinSpace</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;..\dtl</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -362,7 +362,7 @@
       <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
       <Optimization>MinSpace</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;..\ffmpeg_lgpl\include;..\dtl</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>

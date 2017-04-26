@@ -36,6 +36,13 @@
 #include "VCECore.h"
 #include "avcodec_vce.h"
 
+#if ENABLE_CPP_REGEX
+#include <regex>
+#endif //#if ENABLE_CPP_REGEX
+#if ENABLE_DTL
+#include <dtl/dtl.hpp>
+#endif //#if ENABLE_DTL
+
 static tstring GetVCEEncVersion() {
     static const TCHAR *const ENABLED_INFO[] = { _T("disabled"), _T("enabled") };
     tstring version = strsprintf(_T("VCEEncC (%s) %s by rigaya, build %s %s\n"), BUILD_ARCH_STR, VER_STR_FILEVERSION_TCHAR, _T(__DATE__), _T(__TIME__));
@@ -50,6 +57,32 @@ static tstring GetVCEEncVersion() {
 static void PrintVersion() {
     _ftprintf(stdout, _T("%s\n"), GetVCEEncVersion().c_str());
 }
+
+class CombinationGenerator {
+public:
+    CombinationGenerator(int i) : m_nCombination(i) {
+
+    }
+    void create(vector<int> used) {
+        if ((int)used.size() == m_nCombination) {
+            m_nCombinationList.push_back(used);
+        }
+        for (int i = 0; i < m_nCombination; i++) {
+            if (std::find(used.begin(), used.end(), i) == used.end()) {
+                vector<int> u = used;
+                u.push_back(i);
+                create(u);
+            }
+        }
+    }
+    vector<vector<int>> generate() {
+        vector<int> used;
+        create(used);
+        return m_nCombinationList;
+    };
+    int m_nCombination;
+    vector<vector<int>> m_nCombinationList;
+};
 
 //適当に改行しながら表示する
 static tstring PrintListOptions(const TCHAR *option_name, const CX_DESC *list, int default_index) {
@@ -424,6 +457,27 @@ static tstring help() {
     return str;
 }
 
+#if ENABLE_CPP_REGEX
+static vector<std::string> createOptionList() {
+    vector<std::string> optionList;
+    auto helpLines = split(tchar_to_string(help()), "\n");
+    std::regex re1(R"(^\s{2,6}--([A-Za-z0-9][A-Za-z0-9-_]+)\s+.*)");
+    std::regex re2(R"(^\s{0,3}-[A-Za-z0-9],--([A-Za-z0-9][A-Za-z0-9-_]+)\s+.*)");
+    std::regex re3(R"(^\s{0,3}--\(no-\)([A-Za-z0-9][A-Za-z0-9-_]+)\s+.*)");
+    for (const auto& line : helpLines) {
+        std::smatch match;
+        if (std::regex_match(line, match, re1) && match.size() == 2) {
+            optionList.push_back(match[1]);
+        } else if (std::regex_match(line, match, re2) && match.size() == 2) {
+            optionList.push_back(match[1]);
+        } else if (std::regex_match(line, match, re3) && match.size() == 2) {
+            optionList.push_back(match[1]);
+        }
+    }
+    return optionList;
+}
+#endif //#if ENABLE_CPP_REGEX
+
 static void PrintHelp(const TCHAR *strAppName, const TCHAR *strErrorMessage, const TCHAR *strOptionName, const TCHAR *strErrorValue = nullptr) {
     strAppName = strAppName;
     if (strErrorMessage) {
@@ -439,6 +493,46 @@ static void PrintHelp(const TCHAR *strAppName, const TCHAR *strErrorMessage, con
             }
         } else {
             _ftprintf(stderr, _T("Error: %s\n\n"), strErrorMessage);
+#if (ENABLE_CPP_REGEX && ENABLE_DTL)
+            if (strErrorValue) {
+                //どのオプション名に近いか検証する
+                auto optList = createOptionList();
+                const auto invalid_opt = tchar_to_string(strErrorValue);
+                //入力文字列を"-"で区切り、その組み合わせをすべて試す
+                const auto invalid_opt_words = split(invalid_opt, "-", true);
+                CombinationGenerator generator((int)invalid_opt_words.size());
+                const auto combinationList = generator.generate();
+                vector<std::pair<std::string, int>> editDistList;
+                for (const auto& opt : optList) {
+                    int nMinEditDist = INT_MAX;
+                    for (const auto& combination : combinationList) {
+                        std::string check_key;
+                        for (auto i : combination) {
+                            if (check_key.length() > 0) {
+                                check_key += "-";
+                            }
+                            check_key += invalid_opt_words[i];
+                        }
+                        dtl::Diff<char, std::string> diff(check_key, opt);
+                        diff.onOnlyEditDistance();
+                        diff.compose();
+                        nMinEditDist = (std::min)(nMinEditDist, (int)diff.getEditDistance());
+                    }
+                    editDistList.push_back(std::make_pair(opt, nMinEditDist));
+                }
+                std::sort(editDistList.begin(), editDistList.end(), [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) {
+                    return b.second > a.second;
+                });
+                const int nMinEditDist = editDistList[0].second;
+                _ftprintf(stderr, _T("Did you mean option(s) below?\n"));
+                for (const auto& editDist : editDistList) {
+                    if (editDist.second != nMinEditDist) {
+                        break;
+                    }
+                    _ftprintf(stderr, _T("  --%s\n"), char_to_tstring(editDist.first).c_str());
+                }
+            }
+#endif //#if ENABLE_DTL
         }
     } else {
         PrintVersion();
