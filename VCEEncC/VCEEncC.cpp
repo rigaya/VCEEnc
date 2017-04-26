@@ -501,7 +501,7 @@ int ParseOneOption(const TCHAR *option_name, const TCHAR* strInput[], int& i, in
         return 0;
     }
     if (IS_OPTION("avvce")) {
-        pParams->nInputType = VCE_INPUT_AVVCE;
+        pParams->nInputType = VCE_INPUT_AVHW;
         return 0;
     }
     if (IS_OPTION("avsw")) {

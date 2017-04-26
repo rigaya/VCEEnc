@@ -698,7 +698,7 @@ enum AVDecodeMode {
 
 static AVDecodeMode decodeModeFromInputFmtType(int inputFmt) {
     switch (inputFmt) {
-    case VCE_INPUT_AVVCE: return AV_DECODE_MODE_HW;
+    case VCE_INPUT_AVHW: return AV_DECODE_MODE_HW;
     case VCE_INPUT_AVSW:  return AV_DECODE_MODE_SW;
     case VCE_INPUT_AVANY:
     default: return AV_DECODE_MODE_ANY;

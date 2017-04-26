@@ -485,7 +485,7 @@ AMF_RESULT VCECore::initInput(VCEParam *pParams, const VCEInputInfo *pInputInfo)
         m_pFileReader.reset(new VCEInputVpy());
 #endif
 #if ENABLE_AVCODEC_VCE_READER
-    } else if (pParams->nInputType == VCE_INPUT_AVVCE
+    } else if (pParams->nInputType == VCE_INPUT_AVHW
             || pParams->nInputType == VCE_INPUT_AVSW
             || pParams->nInputType == VCE_INPUT_AVANY) {
         avcodecReaderPrm.srcFile = pParams->pInputFile;
@@ -634,7 +634,7 @@ AMF_RESULT VCECore::checkParam(VCEParam *prm) {
         PrintMes(VCE_LOG_ERROR, _T("crop size is too big.\n"));
         return AMF_FAIL;
     }
-    if (prm->nInputType == VCE_INPUT_AVVCE && (m_inputInfo.crop.left | m_inputInfo.crop.right | m_inputInfo.crop.bottom | m_inputInfo.crop.up)) {
+    if (prm->nInputType == VCE_INPUT_AVHW && (m_inputInfo.crop.left | m_inputInfo.crop.right | m_inputInfo.crop.bottom | m_inputInfo.crop.up)) {
         PrintMes(VCE_LOG_ERROR, _T("crop not available with avvce readder.\n"));
         return AMF_NOT_SUPPORTED;
     }
