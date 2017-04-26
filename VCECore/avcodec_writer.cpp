@@ -1331,8 +1331,11 @@ AMF_RESULT CAvcodecWriter::Init(const tstring& dstFile, const void *pOption, sha
         }
         AddMessage(VCE_LOG_DEBUG, _T("allocated internal buffer %d MB.\n"), m_Mux.format.nAVOutBufferSize / (1024 * 1024));
         CreateDirectoryRecursive(PathRemoveFileSpecFixed(dstFile).second.c_str());
-        errno_t error;
-        if (0 != (error = _tfopen_s(&m_Mux.format.fpOutput, dstFile.c_str(), _T("wb"))) || m_Mux.format.fpOutput == NULL) {
+
+        //"movflags:faststart"にするには、共有モードで開けるようにする必要がある
+        m_Mux.format.fpOutput = _tfsopen(dstFile.c_str(), _T("wb"), _SH_DENYWR);
+        if (m_Mux.format.fpOutput == NULL) {
+            errno_t error = errno;
             AddMessage(VCE_LOG_ERROR, _T("failed to open %soutput file \"%s\": %s.\n"), (prm->vidPrm.nCodecId != VCE_CODEC_NONE) ? _T("") : _T("audio "), dstFile.c_str(), _tcserror(error));
             return AMF_INVALID_POINTER; // Couldn't open file
         }
@@ -1611,10 +1614,16 @@ AMF_RESULT CAvcodecWriter::WriteFileHeader(const sBitstream *pBitstream) {
 
     //mp4のmajor_brandをisonからmp42に変更
     //これはmetadataではなく、avformat_write_headerのoptionsに渡す
-    //この差ははっきり言って謎
-    if (m_Mux.video.pStream && 0 == strcmp(m_Mux.format.pFormatCtx->oformat->name, "mp4")) {
-        av_dict_set(&m_Mux.format.pHeaderOptions, "brand", "mp42", 0);
-        AddMessage(VCE_LOG_DEBUG, _T("set format brand \"mp42\".\n"));
+    if (m_Mux.video.pStream) {
+        if (0 == strcmp(m_Mux.format.pFormatCtx->oformat->name, "mp4")
+         || 0 == strcmp(m_Mux.format.pFormatCtx->oformat->name, "mov")) {
+            av_dict_set(&m_Mux.format.pHeaderOptions, "brand", "mp42", 0);
+            AddMessage(VCE_LOG_DEBUG, _T("set format brand \"mp42\".\n"));
+
+            //moovを先頭に
+            av_dict_set(&m_Mux.format.pHeaderOptions, "movflags", "faststart", 0);
+            AddMessage(VCE_LOG_DEBUG, _T("set faststart.\n"));
+        }
     }
 
     //なんらかの問題があると、ここでよく死ぬ
