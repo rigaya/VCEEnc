@@ -41,6 +41,7 @@ void error_mp4_muxer_unmatch_of_ini_and_exe(BOOL exe_file_is_lsmash);
 void warning_auto_afs_disable();
 void error_afs_setup(BOOL afs, BOOL auto_afs_disable);
 void error_run_process(const char *exe_name, int rp_ret);
+void error_video_output_thread_start();
 void warning_auto_qpfile_failed();
 void warning_auo_tcfile_failed();
 void error_open_wavfile();
@@ -59,8 +60,8 @@ void error_mux_failed(const char *name, const char *args);
 
 void warning_no_mux_tmp_root(const char *dir);
 void warning_failed_mux_tmp_drive_space();
-void warning_failed_muxer_drive_space();
-void warning_failed_out_drive_space();
+void error_failed_muxer_drive_space();
+void error_failed_out_drive_space();
 void warning_failed_get_aud_size();
 void warning_failed_get_vid_size();
 void error_no_vid_file();
@@ -80,6 +81,9 @@ void info_encoding_aborted();
 
 void warning_mux_no_chapter_file();
 void warning_mux_chapter(int sts);
+void warning_chapter_convert_to_utf8(int sts);
+
+void error_select_convert_func(int width, int height, BOOL use16bit, BOOL interlaced, int output_csp);
 
 void warning_no_batfile(const char *batfile);
 void warning_malloc_batfile_tmp();

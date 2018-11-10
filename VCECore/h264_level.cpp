@@ -1,9 +1,9 @@
 ﻿// -----------------------------------------------------------------------------------------
-//     VCEEnc by rigaya
+// NVEnc by rigaya
 // -----------------------------------------------------------------------------------------
 // The MIT License
 //
-// Copyright (c) 2014-2017 rigaya
+// Copyright (c) 2014-2016 rigaya
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,11 +19,11 @@
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// IABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// ------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
 
 #include <map>
 #include <cstdint>
@@ -125,7 +125,7 @@ int calc_h264_auto_level(int width, int height, int ref, bool interlaced, int fp
 
 //vbv値を求める *vbv_max と *vbv_buf はNULLでもOK
 void get_h264_vbv_value(int *vbv_max, int *vbv_buf, int level, int profile) {
-    int level_idx = (int)(std::find(H264_LEVEL_INDEX, H264_LEVEL_INDEX + _countof(H264_LEVEL_INDEX), level) - H264_LEVEL_INDEX);
+    int level_idx = std::find(H264_LEVEL_INDEX, H264_LEVEL_INDEX + _countof(H264_LEVEL_INDEX), level) - H264_LEVEL_INDEX;
     if (level_idx == _countof(H264_LEVEL_INDEX)) {
         level_idx = 0;
     }

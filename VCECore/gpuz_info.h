@@ -1,9 +1,9 @@
 ﻿// -----------------------------------------------------------------------------------------
-//     VCEEnc by rigaya
+// QSVEnc by rigaya
 // -----------------------------------------------------------------------------------------
 // The MIT License
 //
-// Copyright (c) 2014-2017 rigaya
+// Copyright (c) 2011-2016 rigaya
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,21 +19,20 @@
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// IABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// ------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
 
 #ifndef __GPUZ_INFO_H__
 #define __GPUZ_INFO_H__
 
 #if (defined(_WIN32) || defined(_WIN64))
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
 #include <Windows.h>
 #include <tchar.h>
 
+#define ENABLE_GPUZ_INFO 1
 #define SHMEM_NAME _T("GPUZShMem")
 #define MAX_RECORDS 128
 
@@ -62,7 +61,10 @@ struct GPUZ_SH_MEM {
 int get_gpuz_info(GPUZ_SH_MEM *data);
 double gpu_core_clock(GPUZ_SH_MEM *data);
 double gpu_load(GPUZ_SH_MEM *data);
+double video_engine_load(GPUZ_SH_MEM *data, bool *pbVideoEngineUsage);
 
+#else
+#define ENABLE_GPUZ_INFO 0
 #endif //#if (defined(_WIN32) || defined(_WIN64))
 
 #endif //__GPUZ_INFO_H__

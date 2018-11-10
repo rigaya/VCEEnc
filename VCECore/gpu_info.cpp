@@ -1,9 +1,10 @@
 ﻿// -----------------------------------------------------------------------------------------
-//     VCEEnc by rigaya
+// QSVEnc/NVEnc by rigaya
 // -----------------------------------------------------------------------------------------
+//
 // The MIT License
 //
-// Copyright (c) 2014-2017 rigaya
+// Copyright (c) 2011-2016 rigaya
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,101 +20,23 @@
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// IABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
 // ------------------------------------------------------------------------------------------
 
-#include <tchar.h>
+#include "rgy_tchar.h"
 #include <string>
 #include <vector>
 #include <random>
 #include <future>
 #include <algorithm>
 #include "cl_func.h"
+#include "rgy_osdep.h"
+#include "rgy_util.h"
 
 #if ENABLE_OPENCL
-
-static cl_int cl_create_kernel(cl_data_t *cl_data, const cl_func_t *cl) {
-    cl_int ret = CL_SUCCESS;
-    cl_data->contextCL = cl->createContext(0, 1, &cl_data->deviceID, NULL, NULL, &ret);
-    if (CL_SUCCESS != ret)
-        return ret;
-
-    cl_data->commands = cl->createCommandQueue(cl_data->contextCL, cl_data->deviceID, NULL, &ret);
-    if (CL_SUCCESS != ret)
-        return ret;
-
-    //OpenCLのカーネル用のコードはリソース埋め込みにしているので、それを呼び出し
-    HRSRC hResource = NULL;
-    HGLOBAL hResourceData = NULL;
-    const char *clSourceFile = NULL;
-    if (   NULL == (hResource = FindResource(NULL, _T("CLDATA"), _T("KERNEL_DATA")))
-        || NULL == (hResourceData = LoadResource(NULL, hResource))
-        || NULL == (clSourceFile = (const char *)LockResource(hResourceData))) {
-        return 1;
-    }
-    size_t programLength = strlen(clSourceFile);
-    cl_data->program = cl->createProgramWithSource(cl_data->contextCL, 1, (const char**)&clSourceFile, &programLength, &ret);
-    if (CL_SUCCESS != ret)
-        return ret;
-
-    if (CL_SUCCESS != (ret = cl->buildProgram(cl_data->program, 1, &cl_data->deviceID, NULL, NULL, NULL))) {
-        char buffer[2048];
-        size_t length = 0;
-        cl->getProgramBuildInfo(cl_data->program, cl_data->deviceID, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &length);
-        fprintf(stderr, "%s\n", buffer);
-        return ret;
-    }
-    cl_data->kernel = cl->createKernel(cl_data->program, "dummy_calc", &ret);
-    if (CL_SUCCESS != ret)
-        return ret;
-
-    return ret;
-}
-
-static cl_int cl_calc(const cl_data_t *cl_data, const cl_func_t *cl) {
-    using namespace std;
-    const int LOOKAROUND = 10;
-    const int BUFFER_X = 1024 * 8;
-    const int BUFFER_Y = 1024;
-    const size_t BUFFER_BYTE_SIZE = BUFFER_X * BUFFER_Y * sizeof(float);
-    cl_int ret = CL_SUCCESS;
-    cl_mem bufA = cl->createBuffer(cl_data->contextCL, CL_MEM_READ_ONLY,  BUFFER_BYTE_SIZE, NULL, &ret);
-    cl_mem bufB = cl->createBuffer(cl_data->contextCL, CL_MEM_READ_ONLY,  BUFFER_BYTE_SIZE, NULL, &ret);
-    cl_mem bufC = cl->createBuffer(cl_data->contextCL, CL_MEM_WRITE_ONLY, BUFFER_BYTE_SIZE, NULL, &ret);
-
-    vector<float> arrayA(BUFFER_BYTE_SIZE);
-    vector<float> arrayB(BUFFER_BYTE_SIZE);
-    vector<float> arrayC(BUFFER_BYTE_SIZE, 0.0);
-
-    random_device rd;
-    mt19937 mt(rd());
-    uniform_real_distribution<float> random(0.0f, 10.0f);
-    generate(arrayA.begin(), arrayA.end(), [&random, &mt]() { return random(mt); });
-    generate(arrayB.begin(), arrayB.end(), [&random, &mt]() { return random(mt); });
-
-    cl->enqueueWriteBuffer(cl_data->commands, bufA, CL_FALSE, 0, BUFFER_BYTE_SIZE, &arrayA[0], 0, NULL, NULL);
-    cl->enqueueWriteBuffer(cl_data->commands, bufB, CL_FALSE, 0, BUFFER_BYTE_SIZE, &arrayB[0], 0, NULL, NULL);
-    cl->setKernelArg(cl_data->kernel, 0, sizeof(cl_mem), &bufA);
-    cl->setKernelArg(cl_data->kernel, 1, sizeof(cl_mem), &bufB);
-    cl->setKernelArg(cl_data->kernel, 2, sizeof(cl_mem), &bufC);
-    cl->setKernelArg(cl_data->kernel, 3, sizeof(cl_int), &BUFFER_X);
-    cl->setKernelArg(cl_data->kernel, 4, sizeof(cl_int), &BUFFER_Y);
-    cl->setKernelArg(cl_data->kernel, 5, sizeof(cl_int), &LOOKAROUND);
-
-    size_t data_size = BUFFER_X * BUFFER_Y;
-    cl->enqueueNDRangeKernel(cl_data->commands, cl_data->kernel, 1, 0, &data_size, NULL, 0, NULL, NULL);
-    cl->enqueueReadBuffer(cl_data->commands, bufC, CL_TRUE, 0, BUFFER_BYTE_SIZE, &arrayC[0], 0, NULL, NULL);
-    cl->finish(cl_data->commands);
-
-    cl->releaseMemObject(bufA);
-    cl->releaseMemObject(bufB);
-    cl->releaseMemObject(bufC);
-
-    return ret;
-}
 
 static std::basic_string<TCHAR> to_tchar(const char *string) {
 #if UNICODE
@@ -126,51 +49,67 @@ static std::basic_string<TCHAR> to_tchar(const char *string) {
     return str;
 };
 
-cl_int cl_get_driver_version(const cl_data_t *cl_data, const cl_func_t *cl, TCHAR *buffer, unsigned int buffer_size) {
-    cl_int ret = CL_SUCCESS;
-    char cl_info_buffer[1024] = { 0 };
-    if (CL_SUCCESS == (ret = cl->getDeviceInfo(cl_data->deviceID, CL_DRIVER_VERSION, _countof(cl_info_buffer), cl_info_buffer, NULL))) {
-        _tcscpy_s(buffer, buffer_size, to_tchar(cl_info_buffer).c_str());
-    } else {
-        _tcscpy_s(buffer, buffer_size, _T("Unknown"));
-    }
-    return ret;
-}
-
 static cl_int cl_create_info_string(cl_data_t *cl_data, const cl_func_t *cl, TCHAR *buffer, unsigned int buffer_size) {
-    cl_int ret = CL_SUCCESS;
-
-    char cl_info_buffer[1024] = { 0 };
-    if (cl_data && CL_SUCCESS == (ret = cl->getDeviceInfo(cl_data->deviceID, CL_DEVICE_NAME, _countof(cl_info_buffer), cl_info_buffer, NULL))) {
-        _tcscpy_s(buffer, buffer_size, to_tchar(cl_info_buffer).c_str());
+    cl_int ret = cl_get_device_name(cl_data, cl, buffer, buffer_size);
+    if (ret != CL_SUCCESS) {
+        return ret;
     }
-
-    int MaxFreqMHz = 0;
-    if (cl_data) {
-        MaxFreqMHz = cl_get_device_max_clock_frequency_mhz(cl_data, cl);
+    const int device_cu = cl_get_device_max_compute_units(cl_data, cl);
+    if (device_cu > 0) {
+        _stprintf_s(buffer + _tcslen(buffer), buffer_size - _tcslen(buffer), _T(" (%d EU)"), device_cu);
     }
-    if (MaxFreqMHz) {
-        _stprintf_s(buffer + _tcslen(buffer), buffer_size - _tcslen(buffer), _T(" %dMHz"), MaxFreqMHz);
+    const int max_device_frequency = cl_get_device_max_clock_frequency_mhz(cl_data, cl);
+    if (max_device_frequency) {
+        _stprintf_s(buffer + _tcslen(buffer), buffer_size - _tcslen(buffer), _T(" @ %d MHz"), max_device_frequency);
     }
-    if (cl_data && CL_SUCCESS == cl->getDeviceInfo(cl_data->deviceID, CL_DRIVER_VERSION, _countof(cl_info_buffer), cl_info_buffer, NULL)) {
-        _stprintf_s(buffer + _tcslen(buffer), buffer_size - _tcslen(buffer), _T(" (%s)"), to_tchar(cl_info_buffer).c_str());
+    TCHAR driver_ver[256] = { 0 };
+    if (CL_SUCCESS == cl_get_driver_version(cl_data, cl, driver_ver, _countof(driver_ver))) {
+        _stprintf_s(buffer + _tcslen(buffer), buffer_size - _tcslen(buffer), _T(" (%s)"), driver_ver);
     }
-    auto remove_string =[](TCHAR *target_str, const TCHAR *remove_str) {
-        TCHAR *ptr = _tcsstr(target_str, remove_str);
-        if (nullptr != ptr) {
-            memmove(ptr, ptr + _tcslen(remove_str), (_tcslen(ptr) - _tcslen(remove_str) + 1) *  sizeof(target_str[0]));
-        }
-    };
-    remove_string(buffer, _T("(R)"));
-    remove_string(buffer, _T("(TM)"));
     return ret;
 }
 
 #endif //ENABLE_OPENCL
 
+#if ENCODER_NVENC && !FOR_AUO
+#include "NVEncCore.h"
+#endif //#if ENCODER_NVENC
+
 #pragma warning (push)
 #pragma warning (disable: 4100)
-int getGPUInfo(const char *VendorName, TCHAR *buffer, unsigned int buffer_size, bool driver_version_only) {
+int getGPUInfo(const char *VendorName, TCHAR *buffer, unsigned int buffer_size, int device_id, bool driver_version_only) {
+#if ENCODER_NVENC && !FOR_AUO
+    NVEncoderGPUInfo nvGPUInfo(device_id, true);
+    const auto gpulist = nvGPUInfo.getGPUList();
+    if (gpulist.size() > 0) {
+        tstring gpu_info;
+        const auto& gpuInfo = std::find_if(gpulist.begin(), gpulist.end(), [device_id](const NVGPUInfo& info) { return info.id == device_id; });
+        if (gpuInfo != gpulist.end()) {
+            if (driver_version_only) {
+                if (gpuInfo->nv_driver_version) {
+                    gpu_info = strsprintf(_T("%d.%d"), gpuInfo->nv_driver_version / 1000, (gpuInfo->nv_driver_version % 1000) / 10);
+                }
+            } else {
+                gpu_info = strsprintf(_T("#%d: %s"), gpuInfo->id, gpuInfo->name.c_str());
+                if (gpuInfo->cuda_cores > 0) {
+                    gpu_info += strsprintf(_T(" (%d cores"), gpuInfo->cuda_cores);
+                    if (gpuInfo->clock_rate > 0) {
+                        gpu_info += strsprintf(_T(", %d MHz"), gpuInfo->clock_rate / 1000);
+                    }
+                    gpu_info += strsprintf(_T(")"));
+                }
+                if (gpuInfo->pcie_gen > 0 && gpuInfo->pcie_link > 0) {
+                    gpu_info += strsprintf(_T("[PCIe%dx%d]"), gpuInfo->pcie_gen, gpuInfo->pcie_link);
+                }
+                if (gpuInfo->nv_driver_version) {
+                    gpu_info += strsprintf(_T("[%d.%d]"), gpuInfo->nv_driver_version / 1000, (gpuInfo->nv_driver_version % 1000) / 10);
+                }
+            }
+            _tcscpy_s(buffer, buffer_size, gpu_info.c_str());
+            return 0;
+        }
+    }
+#endif  //#if ENCODER_NVENC && !FOR_AUO
 #if !ENABLE_OPENCL
     _stprintf_s(buffer, buffer_size, _T("Unknown (not compiled with OpenCL support)"));
     return 0;
@@ -179,24 +118,15 @@ int getGPUInfo(const char *VendorName, TCHAR *buffer, unsigned int buffer_size, 
     cl_func_t cl = { 0 };
     cl_data_t data = { 0 };
 
-    bool opencl_error = false;
-    bool intel_error = false;
     if (CL_SUCCESS != (ret = cl_get_func(&cl))) {
         _tcscpy_s(buffer, buffer_size, _T("Unknown (Failed to load OpenCL.dll)"));
-        opencl_error = true;
     } else if (CL_SUCCESS != (ret = cl_get_platform_and_device(VendorName, CL_DEVICE_TYPE_GPU, &data, &cl))) {
         _stprintf_s(buffer, buffer_size, _T("Unknown (Failed to find %s GPU)"), to_tchar(VendorName).c_str());
-        opencl_error = true;
-    }
-
-    if (driver_version_only) {
-        if (!opencl_error) {
-            cl_get_driver_version(&data, &cl, buffer, buffer_size);
-        }
     } else {
-        if (!(opencl_error && intel_error)) {
-            cl_create_info_string((opencl_error) ? NULL : &data, &cl, buffer, buffer_size);
-        }
+        if (driver_version_only)
+            cl_get_driver_version(&data, &cl, buffer, buffer_size);
+        else
+            cl_create_info_string(&data, &cl, buffer, buffer_size);
     }
     cl_release(&data, &cl);
     return ret;

@@ -63,9 +63,6 @@
     <ClCompile Include="encode\auo_runbat.cpp">
       <Filter>ソース ファイル\encode</Filter>
     </ClCompile>
-    <ClCompile Include="encode\auo_vce.cpp">
-      <Filter>ソース ファイル\encode</Filter>
-    </ClCompile>
     <ClCompile Include="encode\auo_video.cpp">
       <Filter>ソース ファイル\encode</Filter>
     </ClCompile>
@@ -102,8 +99,20 @@
     <ClCompile Include="encode\exe_version.cpp">
       <Filter>ソース ファイル\encode</Filter>
     </ClCompile>
-    <ClCompile Include="prm\cpu_info.cpp">
-      <Filter>ソース ファイル\prm</Filter>
+    <ClCompile Include="encode\auo_convert.cpp">
+      <Filter>ソース ファイル\encode</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\NVEnc\NVEnc\encode\convert_avx2.cpp">
+      <Filter>ソース ファイル\encode</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\NVEnc\NVEnc\encode\convert_sse2.cpp">
+      <Filter>ソース ファイル\encode</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\NVEnc\NVEnc\encode\convert_sse41.cpp">
+      <Filter>ソース ファイル\encode</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\NVEnc\NVEnc\encode\convert_ssse3.cpp">
+      <Filter>ソース ファイル\encode</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -147,9 +156,6 @@
       <Filter>ヘッダー ファイル\encode</Filter>
     </ClInclude>
     <ClInclude Include="encode\auo_runbat.h">
-      <Filter>ヘッダー ファイル\encode</Filter>
-    </ClInclude>
-    <ClInclude Include="encode\auo_vce.h">
       <Filter>ヘッダー ファイル\encode</Filter>
     </ClInclude>
     <ClInclude Include="encode\auo_video.h">
@@ -214,6 +220,9 @@
     </ClInclude>
     <ClInclude Include="prm\cpu_info.h">
       <Filter>ヘッダー ファイル\prm</Filter>
+    </ClInclude>
+    <ClInclude Include="encode\auo_convert.h">
+      <Filter>ヘッダー ファイル\encode</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

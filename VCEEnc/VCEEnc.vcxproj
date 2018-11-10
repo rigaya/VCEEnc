@@ -117,13 +117,13 @@
     <_ProjectFileVersion>11.0.50727.1</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.auo</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugStatic|Win32'">
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.auo</TargetExt>
@@ -131,17 +131,17 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.auo</TargetExt>
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugStatic|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.auo</TargetExt>
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.auo</TargetExt>
@@ -149,11 +149,11 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.auo</TargetExt>
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelStatic|Win32'">
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.auo</TargetExt>
@@ -161,13 +161,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelStatic|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.auo</TargetExt>
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;VCE_AUO;_DEBUG;_WINDOWS;_USRDLL;VCE_AUO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -202,13 +202,16 @@
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(OutDir)$(ProjectName).auo" C:\ProgramEx\Aviutl\plugins</Command>
+      <Command>echo "依存関係を確認..."
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+if %ERRORLEVEL% == 0 exit /B 1
+exit /B 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugStatic|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -245,13 +248,16 @@
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(OutDir)$(ProjectName).auo" C:\ProgramEx\Aviutl\plugins</Command>
+      <Command>echo "依存関係を確認..."
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+if %ERRORLEVEL% == 0 exit /B 1
+exit /B 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;VCE_AUO;_DEBUG;_WINDOWS;_USRDLL;VCE_AUO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -286,13 +292,16 @@
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(OutDir)$(ProjectName).auo" C:\ProgramEx\Aviutl\plugins</Command>
+      <Command>echo "依存関係を確認..."
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+if %ERRORLEVEL% == 0 exit /B 1
+exit /B 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugStatic|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -327,7 +336,10 @@
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(OutDir)$(ProjectName).auo" C:\ProgramEx\Aviutl\plugins</Command>
+      <Command>echo "依存関係を確認..."
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+if %ERRORLEVEL% == 0 exit /B 1
+exit /B 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -339,7 +351,7 @@
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;VCE_AUO;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -375,7 +387,10 @@
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(OutDir)$(ProjectName).auo" C:\ProgramEx\Aviutl\plugins</Command>
+      <Command>echo "依存関係を確認..."
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+if %ERRORLEVEL% == 0 exit /B 1
+exit /B 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -387,7 +402,7 @@
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;VCE_AUO;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -423,7 +438,10 @@
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(OutDir)$(ProjectName).auo" C:\ProgramEx\Aviutl\plugins</Command>
+      <Command>echo "依存関係を確認..."
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+if %ERRORLEVEL% == 0 exit /B 1
+exit /B 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelStatic|Win32'">
@@ -435,7 +453,7 @@
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;VCE_AUO;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -472,7 +490,10 @@
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(OutDir)$(ProjectName).auo" C:\ProgramEx\Aviutl\plugins</Command>
+      <Command>echo "依存関係を確認..."
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+if %ERRORLEVEL% == 0 exit /B 1
+exit /B 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelStatic|x64'">
@@ -484,7 +505,7 @@
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;$(AMDAPPSDKROOT)\include;..\AMF\amf;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\AMF\amf\public\common;..\AMF\amf\public\samples\CPPSamples\common;..\VCECommon;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;VCE_AUO;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -519,7 +540,10 @@
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y "$(OutDir)$(ProjectName).auo" C:\ProgramEx\Aviutl\plugins</Command>
+      <Command>echo "依存関係を確認..."
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+if %ERRORLEVEL% == 0 exit /B 1
+exit /B 0</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -545,17 +569,17 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="encode\exe_version.cpp" />
-    <ClCompile Include="prm\cpu_info.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugStatic|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelStatic|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugStatic|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='RelStatic|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    <ClCompile Include="..\..\NVEnc\NVEnc\encode\convert_avx2.cpp">
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='RelStatic|Win32'">AdvancedVectorExtensions</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AdvancedVectorExtensions</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='RelStatic|x64'">AdvancedVectorExtensions</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AdvancedVectorExtensions</EnableEnhancedInstructionSet>
     </ClCompile>
+    <ClCompile Include="..\..\NVEnc\NVEnc\encode\convert_sse2.cpp" />
+    <ClCompile Include="..\..\NVEnc\NVEnc\encode\convert_sse41.cpp" />
+    <ClCompile Include="..\..\NVEnc\NVEnc\encode\convert_ssse3.cpp" />
+    <ClCompile Include="encode\auo_convert.cpp" />
+    <ClCompile Include="encode\exe_version.cpp" />
     <ClCompile Include="VCEEnc.cpp" />
     <ClCompile Include="encode\auo_audio.cpp" />
     <ClCompile Include="encode\auo_audio_parallel.cpp" />
@@ -565,10 +589,14 @@
     <ClCompile Include="encode\auo_mux.cpp" />
     <ClCompile Include="encode\auo_pipe.cpp" />
     <ClCompile Include="encode\auo_runbat.cpp" />
-    <ClCompile Include="encode\auo_vce.cpp" />
     <ClCompile Include="encode\auo_video.cpp" />
     <ClCompile Include="encode\convert.cpp" />
-    <ClCompile Include="encode\convert_avx.cpp" />
+    <ClCompile Include="encode\convert_avx.cpp">
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='RelStatic|Win32'">AdvancedVectorExtensions</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AdvancedVectorExtensions</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='RelStatic|x64'">AdvancedVectorExtensions</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AdvancedVectorExtensions</EnableEnhancedInstructionSet>
+    </ClCompile>
     <ClCompile Include="encode\fawcheck.cpp" />
     <ClCompile Include="prm\auo_conf.cpp" />
     <ClCompile Include="prm\auo_settings.cpp" />
@@ -627,6 +655,7 @@
   <ItemGroup>
     <ClInclude Include="auo.h" />
     <ClInclude Include="auo_version.h" />
+    <ClInclude Include="encode\auo_convert.h" />
     <ClInclude Include="encode\exe_version.h" />
     <ClInclude Include="frm\frmSetLogColor.h">
       <FileType>CppForm</FileType>
@@ -641,7 +670,6 @@
     <ClInclude Include="encode\auo_mux.h" />
     <ClInclude Include="encode\auo_pipe.h" />
     <ClInclude Include="encode\auo_runbat.h" />
-    <ClInclude Include="encode\auo_vce.h" />
     <ClInclude Include="encode\auo_video.h" />
     <ClInclude Include="encode\convert.h" />
     <ClInclude Include="encode\fawcheck.h" />

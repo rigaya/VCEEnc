@@ -67,8 +67,8 @@ void set_log_title_and_progress(const char * chr, double progress);
 void write_log_auo_line(int log_type_index, const char *chr, bool from_utf8 = false);
 void write_log_line(int log_type_index, const char *chr, bool from_utf8 = false);
 void flush_audio_log();
-//void enable_x264_control(BOOL *enc_pause, BOOL afs, BOOL add_progress, DWORD *start_time, int _total_frame);
-//void disable_x264_control();
+void enable_enc_control(bool *enc_pause, BOOL afs, BOOL add_progress, DWORD start_time, int _total_frame);
+void disable_enc_control();
 void set_prevent_log_close(BOOL prevent);
 void auto_save_log_file(const char *log_filepath);
 void log_process_events();
@@ -78,7 +78,7 @@ void log_reload_settings();
 int init_log_cache(LOG_CACHE *log_cache); //LOG_CACHEの初期化、linesのメモリ確保、成功->0, 失敗->1
 void release_log_cache(LOG_CACHE *log_cache); //LOG_CACHEで使用しているメモリの開放
 
-void write_log_enc_mes(char * const mes, DWORD *log_len, int total_drop, int current_frames);
+void write_log_enc_mes(char * const mes, DWORD *log_len, int total_drop, int current_frames, LOG_CACHE *cache_line);
 void write_log_exe_mes(char *const msg, DWORD *log_len, const char *exename, LOG_CACHE *cache_line);
 void write_args(const char *args);
 

@@ -35,11 +35,9 @@
 
 #include "PipelineElement.h"
 
-#include "VCEUtil.h"
-#include "VCEParam.h"
-#include "VCELog.h"
-#include "VCEStatus.h"
-#include "ConvertCsp.h"
+#include "rgy_util.h"
+#include "vce_util.h"
+#include "vce_param.h"
 #pragma warning(pop)
 
 class VCEInput : public PipelineElement {

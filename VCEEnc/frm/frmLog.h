@@ -78,6 +78,8 @@ namespace VCEEnc {
             //これがfalseだとイベントで設定保存をするので、とりあえずtrue
             prevent_log_closing = true;
 
+            _start_time = 0;
+
             //設定から情報を取得
             guiEx_settings exstg;
             exstg.load_log_win();
@@ -154,12 +156,13 @@ namespace VCEEnc {
     private:
         taskbarProgress *taskbar_progress; //タスクバーでの進捗表示
         HWND hWnd; //このウィンドウのハンドル
-        BOOL *_enc_pause;      //エンコ一時停止へのポインタ
-        DWORD _x264_start_time; //x264エンコ開始時間
+        bool *_enc_pause;      //エンコ一時停止へのポインタ
+        DWORD _start_time; //x264エンコ開始時間
         bool closed; //このウィンドウが閉じているか、開いているか
         bool prevent_log_closing; //ログウィンドウを閉じるを無効化するか・設定保存イベントのフラグでもある
+
+        int  log_level; //表示するログの範囲
         bool add_progress;
-        int log_level;
         array<String^>^ log_type;
         array<Color>^ log_color_text;
         int LastLogLen;  //ひとつ前のエンコードブロックの終わり
@@ -197,10 +200,11 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemTransparen
 private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemSetLogColor;
 private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFileOpen;
 private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOpen;
+private: System::Windows::Forms::ToolStripMenuItem^  ToolStripMenuItemEncPause;
 
 
     private: System::ComponentModel::IContainer^  components;
-    protected: 
+    protected:
 
     private:
         /// <summary>
@@ -236,6 +240,7 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
             this->toolStripCurrentProgress = (gcnew System::Windows::Forms::ToolStripProgressBar());
             this->toolStripStatusCurrentProgress = (gcnew System::Windows::Forms::ToolStripStatusLabel());
             this->fontDialogLog = (gcnew System::Windows::Forms::FontDialog());
+            this->ToolStripMenuItemEncPause = (gcnew System::Windows::Forms::ToolStripMenuItem());
             this->contextMenuStripLog->SuspendLayout();
             this->statusStripLog->SuspendLayout();
             this->SuspendLayout();
@@ -260,20 +265,20 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
             // 
             // contextMenuStripLog
             // 
-            this->contextMenuStripLog->Items->AddRange(gcnew cli::array< System::Windows::Forms::ToolStripItem^  >(11) {
+            this->contextMenuStripLog->Items->AddRange(gcnew cli::array< System::Windows::Forms::ToolStripItem^  >(12) {
                 this->toolStripMenuItemFileOpen,
-                    this->toolStripMenuItemFilePathOpen, this->ToolStripMenuItemTransparent, this->toolStripMenuItemTransparentValue, this->toolStripMenuItemSetLogColor,
-                    this->ToolStripMenuItemStartMinimized, this->toolStripMenuItemSaveLogSize, this->toolStripMenuItemAutoSave, this->toolStripMenuItemShowStatus,
-                    this->toolStripMenuItemTaskBarProgress, this->toolStripMenuItemWindowFont
+                    this->toolStripMenuItemFilePathOpen, this->ToolStripMenuItemEncPause, this->ToolStripMenuItemTransparent, this->toolStripMenuItemTransparentValue,
+                    this->toolStripMenuItemSetLogColor, this->ToolStripMenuItemStartMinimized, this->toolStripMenuItemSaveLogSize, this->toolStripMenuItemAutoSave,
+                    this->toolStripMenuItemShowStatus, this->toolStripMenuItemTaskBarProgress, this->toolStripMenuItemWindowFont
             });
             this->contextMenuStripLog->Name = L"contextMenuStrip1";
-            this->contextMenuStripLog->Size = System::Drawing::Size(220, 246);
+            this->contextMenuStripLog->Size = System::Drawing::Size(221, 290);
             // 
             // toolStripMenuItemFileOpen
             // 
             this->toolStripMenuItemFileOpen->ForeColor = System::Drawing::Color::Blue;
             this->toolStripMenuItemFileOpen->Name = L"toolStripMenuItemFileOpen";
-            this->toolStripMenuItemFileOpen->Size = System::Drawing::Size(219, 22);
+            this->toolStripMenuItemFileOpen->Size = System::Drawing::Size(220, 22);
             this->toolStripMenuItemFileOpen->Text = L"この動画を再生...";
             this->toolStripMenuItemFileOpen->Click += gcnew System::EventHandler(this, &frmLog::toolStripMenuItemFileOpen_Click);
             // 
@@ -281,7 +286,7 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
             // 
             this->toolStripMenuItemFilePathOpen->ForeColor = System::Drawing::Color::Blue;
             this->toolStripMenuItemFilePathOpen->Name = L"toolStripMenuItemFilePathOpen";
-            this->toolStripMenuItemFilePathOpen->Size = System::Drawing::Size(219, 22);
+            this->toolStripMenuItemFilePathOpen->Size = System::Drawing::Size(220, 22);
             this->toolStripMenuItemFilePathOpen->Text = L"この動画の場所を開く...";
             this->toolStripMenuItemFilePathOpen->Click += gcnew System::EventHandler(this, &frmLog::toolStripMenuItemFilePathOpen_Click);
             // 
@@ -289,21 +294,21 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
             // 
             this->ToolStripMenuItemTransparent->CheckOnClick = true;
             this->ToolStripMenuItemTransparent->Name = L"ToolStripMenuItemTransparent";
-            this->ToolStripMenuItemTransparent->Size = System::Drawing::Size(219, 22);
+            this->ToolStripMenuItemTransparent->Size = System::Drawing::Size(220, 22);
             this->ToolStripMenuItemTransparent->Text = L"ちょっと透過";
             this->ToolStripMenuItemTransparent->CheckedChanged += gcnew System::EventHandler(this, &frmLog::ToolStripMenuItemTransparent_CheckedChanged);
             // 
             // toolStripMenuItemTransparentValue
             // 
             this->toolStripMenuItemTransparentValue->Name = L"toolStripMenuItemTransparentValue";
-            this->toolStripMenuItemTransparentValue->Size = System::Drawing::Size(219, 22);
+            this->toolStripMenuItemTransparentValue->Size = System::Drawing::Size(220, 22);
             this->toolStripMenuItemTransparentValue->Text = L"透過率の指定...";
             this->toolStripMenuItemTransparentValue->Click += gcnew System::EventHandler(this, &frmLog::toolStripMenuItemTransparentValue_Click);
             // 
             // toolStripMenuItemSetLogColor
             // 
             this->toolStripMenuItemSetLogColor->Name = L"toolStripMenuItemSetLogColor";
-            this->toolStripMenuItemSetLogColor->Size = System::Drawing::Size(219, 22);
+            this->toolStripMenuItemSetLogColor->Size = System::Drawing::Size(220, 22);
             this->toolStripMenuItemSetLogColor->Text = L"ログの色の指定...";
             this->toolStripMenuItemSetLogColor->Click += gcnew System::EventHandler(this, &frmLog::toolStripMenuItemSetLogColor_Click);
             // 
@@ -311,7 +316,7 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
             // 
             this->ToolStripMenuItemStartMinimized->CheckOnClick = true;
             this->ToolStripMenuItemStartMinimized->Name = L"ToolStripMenuItemStartMinimized";
-            this->ToolStripMenuItemStartMinimized->Size = System::Drawing::Size(219, 22);
+            this->ToolStripMenuItemStartMinimized->Size = System::Drawing::Size(220, 22);
             this->ToolStripMenuItemStartMinimized->Text = L"このウィンドウを最小化で開始";
             this->ToolStripMenuItemStartMinimized->CheckedChanged += gcnew System::EventHandler(this, &frmLog::ToolStripCheckItem_CheckedChanged);
             // 
@@ -319,7 +324,7 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
             // 
             this->toolStripMenuItemSaveLogSize->CheckOnClick = true;
             this->toolStripMenuItemSaveLogSize->Name = L"toolStripMenuItemSaveLogSize";
-            this->toolStripMenuItemSaveLogSize->Size = System::Drawing::Size(219, 22);
+            this->toolStripMenuItemSaveLogSize->Size = System::Drawing::Size(220, 22);
             this->toolStripMenuItemSaveLogSize->Text = L"このウィンドウのサイズを保存";
             this->toolStripMenuItemSaveLogSize->CheckedChanged += gcnew System::EventHandler(this, &frmLog::toolStripMenuItemSaveLogSize_CheckedChanged);
             // 
@@ -327,7 +332,7 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
             // 
             this->toolStripMenuItemAutoSave->CheckOnClick = true;
             this->toolStripMenuItemAutoSave->Name = L"toolStripMenuItemAutoSave";
-            this->toolStripMenuItemAutoSave->Size = System::Drawing::Size(219, 22);
+            this->toolStripMenuItemAutoSave->Size = System::Drawing::Size(220, 22);
             this->toolStripMenuItemAutoSave->Text = L"ログ自動保存を行う";
             this->toolStripMenuItemAutoSave->CheckedChanged += gcnew System::EventHandler(this, &frmLog::ToolStripCheckItem_CheckedChanged);
             // 
@@ -337,7 +342,7 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
             this->toolStripMenuItemShowStatus->CheckOnClick = true;
             this->toolStripMenuItemShowStatus->CheckState = System::Windows::Forms::CheckState::Checked;
             this->toolStripMenuItemShowStatus->Name = L"toolStripMenuItemShowStatus";
-            this->toolStripMenuItemShowStatus->Size = System::Drawing::Size(219, 22);
+            this->toolStripMenuItemShowStatus->Size = System::Drawing::Size(220, 22);
             this->toolStripMenuItemShowStatus->Text = L"ステータスバーの表示";
             this->toolStripMenuItemShowStatus->CheckedChanged += gcnew System::EventHandler(this, &frmLog::toolStripMenuItemShowStatus_CheckedChanged);
             // 
@@ -345,14 +350,14 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
             // 
             this->toolStripMenuItemTaskBarProgress->CheckOnClick = true;
             this->toolStripMenuItemTaskBarProgress->Name = L"toolStripMenuItemTaskBarProgress";
-            this->toolStripMenuItemTaskBarProgress->Size = System::Drawing::Size(219, 22);
+            this->toolStripMenuItemTaskBarProgress->Size = System::Drawing::Size(220, 22);
             this->toolStripMenuItemTaskBarProgress->Text = L"タスクバーに進捗を表示(Win7)";
             this->toolStripMenuItemTaskBarProgress->CheckedChanged += gcnew System::EventHandler(this, &frmLog::toolStripMenuItemTaskBarProgress_CheckedChanged);
             // 
             // toolStripMenuItemWindowFont
             // 
             this->toolStripMenuItemWindowFont->Name = L"toolStripMenuItemWindowFont";
-            this->toolStripMenuItemWindowFont->Size = System::Drawing::Size(219, 22);
+            this->toolStripMenuItemWindowFont->Size = System::Drawing::Size(220, 22);
             this->toolStripMenuItemWindowFont->Text = L"表示フォント...";
             this->toolStripMenuItemWindowFont->Click += gcnew System::EventHandler(this, &frmLog::toolStripMenuItemWindowFont_Click);
             // 
@@ -421,6 +426,13 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
             this->fontDialogLog->MinSize = 9;
             this->fontDialogLog->ShowEffects = false;
             // 
+            // ToolStripMenuItemEncPause
+            // 
+            this->ToolStripMenuItemEncPause->CheckOnClick = true;
+            this->ToolStripMenuItemEncPause->Name = L"ToolStripMenuItemEncPause";
+            this->ToolStripMenuItemEncPause->Size = System::Drawing::Size(220, 22);
+            this->ToolStripMenuItemEncPause->Text = L"エンコード一時停止";
+            // 
             // frmLog
             // 
             this->AutoScaleDimensions = System::Drawing::SizeF(96, 96);
@@ -447,11 +459,11 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
 
         }
 #pragma endregion
-    private: 
+    private:
         System::Void frmLog_Load(System::Object^  sender, System::EventArgs^  e) {
             closed = false;
             pause_start = NULL;
-            
+
             guiEx_settings exstg(true);
             exstg.load_log_win();
             SetWindowPos(exstg.s_log.log_pos[0], exstg.s_log.log_pos[1]);
@@ -556,7 +568,7 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
             String^ title = String(chr).ToString();
             double progress = frame_n / (double)total_frame;
             String^ ProgressPercent = (progress).ToString("P1");
-            DWORD time_elapsed = timeGetTime() - _x264_start_time;
+            DWORD time_elapsed = timeGetTime() - _start_time;
             int t;
             if (using_afs) {
                 StringBuilder^ SB = gcnew StringBuilder();
@@ -639,9 +651,9 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
                     richTextLog->SelectionColor = log_color_text[log_type_index];
                     richTextLog->AppendText(L"auo [" + log_type[log_type_index] + L"]: " + str + L"\n");
                     richTextLog->SelectionStart = richTextLog->Text->Length;
-    
+
                     richTextLog->ScrollToCaret();
-    
+
                     richTextLog->ResumeLayout();
                 }
             }
@@ -664,9 +676,9 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
                     richTextLog->SelectionColor = log_color_text[log_type_index];
                     richTextLog->AppendText(str + L"\n");
                     richTextLog->SelectionStart = richTextLog->Text->Length;
-    
+
                     richTextLog->ScrollToCaret();
-    
+
                     richTextLog->ResumeLayout();
                 }
             }
@@ -674,7 +686,7 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
     public:
         System::Void FlushAudioLogCache() {
             for (int i = 0; i < AudioParallelCache.Count; i++) {
-                (AudioParallelCache[i].type) 
+                (AudioParallelCache[i].type)
                     ? WriteLogLine(AudioParallelCache[i].str, AudioParallelCache[i].log_type_index)
                     : WriteLogAuoLine(AudioParallelCache[i].str, AudioParallelCache[i].log_type_index);
             }
@@ -691,6 +703,14 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
                 sw->WriteLine(DateTime::Now.ToString("yyyy年M月d日 H時mm分 エンコード終了"));
                 sw->WriteLine(L"-------------------------------------------------------------------------------------");
                 sw->WriteLine();
+            } catch (IOException^ ex) {
+                WriteLogAuoLine("自動ログ保存に失敗しました。", LOG_WARNING);
+                WriteLogAuoLine(ex->Message, LOG_WARNING);
+            }  catch (UnauthorizedAccessException^ ex) {
+                WriteLogAuoLine("自動ログ保存に失敗しました。", LOG_WARNING);
+                WriteLogAuoLine(ex->Message, LOG_WARNING);
+            } catch (...) {
+                WriteLogAuoLine("自動ログ保存に失敗しました。", LOG_WARNING);
             } finally {
                 if (sw != nullptr) {
                     sw->Close();
@@ -712,24 +732,25 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
             if (toolStripMenuItemAutoSave->Checked && !prevent_log_closing && log_filename != NULL)
                 SaveLog(String(log_filename).ToString());
         }
-    //public:
-    //    System::Void Enablex264Control(BOOL *enc_pause, BOOL afs, BOOL _add_progress, DWORD *start_time, int _total_frame) {
-    //        _enc_pause = enc_pause;
-    //        add_progress = _add_progress != 0;
-    //        using_afs = afs != 0;
-    //        _x264_start_time = start_time;
-    //        total_frame = _total_frame;
+    public:
+        System::Void EnableEncControl(bool *enc_pause, BOOL afs, BOOL _add_progress, DWORD start_time, int _total_frame) {
+            _enc_pause = enc_pause;
+            add_progress = _add_progress != 0;
+            using_afs = afs != 0;
+            _start_time = start_time;
+            total_frame = _total_frame;
 
-    //        if (_enc_pause) {
-    //            this->ToolStripMenuItemEncPause->Checked = *_enc_pause != 0;
-    //            this->ToolStripMenuItemEncPause->Enabled = true;
-    //        }
-    //    }
-    //public:
-    //    System::Void Disablex264Control() {
-    //        this->ToolStripMenuItemEncPause->Enabled = false;
-    //        _enc_pause = NULL;
-    //    }
+            if (_enc_pause) {
+                this->ToolStripMenuItemEncPause->Checked = *_enc_pause != 0;
+                this->ToolStripMenuItemEncPause->Enabled = true;
+            }
+        }
+    public:
+        System::Void DisableEncControl() {
+            this->ToolStripMenuItemEncPause->Enabled = false;
+            _start_time = 0;
+            _enc_pause = NULL;
+        }
     private:
         System::Void frmLog_FormClosing(System::Object^  sender, System::Windows::Forms::FormClosingEventArgs^  e) {
             delete timerResizeOrPos;
@@ -798,13 +819,13 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
                 timerResizeOrPos->Change(0, timerResizeOrPosPeriod);
             }
         }
-    private: 
+    private:
         System::Void ToolStripMenuItemTransparent_CheckedChanged(System::Object^  sender, System::EventArgs^  e) {
             this->Opacity = ((ToolStripMenuItemTransparent->Checked) ? 100 - frmTransparency : 100) * 0.01f;
             toolStripMenuItemTransparentValue->Enabled = ToolStripMenuItemTransparent->Checked;
             ToolStripCheckItem_CheckedChanged(sender, e);
         }
-    //private: 
+    //private:
     //    System::Void ToolStripMenuItemEncPause_CheckedChanged(System::Object^  sender, System::EventArgs^  e) {
     //        if (_enc_pause) {
     //            *_enc_pause = Convert::ToInt32(ToolStripMenuItemEncPause->Checked);
@@ -819,7 +840,7 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
     //            //}
     //        }
     //    }
-    private: 
+    private:
         System::Void toolStripMenuItemShowStatus_CheckedChanged(System::Object^  sender, System::EventArgs^  e) {
             statusStripLog->Visible = toolStripMenuItemShowStatus->Checked;
             if (statusStripLog->Visible)
@@ -828,7 +849,7 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
                 richTextLog->Height += statusStripLog->Height;
             ToolStripCheckItem_CheckedChanged(sender, e);
         }
-    private: 
+    private:
         System::Void toolStripMenuItemTaskBarProgress_CheckedChanged(System::Object^  sender, System::EventArgs^  e) {
             if (nullptr != taskbar_progress) {
                 taskbar_progress->set_visible(toolStripMenuItemTaskBarProgress->Checked);
@@ -839,7 +860,7 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
         System::Void toolStripMenuItemSaveLogSize_CheckedChanged(System::Object^  sender, System::EventArgs^  e) {
             ToolStripCheckItem_CheckedChanged(sender, e);
         }
-    private: 
+    private:
         System::Void toolStripMenuItemAutoSaveSettings_Click(System::Object^  sender, System::EventArgs^  e) {
             frmAutoSaveLogSettings::Instance::get()->Owner = this;
             frmAutoSaveLogSettings::Instance::get()->Show();
@@ -891,7 +912,7 @@ private: System::Windows::Forms::ToolStripMenuItem^  toolStripMenuItemFilePathOp
             ::SendMessage(hWnd, WM_SETREDRAW, true, 0); //描画再開
             this->Refresh(); //強制再描画
         }
-    private: 
+    private:
         System::Void toolStripMenuItemWindowFont_Click(System::Object^  sender, System::EventArgs^  e) {
             System::Drawing::Font^ LastFont = richTextLog->Font;
             fontDialogLog->Font = richTextLog->Font;

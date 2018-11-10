@@ -1,9 +1,10 @@
 ﻿// -----------------------------------------------------------------------------------------
-//     VCEEnc by rigaya
+// NVEnc by rigaya
 // -----------------------------------------------------------------------------------------
+//
 // The MIT License
 //
-// Copyright (c) 2014-2017 rigaya
+// Copyright (c) 2014-2016 rigaya
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,7 +20,7 @@
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// IABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
@@ -28,14 +29,12 @@
 #ifndef _CL_FUNC_H_
 #define _CL_FUNC_H_
 
-#include "VCEVersion.h"
+#include "rgy_version.h"
 
 #if ENABLE_OPENCL
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
 #include <CL/cl.h>
+#include "rgy_osdep.h"
 
 typedef cl_int (CL_API_CALL* funcClGetPlatformIDs)(cl_uint num_entries, cl_platform_id *platforms, cl_uint *num_platforms);
 typedef cl_int (CL_API_CALL* funcClGetPlatformInfo) (cl_platform_id platform, cl_platform_info param_name, size_t param_value_size, void *param_value, size_t *param_value_size_ret);
@@ -109,6 +108,9 @@ void cl_release_func(cl_func_t *cl);
 
 bool cl_check_vendor_name(const char *str, const char *VendorName);
 cl_int cl_get_platform_and_device(const char *VendorName, cl_int device_type, cl_data_t *cl_data, const cl_func_t *cl);
+int cl_get_device_max_compute_units(const cl_data_t *cl_data, const cl_func_t *cl);
+cl_int cl_get_device_name(const cl_data_t *cl_data, const cl_func_t *cl, TCHAR *buffer, unsigned int buffer_size);
+cl_int cl_get_driver_version(const cl_data_t *cl_data, const cl_func_t *cl, TCHAR *buffer, unsigned int buffer_size);
 
 void cl_release(cl_data_t *cl_data, cl_func_t *cl);
 

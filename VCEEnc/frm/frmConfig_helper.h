@@ -28,6 +28,8 @@
 #pragma once
 
 using namespace System;
+using namespace System::Data;
+using namespace System::Threading;
 using namespace System::IO;
 using namespace System::Collections::Generic;
 
@@ -38,6 +40,8 @@ namespace VCEEnc {
     ref class LocalSettings 
     {
     public:
+        String^ vidEncName;
+        String^ vidEncPath;
         List<String^>^ audEncName;
         List<String^>^ audEncExeName;
         List<String^>^ audEncPath;
@@ -74,6 +78,12 @@ namespace VCEEnc {
         String^ Name;
         String^ Path;
         const char* args;
+    };
+
+    value struct VidEncInfo {
+        bool hwencAvail;
+        bool h264Enc;
+        bool hevcEnc;
     };
 };
 
@@ -112,14 +122,14 @@ static const WCHAR * const list_mp4boxtempdir[] = {
 const WCHAR * const audio_enc_timing_desc[] = {
     L"後",
     L"前",
-    //L"同時", //うまく動作しないため、無効化
+    L"同時",
     NULL
 };
 
 const CX_DESC list_log_level_jp[] ={
-    { "通常",                  VCE_LOG_INFO },
-    { "音声/muxのログも表示 ", VCE_LOG_MORE },
-    { "デバッグ用出力も表示 ", VCE_LOG_DEBUG },
+    { "通常",                  RGY_LOG_INFO },
+    { "音声/muxのログも表示 ", RGY_LOG_MORE },
+    { "デバッグ用出力も表示 ", RGY_LOG_DEBUG },
     { NULL, NULL }
 };
 

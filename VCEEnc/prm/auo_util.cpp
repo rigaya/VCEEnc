@@ -34,7 +34,6 @@
 #include <algorithm>
 #include <tlhelp32.h>
 #include <vector>
-#include <tchar.h>
 
 #include "auo_util.h"
 #include "auo_version.h"

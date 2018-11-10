@@ -30,6 +30,7 @@
 #include "auo_frm.h" 
 #include "auo_pipe.h"
 #include "auo_chapter.h"
+#include "auo_convert.h"
 
 void warning_failed_getting_temp_path() {
     write_log_auo_line(LOG_WARNING, "一時フォルダ名取得に失敗しました。一時フォルダ指定を解除しました。");
@@ -135,6 +136,10 @@ void error_run_process(const char *exe_name, int rp_ret) {
     }
 }
 
+void error_video_output_thread_start() {
+    write_log_auo_line(LOG_ERROR, "パイプ出力用スレッドの生成に失敗しました。");
+}
+
 void warning_auto_qpfile_failed() {
     write_log_auo_line(LOG_WARNING, "Aviutlのキーフレーム検出用 qpfileの自動作成に失敗しました。");
 }
@@ -162,13 +167,13 @@ void error_afs_interlace_stg() {
 }
 
 void error_x264_dead() {
-    write_log_auo_line(LOG_ERROR, "x264が予期せず途中終了しました。x264に不正なパラメータ(オプション)が渡された可能性があります。");
+    write_log_auo_line(LOG_ERROR, "VCEEncCが予期せず途中終了しました。VCEEncCに不正なパラメータ(オプション)が渡された可能性があります。");
 }
 
 void error_x264_version() {
     write_log_line(LOG_ERROR, ""
-        "auo [error]: x264のバージョンが古く、エンコードできません。\n"
-        "             最新のx264をダウンロードし、設定画面で最新版に指定しなおしてください。");
+        "auo [error]: VCEEncCのバージョンが古く、エンコードできません。\n"
+        "             最新のVCEEncCをダウンロードし、設定画面で最新版に指定しなおしてください。");
 }
 
 void error_afs_get_frame() {
@@ -216,12 +221,12 @@ void warning_failed_mux_tmp_drive_space() {
     write_log_auo_line(LOG_WARNING, "指定されたmux用一時フォルダのあるドライブの空き容量取得に失敗しました。mux用一時フォルダ指定を解除しました。");
 }
 
-void warning_failed_muxer_drive_space() {
-    write_log_auo_line(LOG_WARNING, "muxerのあるドライブの空き容量取得に失敗しました。容量不足によりmuxが失敗する可能性があります。");
+void error_failed_muxer_drive_space() {
+    write_log_auo_line(LOG_ERROR, "muxerのあるドライブの空き容量取得に失敗しました。muxを行えません。");
 }
 
-void warning_failed_out_drive_space() {
-    write_log_auo_line(LOG_WARNING, "出力先のあるドライブの空き容量取得に失敗しました。容量不足によりmuxが失敗する可能性があります。");
+void error_failed_out_drive_space() {
+    write_log_auo_line(LOG_ERROR, "出力先のあるドライブの空き容量取得に失敗しました。muxを行えません。");
 }
 
 void warning_failed_get_aud_size() {
@@ -314,6 +319,16 @@ void warning_mux_chapter(int sts) {
 void warning_chapter_convert_to_utf8(int sts) {
     write_log_auo_line_fmt(LOG_WARNING, "チャプターファイルのUTF-8への変換に失敗しました。");
     warning_mux_chapter(sts);
+}
+
+void error_select_convert_func(int width, int height, BOOL use16bit, BOOL interlaced, int output_csp) {
+    write_log_auo_line(LOG_ERROR, "色形式変換関数の取得に失敗しました。");
+    write_log_auo_line_fmt(LOG_ERROR, "%dx%d%s, output-csp %s%s%s",
+        width, height,
+        (interlaced) ? "i" : "p",
+        specify_csp[output_csp],
+        (use16bit) ? "(16bit)" : ""
+    );
 }
 
 void warning_no_batfile(const char *batfile) {

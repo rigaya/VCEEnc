@@ -37,7 +37,8 @@
 #include "frmSaveNewStg.h"
 #include "frmOtherSettings.h"
 #include "frmBitrateCalculator.h"
-#include "VCEParam.h"
+#include "vce_param.h"
+#include "vce_cmd.h"
 
 using namespace VCEEnc;
 
@@ -60,7 +61,7 @@ System::Boolean frmSaveNewStg::checkStgFileName(String^ stgName) {
     String^ fileName;
     if (stgName->Length == 0)
         return false;
-    
+
     if (!ValidiateFileName(stgName)) {
         MessageBox::Show(L"ファイル名に使用できない文字が含まれています。\n保存できません。", L"エラー", MessageBoxButtons::OK, MessageBoxIcon::Error);
         return false;
@@ -193,6 +194,8 @@ System::Void frmConfig::LoadLocalStg() {
     LocalStg.CustomMP4TmpDir = String(_ex_stg->s_local.custom_mp4box_tmp_dir).ToString();
     LocalStg.LastAppDir      = String(_ex_stg->s_local.app_dir).ToString();
     LocalStg.LastBatDir      = String(_ex_stg->s_local.bat_dir).ToString();
+    LocalStg.vidEncName      = String(_ex_stg->s_vid.filename).ToString();
+    LocalStg.vidEncPath      = String(_ex_stg->s_vid.fullpath).ToString();
     LocalStg.MP4MuxerExeName = String(_ex_stg->s_mux[MUXER_MP4].filename).ToString();
     LocalStg.MP4MuxerPath    = String(_ex_stg->s_mux[MUXER_MP4].fullpath).ToString();
     LocalStg.MKVMuxerExeName = String(_ex_stg->s_mux[MUXER_MKV].filename).ToString();
@@ -219,11 +222,17 @@ System::Void frmConfig::LoadLocalStg() {
 System::Boolean frmConfig::CheckLocalStg() {
     bool error = false;
     String^ err = "";
+    //映像エンコーダのチェック
+    if (!File::Exists(LocalStg.vidEncPath)) {
+        if (!error) err += L"\n\n";
+        error = true;
+        err += L"指定された 動画エンコーダ は存在しません。\n [ " + LocalStg.vidEncPath + L" ]\n";
+    }
     //音声エンコーダのチェック (実行ファイル名がない場合はチェックしない)
     if (LocalStg.audEncExeName[fcgCXAudioEncoder->SelectedIndex]->Length) {
         String^ AudioEncoderPath = LocalStg.audEncPath[fcgCXAudioEncoder->SelectedIndex];
-        if (!File::Exists(AudioEncoderPath) 
-            && (fcgCXAudioEncoder->SelectedIndex != sys_dat->exstg->s_aud_faw_index 
+        if (!File::Exists(AudioEncoderPath)
+            && (fcgCXAudioEncoder->SelectedIndex != sys_dat->exstg->s_aud_faw_index
                 || !check_if_faw2aac_exists()) ) {
             //音声実行ファイルがない かつ
             //選択された音声がfawでない または fawであってもfaw2aacがない
@@ -249,7 +258,7 @@ System::Boolean frmConfig::CheckLocalStg() {
                 +  L"一度設定画面でFAW(fawcl)へのパスを指定してください。\n";
         }
     }
-    if (error) 
+    if (error)
         MessageBox::Show(this, err, L"エラー", MessageBoxButtons::OK, MessageBoxIcon::Error);
     return error;
 }
@@ -263,6 +272,7 @@ System::Void frmConfig::SaveLocalStg() {
     GetCHARfromString(_ex_stg->s_local.custom_audio_tmp_dir,  sizeof(_ex_stg->s_local.custom_audio_tmp_dir),  LocalStg.CustomAudTmpDir);
     GetCHARfromString(_ex_stg->s_local.app_dir,               sizeof(_ex_stg->s_local.app_dir),               LocalStg.LastAppDir);
     GetCHARfromString(_ex_stg->s_local.bat_dir,               sizeof(_ex_stg->s_local.bat_dir),               LocalStg.LastBatDir);
+    GetCHARfromString(_ex_stg->s_vid.fullpath,                sizeof(_ex_stg->s_vid.fullpath),                LocalStg.vidEncPath);
     GetCHARfromString(_ex_stg->s_mux[MUXER_MP4].fullpath,     sizeof(_ex_stg->s_mux[MUXER_MP4].fullpath),     LocalStg.MP4MuxerPath);
     GetCHARfromString(_ex_stg->s_mux[MUXER_MKV].fullpath,     sizeof(_ex_stg->s_mux[MUXER_MKV].fullpath),     LocalStg.MKVMuxerPath);
     GetCHARfromString(_ex_stg->s_mux[MUXER_TC2MP4].fullpath,  sizeof(_ex_stg->s_mux[MUXER_TC2MP4].fullpath),  LocalStg.TC2MP4Path);
@@ -274,6 +284,7 @@ System::Void frmConfig::SaveLocalStg() {
 }
 
 System::Void frmConfig::SetLocalStg() {
+    fcgTXVideoEncoderPath->Text   = LocalStg.vidEncPath;
     fcgTXMP4MuxerPath->Text       = LocalStg.MP4MuxerPath;
     fcgTXMKVMuxerPath->Text       = LocalStg.MKVMuxerPath;
     fcgTXTC2MP4Path->Text         = LocalStg.TC2MP4Path;
@@ -475,8 +486,8 @@ ToolStripMenuItem^ frmConfig::fcgTSSettingsSearchItem(String^ stgPath, ToolStrip
         if (item != nullptr)
             return item;
         item = dynamic_cast<ToolStripMenuItem^>(DropDownItem->DropDownItems[i]);
-        if (item      != nullptr && 
-            item->Tag != nullptr && 
+        if (item      != nullptr &&
+            item->Tag != nullptr &&
             0 == String::Compare(item->Tag->ToString(), stgPath, true))
             return item;
     }
@@ -488,7 +499,7 @@ ToolStripMenuItem^ frmConfig::fcgTSSettingsSearchItem(String^ stgPath) {
 }
 
 System::Void frmConfig::SaveToStgFile(String^ stgName) {
-    size_t nameLen = CountStringBytes(stgName) + 1; 
+    size_t nameLen = CountStringBytes(stgName) + 1;
     char *stg_name = (char *)malloc(nameLen);
     GetCHARfromString(stg_name, nameLen, stgName);
     init_CONF_GUIEX(cnf_stgSelected, FALSE);
@@ -497,7 +508,7 @@ System::Void frmConfig::SaveToStgFile(String^ stgName) {
     if (!Directory::Exists(stgDir))
         Directory::CreateDirectory(stgDir);
     guiEx_config exCnf;
-    int result = exCnf.save_guiEx_conf(cnf_stgSelected, stg_name);
+    int result = exCnf.save_guiex_conf(cnf_stgSelected, stg_name);
     free(stg_name);
     switch (result) {
         case CONF_ERROR_FILE_OPEN:
@@ -534,7 +545,7 @@ System::Void frmConfig::fcgTSBSaveNew_Click(System::Object^  sender, System::Eve
 System::Void frmConfig::DeleteStgFile(ToolStripMenuItem^ mItem) {
     if (System::Windows::Forms::DialogResult::OK ==
         MessageBox::Show(L"設定ファイル " + mItem->Text + L" を削除してよろしいですか?",
-        L"エラー", MessageBoxButtons::OKCancel, MessageBoxIcon::Exclamation)) 
+        L"エラー", MessageBoxButtons::OKCancel, MessageBoxIcon::Exclamation))
     {
         File::Delete(mItem->Tag->ToString());
         RebuildStgFileDropDown(nullptr);
@@ -557,7 +568,7 @@ System::Void frmConfig::fcgTSSettings_DropDownItemClicked(System::Object^  sende
     guiEx_config exCnf;
     char stg_path[MAX_PATH_LEN];
     GetCHARfromString(stg_path, sizeof(stg_path), ClickedMenuItem->Tag->ToString());
-    if (exCnf.load_guiEx_conf(&load_stg, stg_path) == CONF_ERROR_FILE_OPEN) {
+    if (exCnf.load_guiex_conf(&load_stg, stg_path) == CONF_ERROR_FILE_OPEN) {
         if (MessageBox::Show(L"設定ファイルオープンに失敗しました。\n"
                            + L"このファイルを削除しますか?",
                            L"エラー", MessageBoxButtons::YesNo, MessageBoxIcon::Error)
@@ -609,8 +620,7 @@ System::Void frmConfig::InitData(CONF_GUIEX *set_config, const SYSTEM_DATA *syst
 
 System::Void frmConfig::InitComboBox() {
     //コンボボックスに値を設定する
-    const int codecCount = check_if_vce_available(VCE_CODEC_HEVC) ? 2 : 1;
-    setComboBox(fcgCXCodec,         list_codec, codecCount);
+    setComboBox(fcgCXCodec,         list_codec);
     setComboBox(fcgCXEncMode,       list_vce_h264_rc_method);
     setComboBox(fcgCXQualityPreset, list_vce_quality_preset);
     setComboBox(fcgCXCodecLevel,    list_avc_level);
@@ -695,6 +705,10 @@ System::Void frmConfig::fcgChangeEnabled(System::Object^  sender, System::EventA
     fcgNUMaxkbps->Enabled = cbr_vbr_mode;
     fcgLBMaxkbps->Enabled = cbr_vbr_mode;
     fcgLBMaxBitrate2->Enabled = cbr_vbr_mode;
+    fcgNUVBVBufSize->Visible = cbr_vbr_mode;
+    fcgNUVBVBufSize->Enabled = cbr_vbr_mode;
+    fcgLBVBVBufSize->Visible = cbr_vbr_mode;
+    fcgLBVBVBufSizeKbps->Visible = cbr_vbr_mode;
 
     this->ResumeLayout();
     this->PerformLayout();
@@ -704,9 +718,9 @@ System::Void frmConfig::fcgCXCodec_SelectedIndexChanged(System::Object^  sender,
 
     this->SuspendLayout();
 
-    fcgPNHEVCLevelProfile->Visible = nCodecId == VCE_CODEC_HEVC;
-    fcgPNPreAnalysis->Visible = nCodecId == VCE_CODEC_HEVC;
-    bool bBframes = nCodecId != VCE_CODEC_HEVC;
+    fcgPNHEVCLevelProfile->Visible = nCodecId == RGY_CODEC_HEVC;
+    fcgPNPreAnalysis->Visible = nCodecId == RGY_CODEC_HEVC;
+    bool bBframes = nCodecId != RGY_CODEC_HEVC;
     fcgPNBframes->Visible = bBframes;
     fcgLBQPB->Visible = bBframes;
     fcgNUQPB->Visible = bBframes;
@@ -780,6 +794,8 @@ System::Void frmConfig::AdjustLocation() {
 }
 
 System::Void frmConfig::InitForm() {
+    fcgpictureBoxVCEEnabled->Visible = false;
+    GetVidEncInfoAsync();
     //ローカル設定のロード
     LoadLocalStg();
     //ローカル設定の反映
@@ -791,7 +807,6 @@ System::Void frmConfig::InitForm() {
     //タイトル表示
     this->Text = String(AUO_FULL_NAME).ToString();
     //バージョン情報,コンパイル日時
-    fcgpictureBoxVCEEnabled->Visible = check_if_vce_available(VCE_CODEC_H264);
     fcgLBVersion->Text     = String(AUO_VERSION_NAME).ToString();
     fcgLBVersionDate->Text = L"build " + String(__DATE__).ToString() + L" " + String(__TIME__).ToString();
     //ツールチップ
@@ -822,60 +837,64 @@ System::Void frmConfig::InitForm() {
 System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     this->SuspendLayout();
 
-    SetCXIndex(fcgCXCodec,             get_cx_index(list_codec, cnf->vce.nCodecId));
-    SetCXIndex(fcgCXEncMode,           get_cx_index(list_vce_h264_rc_method, cnf->vce.nRateControl));
-    SetCXIndex(fcgCXQualityPreset,     get_cx_index(list_vce_quality_preset, cnf->vce.nQualityPreset));
-    SetNUValue(fcgNUBitrate,           cnf->vce.nBitrate);
-    SetNUValue(fcgNUMaxkbps,           cnf->vce.nMaxBitrate);
-    SetNUValue(fcgNUVBVBufSize,        cnf->vce.nVBVBufferSize);
-    SetNUValue(fcgNUQPI,               cnf->vce.nQPI);
-    SetNUValue(fcgNUQPP,               cnf->vce.nQPP);
-    SetNUValue(fcgNUQPB,               cnf->vce.nQPB);
-    SetNUValue(fcgNUGopLength,         cnf->vce.nGOPLen);
-    SetNUValue(fcgNUBframes,           cnf->vce.nBframes);
-    fcgCBBPyramid->Checked           = cnf->vce.bBPyramid != 0;
-    SetCXIndex(fcgCXCodecLevel,        get_cx_index(list_avc_level, cnf->vce.codecParam[VCE_CODEC_H264].nLevel));
-    SetCXIndex(fcgCXCodecProfile,      get_cx_index(list_avc_profile, cnf->vce.codecParam[VCE_CODEC_H264].nProfile));
-    SetCXIndex(fcgCXHEVCLevel,         get_cx_index(list_hevc_level, cnf->vce.codecParam[VCE_CODEC_HEVC].nLevel));
-    SetCXIndex(fcgCXHEVCProfile,       get_cx_index(list_hevc_profile, cnf->vce.codecParam[VCE_CODEC_HEVC].nProfile));
-    SetCXIndex(fcgCXInterlaced,        get_cx_index(list_interlaced, cnf->vce.nPicStruct));
-    if (cnf->vce.nPAR[0] * cnf->vce.nPAR[1] <= 0)
-        cnf->vce.nPAR[0] = cnf->vce.nPAR[1] = 0;
-    SetCXIndex(fcgCXAspectRatio, (cnf->vce.nPAR[0] < 0));
-    SetNUValue(fcgNUAspectRatioX, abs(cnf->vce.nPAR[0]));
-    SetNUValue(fcgNUAspectRatioY, abs(cnf->vce.nPAR[1]));
+    ParseCmdError err;
+    VCEParam vce;
+    parse_cmd(&vce, conf->vce.cmd, err);
 
-    SetNUValue(fcgNUQPMax,               cnf->vce.nQPMax);
-    SetNUValue(fcgNUQPMin,               cnf->vce.nQPMin);
-    SetNUValue(fcgNUBDeltaQP,            cnf->vce.nDeltaQPBFrame);
-    SetNUValue(fcgNUBRefDeltaQP,         cnf->vce.nDeltaQPBFrameRef);
+    SetCXIndex(fcgCXCodec,             get_cx_index(list_codec, vce.codec));
+    SetCXIndex(fcgCXEncMode,           get_cx_index(list_vce_h264_rc_method, vce.rateControl));
+    SetCXIndex(fcgCXQualityPreset,     get_cx_index(list_vce_quality_preset, vce.qualityPreset));
+    SetNUValue(fcgNUBitrate,           vce.nBitrate);
+    SetNUValue(fcgNUMaxkbps,           vce.nMaxBitrate);
+    SetNUValue(fcgNUVBVBufSize,        vce.nVBVBufferSize);
+    SetNUValue(fcgNUQPI,               vce.nQPI);
+    SetNUValue(fcgNUQPP,               vce.nQPP);
+    SetNUValue(fcgNUQPB,               vce.nQPB);
+    SetNUValue(fcgNUGopLength,         vce.nGOPLen);
+    SetNUValue(fcgNUBframes,           vce.nBframes);
+    fcgCBBPyramid->Checked           = vce.bBPyramid != 0;
+    SetCXIndex(fcgCXCodecLevel,        get_cx_index(list_avc_level, vce.codecParam[RGY_CODEC_H264].nLevel));
+    SetCXIndex(fcgCXCodecProfile,      get_cx_index(list_avc_profile, vce.codecParam[RGY_CODEC_H264].nProfile));
+    SetCXIndex(fcgCXHEVCLevel,         get_cx_index(list_hevc_level, vce.codecParam[RGY_CODEC_HEVC].nLevel));
+    SetCXIndex(fcgCXHEVCProfile,       get_cx_index(list_hevc_profile, vce.codecParam[RGY_CODEC_HEVC].nProfile));
+    SetCXIndex(fcgCXInterlaced,        get_cx_index(list_interlaced, vce.input.picstruct));
+    if (vce.par[0] * vce.par[1] <= 0)
+        vce.par[0] = vce.par[1] = 0;
+    SetCXIndex(fcgCXAspectRatio, (vce.par[0] < 0));
+    SetNUValue(fcgNUAspectRatioX, abs(vce.par[0]));
+    SetNUValue(fcgNUAspectRatioY, abs(vce.par[1]));
 
-    SetNUValue(fcgNUSlices,             cnf->vce.nSlices);
-    SetNUValue(fcgNURefFrames,          cnf->vce.nRefFrames);
-    SetNUValue(fcgNULTRFrames,          cnf->vce.nLTRFrames);
+    SetNUValue(fcgNUQPMax,               vce.nQPMax);
+    SetNUValue(fcgNUQPMin,               vce.nQPMin);
+    SetNUValue(fcgNUBDeltaQP,            vce.nDeltaQPBFrame);
+    SetNUValue(fcgNUBRefDeltaQP,         vce.nDeltaQPBFrameRef);
 
-    fcgCBDeblock->Checked             = cnf->vce.bDeblockFilter != 0;
-    fcgCBSkipFrame->Checked           = cnf->vce.bEnableSkipFrame != 0;
-    fcgCBTimerPeriodTuning->Checked   = cnf->vce.bTimerPeriodTuning != 0;
-    fcgCBVBAQ->Checked                = cnf->vce.bVBAQ != 0;
-    fcgCBFullrange->Checked           = cnf->vce.vui.infoPresent != 0 && cnf->vce.vui.fullrange != 0;
-    if (cnf->vce.nCodecId == VCE_CODEC_H264) {
-        SetCXIndex(fcgCXPreAnalysis,     get_cx_index(get_pre_analysis_list(VCE_CODEC_H264), cnf->vce.nPreAnalysis));
+    SetNUValue(fcgNUSlices,             vce.nSlices);
+    SetNUValue(fcgNURefFrames,          vce.nRefFrames);
+    SetNUValue(fcgNULTRFrames,          vce.nLTRFrames);
+
+    fcgCBDeblock->Checked             = vce.bDeblockFilter != 0;
+    fcgCBSkipFrame->Checked           = vce.bEnableSkipFrame != 0;
+    fcgCBTimerPeriodTuning->Checked   = vce.bTimerPeriodTuning != 0;
+    fcgCBVBAQ->Checked                = vce.bVBAQ != 0;
+    fcgCBFullrange->Checked           = vce.vui.fullrange != 0;
+    if (vce.codec == RGY_CODEC_H264) {
+        SetCXIndex(fcgCXPreAnalysis,     get_cx_index(get_pre_analysis_list(RGY_CODEC_H264), vce.nPreAnalysis));
         SetCXIndex(fcgCXHEVCPreAnalysis, 0);
-    } else if (cnf->vce.nCodecId == VCE_CODEC_HEVC) {
+    } else if (vce.codec == RGY_CODEC_HEVC) {
         SetCXIndex(fcgCXPreAnalysis,     0);
-        SetCXIndex(fcgCXHEVCPreAnalysis, get_cx_index(get_pre_analysis_list(VCE_CODEC_HEVC), cnf->vce.nPreAnalysis));
+        SetCXIndex(fcgCXHEVCPreAnalysis, get_cx_index(get_pre_analysis_list(RGY_CODEC_HEVC), vce.nPreAnalysis));
     }
 
-    SetCXIndex(fcgCXMotionEst,          get_cx_index(list_mv_presicion, cnf->vce.nMotionEst));
+    SetCXIndex(fcgCXMotionEst,          get_cx_index(list_mv_presicion, vce.nMotionEst));
 
         //SetCXIndex(fcgCXX264Priority,        cnf->vid.priority);
         SetCXIndex(fcgCXTempDir,             cnf->oth.temp_dir);
         fcgCBAFS->Checked                  = cnf->vid.afs != 0;
         fcgCBAuoTcfileout->Checked         = cnf->vid.auo_tcfile_out != 0;
-        fcgCBResize->Checked               = cnf->vid.enable_resize != 0;
-        SetNUValue(fcgNUResizeW,             cnf->vid.resize_w);
-        SetNUValue(fcgNUResizeH,             cnf->vid.resize_h);
+        fcgCBResize->Checked               = cnf->vid.resize_enable != 0;
+        SetNUValue(fcgNUResizeW,             cnf->vid.resize_width);
+        SetNUValue(fcgNUResizeH,             cnf->vid.resize_height);
 
         //音声
         fcgCBAudioOnly->Checked            = cnf->oth.out_audio_only != 0;
@@ -919,68 +938,67 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     this->PerformLayout();
 }
 
-System::Void frmConfig::FrmToConf(CONF_GUIEX *cnf) {
+System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     //これもひたすら書くだけ。めんどい
-    cnf->vce.nCodecId                                = list_codec[fcgCXCodec->SelectedIndex].value;
-    cnf->vce.nRateControl                            = list_vce_h264_rc_method[fcgCXEncMode->SelectedIndex].value;
-    cnf->vce.nQualityPreset                          = list_vce_quality_preset[fcgCXQualityPreset->SelectedIndex].value;
-    cnf->vce.codecParam[VCE_CODEC_H264].nProfile     = (int16_t)list_avc_profile[fcgCXCodecProfile->SelectedIndex].value;
-    cnf->vce.codecParam[VCE_CODEC_H264].nLevel       = (int16_t)list_avc_level[fcgCXCodecLevel->SelectedIndex].value;
-    cnf->vce.codecParam[VCE_CODEC_HEVC].nProfile     = (int16_t)list_hevc_profile[fcgCXHEVCProfile->SelectedIndex].value;
-    cnf->vce.codecParam[VCE_CODEC_HEVC].nLevel       = (int16_t)list_hevc_level[fcgCXHEVCLevel->SelectedIndex].value;
-    cnf->vce.nBitrate                                = (int)fcgNUBitrate->Value;
-    cnf->vce.nMaxBitrate                             = (int)fcgNUMaxkbps->Value;
-    cnf->vce.nVBVBufferSize                          = (int)fcgNUVBVBufSize->Value;
-    cnf->vce.nGOPLen                                 = (int)fcgNUGopLength->Value;
-    cnf->vce.nQPI                                    = (int)fcgNUQPI->Value;
-    cnf->vce.nQPP                                    = (int)fcgNUQPP->Value;
-    cnf->vce.nQPB                                    = (int)fcgNUQPB->Value;
-    cnf->vce.nQPMax                                  = (int)fcgNUQPMax->Value;
-    cnf->vce.nQPMin                                  = (int)fcgNUQPMin->Value;
+    VCEParam vce;
+    vce.codec                                   = (RGY_CODEC)list_codec[fcgCXCodec->SelectedIndex].value;
+    conf->vce.codec = vce.codec;
+    vce.rateControl                             = list_vce_h264_rc_method[fcgCXEncMode->SelectedIndex].value;
+    vce.qualityPreset                           = list_vce_quality_preset[fcgCXQualityPreset->SelectedIndex].value;
+    vce.codecParam[RGY_CODEC_H264].nProfile     = list_avc_profile[fcgCXCodecProfile->SelectedIndex].value;
+    vce.codecParam[RGY_CODEC_H264].nLevel       = list_avc_level[fcgCXCodecLevel->SelectedIndex].value;
+    vce.codecParam[RGY_CODEC_HEVC].nProfile     = list_hevc_profile[fcgCXHEVCProfile->SelectedIndex].value;
+    vce.codecParam[RGY_CODEC_HEVC].nLevel       = list_hevc_level[fcgCXHEVCLevel->SelectedIndex].value;
+    vce.nBitrate                                = (int)fcgNUBitrate->Value;
+    vce.nMaxBitrate                             = (int)fcgNUMaxkbps->Value;
+    vce.nVBVBufferSize                          = (int)fcgNUVBVBufSize->Value;
+    vce.nGOPLen                                 = (int)fcgNUGopLength->Value;
+    vce.nQPI                                    = (int)fcgNUQPI->Value;
+    vce.nQPP                                    = (int)fcgNUQPP->Value;
+    vce.nQPB                                    = (int)fcgNUQPB->Value;
+    vce.nQPMax                                  = (int)fcgNUQPMax->Value;
+    vce.nQPMin                                  = (int)fcgNUQPMin->Value;
 
-    cnf->vce.nBframes                                = (int)fcgNUBframes->Value;
-    cnf->vce.bBPyramid                               = fcgCBBPyramid->Checked;
-    cnf->vce.nDeltaQPBFrame                          = (int)fcgNUBDeltaQP->Value;
-    cnf->vce.nDeltaQPBFrameRef                       = (int)fcgNUBRefDeltaQP->Value;
+    vce.nBframes                                = (int)fcgNUBframes->Value;
+    vce.bBPyramid                               = fcgCBBPyramid->Checked;
+    vce.nDeltaQPBFrame                          = (int)fcgNUBDeltaQP->Value;
+    vce.nDeltaQPBFrameRef                       = (int)fcgNUBRefDeltaQP->Value;
 
-    cnf->vce.nPicStruct                              = AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME;
-    //cnf->vce.nPicStruct                              = (VCE_PICSTRUCT)list_interlaced[fcgCXInterlaced->SelectedIndex].value;
-    cnf->vce.nSlices                                 = (int)fcgNUSlices->Value;
-    cnf->vce.nRefFrames                              = (int)fcgNURefFrames->Value;
-    cnf->vce.nLTRFrames                              = (int)fcgNULTRFrames->Value;
+    vce.input.picstruct                         = RGY_PICSTRUCT_FRAME; // (RGY_PICSTRUCT)list_interlaced[fcgCXInterlaced->SelectedIndex].value;
+    vce.nSlices                                 = (int)fcgNUSlices->Value;
+    vce.nRefFrames                              = (int)fcgNURefFrames->Value;
+    vce.nLTRFrames                              = (int)fcgNULTRFrames->Value;
 
-    cnf->vce.bDeblockFilter                          = fcgCBDeblock->Checked;
-    cnf->vce.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;
-    cnf->vce.bVBAQ                                   = fcgCBVBAQ->Checked;
-    cnf->vce.vui.infoPresent                         = 0;
-    cnf->vce.vui.infoPresent                        |= fcgCBFullrange->Checked ? 1 : 0;
-    cnf->vce.vui.fullrange                           = fcgCBFullrange->Checked;
-    if (cnf->vce.nCodecId == VCE_CODEC_H264) {
-        cnf->vce.nPreAnalysis = get_pre_analysis_list(VCE_CODEC_H264)[fcgCXPreAnalysis->SelectedIndex].value;
-    } else if (cnf->vce.nCodecId == VCE_CODEC_HEVC) {
-        cnf->vce.nPreAnalysis = get_pre_analysis_list(VCE_CODEC_HEVC)[fcgCXHEVCPreAnalysis->SelectedIndex].value;
+    vce.bDeblockFilter                          = fcgCBDeblock->Checked;
+    vce.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;
+    vce.bVBAQ                                   = fcgCBVBAQ->Checked;
+    vce.vui.fullrange                           = fcgCBFullrange->Checked;
+    if (vce.codec == RGY_CODEC_H264) {
+        vce.nPreAnalysis = get_pre_analysis_list(RGY_CODEC_H264)[fcgCXPreAnalysis->SelectedIndex].value;
+    } else if (vce.codec == RGY_CODEC_HEVC) {
+        vce.nPreAnalysis = get_pre_analysis_list(RGY_CODEC_HEVC)[fcgCXHEVCPreAnalysis->SelectedIndex].value;
     }
 
-    cnf->vce.nMotionEst                              = list_mv_presicion[fcgCXMotionEst->SelectedIndex].value;
+    vce.nMotionEst                              = list_mv_presicion[fcgCXMotionEst->SelectedIndex].value;
 
-    cnf->vce.bTimerPeriodTuning                      = fcgCBTimerPeriodTuning->Checked;
+    vce.bTimerPeriodTuning                      = fcgCBTimerPeriodTuning->Checked;
 
     cnf->vid.afs                    = fcgCBAFS->Checked;
     cnf->vid.auo_tcfile_out         = fcgCBAuoTcfileout->Checked;
-    cnf->vce.nPAR[0]                = (int)fcgNUAspectRatioX->Value;
-    cnf->vce.nPAR[1]                = (int)fcgNUAspectRatioY->Value;
+    vce.par[0]                      = (int)fcgNUAspectRatioX->Value;
+    vce.par[1]                      = (int)fcgNUAspectRatioY->Value;
     if (fcgCXAspectRatio->SelectedIndex == 1) {
-        cnf->vce.nPAR[0] *= -1;
-        cnf->vce.nPAR[1] *= -1;
+        vce.par[0] *= -1;
+        vce.par[1] *= -1;
     }
 
     //拡張部
     cnf->oth.temp_dir               = fcgCXTempDir->SelectedIndex;
     cnf->vid.afs                    = fcgCBAFS->Checked;
     cnf->vid.auo_tcfile_out         = fcgCBAuoTcfileout->Checked;
-    cnf->vid.enable_resize          = fcgCBResize->Checked;
-    cnf->vid.resize_w               = (int)fcgNUResizeW->Value;
-    cnf->vid.resize_h               = (int)fcgNUResizeH->Value;
+    cnf->vid.resize_enable          = fcgCBResize->Checked;
+    cnf->vid.resize_width           = (int)fcgNUResizeW->Value;
+    cnf->vid.resize_height          = (int)fcgNUResizeH->Value;
 
     //音声部
     cnf->aud.encoder                = fcgCXAudioEncoder->SelectedIndex;
@@ -1021,6 +1039,10 @@ System::Void frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     GetCHARfromString(cnf->oth.batfile.after_audio,    fcgTXBatAfterAudioPath->Text);
 
     GetfcgTSLSettingsNotes(cnf->oth.notes, sizeof(cnf->oth.notes));
+
+    strcpy_s(cnf->vce.cmd, gen_cmd(&vce, true).c_str());
+
+    return String(gen_cmd(&vce, false).c_str()).ToString();
 }
 
 System::Void frmConfig::GetfcgTSLSettingsNotes(char *notes, int nSize) {
@@ -1081,6 +1103,8 @@ System::Void frmConfig::SetAllCheckChangedEvents(Control ^top) {
             SetToolStripEvents((ToolStrip^)(top->Controls[i]), gcnew System::Windows::Forms::MouseEventHandler(this, &frmConfig::fcgTSItem_MouseDown));
         else if (top->Controls[i]->Tag == nullptr)
             SetAllCheckChangedEvents(top->Controls[i]);
+        else if (String::Equals(top->Controls[i]->Tag->ToString(), L"reCmd"))
+            SetChangedEvent(top->Controls[i], gcnew System::EventHandler(this, &frmConfig::fcgRebuildCmd));
         else if (String::Equals(top->Controls[i]->Tag->ToString(), L"chValue"))
             SetChangedEvent(top->Controls[i], gcnew System::EventHandler(this, &frmConfig::CheckOtherChanges));
         else
@@ -1329,6 +1353,67 @@ System::Void frmConfig::ShowExehelp(String^ ExePath, String^ args) {
             MessageBox::Show(L"helpを開く際に不明なエラーが発生しました。", L"エラー", MessageBoxButtons::OK, MessageBoxIcon::Error);
         }
     }
+}
+
+System::Void frmConfig::SetVidEncInfo(VidEncInfo info) {
+    if (this->InvokeRequired) {
+        this->Invoke(gcnew SetVidEncInfoDelegate(this, &frmConfig::SetVidEncInfo), info);
+    } else {
+        fcgpictureBoxVCEEnabled->Visible = encInfo.hwencAvail;
+        //HEVCエンコができるか
+        if (!encInfo.hevcEnc) {
+            fcgCXCodec->Items[get_cx_index(list_codec, RGY_CODEC_HEVC)] = L"-------------";
+            if (fcgCXCodec->SelectedIndex == get_cx_index(list_codec, RGY_CODEC_HEVC)) {
+                fcgCXCodec->SelectedIndex = get_cx_index(list_codec, RGY_CODEC_H264);
+            }
+        }
+        fcgCXCodec_SelectedIndexChanged(nullptr, nullptr);
+        fcgRebuildCmd(nullptr, nullptr);
+    }
+}
+
+VidEncInfo frmConfig::GetVidEncInfo() {
+    char exe_path[MAX_PATH_LEN];
+    char mes[8192];
+
+    VidEncInfo info;
+    info.hwencAvail = false;
+    info.h264Enc = false;
+    info.hevcEnc = false;
+    GetCHARfromString(exe_path, sizeof(exe_path), LocalStg.vidEncPath);
+
+    if (get_exe_message(exe_path, "--check-hw", mes, _countof(mes), AUO_PIPE_MUXED) == RP_SUCCESS) {
+        auto lines = String(mes).ToString()->Split(String(L"\r\n").ToString()->ToCharArray(), System::StringSplitOptions::RemoveEmptyEntries);
+        for (int i = 0; i < lines->Length; i++) {
+            if (lines[i]->Contains("VCE available")) {
+                if (lines[i]->ToLower()->Contains("h.264")) {
+                    info.hwencAvail = true;
+                    info.h264Enc = true;
+                }
+                if (lines[i]->ToLower()->Contains("hevc")) {
+                    info.hwencAvail = true;
+                    info.hevcEnc = true;
+                }
+            }
+        }
+    }
+    encInfo = info;
+    SetVidEncInfo(info);
+    return info;
+}
+
+System::Void frmConfig::GetVidEncInfoAsync() {
+    if (!File::Exists(LocalStg.vidEncPath)) {
+        encInfo.hwencAvail = false;
+        encInfo.h264Enc = false;
+        encInfo.hevcEnc = false;
+        return;
+    }
+    if (taskEncInfo != nullptr && !taskEncInfo->IsCompleted) {
+        taskEncInfoCancell->Cancel();
+    }
+    taskEncInfoCancell = gcnew CancellationTokenSource();
+    taskEncInfo = Task<VidEncInfo>::Factory->StartNew(gcnew Func<VidEncInfo>(this, &frmConfig::GetVidEncInfo), taskEncInfoCancell->Token);
 }
 
 #pragma warning( pop )

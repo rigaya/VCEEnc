@@ -123,43 +123,43 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\obj\</IntDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\obj\</IntDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugStatic|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\obj\</IntDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DebugStatic|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\obj\</IntDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\obj\</IntDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\obj\</IntDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelStatic|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\obj\</IntDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelStatic|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>..\_build\$(ProjectName)\$(Platform)\$(Configuration)\obj\</IntDir>
+    <OutDir>$(SolutionDir)_build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)obj\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

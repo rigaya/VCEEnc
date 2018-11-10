@@ -30,7 +30,7 @@
 
 #include <Windows.h>
 #include "auo.h"
-#include "VCEParam.h"
+#include "vce_param.h"
 
 const int CONF_INITIALIZED = 1;
 
@@ -54,7 +54,7 @@ static inline int get_run_bat_idx(DWORD flag) {
     return (int)ret;
 }
 
-static const char *CONF_NAME          = "VCEEnc ConfigFile v2";
+static const char *CONF_NAME          = "VCEEnc ConfigFile v3";
 const int CONF_NAME_BLOCK_LEN         = 32;
 const int CONF_BLOCK_MAX              = 32;
 const int CONF_BLOCK_COUNT            = 5; //最大 CONF_BLOCK_MAXまで
@@ -77,20 +77,28 @@ enum {
 static const char *const AUDIO_DELAY_CUT_MODE[] = {
     "補正なし",
     "音声カット",
-    "映像追加",
+    "----------",
     "edts",
     NULL
 };
 
 const int CMDEX_MAX_LEN = 2048;    //追加コマンドラインの最大長
 
+#pragma pack(push, 1)
+typedef struct {
+    int codec;
+    int reserved[128];
+    char cmd[3072];
+    char reserved2[1024];
+} CONF_VCE;
+
 typedef struct {
     BOOL afs;                      //自動フィールドシフトの使用
     BOOL auo_tcfile_out;           //auo側でタイムコードを出力する
-    BOOL enable_resize;
-    int  resize_w;
-    int  resize_h;
-} CONF_VIDEO; //動画用設定
+    BOOL resize_enable;
+    int resize_width;
+    int resize_height;
+} CONF_VIDEO;
 
 typedef struct {
     int  encoder;             //使用する音声エンコーダ
@@ -103,7 +111,7 @@ typedef struct {
     BOOL minimized;           //音声エンコーダを最小化で実行
     int  aud_temp_dir;        //音声専用一時フォルダ
     int  audio_encode_timing; //音声を先にエンコード
-    int   delay_cut;           //エンコード遅延の削除
+    int  delay_cut;           //エンコード遅延の削除
 } CONF_AUDIO; //音声用設定
 
 typedef struct {
@@ -144,12 +152,13 @@ typedef struct {
     int         block_count;                     //ヘッダ部を除いた設定のブロック数
     int         block_size[CONF_BLOCK_MAX];      //各ブロックのサイズ
     size_t      block_head_p[CONF_BLOCK_MAX];    //各ブロックのポインタ位置
-    VCEParam    vce;                             //vceについての設定
+    CONF_VCE    vce;                             //vceについての設定
     CONF_VIDEO  vid;                             //その他動画についての設定
     CONF_AUDIO  aud;                             //音声についての設定
     CONF_MUX    mux;                             //muxについての設定
     CONF_OTHER  oth;                             //その他の設定
 } CONF_GUIEX;
+#pragma pack(pop)
 
 class guiEx_config {
 private:
@@ -159,8 +168,8 @@ public:
     guiEx_config();
     static void write_conf_header(CONF_GUIEX *conf);
     static int  adjust_conf_size(CONF_GUIEX *conf_buf, void *old_data, int old_size);
-    int  load_guiEx_conf(CONF_GUIEX *conf, const char *stg_file);       //設定をstgファイルから読み込み
-    int  save_guiEx_conf(const CONF_GUIEX *conf, const char *stg_file); //設定をstgファイルとして保存
+    int  load_guiex_conf(CONF_GUIEX *conf, const char *stg_file);       //設定をstgファイルから読み込み
+    int  save_guiex_conf(const CONF_GUIEX *conf, const char *stg_file); //設定をstgファイルとして保存
 };
 
 //定義はVCEEnc.cpp
@@ -171,5 +180,6 @@ void init_CONF_GUIEX(CONF_GUIEX *conf, BOOL use_highbit); //初期化し、デ�
 void make_file_filter(char *filter, size_t nSize, int default_index);
 
 void overwrite_aviutl_ini_file_filter(int idx);
+void overwrite_aviutl_ini_name();
 
 #endif //_AUO_CONF_H_

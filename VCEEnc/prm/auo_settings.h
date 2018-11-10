@@ -201,14 +201,21 @@ typedef struct {
     char *vid_cmd;                //映像mux用のコマンドライン
     char *aud_cmd;                //音声mux用のコマンドライン
     char *tc_cmd;                 //タイムコードmux用のコマンドライン
-    char *tmp_cmd;                //一時フォルダ指定用コマンドライン
     char *delay_cmd;              //音声エンコーダディレイ指定用のコマンドライン
+    char *tmp_cmd;                //一時フォルダ指定用コマンドライン
     char *help_cmd;               //ヘルプ表示用コマンドライン
     char *ver_cmd;                //バージョン表示用のコマンドライン
     int ex_count;                 //拡張オプションの数
     MUXER_CMD_EX *ex_cmd;         //拡張オプション
     int post_mux;                 //muxerを実行したあとに別のmuxerを実行する
 } MUXER_SETTINGS;
+
+typedef struct {
+    char *filename;                      //動画エンコーダのファイル名
+    char fullpath[MAX_PATH_LEN];         //動画エンコーダの場所(フルパス)
+    char *default_cmd;                   //デフォルト設定用コマンドライン
+    char *help_cmd;                      //ヘルプ表示用cmd
+} VIDEO_SETTINGS;
 
 typedef struct {
     char *from; //置換元文字列
@@ -254,8 +261,8 @@ typedef struct {
     BOOL   disable_visual_styles;               //視覚効果をオフにする
     BOOL   enable_stg_esc_key;                  //設定画面でEscキーを有効化する
     AUO_FONT_INFO conf_font;                    //設定画面のフォント
-    int    default_audio_encoder;               //デフォルトの音声エンコーダ
     BOOL   chap_nero_convert_to_utf8;           //nero形式のチャプターをUTF-8に変換する
+    int    default_audio_encoder;               //デフォルトの音声エンコーダ
     BOOL   get_relative_path;                   //相対パスで保存する
     BOOL   run_bat_minimized;                   //エンコ前後バッチ処理を最小化で実行
     char   custom_tmp_dir[MAX_PATH_LEN];        //一時フォルダ
@@ -278,6 +285,7 @@ typedef struct {
 class guiEx_settings {
 private:
     mem_cutter fn_rep_mc;
+    mem_cutter s_vid_mc;
     mem_cutter s_aud_mc;
     mem_cutter s_mux_mc;
 
@@ -288,12 +296,13 @@ private:
     static char  conf_fileName[MAX_PATH_LEN]; //configファイル(読み書き用)の場所
     static DWORD ini_filesize;                //iniファイル(読み込み用)のサイズ
 
+    void load_vid();          //動画エンコーダ関連の設定の読み込み・更新
     void load_aud();          //音声エンコーダ関連の設定の読み込み・更新
     void load_mux();          //muxerの設定の読み込み・更新
     void load_local();        //ファイルの場所等の設定の読み込み・更新
 
     int get_faw_index();             //FAWのインデックスを取得する
-    BOOL s_x264_refresh;             //x264設定の再ロード
+    BOOL s_vid_refresh;              //動画設定の再ロード
 
     void make_default_stg_dir(char *default_stg_dir, DWORD nSize); //プロファイル設定ファイルの保存場所の作成
     BOOL check_inifile();            //iniファイルが読めるかテスト
@@ -302,6 +311,7 @@ public:
     static char blog_url[MAX_PATH_LEN];      //ブログページのurl
     int s_aud_count;                 //音声エンコーダの数
     int s_mux_count;                 //muxerの数 (基本3固定)
+    VIDEO_SETTINGS s_vid;            //動画エンコーダの設定
     AUDIO_SETTINGS *s_aud;           //音声エンコーダの設定
     MUXER_SETTINGS *s_mux;           //muxerの設定
     LOCAL_SETTINGS s_local;          //ファイルの場所等
@@ -335,6 +345,7 @@ private:
     void initialize(BOOL disable_loading);
     void initialize(BOOL disable_loading, const char *_auo_path, const char *main_section);
 
+    void clear_vid();         //動画エンコーダ関連の設定の消去
     void clear_aud();         //音声エンコーダ関連の設定の消去
     void clear_mux();         //muxerの設定の消去
     void clear_local();       //ファイルの場所等の設定の消去

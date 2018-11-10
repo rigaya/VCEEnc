@@ -19,14 +19,13 @@
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// IABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
 // ------------------------------------------------------------------------------------------
 
 #include <Windows.h>
-#include <string>
 #include <shlwapi.h>
 #pragma comment(lib, "shlwapi.lib")
 #include <process.h>
@@ -34,9 +33,9 @@
 #pragma comment(lib, "user32.lib") //WaitforInputIdle
 
 #include "output.h"
+#include "convert.h"
 #include "auo.h"
 #include "auo_version.h"
-#include "convert.h"
 #include "auo_frm.h"
 #include "auo_pipe.h"
 #include "auo_error.h"
@@ -74,7 +73,7 @@ void auo_faw_check(CONF_AUDIO *aud, const OUTPUT_INFO *oip, PRM_ENC *pe, const g
     if (!(oip->flag & OUTPUT_INFO_FLAG_AUDIO))
         return;
     if (ex_stg->s_aud_faw_index == FAW_INDEX_ERROR) {
-        write_log_auo_line_fmt(LOG_WARNING, "FAWCheck : %s.iniからのFAWの情報取得に失敗したため、判定を中止しました。", AUO_NAME_WITHOUT_EXT);
+        write_log_auo_line(LOG_WARNING, "FAWCheck : " AUO_NAME_WITHOUT_EXT ".iniからのFAWの情報取得に失敗したため、判定を中止しました。");
         return;
     }
     int n = 0;
@@ -331,13 +330,13 @@ static AUO_RESULT wav_file_close(aud_data_t *aud_dat, const OUTPUT_INFO *oip, in
 }
 
 static AUO_RESULT wav_output(aud_data_t *aud_dat, const OUTPUT_INFO *oip, PRM_ENC *pe, int wav_8bit, int bufsize,
-                        const char *auddispname, const char *auddir, DWORD encoder_priority, DWORD disable_log) 
+                        const char *auddispname, const char *auddir, DWORD encoder_priority, DWORD disable_log)
 {
     AUO_RESULT ret = AUO_RESULT_SUCCESS;
     BYTE *buf8bit = NULL;
     const func_audio_16to8 audio_16to8 = get_audio_16to8_func(wav_8bit == 2);
     const BOOL use_pipe = (strcmp(aud_dat->wavfile, PIPE_FN) == NULL);
-    
+
     //並列時は8フレーム分
     if (pe->aud_parallel.th_aud) {
         bufsize = ceil_div_int((int)(oip->audio_rate * (double)oip->scale / (double)oip->rate), 16) * 16 * 8;
@@ -454,7 +453,7 @@ static AUO_RESULT audio_finish_enc(AUO_RESULT ret, aud_data_t *aud_dat, const AU
         while (ReadLogExe(&aud_dat->pipes, aud_stg->dispname, &aud_dat->log_line_cache) > 0);
 
         UINT64 audfilesize = 0;
-        if (!PathFileExists(aud_dat->audfile) || 
+        if (!PathFileExists(aud_dat->audfile) ||
             (GetFileSizeUInt64(aud_dat->audfile, &audfilesize) && audfilesize == 0)) {
                 //エラーが発生した場合
                 ret |= AUO_RESULT_ERROR; error_audenc_failed(aud_stg->dispname, aud_dat->args);
@@ -489,7 +488,7 @@ AUO_RESULT audio_output(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_ENC *pe, c
     //可能ならfaw2aacを使用
     if (conf->aud.encoder == sys_dat->exstg->s_aud_faw_index)
         if (AUO_RESULT_SUCCESS == audio_faw2aac(conf, oip, pe, sys_dat))
-            return ret;
+            return run_bat_file(conf, oip, pe, sys_dat, RUN_BAT_AFTER_AUDIO);
 
     aud_data_t aud_dat[2] = { { 0, 0 }, { 1, 0 } };
     char auddir[MAX_PATH_LEN]  = { 0 };
@@ -518,7 +517,7 @@ AUO_RESULT audio_output(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_ENC *pe, c
 
     //wav出力
     ret |= wav_output(aud_dat, oip, pe, aud_stg->mode[conf->aud.enc_mode].use_8bit, sys_dat->exstg->s_local.audio_buffer_size, aud_stg->dispname, auddir, encoder_priority, aud_stg->disable_log);
-    
+
     //音声エンコード前バッチ処理
     ret |= run_bat_file(conf, oip, pe, sys_dat, RUN_BAT_BEFORE_AUDIO);
 

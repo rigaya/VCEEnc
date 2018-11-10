@@ -1,9 +1,9 @@
 ﻿// -----------------------------------------------------------------------------------------
-//     VCEEnc by rigaya
+// QSVEnc by rigaya
 // -----------------------------------------------------------------------------------------
 // The MIT License
 //
-// Copyright (c) 2014-2017 rigaya
+// Copyright (c) 2011-2016 rigaya
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,11 +19,11 @@
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// IABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// ------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
 
 #if (defined(_WIN32) || defined(_WIN64))
 #include <Windows.h>
@@ -81,6 +81,17 @@ double gpu_load(GPUZ_SH_MEM *data) {
             return data->sensors[i].value;
         }
     }
+    return 0.0;
+}
+
+double video_engine_load(GPUZ_SH_MEM *data, bool *pbVideoEngineUsage) {
+    for (int i = 0; i < MAX_RECORDS; i++) {
+        if (wcsistr(data->sensors[i].name, L"Video Engine Load")) {
+            if (pbVideoEngineUsage) *pbVideoEngineUsage = true;
+            return data->sensors[i].value;
+        }
+    }
+    if (pbVideoEngineUsage) *pbVideoEngineUsage = false;
     return 0.0;
 }
 
