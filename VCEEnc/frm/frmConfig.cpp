@@ -630,8 +630,6 @@ System::Void frmConfig::InitComboBox() {
     setComboBox(fcgCXInterlaced,    list_interlaced);
     setComboBox(fcgCXAspectRatio,   list_aspect_ratio);
     setComboBox(fcgCXMotionEst,     list_mv_presicion);
-    setComboBox(fcgCXPreAnalysis,   list_pre_analysis_h264);
-    setComboBox(fcgCXHEVCPreAnalysis, list_pre_analysis_hevc);
 
     setComboBox(fcgCXAudioTempDir,  list_audtempdir);
     setComboBox(fcgCXMP4BoxTempDir, list_mp4boxtempdir);
@@ -719,7 +717,6 @@ System::Void frmConfig::fcgCXCodec_SelectedIndexChanged(System::Object^  sender,
     this->SuspendLayout();
 
     fcgPNHEVCLevelProfile->Visible = nCodecId == RGY_CODEC_HEVC;
-    fcgPNPreAnalysis->Visible = nCodecId == RGY_CODEC_HEVC;
     bool bBframes = nCodecId != RGY_CODEC_HEVC;
     fcgPNBframes->Visible = bBframes;
     fcgLBQPB->Visible = bBframes;
@@ -873,18 +870,12 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetNUValue(fcgNURefFrames,          vce.nRefFrames);
     SetNUValue(fcgNULTRFrames,          vce.nLTRFrames);
 
-    fcgCBDeblock->Checked             = vce.bDeblockFilter != 0;
-    fcgCBSkipFrame->Checked           = vce.bEnableSkipFrame != 0;
-    fcgCBTimerPeriodTuning->Checked   = vce.bTimerPeriodTuning != 0;
-    fcgCBVBAQ->Checked                = vce.bVBAQ != 0;
-    fcgCBFullrange->Checked           = vce.vui.fullrange != 0;
-    if (vce.codec == RGY_CODEC_H264) {
-        SetCXIndex(fcgCXPreAnalysis,     get_cx_index(get_pre_analysis_list(RGY_CODEC_H264), vce.nPreAnalysis));
-        SetCXIndex(fcgCXHEVCPreAnalysis, 0);
-    } else if (vce.codec == RGY_CODEC_HEVC) {
-        SetCXIndex(fcgCXPreAnalysis,     0);
-        SetCXIndex(fcgCXHEVCPreAnalysis, get_cx_index(get_pre_analysis_list(RGY_CODEC_HEVC), vce.nPreAnalysis));
-    }
+    fcgCBDeblock->Checked             = vce.bDeblockFilter;
+    fcgCBSkipFrame->Checked           = vce.bEnableSkipFrame;
+    fcgCBTimerPeriodTuning->Checked   = vce.bTimerPeriodTuning;
+    fcgCBVBAQ->Checked                = vce.bVBAQ;
+    fcgCBFullrange->Checked           = vce.vui.fullrange;
+    fcgCBPreAnalysis->Checked         = vce.preAnalysis;
 
     SetCXIndex(fcgCXMotionEst,          get_cx_index(list_mv_presicion, vce.nMotionEst));
 
@@ -973,11 +964,7 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;
     vce.bVBAQ                                   = fcgCBVBAQ->Checked;
     vce.vui.fullrange                           = fcgCBFullrange->Checked;
-    if (vce.codec == RGY_CODEC_H264) {
-        vce.nPreAnalysis = get_pre_analysis_list(RGY_CODEC_H264)[fcgCXPreAnalysis->SelectedIndex].value;
-    } else if (vce.codec == RGY_CODEC_HEVC) {
-        vce.nPreAnalysis = get_pre_analysis_list(RGY_CODEC_HEVC)[fcgCXHEVCPreAnalysis->SelectedIndex].value;
-    }
+    vce.preAnalysis                             = fcgCBPreAnalysis->Checked;
 
     vce.nMotionEst                              = list_mv_presicion[fcgCXMotionEst->SelectedIndex].value;
 

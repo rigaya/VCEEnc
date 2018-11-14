@@ -1,40 +1,37 @@
-﻿/*******************************************************************************
- Copyright 息2014 Advanced Micro Devices, Inc. All rights reserved.
-
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions are met:
-
- 1   Redistributions of source code must retain the above copyright notice,
- this list of conditions and the following disclaimer.
- 2   Redistributions in binary form must reproduce the above copyright notice,
- this list of conditions and the following disclaimer in the
- documentation and/or other materials provided with the distribution.
-
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
- THE POSSIBILITY OF SUCH DAMAGE.
- ******************************************************************************/
-
-/**
- *******************************************************************************
- * @file <Pipeline.cpp>
- *
- * @brief Source file for the Pipeline
- *
- *******************************************************************************
- */
-
+// 
+// Notice Regarding Standards.  AMD does not provide a license or sublicense to
+// any Intellectual Property Rights relating to any standards, including but not
+// limited to any audio and/or video codec technologies such as MPEG-2, MPEG-4;
+// AVC/H.264; HEVC/H.265; AAC decode/FFMPEG; AAC encode/FFMPEG; VC-1; and MP3
+// (collectively, the "Media Technologies"). For clarity, you will pay any
+// royalties due for such third party technologies, which may include the Media
+// Technologies that are owed as a result of AMD providing the Software to you.
+// 
+// MIT license 
+// 
+// Copyright (c) 2018 Advanced Micro Devices, Inc. All rights reserved.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
 #include "Pipeline.h"
-#include "PipelineMod.h"
-#include "Thread.h"
+#include "public/common/Thread.h"
+#include "CmdLogger.h"
 #include <sstream>
 
 #pragma warning(disable:4355)
@@ -49,23 +46,25 @@ class Slot : public amf::AMFThread
 {
 public:
     ConnectionThreading     m_eThreading;
-    bool                    m_bError;
     PipelineConnector      *m_pConnector;
     amf_int32               m_iThisSlot;
     amf::AMFPreciseWaiter   m_waiter;
     bool                    m_bEof;
+    bool                    m_bFrozen;
     
 
     Slot(ConnectionThreading eThreading, PipelineConnector *connector, amf_int32 thisSlot);
     virtual ~Slot(){}
 
     virtual void Stop();
-    void OnError();
-    bool IsError();
     virtual bool StopRequested();
     virtual bool IsEof(){return m_bEof;}
     virtual void OnEof();
     virtual void Restart(){m_bEof = false;}
+
+    virtual AMF_RESULT Freeze() { m_bFrozen = true; return AMF_OK;}
+    virtual AMF_RESULT UnFreeze(){ m_bFrozen = false; return AMF_OK;}
+    virtual AMF_RESULT Flush() = 0;
 
 };
 //-------------------------------------------------------------------------------------------------
@@ -81,6 +80,7 @@ public:
     virtual void Run();
     AMF_RESULT Drain();
     AMF_RESULT SubmitInput(amf::AMFData* pData, amf_ulong ulTimeout, bool poll);
+    virtual AMF_RESULT Flush() {return AMF_OK;}
 };
 typedef std::shared_ptr<InputSlot> InputSlotPtr;
 //-------------------------------------------------------------------------------------------------
@@ -97,6 +97,7 @@ public:
     AMF_RESULT QueryOutput(amf::AMFData** ppData, amf_ulong ulTimeout);
     AMF_RESULT Poll();
     virtual void Restart();
+    virtual AMF_RESULT Flush();
 };
 typedef std::shared_ptr<OutputSlot> OutputSlotPtr;
 //-------------------------------------------------------------------------------------------------
@@ -117,8 +118,6 @@ public:
 
    
     bool IsEof();
-
-    bool IsError();
     void OnEof();
     void Restart();
 
@@ -132,12 +131,19 @@ public:
     amf_int64 GetSubmitFramesProcessed(){return m_iSubmitFramesProcessed;}
     amf_int64 GetPollFramesProcessed(){return m_iPollFramesProcessed;}
 
+    AMF_RESULT Freeze();
+    AMF_RESULT UnFreeze();
+    AMF_RESULT Flush();
+
+    void SetStatSlot(amf_int32 slot) {m_iStatSlot = slot;}
+
 protected:
     Pipeline*               m_pPipeline;
     PipelineElementPtr      m_pElement;
     bool                    m_bStop;
     amf_int64               m_iSubmitFramesProcessed;
     amf_int64               m_iPollFramesProcessed;
+    amf_int32               m_iStatSlot;
 
     std::vector<InputSlotPtr>               m_InputSlots;
     std::vector<OutputSlotPtr>              m_OutputSlots;
@@ -205,6 +211,27 @@ AMF_RESULT Pipeline::Connect(PipelineElementPtr pElement, amf_int32 slot, Pipeli
     m_state = PipelineStateReady;
     return AMF_OK;
 }
+AMF_RESULT Pipeline::SetStatSlot(PipelineElementPtr pElement, amf_int32 slot)
+{
+    PipelineConnectorPtr connector;
+    for(ConnectorList::iterator it = m_connectors.begin(); it != m_connectors.end(); it++)
+    {
+        if(it->get()->m_pElement.get() == pElement.get())
+        {
+            connector = *it;
+        }
+    }
+
+    if(connector == NULL)
+    {
+        return AMF_FAIL;
+    }
+
+    connector->SetStatSlot(slot);
+
+
+    return AMF_OK;
+}
 //-------------------------------------------------------------------------------------------------
 AMF_RESULT Pipeline::Start()
 {
@@ -250,20 +277,18 @@ void Pipeline::OnEof()
     m_stopTime = amf_high_precision_clock();
 }
 //-------------------------------------------------------------------------------------------------
-PipelineState Pipeline::GetState()
+PipelineState Pipeline::GetState() const
 {
-    bool bError = false;
-    for (ConnectorList::iterator it = m_connectors.begin();
-        it != m_connectors.end() && !bError; it++) {
-        if ((*it)->IsError()) {
-            bError = true;
+    amf::AMFLock lock(&m_cs);
+    // test code 
+    for(ConnectorList::const_iterator it = m_connectors.begin(); it != m_connectors.end(); it++)
+    {
+        if(!(*it)->IsEof())
+        {
+            int a = 1;
         }
     }
-    if (bError) {
-        Stop();
-        m_state = PipelineStateError;
-    }
-    amf::AMFLock lock(&m_cs);
+
     return m_state;
 }
 //-------------------------------------------------------------------------------------------------
@@ -326,6 +351,10 @@ double Pipeline::GetProcessingTime()
 //-------------------------------------------------------------------------------------------------
 amf_int64 Pipeline::GetNumberOfProcessedFrames()
 {
+    if(m_connectors.size() == 0)
+    {
+        return 0;
+    }
     PipelineConnectorPtr last = *m_connectors.rbegin();
     return last->GetSubmitFramesProcessed();
 }
@@ -343,14 +372,46 @@ AMF_RESULT Pipeline::Restart()
     return AMF_OK;
 }
 //-------------------------------------------------------------------------------------------------
+AMF_RESULT Pipeline::Freeze()
+{
+    amf::AMFLock lock(&m_cs);
+    for(ConnectorList::iterator it = m_connectors.begin(); it != m_connectors.end(); it++)
+    {
+        (*it)->Freeze();
+    }
+    m_state = PipelineStateFrozen;
+    return AMF_OK;
+}
+//-------------------------------------------------------------------------------------------------
+AMF_RESULT Pipeline::UnFreeze()
+{
+    amf::AMFLock lock(&m_cs);
+    for(ConnectorList::iterator it = m_connectors.begin(); it != m_connectors.end(); it++)
+    {
+        (*it)->UnFreeze();
+    }
+    m_state = PipelineStateRunning;
+    return AMF_OK;
+}
+//-------------------------------------------------------------------------------------------------
+AMF_RESULT Pipeline::Flush()
+{
+    amf::AMFLock lock(&m_cs);
+    for(ConnectorList::iterator it = m_connectors.begin(); it != m_connectors.end(); it++)
+    {
+        (*it)->Flush();
+    }
+    return AMF_OK;
+}
+//-------------------------------------------------------------------------------------------------
 // class Slot
 //-------------------------------------------------------------------------------------------------
 Slot::Slot(ConnectionThreading eThreading, PipelineConnector *connector, amf_int32 thisSlot) :
     m_eThreading(eThreading),
-    m_bError(false), 
     m_pConnector(connector),
     m_iThisSlot(thisSlot),
-    m_bEof(false)
+    m_bEof(false),
+    m_bFrozen(false)
 {
 }
 //-------------------------------------------------------------------------------------------------
@@ -366,14 +427,6 @@ void Slot::OnEof()
     m_pConnector->OnEof();
 }
 //-------------------------------------------------------------------------------------------------
-void Slot::OnError()
-{
-    m_bError = true;
-}
-bool Slot::IsError()
-{
-    return m_bError;
-}
 bool Slot::StopRequested()
 {
     return amf::AMFThread::IsRunning() ? amf::AMFThread::StopRequested() : m_pConnector->StopRequested();
@@ -393,19 +446,19 @@ void InputSlot::Run()
     AMF_RESULT res = AMF_OK;
     while(!StopRequested())
     {
+        if(m_bFrozen)
+        {
+            m_waiter.Wait(1);
+            continue;
+        }
         if(!IsEof()) // after EOF thread waits for stop
         {
             amf::AMFDataPtr data;
 
             res = m_pUpstreamOutputSlot->QueryOutput(&data, 50);
-            if((res == AMF_OK && data != NULL)  || res == AMF_EOF)
+            if(((res == AMF_OK && data != NULL)  || res == AMF_EOF) && !m_bFrozen)
             {
                 res = SubmitInput(data, 50, false);
-            }
-            else if (res != AMF_OK)
-            {
-                OnError();
-                break;
             }
             else
             {
@@ -447,6 +500,10 @@ AMF_RESULT InputSlot::Drain()
 //-------------------------------------------------------------------------------------------------
 AMF_RESULT InputSlot::SubmitInput(amf::AMFData* pData, amf_ulong ulTimeout, bool poll)
 {
+    if(m_bFrozen)
+    {
+        return AMF_OK;
+    }
     AMF_RESULT  res = AMF_OK;
     if(pData == NULL)
     {
@@ -458,6 +515,10 @@ AMF_RESULT InputSlot::SubmitInput(amf::AMFData* pData, amf_ulong ulTimeout, bool
         while(!StopRequested())
         {
             res = m_pConnector->m_pElement->SubmitInput(pData, m_iThisSlot);
+            if(m_bFrozen)
+            {
+                break;
+            }
             if(res == AMF_EOF)
             {
 //                OnEof();
@@ -465,18 +526,25 @@ AMF_RESULT InputSlot::SubmitInput(amf::AMFData* pData, amf_ulong ulTimeout, bool
             if(res == AMF_NEED_MORE_INPUT)
             {
                 // do nothing
-                break;
+				break;
             }
             else if(res == AMF_INPUT_FULL  || res == AMF_DECODER_NO_FREE_SURFACES)
             {
-                m_waiter.Wait(10);
                 if(poll)
                 {
                     res = m_pConnector->PollAll(); // no poll thread: poll right here
+                    if(m_bFrozen)
+                    {
+                        break;
+                    }
                     if(res != AMF_OK && res != AMF_REPEAT && res != AMF_RESOLUTION_UPDATED)
                     {
                         break;
                     }
+                }
+                else
+                {
+                    m_waiter.Wait(1); // wait till Poll thread clears input
                 }
             }
             else if(res == AMF_REPEAT)
@@ -487,15 +555,14 @@ AMF_RESULT InputSlot::SubmitInput(amf::AMFData* pData, amf_ulong ulTimeout, bool
             {
                 if(res == AMF_OK || res == AMF_RESOLUTION_UPDATED)
                 {
-                    if(pData != NULL)
+                    if(pData != NULL && m_iThisSlot == m_pConnector->m_iStatSlot)
                     {
                         m_pConnector->m_iSubmitFramesProcessed++;
                     }
                 }
                 else if(res != AMF_EOF)
                 {
-                    //LOG_ERROR(L"SubmitInput() returned error: " << amf::AMFGetResultText(res));
-                    OnError();
+                    LOG_ERROR(L"SubmitInput() returned error: " << g_AMFFactory.GetTrace()->GetResultText(res));
                 }
 
                 break;
@@ -506,12 +573,13 @@ AMF_RESULT InputSlot::SubmitInput(amf::AMFData* pData, amf_ulong ulTimeout, bool
     {
         return res;
     }
+    if(m_bFrozen)
+    {
+        return AMF_OK;
+    }
+
     // poll output
     AMF_RESULT resPoll = m_pConnector->PollAll();
-    //if (pData == NULL && m_pConnector->m_bLast)
-    //{
-    //    m_pConnector->OnEof();
-    //}
 
     return res;
 }
@@ -530,6 +598,12 @@ void OutputSlot::Run()
     AMF_RESULT res  = AMF_OK;
     while(!StopRequested())
     {
+        if(m_bFrozen)
+        {
+            m_waiter.Wait(1);
+            continue;
+        }
+
         if(!IsEof()) // after EOF thread waits for stop
         {
             res = Poll();
@@ -537,10 +611,6 @@ void OutputSlot::Run()
             {
                 m_waiter.Wait(1);
             }
-        }
-        else if (IsError())
-        {
-            break;
         }
         else
         {
@@ -552,6 +622,10 @@ void OutputSlot::Run()
 AMF_RESULT OutputSlot::QueryOutput(amf::AMFData** ppData, amf_ulong ulTimeout) 
 {
     AMF_RESULT res = AMF_OK;
+    if(m_bFrozen)
+    {
+        return AMF_OK;
+    }
 
     if(m_eThreading == CT_ThreadPoll || m_eThreading == CT_Direct)
     {
@@ -568,6 +642,10 @@ AMF_RESULT OutputSlot::QueryOutput(amf::AMFData** ppData, amf_ulong ulTimeout)
     amf_ulong id=0;
     if(m_dataQueue.Get(id, data, ulTimeout))
     {
+        if(m_bFrozen)
+        {
+            return AMF_OK;
+        }
         *ppData=data.Detach();
         if(*ppData == NULL)
         {
@@ -585,14 +663,24 @@ AMF_RESULT OutputSlot::Poll()
 
     while(!StopRequested())
     {
+        if(m_bFrozen)
+        {
+            break;
+        }
+
         amf::AMFDataPtr data;
 
         res = m_pConnector->m_pElement->QueryOutput(&data, m_iThisSlot);
+        if(m_bFrozen)
+        {
+            break;
+        }
+
         if(res == AMF_EOF) // EOF is sent as NULL data to the next element
         {
             OnEof();
         }
-        if(data != NULL)
+        if(data != NULL && m_iThisSlot == m_pConnector->m_iStatSlot)
         {
             m_pConnector->m_iPollFramesProcessed++; // EOF is not included
         }
@@ -603,6 +691,10 @@ AMF_RESULT OutputSlot::Poll()
             {
                 while(!StopRequested())
                 {
+                    if(m_bFrozen)
+                    {
+                        break;
+                    }
                     amf_ulong id=0;
                     if(m_dataQueue.Add(id, data, 0, 50))
                     {
@@ -618,11 +710,6 @@ AMF_RESULT OutputSlot::Poll()
         else if(res == AMF_OK)
         {
             res = AMF_REPEAT;
-        }
-        else if (res != AMF_OK && data == NULL)
-        {
-            OnError();
-            break;
         }
         if(data == NULL)
         {
@@ -640,10 +727,6 @@ AMF_RESULT OutputSlot::Poll()
             */
         }
     }
-    //if (bEof)
-    //{
-    //    m_pConnector->OnEof();
-    //}
     return res;
 }
 //-------------------------------------------------------------------------------------------------
@@ -653,6 +736,12 @@ void OutputSlot::Restart()
     Slot::Restart();
 }
 //-------------------------------------------------------------------------------------------------
+AMF_RESULT OutputSlot::Flush()
+{
+    m_dataQueue.Clear();
+    return AMF_OK;
+}
+//-------------------------------------------------------------------------------------------------
 // class PipelineConnector
 //-------------------------------------------------------------------------------------------------
 PipelineConnector::PipelineConnector(Pipeline *host, PipelineElementPtr element)  : 
@@ -660,7 +749,8 @@ PipelineConnector::PipelineConnector(Pipeline *host, PipelineElementPtr element)
   m_pElement(element),
   m_bStop(false),
   m_iSubmitFramesProcessed(0),
-  m_iPollFramesProcessed(0)
+  m_iPollFramesProcessed(0),
+  m_iStatSlot(0)
 {
 }
 //-------------------------------------------------------------------------------------------------
@@ -692,20 +782,6 @@ void PipelineConnector::Start()
         }
     }
 
-}
-//-------------------------------------------------------------------------------------------------
-bool PipelineConnector::IsError() {
-    for (amf_size i = 0; i < m_InputSlots.size(); i++) {
-        if (m_InputSlots[i]->IsError()) {
-            return true;
-        }
-    }
-    for (amf_size i = 0; i < m_OutputSlots.size(); i++) {
-        if (m_OutputSlots[i]->IsError()) {
-            return true;
-        }
-    }
-    return false;
 }
 //-------------------------------------------------------------------------------------------------
 void PipelineConnector::Stop()
@@ -759,6 +835,7 @@ void PipelineConnector::Restart()
     {
         m_OutputSlots[i]->Restart();
     }
+    m_iSubmitFramesProcessed = 0;
 }
 //-------------------------------------------------------------------------------------------------
 // a-sync operations from threads
@@ -799,7 +876,45 @@ void PipelineConnector::AddOutputSlot(OutputSlotPtr pSlot)
 {
     m_OutputSlots.push_back(pSlot);
 }
-
+//-------------------------------------------------------------------------------------------------
+AMF_RESULT PipelineConnector::Freeze()
+{
+    for(amf_size i = 0; i < m_OutputSlots.size(); i++)
+    {
+        m_OutputSlots[i]->Freeze();
+    }
+    for(amf_size i = 0; i < m_InputSlots.size(); i++)
+    {
+        m_InputSlots[i]->Freeze();
+    }
+    return m_pElement->Freeze();
+}
+//-------------------------------------------------------------------------------------------------
+AMF_RESULT PipelineConnector::UnFreeze()
+{
+    for(amf_size i = 0; i < m_OutputSlots.size(); i++)
+    {
+        m_OutputSlots[i]->UnFreeze();
+    }
+    for(amf_size i = 0; i < m_InputSlots.size(); i++)
+    {
+        m_InputSlots[i]->UnFreeze();
+    }
+    return m_pElement->UnFreeze();
+}
+//-------------------------------------------------------------------------------------------------
+AMF_RESULT PipelineConnector::Flush()
+{
+    for(amf_size i = 0; i < m_OutputSlots.size(); i++)
+    {
+        m_OutputSlots[i]->Flush();
+    }
+    for(amf_size i = 0; i < m_InputSlots.size(); i++)
+    {
+        m_InputSlots[i]->Flush();
+    }
+    return m_pElement->Flush();
+}
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------

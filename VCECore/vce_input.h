@@ -59,10 +59,10 @@ public:
         return AMF_OK;
     }
 
-    virtual amf_int32 GetInputSlotCount() override {
+    virtual amf_int32 GetInputSlotCount() const override {
         return 0;
     }
-    virtual amf_int32 GetOutputSlotCount() override {
+    virtual amf_int32 GetOutputSlotCount() const override {
         return 1;
     }
     virtual AMF_RESULT SubmitInput(amf::AMFData *pData) override {

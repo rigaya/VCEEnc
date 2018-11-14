@@ -128,7 +128,6 @@ bool get_list_value(const CX_DESC * list, const TCHAR *chr, int *value) {
 
 struct sArgsData {
     tstring cachedlevel, cachedprofile, cachedtier;
-    tstring cachedPreAnalysis;
     uint32_t nParsedAudioFile = 0;
     uint32_t nParsedAudioEncode = 0;
     uint32_t nParsedAudioCopy = 0;
@@ -1109,17 +1108,15 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         return 0;
     }
     if (IS_OPTION("vbaq")) {
-        pParams->bVBAQ = 1;
+        pParams->bVBAQ = true;
+        return 0;
+    }
+    if (IS_OPTION("no-pre-analysis")) {
+        pParams->preAnalysis = false;
         return 0;
     }
     if (IS_OPTION("pre-analysis")) {
-        if (i+1 < nArgNum) {
-            i++;
-            argData->cachedPreAnalysis = strInput[i];
-        } else {
-            SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
-        }
+        pParams->preAnalysis = true;
         return 0;
     }
     if (IS_OPTION("gop-len")) {
@@ -1423,15 +1420,6 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, ParseCmdEr
             return -1;
         }
     }
-    if (argsData.cachedPreAnalysis.length() > 0) {
-        const auto desc = get_pre_analysis_list(pParams->codec);
-        int value = 0;
-        if (desc != nullptr && PARSE_ERROR_FLAG == (value = get_value_from_chr(desc, argsData.cachedPreAnalysis.c_str()))) {
-            SET_ERR(strInput[0], _T("Unknown value"), _T("pre-analysis"), argsData.cachedPreAnalysis.c_str());
-            return -1;
-        }
-        pParams->nPreAnalysis = value;
-    }
     if (pParams->codec == RGY_CODEC_HEVC) {
         int nH264RateControl = pParams->rateControl;
         switch (nH264RateControl) {
@@ -1641,7 +1629,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
         OPT_LST_H264(_T("--level"), _T(""), nLevel, list_avc_level);
         OPT_LST_H264(_T("--profile"), _T(""), nProfile, list_avc_profile);
     }
-    OPT_LST(_T("--pre-analysis"), nPreAnalysis, get_pre_analysis_list(pParams->codec));
+    OPT_BOOL(_T("--pre-analysis"), _T("--no-pre-analysis"), preAnalysis);
 
     std::basic_stringstream<TCHAR> tmp;
 #if ENABLE_AVSW_READER

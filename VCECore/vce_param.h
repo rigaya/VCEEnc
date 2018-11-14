@@ -254,20 +254,6 @@ static int get_quality_index(RGY_CODEC codec, int quality_preset) {
     return 0;
 }
 
-const CX_DESC list_pre_analysis_h264[] = {
-    { _T("none"),    AMF_VIDEO_ENCODER_PREENCODE_DISABLED },
-    { _T("full"),    AMF_VIDEO_ENCODER_PREENCODE_ENABLED },
-    { _T("half"),    AMF_VIDEO_ENCODER_PREENCODE_ENABLED_DOWNSCALEFACTOR_2 },
-    { _T("quarter"), AMF_VIDEO_ENCODER_PREENCODE_ENABLED_DOWNSCALEFACTOR_4 },
-    { NULL, NULL }
-};
-
-const CX_DESC list_pre_analysis_hevc[] = {
-    { _T("none"),   AMF_VIDEO_ENCODER_PREENCODE_DISABLED },
-    { _T("auto"),   AMF_VIDEO_ENCODER_HEVC_VBAQ_MODE_AUTO },
-    { NULL, NULL }
-};
-
 static inline const CX_DESC *get_level_list(RGY_CODEC codec) {
     switch (codec) {
     case RGY_CODEC_H264:    return list_avc_level;
@@ -287,14 +273,6 @@ static inline const CX_DESC *get_profile_list(RGY_CODEC codec) {
 static inline const CX_DESC *get_tier_list(RGY_CODEC codec) {
     switch (codec) {
     case RGY_CODEC_HEVC:    return list_hevc_tier;
-    default:                return list_empty;
-    }
-}
-
-static inline const CX_DESC *get_pre_analysis_list(RGY_CODEC codec) {
-    switch (codec) {
-    case RGY_CODEC_H264:    return list_pre_analysis_h264;
-    case RGY_CODEC_HEVC:    return list_pre_analysis_hevc;
     default:                return list_empty;
     }
 }
@@ -396,7 +374,7 @@ struct VCEParam {
     std::string  sMasterDisplay;
 
     bool        bVBAQ;
-    int         nPreAnalysis;
+    bool        preAnalysis;
 
     TCHAR *pMuxVidTsLogFile;
     TCHAR *pAVInputFormat;

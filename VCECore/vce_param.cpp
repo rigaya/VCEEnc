@@ -109,7 +109,7 @@ VCEParam::VCEParam() :
     sMasterDisplay(),
 
     bVBAQ(false),
-    nPreAnalysis(0),
+    preAnalysis(false),
 
     pMuxVidTsLogFile(nullptr),
     pAVInputFormat(nullptr),

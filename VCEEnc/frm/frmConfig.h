@@ -845,7 +845,7 @@ private: System::Windows::Forms::ComboBox^  fcgCXAudioDelayCut;
 private: System::Windows::Forms::Label^  fcgLBAudioDelayCut;
 private: System::Windows::Forms::Label^  fcgLBVBAQ;
 private: System::Windows::Forms::CheckBox^  fcgCBVBAQ;
-private: System::Windows::Forms::ComboBox^  fcgCXPreAnalysis;
+
 private: System::Windows::Forms::Label^  fcgLBPreAnalysis;
 private: System::Windows::Forms::Label^  fcgLBCodec;
 private: System::Windows::Forms::ComboBox^  fcgCXCodec;
@@ -855,9 +855,9 @@ private: System::Windows::Forms::ComboBox^  fcgCXHEVCProfile;
 private: System::Windows::Forms::Label^  fcgLBHEVCLevel;
 private: System::Windows::Forms::Label^  fcgLBHEVCProfile;
 private: System::Windows::Forms::Panel^  fcgPNBframes;
-private: System::Windows::Forms::Panel^  fcgPNPreAnalysis;
-private: System::Windows::Forms::ComboBox^  fcgCXHEVCPreAnalysis;
-private: System::Windows::Forms::Label^  fcgLBHEVCPreAnalysis;
+
+
+
 private: System::Windows::Forms::NumericUpDown^  fcgNURefFrames;
 private: System::Windows::Forms::Label^  fcgLBRefFrames;
 private: System::Windows::Forms::NumericUpDown^  fcgNULTRFrames;
@@ -875,6 +875,7 @@ private: System::Windows::Forms::CheckBox^  fcgCBTimerPeriodTuning;
 private: System::Windows::Forms::Button^  fcgBTVideoEncoderPath;
 private: System::Windows::Forms::TextBox^  fcgTXVideoEncoderPath;
 private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
+private: System::Windows::Forms::CheckBox^  fcgCBPreAnalysis;
 
 
 
@@ -1064,6 +1065,11 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             this->fcgTTEx = (gcnew System::Windows::Forms::ToolTip(this->components));
             this->fcgtabControlVCE = (gcnew System::Windows::Forms::TabControl());
             this->tabPageVideoEnc = (gcnew System::Windows::Forms::TabPage());
+            this->fcgPNHEVCLevelProfile = (gcnew System::Windows::Forms::Panel());
+            this->fcgCXHEVCLevel = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgCXHEVCProfile = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgLBHEVCLevel = (gcnew System::Windows::Forms::Label());
+            this->fcgLBHEVCProfile = (gcnew System::Windows::Forms::Label());
             this->fcgBTVideoEncoderPath = (gcnew System::Windows::Forms::Button());
             this->fcgTXVideoEncoderPath = (gcnew System::Windows::Forms::TextBox());
             this->fcgLBVideoEncoderPath = (gcnew System::Windows::Forms::Label());
@@ -1076,26 +1082,8 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             this->fcgLBLTRFrames = (gcnew System::Windows::Forms::Label());
             this->fcgNURefFrames = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgLBRefFrames = (gcnew System::Windows::Forms::Label());
-            this->fcgPNPreAnalysis = (gcnew System::Windows::Forms::Panel());
-            this->fcgCXHEVCPreAnalysis = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgLBHEVCPreAnalysis = (gcnew System::Windows::Forms::Label());
-            this->fcgPNHEVCLevelProfile = (gcnew System::Windows::Forms::Panel());
-            this->fcgCXHEVCLevel = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgCXHEVCProfile = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgLBHEVCLevel = (gcnew System::Windows::Forms::Label());
-            this->fcgLBHEVCProfile = (gcnew System::Windows::Forms::Label());
-            this->fcgPNBframes = (gcnew System::Windows::Forms::Panel());
-            this->fcgLBBframes = (gcnew System::Windows::Forms::Label());
-            this->fcgNUBframes = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgCBBPyramid = (gcnew System::Windows::Forms::CheckBox());
-            this->fcgLBBPyramid = (gcnew System::Windows::Forms::Label());
-            this->fcgLBBDeltaQP = (gcnew System::Windows::Forms::Label());
-            this->fcgNUBDeltaQP = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgLBBRefDeltaQP = (gcnew System::Windows::Forms::Label());
-            this->fcgNUBRefDeltaQP = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgLBCodec = (gcnew System::Windows::Forms::Label());
             this->fcgCXCodec = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgCXPreAnalysis = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBPreAnalysis = (gcnew System::Windows::Forms::Label());
             this->fcgNUVBVBufSize = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgLBSkipFrame = (gcnew System::Windows::Forms::Label());
@@ -1115,20 +1103,6 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             this->fcgpictureBoxVCEEnabled = (gcnew System::Windows::Forms::PictureBox());
             this->fcgpictureBoxVCEDisabled = (gcnew System::Windows::Forms::PictureBox());
             this->fcgCBDeblock = (gcnew System::Windows::Forms::CheckBox());
-            this->fcgPNBitrate = (gcnew System::Windows::Forms::Panel());
-            this->fcgLBBitrate = (gcnew System::Windows::Forms::Label());
-            this->fcgNUBitrate = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgLBBitrate2 = (gcnew System::Windows::Forms::Label());
-            this->fcgNUMaxkbps = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgLBMaxkbps = (gcnew System::Windows::Forms::Label());
-            this->fcgLBMaxBitrate2 = (gcnew System::Windows::Forms::Label());
-            this->fcgPNQP = (gcnew System::Windows::Forms::Panel());
-            this->fcgLBQPI = (gcnew System::Windows::Forms::Label());
-            this->fcgNUQPI = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgNUQPP = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgNUQPB = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgLBQPP = (gcnew System::Windows::Forms::Label());
-            this->fcgLBQPB = (gcnew System::Windows::Forms::Label());
             this->fcgNUSlices = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgLBSlices = (gcnew System::Windows::Forms::Label());
             this->fcgLBGOPLengthAuto = (gcnew System::Windows::Forms::Label());
@@ -1147,6 +1121,29 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             this->fcgLBCodecProfile = (gcnew System::Windows::Forms::Label());
             this->fcgLBEncMode = (gcnew System::Windows::Forms::Label());
             this->fcgCXEncMode = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgPNBitrate = (gcnew System::Windows::Forms::Panel());
+            this->fcgLBBitrate = (gcnew System::Windows::Forms::Label());
+            this->fcgNUBitrate = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgLBBitrate2 = (gcnew System::Windows::Forms::Label());
+            this->fcgNUMaxkbps = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgLBMaxkbps = (gcnew System::Windows::Forms::Label());
+            this->fcgLBMaxBitrate2 = (gcnew System::Windows::Forms::Label());
+            this->fcgPNQP = (gcnew System::Windows::Forms::Panel());
+            this->fcgLBQPI = (gcnew System::Windows::Forms::Label());
+            this->fcgNUQPI = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUQPP = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUQPB = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgLBQPP = (gcnew System::Windows::Forms::Label());
+            this->fcgLBQPB = (gcnew System::Windows::Forms::Label());
+            this->fcgPNBframes = (gcnew System::Windows::Forms::Panel());
+            this->fcgLBBframes = (gcnew System::Windows::Forms::Label());
+            this->fcgNUBframes = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgCBBPyramid = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgLBBPyramid = (gcnew System::Windows::Forms::Label());
+            this->fcgLBBDeltaQP = (gcnew System::Windows::Forms::Label());
+            this->fcgNUBDeltaQP = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgLBBRefDeltaQP = (gcnew System::Windows::Forms::Label());
+            this->fcgNUBRefDeltaQP = (gcnew System::Windows::Forms::NumericUpDown());
             this->tabPageExOpt = (gcnew System::Windows::Forms::TabPage());
             this->fcgCBTimerPeriodTuning = (gcnew System::Windows::Forms::CheckBox());
             this->fcgCBResize = (gcnew System::Windows::Forms::CheckBox());
@@ -1200,6 +1197,7 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             this->fcgCBRunBatBeforeAudio = (gcnew System::Windows::Forms::CheckBox());
             this->fcgCXAudioPriority = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBAudioPriority = (gcnew System::Windows::Forms::Label());
+            this->fcgCBPreAnalysis = (gcnew System::Windows::Forms::CheckBox());
             this->fcgtoolStripSettings->SuspendLayout();
             this->fcgtabControlMux->SuspendLayout();
             this->fcgtabPageMP4->SuspendLayout();
@@ -1209,20 +1207,20 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             this->fcgtabPageBat->SuspendLayout();
             this->fcgtabControlVCE->SuspendLayout();
             this->tabPageVideoEnc->SuspendLayout();
+            this->fcgPNHEVCLevelProfile->SuspendLayout();
             this->fcgPNH264Features->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNULTRFrames))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNURefFrames))->BeginInit();
-            this->fcgPNPreAnalysis->SuspendLayout();
-            this->fcgPNHEVCLevelProfile->SuspendLayout();
-            this->fcgPNBframes->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBframes))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBDeltaQP))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBRefDeltaQP))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVBVBufSize))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMax))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMin))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgpictureBoxVCEEnabled))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgpictureBoxVCEDisabled))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUSlices))->BeginInit();
+            this->fcgGroupBoxAspectRatio->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioY))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioX))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUGopLength))->BeginInit();
             this->fcgPNBitrate->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBitrate))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUMaxkbps))->BeginInit();
@@ -1230,11 +1228,10 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPI))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPP))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPB))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUSlices))->BeginInit();
-            this->fcgGroupBoxAspectRatio->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioY))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioX))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUGopLength))->BeginInit();
+            this->fcgPNBframes->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBframes))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBDeltaQP))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBRefDeltaQP))->BeginInit();
             this->tabPageExOpt->SuspendLayout();
             this->fcggroupboxResize->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUResizeH))->BeginInit();
@@ -2025,7 +2022,7 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             // 
             // tabPageVideoEnc
             // 
-            this->tabPageVideoEnc->Controls->Add(this->fcgPNPreAnalysis);
+            this->tabPageVideoEnc->Controls->Add(this->fcgCBPreAnalysis);
             this->tabPageVideoEnc->Controls->Add(this->fcgPNHEVCLevelProfile);
             this->tabPageVideoEnc->Controls->Add(this->fcgBTVideoEncoderPath);
             this->tabPageVideoEnc->Controls->Add(this->fcgTXVideoEncoderPath);
@@ -2037,7 +2034,6 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             this->tabPageVideoEnc->Controls->Add(this->fcgLBRefFrames);
             this->tabPageVideoEnc->Controls->Add(this->fcgLBCodec);
             this->tabPageVideoEnc->Controls->Add(this->fcgCXCodec);
-            this->tabPageVideoEnc->Controls->Add(this->fcgCXPreAnalysis);
             this->tabPageVideoEnc->Controls->Add(this->fcgLBPreAnalysis);
             this->tabPageVideoEnc->Controls->Add(this->fcgNUVBVBufSize);
             this->tabPageVideoEnc->Controls->Add(this->fcgLBSkipFrame);
@@ -2084,6 +2080,55 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             this->tabPageVideoEnc->Text = L"動画エンコード";
             this->tabPageVideoEnc->UseVisualStyleBackColor = true;
             // 
+            // fcgPNHEVCLevelProfile
+            // 
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCLevel);
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCProfile);
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCLevel);
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCProfile);
+            this->fcgPNHEVCLevelProfile->Location = System::Drawing::Point(329, 147);
+            this->fcgPNHEVCLevelProfile->Name = L"fcgPNHEVCLevelProfile";
+            this->fcgPNHEVCLevelProfile->Size = System::Drawing::Size(255, 63);
+            this->fcgPNHEVCLevelProfile->TabIndex = 166;
+            // 
+            // fcgCXHEVCLevel
+            // 
+            this->fcgCXHEVCLevel->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXHEVCLevel->FormattingEnabled = true;
+            this->fcgCXHEVCLevel->Location = System::Drawing::Point(112, 36);
+            this->fcgCXHEVCLevel->Name = L"fcgCXHEVCLevel";
+            this->fcgCXHEVCLevel->Size = System::Drawing::Size(121, 22);
+            this->fcgCXHEVCLevel->TabIndex = 86;
+            this->fcgCXHEVCLevel->Tag = L"reCmd";
+            // 
+            // fcgCXHEVCProfile
+            // 
+            this->fcgCXHEVCProfile->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXHEVCProfile->FormattingEnabled = true;
+            this->fcgCXHEVCProfile->Location = System::Drawing::Point(112, 4);
+            this->fcgCXHEVCProfile->Name = L"fcgCXHEVCProfile";
+            this->fcgCXHEVCProfile->Size = System::Drawing::Size(121, 22);
+            this->fcgCXHEVCProfile->TabIndex = 85;
+            this->fcgCXHEVCProfile->Tag = L"reCmd";
+            // 
+            // fcgLBHEVCLevel
+            // 
+            this->fcgLBHEVCLevel->AutoSize = true;
+            this->fcgLBHEVCLevel->Location = System::Drawing::Point(13, 39);
+            this->fcgLBHEVCLevel->Name = L"fcgLBHEVCLevel";
+            this->fcgLBHEVCLevel->Size = System::Drawing::Size(33, 14);
+            this->fcgLBHEVCLevel->TabIndex = 88;
+            this->fcgLBHEVCLevel->Text = L"レベル";
+            // 
+            // fcgLBHEVCProfile
+            // 
+            this->fcgLBHEVCProfile->AutoSize = true;
+            this->fcgLBHEVCProfile->Location = System::Drawing::Point(13, 7);
+            this->fcgLBHEVCProfile->Name = L"fcgLBHEVCProfile";
+            this->fcgLBHEVCProfile->Size = System::Drawing::Size(53, 14);
+            this->fcgLBHEVCProfile->TabIndex = 87;
+            this->fcgLBHEVCProfile->Text = L"プロファイル";
+            // 
             // fcgBTVideoEncoderPath
             // 
             this->fcgBTVideoEncoderPath->Location = System::Drawing::Point(274, 78);
@@ -2120,7 +2165,7 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             this->fcgPNH264Features->Controls->Add(this->fcgCBFullrange);
             this->fcgPNH264Features->Controls->Add(this->fcgCBVBAQ);
             this->fcgPNH264Features->Controls->Add(this->fcgLBFullrange);
-            this->fcgPNH264Features->Location = System::Drawing::Point(326, 358);
+            this->fcgPNH264Features->Location = System::Drawing::Point(326, 381);
             this->fcgPNH264Features->Name = L"fcgPNH264Features";
             this->fcgPNH264Features->Size = System::Drawing::Size(258, 56);
             this->fcgPNH264Features->TabIndex = 175;
@@ -2203,177 +2248,6 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             this->fcgLBRefFrames->TabIndex = 170;
             this->fcgLBRefFrames->Text = L"参照距離";
             // 
-            // fcgPNPreAnalysis
-            // 
-            this->fcgPNPreAnalysis->Controls->Add(this->fcgCXHEVCPreAnalysis);
-            this->fcgPNPreAnalysis->Controls->Add(this->fcgLBHEVCPreAnalysis);
-            this->fcgPNPreAnalysis->Location = System::Drawing::Point(326, 294);
-            this->fcgPNPreAnalysis->Name = L"fcgPNPreAnalysis";
-            this->fcgPNPreAnalysis->Size = System::Drawing::Size(255, 38);
-            this->fcgPNPreAnalysis->TabIndex = 168;
-            this->fcgPNPreAnalysis->Visible = false;
-            // 
-            // fcgCXHEVCPreAnalysis
-            // 
-            this->fcgCXHEVCPreAnalysis->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXHEVCPreAnalysis->FormattingEnabled = true;
-            this->fcgCXHEVCPreAnalysis->Location = System::Drawing::Point(115, 8);
-            this->fcgCXHEVCPreAnalysis->Name = L"fcgCXHEVCPreAnalysis";
-            this->fcgCXHEVCPreAnalysis->Size = System::Drawing::Size(121, 22);
-            this->fcgCXHEVCPreAnalysis->TabIndex = 164;
-            this->fcgCXHEVCPreAnalysis->Tag = L"reCmd";
-            // 
-            // fcgLBHEVCPreAnalysis
-            // 
-            this->fcgLBHEVCPreAnalysis->AutoSize = true;
-            this->fcgLBHEVCPreAnalysis->Location = System::Drawing::Point(16, 11);
-            this->fcgLBHEVCPreAnalysis->Name = L"fcgLBHEVCPreAnalysis";
-            this->fcgLBHEVCPreAnalysis->Size = System::Drawing::Size(51, 14);
-            this->fcgLBHEVCPreAnalysis->TabIndex = 165;
-            this->fcgLBHEVCPreAnalysis->Text = L"先行探索";
-            // 
-            // fcgPNHEVCLevelProfile
-            // 
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCLevel);
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCProfile);
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCLevel);
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCProfile);
-            this->fcgPNHEVCLevelProfile->Location = System::Drawing::Point(329, 147);
-            this->fcgPNHEVCLevelProfile->Name = L"fcgPNHEVCLevelProfile";
-            this->fcgPNHEVCLevelProfile->Size = System::Drawing::Size(255, 63);
-            this->fcgPNHEVCLevelProfile->TabIndex = 166;
-            // 
-            // fcgCXHEVCLevel
-            // 
-            this->fcgCXHEVCLevel->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXHEVCLevel->FormattingEnabled = true;
-            this->fcgCXHEVCLevel->Location = System::Drawing::Point(112, 36);
-            this->fcgCXHEVCLevel->Name = L"fcgCXHEVCLevel";
-            this->fcgCXHEVCLevel->Size = System::Drawing::Size(121, 22);
-            this->fcgCXHEVCLevel->TabIndex = 86;
-            this->fcgCXHEVCLevel->Tag = L"reCmd";
-            // 
-            // fcgCXHEVCProfile
-            // 
-            this->fcgCXHEVCProfile->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXHEVCProfile->FormattingEnabled = true;
-            this->fcgCXHEVCProfile->Location = System::Drawing::Point(112, 4);
-            this->fcgCXHEVCProfile->Name = L"fcgCXHEVCProfile";
-            this->fcgCXHEVCProfile->Size = System::Drawing::Size(121, 22);
-            this->fcgCXHEVCProfile->TabIndex = 85;
-            this->fcgCXHEVCProfile->Tag = L"reCmd";
-            // 
-            // fcgLBHEVCLevel
-            // 
-            this->fcgLBHEVCLevel->AutoSize = true;
-            this->fcgLBHEVCLevel->Location = System::Drawing::Point(13, 39);
-            this->fcgLBHEVCLevel->Name = L"fcgLBHEVCLevel";
-            this->fcgLBHEVCLevel->Size = System::Drawing::Size(33, 14);
-            this->fcgLBHEVCLevel->TabIndex = 88;
-            this->fcgLBHEVCLevel->Text = L"レベル";
-            // 
-            // fcgLBHEVCProfile
-            // 
-            this->fcgLBHEVCProfile->AutoSize = true;
-            this->fcgLBHEVCProfile->Location = System::Drawing::Point(13, 7);
-            this->fcgLBHEVCProfile->Name = L"fcgLBHEVCProfile";
-            this->fcgLBHEVCProfile->Size = System::Drawing::Size(53, 14);
-            this->fcgLBHEVCProfile->TabIndex = 87;
-            this->fcgLBHEVCProfile->Text = L"プロファイル";
-            // 
-            // fcgPNBframes
-            // 
-            this->fcgPNBframes->Controls->Add(this->fcgLBBframes);
-            this->fcgPNBframes->Controls->Add(this->fcgNUBframes);
-            this->fcgPNBframes->Controls->Add(this->fcgCBBPyramid);
-            this->fcgPNBframes->Controls->Add(this->fcgLBBPyramid);
-            this->fcgPNBframes->Controls->Add(this->fcgLBBDeltaQP);
-            this->fcgPNBframes->Controls->Add(this->fcgNUBDeltaQP);
-            this->fcgPNBframes->Controls->Add(this->fcgLBBRefDeltaQP);
-            this->fcgPNBframes->Controls->Add(this->fcgNUBRefDeltaQP);
-            this->fcgPNBframes->Location = System::Drawing::Point(7, 363);
-            this->fcgPNBframes->Name = L"fcgPNBframes";
-            this->fcgPNBframes->Size = System::Drawing::Size(217, 117);
-            this->fcgPNBframes->TabIndex = 167;
-            // 
-            // fcgLBBframes
-            // 
-            this->fcgLBBframes->AutoSize = true;
-            this->fcgLBBframes->Location = System::Drawing::Point(7, 6);
-            this->fcgLBBframes->Name = L"fcgLBBframes";
-            this->fcgLBBframes->Size = System::Drawing::Size(58, 14);
-            this->fcgLBBframes->TabIndex = 139;
-            this->fcgLBBframes->Text = L"Bフレーム数";
-            // 
-            // fcgNUBframes
-            // 
-            this->fcgNUBframes->Location = System::Drawing::Point(125, 3);
-            this->fcgNUBframes->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 3, 0, 0, 0 });
-            this->fcgNUBframes->Name = L"fcgNUBframes";
-            this->fcgNUBframes->Size = System::Drawing::Size(77, 21);
-            this->fcgNUBframes->TabIndex = 138;
-            this->fcgNUBframes->Tag = L"reCmd";
-            this->fcgNUBframes->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
-            // fcgCBBPyramid
-            // 
-            this->fcgCBBPyramid->AutoSize = true;
-            this->fcgCBBPyramid->Location = System::Drawing::Point(138, 33);
-            this->fcgCBBPyramid->Name = L"fcgCBBPyramid";
-            this->fcgCBBPyramid->Size = System::Drawing::Size(15, 14);
-            this->fcgCBBPyramid->TabIndex = 140;
-            this->fcgCBBPyramid->Tag = L"reCmd";
-            this->fcgCBBPyramid->UseVisualStyleBackColor = true;
-            // 
-            // fcgLBBPyramid
-            // 
-            this->fcgLBBPyramid->AutoSize = true;
-            this->fcgLBBPyramid->Location = System::Drawing::Point(6, 33);
-            this->fcgLBBPyramid->Name = L"fcgLBBPyramid";
-            this->fcgLBBPyramid->Size = System::Drawing::Size(66, 14);
-            this->fcgLBBPyramid->TabIndex = 141;
-            this->fcgLBBPyramid->Text = L"ピラミッド参照";
-            // 
-            // fcgLBBDeltaQP
-            // 
-            this->fcgLBBDeltaQP->AutoSize = true;
-            this->fcgLBBDeltaQP->Location = System::Drawing::Point(7, 62);
-            this->fcgLBBDeltaQP->Name = L"fcgLBBDeltaQP";
-            this->fcgLBBDeltaQP->Size = System::Drawing::Size(104, 14);
-            this->fcgLBBDeltaQP->TabIndex = 145;
-            this->fcgLBBDeltaQP->Text = L"Bフレーム QPオフセット";
-            // 
-            // fcgNUBDeltaQP
-            // 
-            this->fcgNUBDeltaQP->Location = System::Drawing::Point(137, 59);
-            this->fcgNUBDeltaQP->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, 0 });
-            this->fcgNUBDeltaQP->Minimum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, System::Int32::MinValue });
-            this->fcgNUBDeltaQP->Name = L"fcgNUBDeltaQP";
-            this->fcgNUBDeltaQP->Size = System::Drawing::Size(65, 21);
-            this->fcgNUBDeltaQP->TabIndex = 144;
-            this->fcgNUBDeltaQP->Tag = L"reCmd";
-            this->fcgNUBDeltaQP->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
-            // fcgLBBRefDeltaQP
-            // 
-            this->fcgLBBRefDeltaQP->AutoSize = true;
-            this->fcgLBBRefDeltaQP->Location = System::Drawing::Point(7, 91);
-            this->fcgLBBRefDeltaQP->Name = L"fcgLBBRefDeltaQP";
-            this->fcgLBBRefDeltaQP->Size = System::Drawing::Size(126, 14);
-            this->fcgLBBRefDeltaQP->TabIndex = 157;
-            this->fcgLBBRefDeltaQP->Text = L"参照Bフレーム QPオフセット";
-            // 
-            // fcgNUBRefDeltaQP
-            // 
-            this->fcgNUBRefDeltaQP->Location = System::Drawing::Point(137, 88);
-            this->fcgNUBRefDeltaQP->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, 0 });
-            this->fcgNUBRefDeltaQP->Minimum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, System::Int32::MinValue });
-            this->fcgNUBRefDeltaQP->Name = L"fcgNUBRefDeltaQP";
-            this->fcgNUBRefDeltaQP->Size = System::Drawing::Size(65, 21);
-            this->fcgNUBRefDeltaQP->TabIndex = 156;
-            this->fcgNUBRefDeltaQP->Tag = L"reCmd";
-            this->fcgNUBRefDeltaQP->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
             // fcgLBCodec
             // 
             this->fcgLBCodec->AutoSize = true;
@@ -2394,16 +2268,6 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             this->fcgCXCodec->TabIndex = 164;
             this->fcgCXCodec->Tag = L"reCmd";
             this->fcgCXCodec->SelectedIndexChanged += gcnew System::EventHandler(this, &frmConfig::fcgCXCodec_SelectedIndexChanged);
-            // 
-            // fcgCXPreAnalysis
-            // 
-            this->fcgCXPreAnalysis->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXPreAnalysis->FormattingEnabled = true;
-            this->fcgCXPreAnalysis->Location = System::Drawing::Point(441, 302);
-            this->fcgCXPreAnalysis->Name = L"fcgCXPreAnalysis";
-            this->fcgCXPreAnalysis->Size = System::Drawing::Size(121, 22);
-            this->fcgCXPreAnalysis->TabIndex = 162;
-            this->fcgCXPreAnalysis->Tag = L"reCmd";
             // 
             // fcgLBPreAnalysis
             // 
@@ -2427,7 +2291,7 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             // fcgLBSkipFrame
             // 
             this->fcgLBSkipFrame->AutoSize = true;
-            this->fcgLBSkipFrame->Location = System::Drawing::Point(491, 338);
+            this->fcgLBSkipFrame->Location = System::Drawing::Point(342, 354);
             this->fcgLBSkipFrame->Name = L"fcgLBSkipFrame";
             this->fcgLBSkipFrame->Size = System::Drawing::Size(71, 14);
             this->fcgLBSkipFrame->TabIndex = 159;
@@ -2454,7 +2318,7 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             // fcgCBSkipFrame
             // 
             this->fcgCBSkipFrame->AutoSize = true;
-            this->fcgCBSkipFrame->Location = System::Drawing::Point(568, 340);
+            this->fcgCBSkipFrame->Location = System::Drawing::Point(442, 357);
             this->fcgCBSkipFrame->Name = L"fcgCBSkipFrame";
             this->fcgCBSkipFrame->Size = System::Drawing::Size(15, 14);
             this->fcgCBSkipFrame->TabIndex = 158;
@@ -2534,7 +2398,7 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             // 
             this->fcgCXMotionEst->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXMotionEst->FormattingEnabled = true;
-            this->fcgCXMotionEst->Location = System::Drawing::Point(414, 426);
+            this->fcgCXMotionEst->Location = System::Drawing::Point(414, 449);
             this->fcgCXMotionEst->Name = L"fcgCXMotionEst";
             this->fcgCXMotionEst->Size = System::Drawing::Size(167, 22);
             this->fcgCXMotionEst->TabIndex = 136;
@@ -2543,7 +2407,7 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             // fcgLBMotionEst
             // 
             this->fcgLBMotionEst->AutoSize = true;
-            this->fcgLBMotionEst->Location = System::Drawing::Point(346, 429);
+            this->fcgLBMotionEst->Location = System::Drawing::Point(346, 452);
             this->fcgLBMotionEst->Name = L"fcgLBMotionEst";
             this->fcgLBMotionEst->Size = System::Drawing::Size(48, 14);
             this->fcgLBMotionEst->TabIndex = 137;
@@ -2552,7 +2416,7 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             // fcgLBDeblock
             // 
             this->fcgLBDeblock->AutoSize = true;
-            this->fcgLBDeblock->Location = System::Drawing::Point(342, 338);
+            this->fcgLBDeblock->Location = System::Drawing::Point(342, 329);
             this->fcgLBDeblock->Name = L"fcgLBDeblock";
             this->fcgLBDeblock->Size = System::Drawing::Size(76, 14);
             this->fcgLBDeblock->TabIndex = 134;
@@ -2581,151 +2445,12 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             // fcgCBDeblock
             // 
             this->fcgCBDeblock->AutoSize = true;
-            this->fcgCBDeblock->Location = System::Drawing::Point(442, 340);
+            this->fcgCBDeblock->Location = System::Drawing::Point(442, 331);
             this->fcgCBDeblock->Name = L"fcgCBDeblock";
             this->fcgCBDeblock->Size = System::Drawing::Size(15, 14);
             this->fcgCBDeblock->TabIndex = 25;
             this->fcgCBDeblock->Tag = L"reCmd";
             this->fcgCBDeblock->UseVisualStyleBackColor = true;
-            // 
-            // fcgPNBitrate
-            // 
-            this->fcgPNBitrate->Controls->Add(this->fcgLBBitrate);
-            this->fcgPNBitrate->Controls->Add(this->fcgNUBitrate);
-            this->fcgPNBitrate->Controls->Add(this->fcgLBBitrate2);
-            this->fcgPNBitrate->Controls->Add(this->fcgNUMaxkbps);
-            this->fcgPNBitrate->Controls->Add(this->fcgLBMaxkbps);
-            this->fcgPNBitrate->Controls->Add(this->fcgLBMaxBitrate2);
-            this->fcgPNBitrate->Location = System::Drawing::Point(8, 199);
-            this->fcgPNBitrate->Name = L"fcgPNBitrate";
-            this->fcgPNBitrate->Size = System::Drawing::Size(289, 54);
-            this->fcgPNBitrate->TabIndex = 114;
-            // 
-            // fcgLBBitrate
-            // 
-            this->fcgLBBitrate->AutoSize = true;
-            this->fcgLBBitrate->Location = System::Drawing::Point(5, 4);
-            this->fcgLBBitrate->Name = L"fcgLBBitrate";
-            this->fcgLBBitrate->Size = System::Drawing::Size(54, 14);
-            this->fcgLBBitrate->TabIndex = 66;
-            this->fcgLBBitrate->Text = L"ビットレート";
-            // 
-            // fcgNUBitrate
-            // 
-            this->fcgNUBitrate->Location = System::Drawing::Point(124, 2);
-            this->fcgNUBitrate->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 128000, 0, 0, 0 });
-            this->fcgNUBitrate->Name = L"fcgNUBitrate";
-            this->fcgNUBitrate->Size = System::Drawing::Size(77, 21);
-            this->fcgNUBitrate->TabIndex = 5;
-            this->fcgNUBitrate->Tag = L"reCmd";
-            this->fcgNUBitrate->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
-            // fcgLBBitrate2
-            // 
-            this->fcgLBBitrate2->AutoSize = true;
-            this->fcgLBBitrate2->Location = System::Drawing::Point(207, 4);
-            this->fcgLBBitrate2->Name = L"fcgLBBitrate2";
-            this->fcgLBBitrate2->Size = System::Drawing::Size(32, 14);
-            this->fcgLBBitrate2->TabIndex = 69;
-            this->fcgLBBitrate2->Text = L"kbps";
-            // 
-            // fcgNUMaxkbps
-            // 
-            this->fcgNUMaxkbps->Location = System::Drawing::Point(124, 29);
-            this->fcgNUMaxkbps->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 100000, 0, 0, 0 });
-            this->fcgNUMaxkbps->Name = L"fcgNUMaxkbps";
-            this->fcgNUMaxkbps->Size = System::Drawing::Size(77, 21);
-            this->fcgNUMaxkbps->TabIndex = 6;
-            this->fcgNUMaxkbps->Tag = L"reCmd";
-            this->fcgNUMaxkbps->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
-            // fcgLBMaxkbps
-            // 
-            this->fcgLBMaxkbps->AutoSize = true;
-            this->fcgLBMaxkbps->Location = System::Drawing::Point(5, 33);
-            this->fcgLBMaxkbps->Name = L"fcgLBMaxkbps";
-            this->fcgLBMaxkbps->Size = System::Drawing::Size(76, 14);
-            this->fcgLBMaxkbps->TabIndex = 78;
-            this->fcgLBMaxkbps->Text = L"最大ビットレート";
-            // 
-            // fcgLBMaxBitrate2
-            // 
-            this->fcgLBMaxBitrate2->AutoSize = true;
-            this->fcgLBMaxBitrate2->Location = System::Drawing::Point(207, 31);
-            this->fcgLBMaxBitrate2->Name = L"fcgLBMaxBitrate2";
-            this->fcgLBMaxBitrate2->Size = System::Drawing::Size(32, 14);
-            this->fcgLBMaxBitrate2->TabIndex = 80;
-            this->fcgLBMaxBitrate2->Text = L"kbps";
-            // 
-            // fcgPNQP
-            // 
-            this->fcgPNQP->Controls->Add(this->fcgLBQPI);
-            this->fcgPNQP->Controls->Add(this->fcgNUQPI);
-            this->fcgPNQP->Controls->Add(this->fcgNUQPP);
-            this->fcgPNQP->Controls->Add(this->fcgNUQPB);
-            this->fcgPNQP->Controls->Add(this->fcgLBQPP);
-            this->fcgPNQP->Controls->Add(this->fcgLBQPB);
-            this->fcgPNQP->Location = System::Drawing::Point(8, 199);
-            this->fcgPNQP->Name = L"fcgPNQP";
-            this->fcgPNQP->Size = System::Drawing::Size(289, 79);
-            this->fcgPNQP->TabIndex = 113;
-            // 
-            // fcgLBQPI
-            // 
-            this->fcgLBQPI->AutoSize = true;
-            this->fcgLBQPI->Location = System::Drawing::Point(10, 4);
-            this->fcgLBQPI->Name = L"fcgLBQPI";
-            this->fcgLBQPI->Size = System::Drawing::Size(66, 14);
-            this->fcgLBQPI->TabIndex = 75;
-            this->fcgLBQPI->Text = L"QP I frame";
-            // 
-            // fcgNUQPI
-            // 
-            this->fcgNUQPI->Location = System::Drawing::Point(124, 2);
-            this->fcgNUQPI->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
-            this->fcgNUQPI->Name = L"fcgNUQPI";
-            this->fcgNUQPI->Size = System::Drawing::Size(77, 21);
-            this->fcgNUQPI->TabIndex = 7;
-            this->fcgNUQPI->Tag = L"reCmd";
-            this->fcgNUQPI->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
-            // fcgNUQPP
-            // 
-            this->fcgNUQPP->Location = System::Drawing::Point(124, 29);
-            this->fcgNUQPP->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
-            this->fcgNUQPP->Name = L"fcgNUQPP";
-            this->fcgNUQPP->Size = System::Drawing::Size(77, 21);
-            this->fcgNUQPP->TabIndex = 8;
-            this->fcgNUQPP->Tag = L"reCmd";
-            this->fcgNUQPP->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
-            // fcgNUQPB
-            // 
-            this->fcgNUQPB->Location = System::Drawing::Point(124, 55);
-            this->fcgNUQPB->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
-            this->fcgNUQPB->Name = L"fcgNUQPB";
-            this->fcgNUQPB->Size = System::Drawing::Size(77, 21);
-            this->fcgNUQPB->TabIndex = 9;
-            this->fcgNUQPB->Tag = L"reCmd";
-            this->fcgNUQPB->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
-            // fcgLBQPP
-            // 
-            this->fcgLBQPP->AutoSize = true;
-            this->fcgLBQPP->Location = System::Drawing::Point(10, 31);
-            this->fcgLBQPP->Name = L"fcgLBQPP";
-            this->fcgLBQPP->Size = System::Drawing::Size(69, 14);
-            this->fcgLBQPP->TabIndex = 76;
-            this->fcgLBQPP->Text = L"QP P frame";
-            // 
-            // fcgLBQPB
-            // 
-            this->fcgLBQPB->AutoSize = true;
-            this->fcgLBQPB->Location = System::Drawing::Point(6, 57);
-            this->fcgLBQPB->Name = L"fcgLBQPB";
-            this->fcgLBQPB->Size = System::Drawing::Size(74, 14);
-            this->fcgLBQPB->TabIndex = 77;
-            this->fcgLBQPB->Text = L"QP B frames";
             // 
             // fcgNUSlices
             // 
@@ -2906,6 +2631,238 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             this->fcgCXEncMode->TabIndex = 4;
             this->fcgCXEncMode->Tag = L"reCmd";
             this->fcgCXEncMode->SelectedIndexChanged += gcnew System::EventHandler(this, &frmConfig::fcgChangeEnabled);
+            // 
+            // fcgPNBitrate
+            // 
+            this->fcgPNBitrate->Controls->Add(this->fcgLBBitrate);
+            this->fcgPNBitrate->Controls->Add(this->fcgNUBitrate);
+            this->fcgPNBitrate->Controls->Add(this->fcgLBBitrate2);
+            this->fcgPNBitrate->Controls->Add(this->fcgNUMaxkbps);
+            this->fcgPNBitrate->Controls->Add(this->fcgLBMaxkbps);
+            this->fcgPNBitrate->Controls->Add(this->fcgLBMaxBitrate2);
+            this->fcgPNBitrate->Location = System::Drawing::Point(8, 199);
+            this->fcgPNBitrate->Name = L"fcgPNBitrate";
+            this->fcgPNBitrate->Size = System::Drawing::Size(289, 54);
+            this->fcgPNBitrate->TabIndex = 114;
+            // 
+            // fcgLBBitrate
+            // 
+            this->fcgLBBitrate->AutoSize = true;
+            this->fcgLBBitrate->Location = System::Drawing::Point(5, 4);
+            this->fcgLBBitrate->Name = L"fcgLBBitrate";
+            this->fcgLBBitrate->Size = System::Drawing::Size(54, 14);
+            this->fcgLBBitrate->TabIndex = 66;
+            this->fcgLBBitrate->Text = L"ビットレート";
+            // 
+            // fcgNUBitrate
+            // 
+            this->fcgNUBitrate->Location = System::Drawing::Point(124, 2);
+            this->fcgNUBitrate->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 128000, 0, 0, 0 });
+            this->fcgNUBitrate->Name = L"fcgNUBitrate";
+            this->fcgNUBitrate->Size = System::Drawing::Size(77, 21);
+            this->fcgNUBitrate->TabIndex = 5;
+            this->fcgNUBitrate->Tag = L"reCmd";
+            this->fcgNUBitrate->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            // 
+            // fcgLBBitrate2
+            // 
+            this->fcgLBBitrate2->AutoSize = true;
+            this->fcgLBBitrate2->Location = System::Drawing::Point(207, 4);
+            this->fcgLBBitrate2->Name = L"fcgLBBitrate2";
+            this->fcgLBBitrate2->Size = System::Drawing::Size(32, 14);
+            this->fcgLBBitrate2->TabIndex = 69;
+            this->fcgLBBitrate2->Text = L"kbps";
+            // 
+            // fcgNUMaxkbps
+            // 
+            this->fcgNUMaxkbps->Location = System::Drawing::Point(124, 29);
+            this->fcgNUMaxkbps->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 100000, 0, 0, 0 });
+            this->fcgNUMaxkbps->Name = L"fcgNUMaxkbps";
+            this->fcgNUMaxkbps->Size = System::Drawing::Size(77, 21);
+            this->fcgNUMaxkbps->TabIndex = 6;
+            this->fcgNUMaxkbps->Tag = L"reCmd";
+            this->fcgNUMaxkbps->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            // 
+            // fcgLBMaxkbps
+            // 
+            this->fcgLBMaxkbps->AutoSize = true;
+            this->fcgLBMaxkbps->Location = System::Drawing::Point(5, 33);
+            this->fcgLBMaxkbps->Name = L"fcgLBMaxkbps";
+            this->fcgLBMaxkbps->Size = System::Drawing::Size(76, 14);
+            this->fcgLBMaxkbps->TabIndex = 78;
+            this->fcgLBMaxkbps->Text = L"最大ビットレート";
+            // 
+            // fcgLBMaxBitrate2
+            // 
+            this->fcgLBMaxBitrate2->AutoSize = true;
+            this->fcgLBMaxBitrate2->Location = System::Drawing::Point(207, 31);
+            this->fcgLBMaxBitrate2->Name = L"fcgLBMaxBitrate2";
+            this->fcgLBMaxBitrate2->Size = System::Drawing::Size(32, 14);
+            this->fcgLBMaxBitrate2->TabIndex = 80;
+            this->fcgLBMaxBitrate2->Text = L"kbps";
+            // 
+            // fcgPNQP
+            // 
+            this->fcgPNQP->Controls->Add(this->fcgLBQPI);
+            this->fcgPNQP->Controls->Add(this->fcgNUQPI);
+            this->fcgPNQP->Controls->Add(this->fcgNUQPP);
+            this->fcgPNQP->Controls->Add(this->fcgNUQPB);
+            this->fcgPNQP->Controls->Add(this->fcgLBQPP);
+            this->fcgPNQP->Controls->Add(this->fcgLBQPB);
+            this->fcgPNQP->Location = System::Drawing::Point(8, 199);
+            this->fcgPNQP->Name = L"fcgPNQP";
+            this->fcgPNQP->Size = System::Drawing::Size(289, 79);
+            this->fcgPNQP->TabIndex = 113;
+            // 
+            // fcgLBQPI
+            // 
+            this->fcgLBQPI->AutoSize = true;
+            this->fcgLBQPI->Location = System::Drawing::Point(10, 4);
+            this->fcgLBQPI->Name = L"fcgLBQPI";
+            this->fcgLBQPI->Size = System::Drawing::Size(66, 14);
+            this->fcgLBQPI->TabIndex = 75;
+            this->fcgLBQPI->Text = L"QP I frame";
+            // 
+            // fcgNUQPI
+            // 
+            this->fcgNUQPI->Location = System::Drawing::Point(124, 2);
+            this->fcgNUQPI->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
+            this->fcgNUQPI->Name = L"fcgNUQPI";
+            this->fcgNUQPI->Size = System::Drawing::Size(77, 21);
+            this->fcgNUQPI->TabIndex = 7;
+            this->fcgNUQPI->Tag = L"reCmd";
+            this->fcgNUQPI->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            // 
+            // fcgNUQPP
+            // 
+            this->fcgNUQPP->Location = System::Drawing::Point(124, 29);
+            this->fcgNUQPP->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
+            this->fcgNUQPP->Name = L"fcgNUQPP";
+            this->fcgNUQPP->Size = System::Drawing::Size(77, 21);
+            this->fcgNUQPP->TabIndex = 8;
+            this->fcgNUQPP->Tag = L"reCmd";
+            this->fcgNUQPP->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            // 
+            // fcgNUQPB
+            // 
+            this->fcgNUQPB->Location = System::Drawing::Point(124, 55);
+            this->fcgNUQPB->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
+            this->fcgNUQPB->Name = L"fcgNUQPB";
+            this->fcgNUQPB->Size = System::Drawing::Size(77, 21);
+            this->fcgNUQPB->TabIndex = 9;
+            this->fcgNUQPB->Tag = L"reCmd";
+            this->fcgNUQPB->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            // 
+            // fcgLBQPP
+            // 
+            this->fcgLBQPP->AutoSize = true;
+            this->fcgLBQPP->Location = System::Drawing::Point(10, 31);
+            this->fcgLBQPP->Name = L"fcgLBQPP";
+            this->fcgLBQPP->Size = System::Drawing::Size(69, 14);
+            this->fcgLBQPP->TabIndex = 76;
+            this->fcgLBQPP->Text = L"QP P frame";
+            // 
+            // fcgLBQPB
+            // 
+            this->fcgLBQPB->AutoSize = true;
+            this->fcgLBQPB->Location = System::Drawing::Point(6, 57);
+            this->fcgLBQPB->Name = L"fcgLBQPB";
+            this->fcgLBQPB->Size = System::Drawing::Size(74, 14);
+            this->fcgLBQPB->TabIndex = 77;
+            this->fcgLBQPB->Text = L"QP B frames";
+            // 
+            // fcgPNBframes
+            // 
+            this->fcgPNBframes->Controls->Add(this->fcgLBBframes);
+            this->fcgPNBframes->Controls->Add(this->fcgNUBframes);
+            this->fcgPNBframes->Controls->Add(this->fcgCBBPyramid);
+            this->fcgPNBframes->Controls->Add(this->fcgLBBPyramid);
+            this->fcgPNBframes->Controls->Add(this->fcgLBBDeltaQP);
+            this->fcgPNBframes->Controls->Add(this->fcgNUBDeltaQP);
+            this->fcgPNBframes->Controls->Add(this->fcgLBBRefDeltaQP);
+            this->fcgPNBframes->Controls->Add(this->fcgNUBRefDeltaQP);
+            this->fcgPNBframes->Location = System::Drawing::Point(7, 363);
+            this->fcgPNBframes->Name = L"fcgPNBframes";
+            this->fcgPNBframes->Size = System::Drawing::Size(217, 117);
+            this->fcgPNBframes->TabIndex = 167;
+            // 
+            // fcgLBBframes
+            // 
+            this->fcgLBBframes->AutoSize = true;
+            this->fcgLBBframes->Location = System::Drawing::Point(7, 6);
+            this->fcgLBBframes->Name = L"fcgLBBframes";
+            this->fcgLBBframes->Size = System::Drawing::Size(58, 14);
+            this->fcgLBBframes->TabIndex = 139;
+            this->fcgLBBframes->Text = L"Bフレーム数";
+            // 
+            // fcgNUBframes
+            // 
+            this->fcgNUBframes->Location = System::Drawing::Point(125, 3);
+            this->fcgNUBframes->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 3, 0, 0, 0 });
+            this->fcgNUBframes->Name = L"fcgNUBframes";
+            this->fcgNUBframes->Size = System::Drawing::Size(77, 21);
+            this->fcgNUBframes->TabIndex = 138;
+            this->fcgNUBframes->Tag = L"reCmd";
+            this->fcgNUBframes->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            // 
+            // fcgCBBPyramid
+            // 
+            this->fcgCBBPyramid->AutoSize = true;
+            this->fcgCBBPyramid->Location = System::Drawing::Point(138, 33);
+            this->fcgCBBPyramid->Name = L"fcgCBBPyramid";
+            this->fcgCBBPyramid->Size = System::Drawing::Size(15, 14);
+            this->fcgCBBPyramid->TabIndex = 140;
+            this->fcgCBBPyramid->Tag = L"reCmd";
+            this->fcgCBBPyramid->UseVisualStyleBackColor = true;
+            // 
+            // fcgLBBPyramid
+            // 
+            this->fcgLBBPyramid->AutoSize = true;
+            this->fcgLBBPyramid->Location = System::Drawing::Point(6, 33);
+            this->fcgLBBPyramid->Name = L"fcgLBBPyramid";
+            this->fcgLBBPyramid->Size = System::Drawing::Size(66, 14);
+            this->fcgLBBPyramid->TabIndex = 141;
+            this->fcgLBBPyramid->Text = L"ピラミッド参照";
+            // 
+            // fcgLBBDeltaQP
+            // 
+            this->fcgLBBDeltaQP->AutoSize = true;
+            this->fcgLBBDeltaQP->Location = System::Drawing::Point(7, 62);
+            this->fcgLBBDeltaQP->Name = L"fcgLBBDeltaQP";
+            this->fcgLBBDeltaQP->Size = System::Drawing::Size(104, 14);
+            this->fcgLBBDeltaQP->TabIndex = 145;
+            this->fcgLBBDeltaQP->Text = L"Bフレーム QPオフセット";
+            // 
+            // fcgNUBDeltaQP
+            // 
+            this->fcgNUBDeltaQP->Location = System::Drawing::Point(137, 59);
+            this->fcgNUBDeltaQP->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, 0 });
+            this->fcgNUBDeltaQP->Minimum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, System::Int32::MinValue });
+            this->fcgNUBDeltaQP->Name = L"fcgNUBDeltaQP";
+            this->fcgNUBDeltaQP->Size = System::Drawing::Size(65, 21);
+            this->fcgNUBDeltaQP->TabIndex = 144;
+            this->fcgNUBDeltaQP->Tag = L"reCmd";
+            this->fcgNUBDeltaQP->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            // 
+            // fcgLBBRefDeltaQP
+            // 
+            this->fcgLBBRefDeltaQP->AutoSize = true;
+            this->fcgLBBRefDeltaQP->Location = System::Drawing::Point(7, 91);
+            this->fcgLBBRefDeltaQP->Name = L"fcgLBBRefDeltaQP";
+            this->fcgLBBRefDeltaQP->Size = System::Drawing::Size(126, 14);
+            this->fcgLBBRefDeltaQP->TabIndex = 157;
+            this->fcgLBBRefDeltaQP->Text = L"参照Bフレーム QPオフセット";
+            // 
+            // fcgNUBRefDeltaQP
+            // 
+            this->fcgNUBRefDeltaQP->Location = System::Drawing::Point(137, 88);
+            this->fcgNUBRefDeltaQP->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, 0 });
+            this->fcgNUBRefDeltaQP->Minimum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, System::Int32::MinValue });
+            this->fcgNUBRefDeltaQP->Name = L"fcgNUBRefDeltaQP";
+            this->fcgNUBRefDeltaQP->Size = System::Drawing::Size(65, 21);
+            this->fcgNUBRefDeltaQP->TabIndex = 156;
+            this->fcgNUBRefDeltaQP->Tag = L"reCmd";
+            this->fcgNUBRefDeltaQP->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
             // 
             // tabPageExOpt
             // 
@@ -3481,6 +3438,16 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             this->fcgLBAudioPriority->TabIndex = 12;
             this->fcgLBAudioPriority->Text = L"音声優先度";
             // 
+            // fcgCBPreAnalysis
+            // 
+            this->fcgCBPreAnalysis->AutoSize = true;
+            this->fcgCBPreAnalysis->Location = System::Drawing::Point(442, 305);
+            this->fcgCBPreAnalysis->Name = L"fcgCBPreAnalysis";
+            this->fcgCBPreAnalysis->Size = System::Drawing::Size(15, 14);
+            this->fcgCBPreAnalysis->TabIndex = 179;
+            this->fcgCBPreAnalysis->Tag = L"reCmd";
+            this->fcgCBPreAnalysis->UseVisualStyleBackColor = true;
+            // 
             // frmConfig
             // 
             this->AutoScaleDimensions = System::Drawing::SizeF(96, 96);
@@ -3521,24 +3488,23 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             this->fcgtabControlVCE->ResumeLayout(false);
             this->tabPageVideoEnc->ResumeLayout(false);
             this->tabPageVideoEnc->PerformLayout();
+            this->fcgPNHEVCLevelProfile->ResumeLayout(false);
+            this->fcgPNHEVCLevelProfile->PerformLayout();
             this->fcgPNH264Features->ResumeLayout(false);
             this->fcgPNH264Features->PerformLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNULTRFrames))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNURefFrames))->EndInit();
-            this->fcgPNPreAnalysis->ResumeLayout(false);
-            this->fcgPNPreAnalysis->PerformLayout();
-            this->fcgPNHEVCLevelProfile->ResumeLayout(false);
-            this->fcgPNHEVCLevelProfile->PerformLayout();
-            this->fcgPNBframes->ResumeLayout(false);
-            this->fcgPNBframes->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBframes))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBDeltaQP))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBRefDeltaQP))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVBVBufSize))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMax))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMin))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgpictureBoxVCEEnabled))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgpictureBoxVCEDisabled))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUSlices))->EndInit();
+            this->fcgGroupBoxAspectRatio->ResumeLayout(false);
+            this->fcgGroupBoxAspectRatio->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioY))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioX))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUGopLength))->EndInit();
             this->fcgPNBitrate->ResumeLayout(false);
             this->fcgPNBitrate->PerformLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBitrate))->EndInit();
@@ -3548,12 +3514,11 @@ private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPI))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPP))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPB))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUSlices))->EndInit();
-            this->fcgGroupBoxAspectRatio->ResumeLayout(false);
-            this->fcgGroupBoxAspectRatio->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioY))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioX))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUGopLength))->EndInit();
+            this->fcgPNBframes->ResumeLayout(false);
+            this->fcgPNBframes->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBframes))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBDeltaQP))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBRefDeltaQP))->EndInit();
             this->tabPageExOpt->ResumeLayout(false);
             this->tabPageExOpt->PerformLayout();
             this->fcggroupboxResize->ResumeLayout(false);

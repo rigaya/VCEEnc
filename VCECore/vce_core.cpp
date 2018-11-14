@@ -137,10 +137,10 @@ public:
         inputSlot;
         return m_pComponent->Drain();
     }
-    virtual amf_int32 GetInputSlotCount() override {
+    virtual amf_int32 GetInputSlotCount() const override {
         return 1;
     }
-    virtual amf_int32 GetOutputSlotCount() override {
+    virtual amf_int32 GetOutputSlotCount() const override {
         return 1;
     }
 protected:
@@ -1543,9 +1543,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_Params.SetParam(AMF_PARAM_PEAK_BITRATE(prm->codec),   (amf_int64)prm->nMaxBitrate * 1000);
     m_Params.SetParam(AMF_PARAM_MAX_NUM_REFRAMES(prm->codec), (amf_int64)prm->nRefFrames);
     m_Params.SetParam(AMF_PARAM_MAX_LTR_FRAMES(prm->codec), (amf_int64)prm->nLTRFrames);
-    m_Params.SetParam(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(prm->codec),  !!prm->bEnableSkipFrame);
+    m_Params.SetParam(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(prm->codec),  prm->bEnableSkipFrame);
     m_Params.SetParam(AMF_PARAM_RATE_CONTROL_METHOD(prm->codec),             (amf_int64)prm->rateControl);
-    m_Params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), (amf_int64)prm->nPreAnalysis);
+    m_Params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), prm->preAnalysis);
     m_Params.SetParam(AMF_PARAM_VBV_BUFFER_SIZE(prm->codec),                 (amf_int64)prm->nVBVBufferSize * 1000);
     m_Params.SetParam(AMF_PARAM_INITIAL_VBV_BUFFER_FULLNESS(prm->codec),     (amf_int64)prm->nInitialVBVPercent);
 
@@ -1972,9 +1972,8 @@ tstring VCECore::GetEncoderParam() {
     if (GetPropertyBool(AMF_PARAM_ENABLE_VBAQ(m_encCodec))) {
         others += _T("vbaq ");
     }
-    int nPreAnalysis = GetPropertyInt(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(m_encCodec));
-    if (nPreAnalysis != 0) {
-        others += tstring(_T("pre-analysis:")) + get_cx_desc(get_pre_analysis_list(m_encCodec), nPreAnalysis) + _T(" ");
+    if (GetPropertyBool(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(m_encCodec))) {
+        others += _T("pre-analysis ");
     }
     if (others.length() > 0) {
         mes += strsprintf(_T("Others:        %s\n"), others.c_str());
