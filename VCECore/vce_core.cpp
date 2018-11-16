@@ -379,9 +379,9 @@ void VCECore::Terminate() {
     m_deviceDX11.Terminate();
 
     m_pFileWriterListAudio.clear();
-    m_pFileReader.reset();
-    m_AudioReaders.clear();
     m_pFileWriter.reset();
+    m_AudioReaders.clear();
+    m_pFileReader.reset();
     m_pStatus.reset();
     m_pLog.reset();
     m_encCodec = RGY_CODEC_UNKNOWN;
@@ -1847,8 +1847,8 @@ tstring VCECore::GetEncoderParam() {
 
     mes += strsprintf(_T("VCEEnc %s (%s) / %s (%s)\n"), VER_STR_FILEVERSION_TCHAR, BUILD_ARCH_STR, getOSVersion().c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"));
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
-    mes += strsprintf(_T("GPU:           %s [%s, AMF %d.%d]\n"), wstring_to_tstring(deviceName).c_str(), gpu_info,
-        (int)AMF_GET_MAJOR_VERSION(g_AMFFactory.AMFQueryVersion()), (int)AMF_GET_MINOR_VERSION(g_AMFFactory.AMFQueryVersion()));
+    mes += strsprintf(_T("GPU:           %s [%s, AMF %d.%d.%d]\n"), wstring_to_tstring(deviceName).c_str(), gpu_info,
+        (int)AMF_GET_MAJOR_VERSION(g_AMFFactory.AMFQueryVersion()), (int)AMF_GET_MINOR_VERSION(g_AMFFactory.AMFQueryVersion()), (int)AMF_GET_SUBMINOR_VERSION(g_AMFFactory.AMFQueryVersion()));
 
     auto inputInfo = m_pFileReader->GetInputFrameInfo();
     mes += strsprintf(_T("Input Info:    %s\n"), m_pFileReader->GetInputMessage());
