@@ -1382,15 +1382,21 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, ParseCmdEr
         bool bParsed = false;
         if (desc != nullptr) {
             if (PARSE_ERROR_FLAG != (value = get_value_from_chr(desc, argsData.cachedlevel.c_str()))) {
-                pParams->codecParam[pParams->codec].nLevel = (int16_t)value;
+                pParams->codecParam[pParams->codec].nLevel = value;
                 bParsed = true;
-            } else if (pParams->codec == RGY_CODEC_H264) {
+            } else {
                 double val_float = 0.0;
                 if (1 == _stscanf_s(argsData.cachedlevel.c_str(), _T("%lf"), &val_float)) {
                     value = (int)(val_float * 10 + 0.5);
                     if (value == desc[get_cx_index(desc, value)].value) {
-                        pParams->codecParam[pParams->codec].nLevel = (int16_t)value;
+                        pParams->codecParam[pParams->codec].nLevel = value;
                         bParsed = true;
+                    } else {
+                        value = (int)(val_float + 0.5);
+                        if (value == desc[get_cx_index(desc, value)].value) {
+                            pParams->codecParam[pParams->codec].nLevel = value;
+                            bParsed = true;
+                        }
                     }
                 }
             }
