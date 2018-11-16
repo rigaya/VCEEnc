@@ -231,9 +231,11 @@ RGY_ERR RGYInputVpy::Init(const TCHAR *strFileName, VideoInfo *pInputInfo, const
         { pfYUV420P8,  RGY_CSP_YV12,      prefered_csp },
         { pfYUV420P10, RGY_CSP_YV12_10,   prefered_csp },
         { pfYUV420P16, RGY_CSP_YV12_16,   prefered_csp },
+#if !ENCODER_VCEENC
         { pfYUV422P8,  RGY_CSP_YUV422,    RGY_CSP_NV16 },
         { pfYUV422P10, RGY_CSP_YUV422_10, RGY_CSP_P210 },
         { pfYUV422P16, RGY_CSP_YUV422_16, RGY_CSP_P210 },
+#endif
         { pfYUV444P8,  RGY_CSP_YUV444,    prefered_csp },
         { pfYUV444P10, RGY_CSP_YUV444_10, prefered_csp },
         { pfYUV444P16, RGY_CSP_YUV444_16, prefered_csp },

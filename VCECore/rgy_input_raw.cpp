@@ -235,6 +235,10 @@ RGY_ERR RGYInputRaw::Init(const TCHAR *strFileName, VideoInfo *pInputInfo, const
         break;
     case RGY_CSP_YUV422:
         bufferSize = m_inputVideoInfo.srcWidth * m_inputVideoInfo.srcHeight * 2;
+        if (ENCODER_VCEENC) {
+            AddMessage(RGY_LOG_ERROR, _T("yuv422 not supported as input color format."));
+            return RGY_ERR_INVALID_FORMAT;
+        }
         //yuv422読み込みは、出力フォーマットへの直接変換を持たないのでNV16に変換する
         nOutputCSP = RGY_CSP_NV16;
         output_csp_if_lossless = RGY_CSP_YUV444;
@@ -245,6 +249,10 @@ RGY_ERR RGYInputRaw::Init(const TCHAR *strFileName, VideoInfo *pInputInfo, const
     case RGY_CSP_YUV422_14:
     case RGY_CSP_YUV422_16:
         bufferSize = m_inputVideoInfo.srcWidth * m_inputVideoInfo.srcHeight * 4;
+        if (ENCODER_VCEENC) {
+            AddMessage(RGY_LOG_ERROR, _T("yuv422 not supported as input color format."));
+            return RGY_ERR_INVALID_FORMAT;
+        }
         //yuv422読み込みは、出力フォーマットへの直接変換を持たないのでP210に変換する
         nOutputCSP = RGY_CSP_P210;
         //m_inputVideoInfo.shiftも出力フォーマットに対応する値でなく入力フォーマットに対するものに
