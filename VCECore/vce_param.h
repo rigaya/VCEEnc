@@ -179,6 +179,15 @@ const CX_DESC list_videoformat[] = {
     { _T("mac"),       4  },
     { NULL, NULL }
 };
+const CX_DESC list_chromaloc[] = {
+    { _T("0"), 0 },
+    { _T("1"), 1 },
+    { _T("2"), 2 },
+    { _T("3"), 3 },
+    { _T("4"), 4 },
+    { _T("5"), 5 },
+    { NULL, 0 }
+};
 
 const CX_DESC list_mv_presicion[] = {
     { _T("full-pel"), VCE_MOTION_EST_FULL   },

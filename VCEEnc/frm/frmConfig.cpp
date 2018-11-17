@@ -630,6 +630,10 @@ System::Void frmConfig::InitComboBox() {
     setComboBox(fcgCXInterlaced,    list_interlaced);
     setComboBox(fcgCXAspectRatio,   list_aspect_ratio);
     setComboBox(fcgCXMotionEst,     list_mv_presicion);
+    setComboBox(fcgCXColorMatrix,   list_colormatrix);
+    setComboBox(fcgCXColorPrim,     list_colorprim);
+    setComboBox(fcgCXTransfer,      list_transfer);
+    setComboBox(fcgCXVideoFormat,   list_videoformat);
 
     setComboBox(fcgCXAudioTempDir,  list_audtempdir);
     setComboBox(fcgCXMP4BoxTempDir, list_mp4boxtempdir);
@@ -855,11 +859,11 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetCXIndex(fcgCXHEVCLevel,         get_cx_index(list_hevc_level, vce.codecParam[RGY_CODEC_HEVC].nLevel));
     SetCXIndex(fcgCXHEVCProfile,       get_cx_index(list_hevc_profile, vce.codecParam[RGY_CODEC_HEVC].nProfile));
     SetCXIndex(fcgCXInterlaced,        get_cx_index(list_interlaced, vce.input.picstruct));
-    if (vce.par[0] * vce.par[1] <= 0)
-        vce.par[0] = vce.par[1] = 0;
-    SetCXIndex(fcgCXAspectRatio, (vce.par[0] < 0));
-    SetNUValue(fcgNUAspectRatioX, abs(vce.par[0]));
-    SetNUValue(fcgNUAspectRatioY, abs(vce.par[1]));
+    if (vce.input.sar[0] * vce.input.sar[1] <= 0)
+        vce.input.sar[0] = vce.input.sar[1] = 0;
+    SetCXIndex(fcgCXAspectRatio, (vce.input.sar[0] < 0));
+    SetNUValue(fcgNUAspectRatioX, abs(vce.input.sar[0]));
+    SetNUValue(fcgNUAspectRatioY, abs(vce.input.sar[1]));
 
     SetNUValue(fcgNUQPMax,               vce.nQPMax);
     SetNUValue(fcgNUQPMin,               vce.nQPMin);
@@ -868,13 +872,16 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
 
     SetNUValue(fcgNUSlices,             vce.nSlices);
     SetNUValue(fcgNURefFrames,          vce.nRefFrames);
-    SetNUValue(fcgNULTRFrames,          vce.nLTRFrames);
 
     fcgCBDeblock->Checked             = vce.bDeblockFilter;
     fcgCBSkipFrame->Checked           = vce.bEnableSkipFrame;
     fcgCBTimerPeriodTuning->Checked   = vce.bTimerPeriodTuning;
     fcgCBVBAQ->Checked                = vce.bVBAQ;
-    fcgCBFullrange->Checked           = vce.vui.fullrange;
+    fcgCBFullrange->Checked           = vce.vui.fullrange != 0;
+    SetCXIndex(fcgCXColorMatrix,        get_cx_index(list_colormatrix, vce.vui.matrix));
+    SetCXIndex(fcgCXTransfer,           get_cx_index(list_transfer, vce.vui.transfer));
+    SetCXIndex(fcgCXColorPrim,          get_cx_index(list_colorprim, vce.vui.colorprim));
+    SetCXIndex(fcgCXVideoFormat,        get_cx_index(list_videoformat, vce.vui.format));
     fcgCBPreAnalysis->Checked         = vce.preAnalysis;
 
     SetCXIndex(fcgCXMotionEst,          get_cx_index(list_mv_presicion, vce.nMotionEst));
@@ -958,12 +965,15 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.input.picstruct                         = RGY_PICSTRUCT_FRAME; // (RGY_PICSTRUCT)list_interlaced[fcgCXInterlaced->SelectedIndex].value;
     vce.nSlices                                 = (int)fcgNUSlices->Value;
     vce.nRefFrames                              = (int)fcgNURefFrames->Value;
-    vce.nLTRFrames                              = (int)fcgNULTRFrames->Value;
 
     vce.bDeblockFilter                          = fcgCBDeblock->Checked;
     vce.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;
     vce.bVBAQ                                   = fcgCBVBAQ->Checked;
     vce.vui.fullrange                           = fcgCBFullrange->Checked;
+    vce.vui.matrix                              = list_colormatrix[fcgCXColorMatrix->SelectedIndex].value;
+    vce.vui.transfer                            = list_transfer[fcgCXTransfer->SelectedIndex].value;
+    vce.vui.colorprim                           = list_colorprim[fcgCXColorPrim->SelectedIndex].value;
+    vce.vui.format                              = list_videoformat[fcgCXVideoFormat->SelectedIndex].value;
     vce.preAnalysis                             = fcgCBPreAnalysis->Checked;
 
     vce.nMotionEst                              = list_mv_presicion[fcgCXMotionEst->SelectedIndex].value;
@@ -972,11 +982,11 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
 
     cnf->vid.afs                    = fcgCBAFS->Checked;
     cnf->vid.auo_tcfile_out         = fcgCBAuoTcfileout->Checked;
-    vce.par[0]                      = (int)fcgNUAspectRatioX->Value;
-    vce.par[1]                      = (int)fcgNUAspectRatioY->Value;
+    vce.input.sar[0]                = (int)fcgNUAspectRatioX->Value;
+    vce.input.sar[1]                = (int)fcgNUAspectRatioY->Value;
     if (fcgCXAspectRatio->SelectedIndex == 1) {
-        vce.par[0] *= -1;
-        vce.par[1] *= -1;
+        vce.input.sar[0] *= -1;
+        vce.input.sar[1] *= -1;
     }
 
     //拡張部

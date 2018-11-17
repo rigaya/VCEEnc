@@ -1870,7 +1870,7 @@ tstring VCECore::GetEncoderParam() {
     m_Params.GetParam(VCE_PARAM_KEY_OUTPUT_WIDTH, outWidth);
     m_Params.GetParam(VCE_PARAM_KEY_OUTPUT_HEIGHT, outHeight);
     mes += strsprintf(_T("               %dx%d%s %d:%d %0.3ffps (%d/%dfps)\n"),
-        outWidth, outHeight,
+        (int)outWidth, (int)outHeight,
         scan_type == AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED ? _T("i") : _T("p"),
         aspectRatio.num, aspectRatio.den,
         frameRate.num / (double)frameRate.den, frameRate.num, frameRate.den);

@@ -126,6 +126,7 @@ VCEParam::VCEParam() :
     vui.colorprim = get_value_from_chr(list_colorprim, _T("undef"));
     vui.transfer  = get_value_from_chr(list_transfer, _T("undef"));
     vui.fullrange   = false;
+    vui.chromaloc = 0;
 }
 
 VCEParam::~VCEParam() {

@@ -1199,6 +1199,16 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+    if (0 == _tcscmp(option_name, _T("chromaloc"))) {
+        i++;
+        int value;
+        if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_chromaloc, strInput[i]))) {
+            SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            return 1;
+        }
+        pParams->vui.chromaloc = value;
+        return 0;
+    }
     if (IS_OPTION("filler")) {
         pParams->bFiller = TRUE;
         return 0;
@@ -1621,7 +1631,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_LST(_T("--videoformat"), vui.format, list_videoformat);
     OPT_LST(_T("--colormatrix"), vui.matrix, list_colormatrix);
     OPT_LST(_T("--colorprim"), vui.colorprim, list_colorprim);
-    //OPT_LST(_T("--chromaloc"), h264VUIParameters.chromaSampleLocationTop, list_chromaloc);
+    OPT_LST(_T("--chromaloc"), vui.chromaloc, list_chromaloc);
     OPT_LST(_T("--transfer"), vui.transfer, list_transfer);
     OPT_STR(_T("--max-cll"), sMaxCll);
     OPT_STR(_T("--master-display"), sMasterDisplay);
