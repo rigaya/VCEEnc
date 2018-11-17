@@ -1861,9 +1861,9 @@ tstring VCECore::GetEncoderParam() {
         getPropertyDesc(AMF_PARAM_PROFILE_LEVEL(m_encCodec), get_level_list(m_encCodec)).c_str(),
         (m_encCodec == RGY_CODEC_HEVC) ? (tstring(_T(" (")) + getPropertyDesc(AMF_VIDEO_ENCODER_HEVC_TIER, get_tier_list(m_encCodec)) + _T(" tier)")).c_str() : _T(""));
     const AMF_VIDEO_ENCODER_SCANTYPE_ENUM scan_type = (m_encCodec == RGY_CODEC_H264) ? (AMF_VIDEO_ENCODER_SCANTYPE_ENUM)GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE) : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE;
-    auto aspectRatio = GetPropertyRatio(AMF_PARAM_ASPECT_RATIO(m_encCodec));
+    AMFRatio aspectRatio;
+    m_Params.GetParam(AMF_PARAM_ASPECT_RATIO(m_encCodec), aspectRatio);
     auto frameRate = GetPropertyRate(AMF_PARAM_FRAMERATE(m_encCodec));
-    pProperty->GetProperty(AMF_PARAM_ASPECT_RATIO(m_encCodec), &aspectRatio);
     int64_t outWidth, outHeight;
     m_Params.GetParam(VCE_PARAM_KEY_OUTPUT_WIDTH, outWidth);
     m_Params.GetParam(VCE_PARAM_KEY_OUTPUT_HEIGHT, outHeight);

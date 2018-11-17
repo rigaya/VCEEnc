@@ -65,7 +65,6 @@ VCEParam::VCEParam() :
     bEnforceHRD(true),
     nIDRPeriod(1),
     nGOPLen(0),
-    par(),
     nRefFrames(VCE_DEFAULT_REF_FRAMES),
     nLTRFrames(0),
     bFiller(false),

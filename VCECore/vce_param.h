@@ -327,7 +327,6 @@ struct VCEParam {
     int     nIDRPeriod;
     int     nGOPLen;
 
-    int par[2];
     int nRefFrames;
     int nLTRFrames;
     bool bFiller;
