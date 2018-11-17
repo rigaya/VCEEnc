@@ -63,12 +63,15 @@ VCEEncを使用したことによる、いかなる損害・トラブルにつ�
 
 ## ソースコードについて
 - MITライセンスです。
-- 本ソフトウェアは[AMD Media Framework](http://gpuopen.com/gaming-product/advanced-media-framework/)のサンプルコードをベースに作成されており、
+- 本ソフトウェアは[AMD Media Framework](https://github.com/GPUOpen-LibrariesAndSDKs/AMF)のサンプルコードをベースに作成されており、
   AMD Media Frameworkのソースを含みます。
   詳細は各ソースのヘッダ部分や、VCEEnc_license.txtをご覧ください。
 - 本ソフトウェアでは、
   [ffmpeg](https://ffmpeg.org/),
-  [tinyxml2](http://www.grinninglizard.com/tinyxml2/)を使用しています。  
+  [tinyxml2](http://www.grinninglizard.com/tinyxml2/),
+  [dtl](https://github.com/cubicdaiya/dtl),
+  [ttmath](http://www.ttmath.org/),
+  [Caption2Ass](https://github.com/maki-rxrz/Caption2Ass_PCR)を使用しています。  
   これらのライセンスにつきましては、該当ソースのヘッダ部分や、VCEEnc_license.txtをご覧ください。
 
 ### ソース概要
