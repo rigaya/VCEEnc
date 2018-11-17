@@ -65,7 +65,7 @@ public:
     virtual AMF_RESULT SubmitInput(amf::AMFData* pData) override {
         amf::AMFBufferPtr pBuffer(pData);
 
-        const auto VCE_TIMEBASE = rgy_rational<int>(1, HW_TIMEBASE);
+        const auto VCE_TIMEBASE = rgy_rational<int>(1, AMF_SECOND);
         RGYBitstream data = RGYBitstreamInit();
         int64_t pts = rgy_change_scale(pData->GetPts(), m_outFps.inv(), m_outTimebase);
         int64_t duration = rgy_change_scale(pData->GetDuration(), VCE_TIMEBASE, m_outTimebase);

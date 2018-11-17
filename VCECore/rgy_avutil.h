@@ -146,7 +146,7 @@ static tstring errorMesForCodec(const TCHAR *mes, AVCodecID targetCodec) {
     return mes + tstring(_T(" for ")) + char_to_tstring(avcodec_get_name(targetCodec)) + tstring(_T(".\n"));
 };
 
-static const AVRational HW_NATIVE_TIMEBASE = { 1, HW_TIMEBASE };
+static const AVRational HW_NATIVE_TIMEBASE = { 1, (int)AMF_SECOND };
 static const TCHAR *AVCODEC_DLL_NAME[] = {
     _T("avcodec-58.dll"), _T("avformat-58.dll"), _T("avutil-56.dll"), _T("avfilter-7.dll"), _T("swresample-3.dll")
 };

@@ -29,11 +29,9 @@
 #ifndef __RGY_VERSION_H__
 #define __RGY_VERSION_H__
 
-#define VER_FILEVERSION             0,3,6,0
-#define VER_STR_FILEVERSION          "3.06"
-#define VER_STR_FILEVERSION_TCHAR _T("3.06")
-
-#define VCE_AMD_APP_SDK "3.0"
+#define VER_FILEVERSION             0,4,0,0
+#define VER_STR_FILEVERSION          "4.00"
+#define VER_STR_FILEVERSION_TCHAR _T("4.00")
 
 #define ENABLE_OPENCL 1
 
@@ -42,8 +40,6 @@
 #else
 #define BUILD_ARCH_STR _T("x64")
 #endif
-
-static const int HW_TIMEBASE = 10000000;
 
 #if _UNICODE
 const wchar_t *get_encoder_version();
