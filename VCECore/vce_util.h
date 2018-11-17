@@ -31,9 +31,13 @@
 
 #include "rgy_util.h"
 #include "rgy_err.h"
+#pragma warning(push)
+#pragma warning(disable:4201)
+#pragma warning(disable:4100)
 #include "VideoEncoderVCE.h"
 #include "PipelineElement.h"
 #include "ParametersStorage.h"
+#pragma warning(pop)
 
 bool check_if_vce_available(int nCodecId, int nDeviceId = 0);
 tstring check_vce_features(int nCodecId, int nDeviceId);

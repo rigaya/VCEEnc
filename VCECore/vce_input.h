@@ -34,13 +34,13 @@
 #include "VideoEncoderVCE.h"
 
 #include "PipelineElement.h"
+#pragma warning(pop)
 
 #include "rgy_util.h"
 #include "vce_param.h"
 #include "rgy_log.h"
 #include "rgy_status.h"
 #include "convert_csp.h"
-#pragma warning(pop)
 #include "rgy_input.h"
 #include "rgy_err.h"
 
@@ -66,6 +66,7 @@ public:
         return 1;
     }
     virtual AMF_RESULT SubmitInput(amf::AMFData *pData) override {
+        UNREFERENCED_PARAMETER(pData);
         return AMF_NOT_SUPPORTED;
     }
 

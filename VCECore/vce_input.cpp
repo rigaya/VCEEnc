@@ -55,6 +55,7 @@ AMF_RESULT VCEInput::QueryOutput(amf::AMFData ** ppData) {
             frameInfo.srcWidth - frameInfo.crop.e.left - frameInfo.crop.e.right,
             frameInfo.srcHeight - frameInfo.crop.e.bottom - frameInfo.crop.e.up,
             &pSurface);
+        if (res != AMF_OK) return res;
         frame = RGYFrameFromSurface(pSurface);
         auto ret = m_input->LoadNextFrame(&frame);
         if (ret == RGY_ERR_NONE) {
