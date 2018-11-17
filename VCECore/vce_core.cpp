@@ -1473,6 +1473,8 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         break;
     case RGY_CODEC_HEVC:
         RegisterEncoderParamsHEVC(&m_Params);
+        //なぜかパラメータセットに登録されていないのでここで追加。
+        m_Params.SetParamDescription(AMF_PARAM_ASPECT_RATIO(prm->codec), ParamEncoderStatic, L"", ParamConverterRatio);
         break;
     default:
         PrintMes(RGY_LOG_ERROR, _T("Unknown Codec.\n"));
