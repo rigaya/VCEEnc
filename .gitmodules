@@ -6,4 +6,4 @@
 	url = https://github.com/cubicdaiya/dtl
 [submodule "ffmpeg_lgpl"]
 	path = ffmpeg_lgpl
-	url = ../ffmpeg_dlls_for_hwenc.git
+	url = https://github.com/rigaya/ffmpeg_dlls_for_hwenc
