@@ -840,7 +840,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
 
     ParseCmdError err;
     VCEParam vce;
-    parse_cmd(&vce, conf->vce.cmd, err);
+    parse_cmd(&vce, cnf->vce.cmd, err);
 
     SetCXIndex(fcgCXCodec,             get_cx_index(list_codec, vce.codec));
     SetCXIndex(fcgCXEncMode,           get_cx_index(list_vce_h264_rc_method, vce.rateControl));
