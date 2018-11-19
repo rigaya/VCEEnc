@@ -29,9 +29,9 @@
 #ifndef __RGY_VERSION_H__
 #define __RGY_VERSION_H__
 
-#define VER_FILEVERSION             0,4,0,0
-#define VER_STR_FILEVERSION          "4.00"
-#define VER_STR_FILEVERSION_TCHAR _T("4.00")
+#define VER_FILEVERSION             0,4,1,0
+#define VER_STR_FILEVERSION          "4.01"
+#define VER_STR_FILEVERSION_TCHAR _T("4.01")
 
 #define ENABLE_OPENCL 1
 
