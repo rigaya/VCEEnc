@@ -392,10 +392,10 @@ static tstring help() {
         _T("   --enforce-hrd                enforce hrd compatibility of bitstream\n")
         _T("   --filler                     use filler data\n")
     );
-    //str += PrintListOptions(_T("--videoformat <string>"), list_videoformat, 0);
-    //str += PrintListOptions(_T("--colormatrix <string>"), list_colormatrix, 0);
-    //str += PrintListOptions(_T("--colorprim <string>"), list_colorprim, 0);
-    //str += PrintListOptions(_T("--transfer <string>"), list_transfer, 0);
+    str += PrintListOptions(_T("--videoformat <string>"), list_videoformat, 0);
+    str += PrintListOptions(_T("--colormatrix <string>"), list_colormatrix, 0);
+    str += PrintListOptions(_T("--colorprim <string>"), list_colorprim, 0);
+    str += PrintListOptions(_T("--transfer <string>"), list_transfer, 0);
     str += strsprintf(_T("\n")
         _T("   --log <string>               output log to file (txt or html).\n")
         _T("   --log-level <int>            set log level\n")
