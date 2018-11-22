@@ -1328,30 +1328,42 @@ RGY_ERR RGYInputAvcodec::Init(const TCHAR *strFileName, VideoInfo *pInputInfo, c
             }
 
             const auto pixCspConv = csp_avpixfmt_to_rgy(m_Demux.video.pCodecCtxDecode->pix_fmt);
-            //出力フォーマットへの直接変換を持たないものは、pixfmtDataListに従う
-            switch (pixCspConv) {
-            case RGY_CSP_NV16:
-            case RGY_CSP_YUV422:
-            case RGY_CSP_YUV422_09:
-            case RGY_CSP_YUV422_10:
-            case RGY_CSP_YUV422_12:
-            case RGY_CSP_YUV422_14:
-            case RGY_CSP_YUV422_16:
-            case RGY_CSP_P210:
-            case RGY_CSP_RGB24:
-            case RGY_CSP_RGB32:
-                m_inputVideoInfo.csp = pixfmtData->output_csp;
-                m_inputVideoInfo.shift = (RGY_CSP_BIT_DEPTH[pixCspConv] > 8) ? 16 - RGY_CSP_BIT_DEPTH[pixCspConv] : 0;
-            default:
-                break;
-            }
-            if (pixCspConv == RGY_CSP_NA
-                || nullptr == (m_sConvert = get_convert_csp_func(pixCspConv, m_inputVideoInfo.csp, false))) {
-                AddMessage(RGY_LOG_ERROR, _T("color conversion not supported: %s -> %s.\n"),
-                     RGY_CSP_NAMES[pixCspConv], RGY_CSP_NAMES[m_inputVideoInfo.csp]);
+            if (pixCspConv == RGY_CSP_NA) {
+                AddMessage(RGY_LOG_ERROR, _T("invalid color format: %s\n"),
+                    char_to_tstring(av_get_pix_fmt_name(m_Demux.video.pCodecCtxDecode->pix_fmt)).c_str());
                 return RGY_ERR_INVALID_COLOR_FORMAT;
             }
             m_InputCsp = pixCspConv;
+            //出力フォーマットへの直接変換を持たないものは、pixfmtDataListに従う
+            const auto prefered_csp = m_inputVideoInfo.csp;
+            if (prefered_csp == RGY_CSP_NA) {
+                //ロスレスの場合は、入力側で出力フォーマットを決める
+                m_inputVideoInfo.csp = pixfmtData->output_csp;
+            } else {
+                m_inputVideoInfo.csp = (get_convert_csp_func(m_InputCsp, prefered_csp, false) != nullptr) ? prefered_csp : pixfmtData->output_csp;
+                //なるべく軽いフォーマットでGPUに転送するように
+                if (ENCODER_NVENC
+                    && RGY_CSP_BIT_PER_PIXEL[pixfmtData->output_csp] < RGY_CSP_BIT_PER_PIXEL[prefered_csp]
+                    && get_convert_csp_func(m_InputCsp, pixfmtData->output_csp, false) != nullptr) {
+                    m_inputVideoInfo.csp = pixfmtData->output_csp;
+                }
+            }
+            m_sConvert = get_convert_csp_func(m_InputCsp, m_inputVideoInfo.csp, false);
+            if (m_sConvert == nullptr && m_InputCsp == RGY_CSP_YUY2) {
+                //YUY2用の特別処理
+                m_inputVideoInfo.csp = RGY_CSP_CHROMA_FORMAT[pixfmtData->output_csp] == RGY_CHROMAFMT_YUV420 ? RGY_CSP_NV12 : RGY_CSP_YUV444;
+                m_sConvert = get_convert_csp_func(m_InputCsp, m_inputVideoInfo.csp, false);
+            }
+            if (m_sConvert == nullptr) {
+                AddMessage(RGY_LOG_ERROR, _T("color conversion not supported: %s -> %s.\n"),
+                    RGY_CSP_NAMES[pixCspConv], RGY_CSP_NAMES[m_inputVideoInfo.csp]);
+                return RGY_ERR_INVALID_COLOR_FORMAT;
+            }
+            if (m_inputVideoInfo.csp != prefered_csp) {
+                //入力フォーマットを変えた場合、m_inputVideoInfo.shiftは、出力フォーマットに対応する値ではなく、
+                //入力フォーマットに対応する値とする必要がある
+                m_inputVideoInfo.shift = (RGY_CSP_BIT_DEPTH[m_InputCsp] > 8) ? 16 - RGY_CSP_BIT_DEPTH[m_InputCsp] : 0;
+            }
             m_inputVideoInfo.shift = (m_inputVideoInfo.csp == RGY_CSP_P010 || m_inputVideoInfo.csp == RGY_CSP_P210) ? m_inputVideoInfo.shift : 0;
             if (nullptr == (m_Demux.video.pFrame = av_frame_alloc())) {
                 AddMessage(RGY_LOG_ERROR, _T("Failed to allocate frame for decoder.\n"));
