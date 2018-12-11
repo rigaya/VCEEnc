@@ -60,7 +60,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 - MIT license.
 - This program is based on samples of [AMD Media Framework](https://github.com/GPUOpen-LibrariesAndSDKs/AMF), and contains source code provided by
   AMD Media Framework.
-  詳細は各ソースのヘッダ部分や、VCEEnc_license.txtをご覧ください。
+  For these licenses, please see the header part of the corresponding source and VCEEnc_license.txt.
 - This software depends on
   [ffmpeg](https://ffmpeg.org/),
   [tinyxml2](http://www.grinninglizard.com/tinyxml2/),
