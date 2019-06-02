@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="cl_func.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="cpu_info.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -132,14 +129,11 @@
     <ClCompile Include="rgy_caption.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_input.cpp">
+    <ClCompile Include="rgy_opencl.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cl_func.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="cpu_info.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -221,9 +215,6 @@
     <ClInclude Include="rgy_input.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_input.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="rgy_input_avcodec.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -245,9 +236,6 @@
     <ClInclude Include="rgy_avutil.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_output.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="rgy_output.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -261,6 +249,9 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="rgy_caption.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="rgy_opencl.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

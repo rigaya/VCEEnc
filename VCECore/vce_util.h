@@ -35,16 +35,16 @@
 #pragma warning(disable:4201)
 #pragma warning(disable:4100)
 #include "VideoEncoderVCE.h"
-#include "PipelineElement.h"
-#include "ParametersStorage.h"
+#include "vce_param.h"
 #pragma warning(pop)
 
-bool check_if_vce_available(int nCodecId, int nDeviceId = 0);
-tstring check_vce_features(int nCodecId, int nDeviceId);
+bool check_if_vce_available(int deviceId, int logLevel);
+tstring check_vce_features(const std::vector<RGY_CODEC>& codecs, int deviceId, int logLevel);
 
 MAP_PAIR_0_1_PROTO(codec, rgy, RGY_CODEC, enc, const wchar_t *);
 MAP_PAIR_0_1_PROTO(codec, rgy, RGY_CODEC, dec, const wchar_t *);
 MAP_PAIR_0_1_PROTO(csp, rgy, RGY_CSP, enc, amf::AMF_SURFACE_FORMAT);
+MAP_PAIR_0_1_PROTO(loglevel, rgy, int, enc, int);
 
 AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM picstruct_rgy_to_enc(RGY_PICSTRUCT picstruct);
 RGY_PICSTRUCT picstruct_enc_to_rgy(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM picstruct);
@@ -403,21 +403,11 @@ static_assert(std::is_pod<RGYFrame>::value == true, "RGYFrame should be POD type
 VideoInfo videooutputinfo(
     RGY_CODEC codec,
     amf::AMF_SURFACE_FORMAT encFormat,
-    ParametersStorage& prm,
+    const AMFParams &prm,
     RGY_PICSTRUCT picstruct,
     const VideoVUIInfo& vui);
 
 int64_t rational_rescale(int64_t v, rgy_rational<int> from, rgy_rational<int> to);
-
-template<typename T>
-T getprm(ParametersStorage& prm, const wchar_t *key) {
-    T value;
-    prm.GetParam(key, value);
-    return value;
-}
-
-template<>
-int getprm(ParametersStorage& prm, const wchar_t *key);
 
 CodecCsp getHWDecCodecCsp();
 

@@ -83,7 +83,7 @@ public:
         return unicode_;
     }
 private:
-    std::unique_ptr<void, module_deleter> m_hModule;
+    std::unique_ptr<std::remove_pointer<HMODULE>::type, module_deleter> m_hModule;
 
     CAPTIONF(InitializeCP);
     CAPTIONF(InitializeUNICODECP);

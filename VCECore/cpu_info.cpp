@@ -68,7 +68,7 @@ int getCPUName(char *buffer, size_t nSize) {
             default:
                 continue;
         }
-        memcpy(buffer + offset, CPUInfo, sizeof(CPUInfo)); 
+        memcpy(buffer + offset, CPUInfo, sizeof(CPUInfo));
     }
     auto remove_string =[](char *target_str, const char *remove_str) {
         char *ptr = strstr(target_str, remove_str);
@@ -191,7 +191,7 @@ bool get_cpu_info(cpu_info_t *cpu_info) {
 
         case RelationCache:
         {
-            // Cache data is in ptr->Cache, one CACHE_DESCRIPTOR structure for each cache. 
+            // Cache data is in ptr->Cache, one CACHE_DESCRIPTOR structure for each cache.
             PCACHE_DESCRIPTOR Cache = &ptr->Cache;
             if (1 <= Cache->Level && Cache->Level <= _countof(cpu_info->caches)) {
                 cache_info_t *cache = &cpu_info->caches[Cache->Level-1];
@@ -389,7 +389,7 @@ double getCPUMaxTurboClock(unsigned int num_thread) {
 }
 
 #if ENABLE_OPENCL
-#include "cl_func.h"
+#include "rgy_opencl.h"
 #endif
 
 #pragma warning (push)
@@ -398,16 +398,21 @@ double getCPUDefaultClockOpenCL() {
 #if !ENABLE_OPENCL
     return 0.0;
 #else
-    int frequency = 0;
-    char buffer[1024] = { 0 };
-    getCPUName(buffer, _countof(buffer));
-    cl_func_t cl = { 0 };
-    cl_data_t data = { 0 };
-    if (CL_SUCCESS == cl_get_func(&cl)
-        && CL_SUCCESS == cl_get_platform_and_device(nullptr, CL_DEVICE_TYPE_CPU, &data, &cl)) {
-        frequency = cl_get_device_max_clock_frequency_mhz(&data, &cl);
+    if (!initOpenCLGlobal()) {
+        return 0.0;
     }
-    cl_release(&data, &cl);
+    int frequency = 0;
+    RGYOpenCL cl;
+    auto platforms = cl.getPlatforms();
+    if (platforms.size() == 0) {
+        return 0.0;
+    }
+    for (const auto& platform : platforms) {
+        if (platform->createDeviceList(CL_DEVICE_TYPE_CPU) == CL_SUCCESS || platform->devs().size() > 0) {
+            frequency = RGYOpenCLDevice(platform->dev(0)).info().max_clock_frequency;
+            break;
+        }
+    }
     return frequency / 1000.0;
 #endif // !ENABLE_OPENCL
 }

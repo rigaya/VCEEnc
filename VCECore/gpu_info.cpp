@@ -32,7 +32,7 @@
 #include <random>
 #include <future>
 #include <algorithm>
-#include "cl_func.h"
+#include "rgy_opencl.h"
 #include "rgy_osdep.h"
 #include "rgy_util.h"
 
@@ -49,6 +49,7 @@ static std::basic_string<TCHAR> to_tchar(const char *string) {
     return str;
 };
 
+#if 0
 static cl_int cl_create_info_string(cl_data_t *cl_data, const cl_func_t *cl, TCHAR *buffer, unsigned int buffer_size) {
     cl_int ret = cl_get_device_name(cl_data, cl, buffer, buffer_size);
     if (ret != CL_SUCCESS) {
@@ -68,6 +69,7 @@ static cl_int cl_create_info_string(cl_data_t *cl_data, const cl_func_t *cl, TCH
     }
     return ret;
 }
+#endif
 
 #endif //ENABLE_OPENCL
 
@@ -114,22 +116,23 @@ int getGPUInfo(const char *VendorName, TCHAR *buffer, unsigned int buffer_size, 
     _stprintf_s(buffer, buffer_size, _T("Unknown (not compiled with OpenCL support)"));
     return 0;
 #else
-    int ret = CL_SUCCESS;
-    cl_func_t cl = { 0 };
-    cl_data_t data = { 0 };
-
-    if (CL_SUCCESS != (ret = cl_get_func(&cl))) {
+    if (!initOpenCLGlobal()) {
         _tcscpy_s(buffer, buffer_size, _T("Unknown (Failed to load OpenCL.dll)"));
-    } else if (CL_SUCCESS != (ret = cl_get_platform_and_device(VendorName, CL_DEVICE_TYPE_GPU, &data, &cl))) {
-        _stprintf_s(buffer, buffer_size, _T("Unknown (Failed to find %s GPU)"), to_tchar(VendorName).c_str());
-    } else {
-        if (driver_version_only)
-            cl_get_driver_version(&data, &cl, buffer, buffer_size);
-        else
-            cl_create_info_string(&data, &cl, buffer, buffer_size);
+        return 1;
     }
-    cl_release(&data, &cl);
-    return ret;
+    RGYOpenCL cl;
+    auto platforms = cl.getPlatforms(VendorName);
+    if (platforms.size() == 0) {
+        _stprintf_s(buffer, buffer_size, _T("Unknown (Failed to find OpenCL %s platform)"), to_tchar(VendorName).c_str());
+        return 1;
+    }
+    const auto& platform = platforms[0];
+    if (platform->createDeviceList(CL_DEVICE_TYPE_GPU) != CL_SUCCESS || platform->devs().size() <= device_id) {
+        _stprintf_s(buffer, buffer_size, _T("Unknown (Failed to find %s GPU)"), to_tchar(VendorName).c_str());
+        return 1;
+    }
+    _tcscpy_s(buffer, buffer_size, RGYOpenCLDevice(platform->dev(device_id)).infostr().c_str());
+    return 0;
 #endif // !ENABLE_OPENCL
 }
 #pragma warning (pop)

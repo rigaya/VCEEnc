@@ -191,7 +191,7 @@ struct handle_deleter {
 };
 
 struct module_deleter {
-    void operator()(void *hmodule) const {
+    void operator()(HMODULE hmodule) const {
         if (hmodule) {
 #if defined(_WIN32) || defined(_WIN64)
             FreeLibrary((HMODULE)hmodule);
@@ -569,6 +569,8 @@ uint64_t getPhysicalRamSize(uint64_t *ramUsed);
 tstring getEnviromentInfo(bool add_ram_info = true, int device_id = 0);
 
 BOOL check_OS_Win8orLater();
+
+int getEmbeddedResource(void **data, const TCHAR *name, const TCHAR *type, HMODULE hModule = NULL);
 
 static void RGY_FORCEINLINE sse_memcpy(uint8_t *dst, const uint8_t *src, int size) {
     if (size < 64) {

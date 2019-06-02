@@ -45,9 +45,6 @@
 #include <dtl/dtl.hpp>
 #endif //#if ENABLE_DTL
 
-tstring check_vce_features(RGY_CODEC codec, int nDeviceId);
-bool check_if_vce_available(RGY_CODEC codec, int nDeviceId);
-
 static void show_version() {
     _ftprintf(stdout, _T("%s\n"), GetVCEEncVersion().c_str());
 }
@@ -499,20 +496,8 @@ static void PrintHelp(tstring strAppName, tstring strErrorMessage, tstring strOp
 
 static void show_hw(int deviceid) {
     show_version();
-    auto test_codecs = make_array<RGY_CODEC>(RGY_CODEC_H264, RGY_CODEC_HEVC);
-    std::vector<RGY_CODEC> avail;
-    for (const auto codec : test_codecs) {
-        if (check_if_vce_available(codec, deviceid)) {
-            avail.push_back(codec);
-        }
-    }
-    if (avail.size()) {
-        tstring str;
-        for (const auto codec : avail) {
-            if (str.length() > 0) str += _T(", ");
-            str += CodecToStr(codec);
-        }
-        _ftprintf(stdout, _T("VCE available: %s.\n"), str.c_str());
+    if (check_if_vce_available(deviceid, RGY_LOG_ERROR)) {
+        _ftprintf(stdout, _T("VCE available\n"));
         exit(0);
     }
     _ftprintf(stdout, _T("VCE unavailable.\n"));
@@ -520,12 +505,8 @@ static void show_hw(int deviceid) {
 }
 
 static void show_vce_features(int deviceid) {
-    _ftprintf(stdout, _T("H.264 Encoder Capability\n"));
-    _ftprintf(stdout, _T("%s\n"), check_vce_features(RGY_CODEC_H264, deviceid).c_str());
-    _ftprintf(stdout, _T("\n"));
-    _ftprintf(stdout, _T("HEVC Encoder Capability\n"));
-    _ftprintf(stdout, _T("%s\n"), check_vce_features(RGY_CODEC_HEVC, deviceid).c_str());
-    _ftprintf(stdout, _T("\n"));
+    const auto codecs = std::vector<RGY_CODEC>{RGY_CODEC_H264, RGY_CODEC_HEVC};
+    _ftprintf(stdout, _T("%s\n"), check_vce_features(codecs, deviceid, RGY_LOG_ERROR).c_str());
     exit(0);
 }
 
@@ -628,16 +609,6 @@ int vce_run(VCEParam *pParams) {
         if (AMF_OK != vce->run()) {
             return 1;
         }
-
-        PipelineState state = PipelineStateRunning;
-        while ((state = vce->GetState()) != PipelineStateEof && state != PipelineStateError) {
-            amf_sleep(100);
-        }
-        if (state == PipelineStateError) {
-            _ftprintf(stderr, _T("fatal error in encoding pipeline.\n"));
-            return 1;
-        }
-        vce->PrintResult();
     } catch (...) {
         _ftprintf(stderr, _T("fatal error in encoding pipeline.\n"));
         return 1;

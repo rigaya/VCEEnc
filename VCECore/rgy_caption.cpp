@@ -442,7 +442,7 @@ CaptionDLL::~CaptionDLL() {
     m_hModule.reset();
 }
 RGY_ERR CaptionDLL::load() {
-    m_hModule = std::unique_ptr<void, module_deleter>(LoadLibrary(_T("Caption.dll")), module_deleter());
+    m_hModule = std::unique_ptr<std::remove_pointer<HMODULE>::type, module_deleter>(LoadLibrary(_T("Caption.dll")), module_deleter());
     if (!m_hModule) {
         return RGY_ERR_INVALID_CALL;
     }

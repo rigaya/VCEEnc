@@ -302,7 +302,6 @@ struct VCEParam {
     tstring logfile;              //ログ出力先
     int loglevel;                 //ログ出力レベル
 
-    amf::AMF_MEMORY_TYPE memoryTypeIn;
     RGY_CODEC codec;
     VCECodecParam codecParam[RGY_CODEC_NUM];
 
@@ -476,5 +475,77 @@ static const wchar_t *AMF_PARAM_MAX_QP(RGY_CODEC codec) {
     default:             return AMF_VIDEO_ENCODER_MAX_QP;
     }
 }
+
+
+enum AMFParamType {
+    AMF_PARAM_UNKNOWN = -1,
+    AMF_PARAM_COMMON = 0,
+    AMF_PARAM_ENCODER_USAGE,   // sets to encoder first
+    AMF_PARAM_STATIC,          // sets to encoder before initialization
+    AMF_PARAM_DYNAMIC,         // sets to encoder at any time
+    AMF_PARAM_FRAME,           // sets to frame before frame submission
+};
+
+#define SETFRAMEPARAMFREQ_PARAM_NAME L"SETFRAMEPARAMFREQ"
+#define SETDYNAMICPARAMFREQ_PARAM_NAME L"SETDYNAMICPARAMFREQ"
+
+struct AMFParam {
+    AMFParamType type;
+    std::wstring desc;
+    amf::AMFVariant value;
+
+    AMFParam() : type(AMF_PARAM_UNKNOWN), desc(), value() {};
+    AMFParam(AMFParamType type_, const std::wstring &desc_, amf::AMFVariant value_)
+        : type(type_), desc(desc_), value(value_) { }
+};
+
+class AMFParams {
+public:
+    AMFParams() {};
+    virtual ~AMFParams() {};
+
+    RGY_ERR SetParamType(const std::wstring &name, AMFParamType type, const std::wstring &desc);
+    RGY_ERR SetParamTypeAVC();
+    RGY_ERR SetParamTypeHEVC();
+
+    RGY_ERR SetParam(const std::wstring &name, amf::AMFVariantStruct value);
+
+    RGY_ERR Apply(amf::AMFPropertyStorage *storage, AMFParamType type, RGYLog *pLog = nullptr);
+
+    template<typename _T> inline
+    RGY_ERR SetParam(const std::wstring &name, const _T &value) {
+        return SetParam(name, static_cast<const amf::AMFVariantStruct &>(amf::AMFVariant(value)));
+    }
+
+    RGY_ERR GetParam(const std::wstring &name, amf::AMFVariantStruct *value) const;
+
+    template<typename T> inline
+    T get(const std::wstring &name) const {
+        T t = T();
+        GetParam(name, t);
+        return t;
+    }
+
+    template<typename _T> inline
+    RGY_ERR GetParam(const std::wstring &name, _T &value) const {
+        amf::AMFVariant var;
+        auto err = GetParam(name, static_cast<amf::AMFVariantStruct *>(&var));
+        if (err == RGY_ERR_NONE) {
+            value = static_cast<_T>(var);
+        }
+        return err;
+    }
+    template<typename _T> inline
+    RGY_ERR GetParamWString(const std::wstring &name, _T &value) const {
+        amf::AMFVariant var;
+        auto err = GetParam(name, static_cast<amf::AMFVariantStruct *>(&var));
+        if (err == RGY_ERR_NONE) {
+            value = var.ToWString().c_str();
+        }
+        return err;
+    }
+protected:
+    std::map<std::wstring, AMFParam> m_params;
+};
 
 #pragma warning(pop)

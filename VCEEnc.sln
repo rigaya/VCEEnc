@@ -1,21 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28729.10
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VCEEnc", "VCEEnc\VCEEnc.vcxproj", "{05D4409E-70DD-489B-9A83-268E6CB1B4C5}"
-	ProjectSection(ProjectDependencies) = postProject
-		{1353C537-2182-4463-805C-E12EF29E1EAB} = {1353C537-2182-4463-805C-E12EF29E1EAB}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VCECore", "VCECore\VCECore.vcxproj", "{06E67B5B-0DA2-4503-A1CA-D75F94BD977A}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VCEEncC", "VCEEncC\VCEEncC.vcxproj", "{6F2D2D39-4BA4-4AB5-9D57-A7C1417EAFFA}"
-	ProjectSection(ProjectDependencies) = postProject
-		{1353C537-2182-4463-805C-E12EF29E1EAB} = {1353C537-2182-4463-805C-E12EF29E1EAB}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VCECommon", "VCECommon\VCECommon.vcxproj", "{1353C537-2182-4463-805C-E12EF29E1EAB}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ChapterRW", "ChapterRW\ChapterRW.vcxproj", "{6A9832B8-FE45-415C-A162-7D07E5E4FA2B}"
 EndProject
@@ -69,20 +61,6 @@ Global
 		{6F2D2D39-4BA4-4AB5-9D57-A7C1417EAFFA}.RelStatic|Win32.Build.0 = RelStatic|Win32
 		{6F2D2D39-4BA4-4AB5-9D57-A7C1417EAFFA}.RelStatic|x64.ActiveCfg = RelStatic|x64
 		{6F2D2D39-4BA4-4AB5-9D57-A7C1417EAFFA}.RelStatic|x64.Build.0 = RelStatic|x64
-		{1353C537-2182-4463-805C-E12EF29E1EAB}.Debug|Win32.ActiveCfg = Debug|Win32
-		{1353C537-2182-4463-805C-E12EF29E1EAB}.Debug|Win32.Build.0 = Debug|Win32
-		{1353C537-2182-4463-805C-E12EF29E1EAB}.Debug|x64.ActiveCfg = Debug|x64
-		{1353C537-2182-4463-805C-E12EF29E1EAB}.DebugStatic|Win32.ActiveCfg = DebugStatic|Win32
-		{1353C537-2182-4463-805C-E12EF29E1EAB}.DebugStatic|Win32.Build.0 = DebugStatic|Win32
-		{1353C537-2182-4463-805C-E12EF29E1EAB}.DebugStatic|x64.ActiveCfg = DebugStatic|x64
-		{1353C537-2182-4463-805C-E12EF29E1EAB}.DebugStatic|x64.Build.0 = DebugStatic|x64
-		{1353C537-2182-4463-805C-E12EF29E1EAB}.Release|Win32.ActiveCfg = Release|Win32
-		{1353C537-2182-4463-805C-E12EF29E1EAB}.Release|Win32.Build.0 = Release|Win32
-		{1353C537-2182-4463-805C-E12EF29E1EAB}.Release|x64.ActiveCfg = Release|x64
-		{1353C537-2182-4463-805C-E12EF29E1EAB}.RelStatic|Win32.ActiveCfg = RelStatic|Win32
-		{1353C537-2182-4463-805C-E12EF29E1EAB}.RelStatic|Win32.Build.0 = RelStatic|Win32
-		{1353C537-2182-4463-805C-E12EF29E1EAB}.RelStatic|x64.ActiveCfg = RelStatic|x64
-		{1353C537-2182-4463-805C-E12EF29E1EAB}.RelStatic|x64.Build.0 = RelStatic|x64
 		{6A9832B8-FE45-415C-A162-7D07E5E4FA2B}.Debug|Win32.ActiveCfg = Debug|Win32
 		{6A9832B8-FE45-415C-A162-7D07E5E4FA2B}.Debug|Win32.Build.0 = Debug|Win32
 		{6A9832B8-FE45-415C-A162-7D07E5E4FA2B}.Debug|x64.ActiveCfg = Debug|x64
@@ -116,5 +94,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {47EED53A-B5E9-4B90-81CF-09172199ACE2}
 	EndGlobalSection
 EndGlobal

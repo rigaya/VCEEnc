@@ -31,6 +31,7 @@
 #include "VideoEncoderVCE.h"
 #include "VideoEncoderHEVC.h"
 #include "VideoDecoderUVD.h"
+#include "Trace.h"
 #include "Surface.h"
 
 static const auto RGY_CODEC_TO_VCE = make_array<std::pair<RGY_CODEC, const wchar_t *>>(
@@ -82,6 +83,15 @@ static const auto RGY_CSP_TO_VCE = make_array<std::pair<RGY_CSP, amf::AMF_SURFAC
     );
 
 MAP_PAIR_0_1(csp, rgy, RGY_CSP, enc, amf::AMF_SURFACE_FORMAT, RGY_CSP_TO_VCE, RGY_CSP_NA, amf::AMF_SURFACE_UNKNOWN);
+
+static const auto RGY_LOGLEVEL_TO_VCE = make_array<std::pair<int, int>>(
+    std::make_pair(RGY_LOG_TRACE, AMF_TRACE_TRACE),
+    std::make_pair(RGY_LOG_DEBUG, AMF_TRACE_DEBUG),
+    std::make_pair(RGY_LOG_INFO,  AMF_TRACE_INFO),
+    std::make_pair(RGY_LOG_WARN,  AMF_TRACE_WARNING),
+    std::make_pair(RGY_LOG_ERROR, AMF_TRACE_ERROR)
+    );
+MAP_PAIR_0_1(loglevel, rgy, int, enc, int, RGY_LOGLEVEL_TO_VCE, RGY_LOG_INFO, AMF_TRACE_INFO);
 
 __declspec(noinline)
 AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM picstruct_rgy_to_enc(RGY_PICSTRUCT picstruct) {
@@ -190,35 +200,29 @@ __declspec(noinline)
 VideoInfo videooutputinfo(
     RGY_CODEC codec,
     amf::AMF_SURFACE_FORMAT encFormat,
-    ParametersStorage& prm,
+    const AMFParams& prm,
     RGY_PICSTRUCT picstruct,
     const VideoVUIInfo& vui) {
 
-    const int bframes = (codec == RGY_CODEC_H264) ? getprm<int>(prm, AMF_VIDEO_ENCODER_B_PIC_PATTERN) : 0;
+    const int bframes = (codec == RGY_CODEC_H264) ? prm.get<int>(AMF_VIDEO_ENCODER_B_PIC_PATTERN) : 0;
 
     VideoInfo info;
     memset(&info, 0, sizeof(info));
     info.codec = codec;
-    info.codecLevel = getprm<int>(prm, AMF_PARAM_PROFILE_LEVEL(codec));
-    info.codecProfile = getprm<int>(prm, AMF_PARAM_PROFILE(codec));
+    info.codecLevel = prm.get<int>(AMF_PARAM_PROFILE_LEVEL(codec));
+    info.codecProfile = prm.get<int>(AMF_PARAM_PROFILE(codec));
     info.videoDelay = ((bframes > 0) + (bframes > 2));
-    info.dstWidth = getprm<int>(prm, VCE_PARAM_KEY_OUTPUT_WIDTH);
-    info.dstHeight = getprm<int>(prm, VCE_PARAM_KEY_OUTPUT_HEIGHT);
-    info.fpsN = getprm<AMFRate>(prm, AMF_PARAM_FRAMERATE(codec)).num;
-    info.fpsD = getprm<AMFRate>(prm, AMF_PARAM_FRAMERATE(codec)).den;
-    info.sar[0] = getprm<AMFRatio>(prm, AMF_PARAM_ASPECT_RATIO(codec)).num;
-    info.sar[1] = getprm<AMFRatio>(prm, AMF_PARAM_ASPECT_RATIO(codec)).den;
+    info.dstWidth = prm.get<int>(VCE_PARAM_KEY_OUTPUT_WIDTH);
+    info.dstHeight = prm.get<int>(VCE_PARAM_KEY_OUTPUT_HEIGHT);
+    info.fpsN = prm.get<AMFRate>(AMF_PARAM_FRAMERATE(codec)).num;
+    info.fpsD = prm.get<AMFRate>(AMF_PARAM_FRAMERATE(codec)).den;
+    info.sar[0] = prm.get<AMFRatio>(AMF_PARAM_ASPECT_RATIO(codec)).num;
+    info.sar[1] = prm.get<AMFRatio>(AMF_PARAM_ASPECT_RATIO(codec)).den;
     adjust_sar(&info.sar[0], &info.sar[1], info.dstWidth, info.dstHeight);
     info.picstruct = picstruct;
     info.csp = csp_enc_to_rgy(encFormat);
     info.vui = vui;
     return info;
-}
-template<>
-int getprm(ParametersStorage& prm, const wchar_t *key) {
-    int64_t value;
-    prm.GetParam(key, value);
-    return (int)value;
 }
 
 //TODO: ちゃんと動的にチェックする

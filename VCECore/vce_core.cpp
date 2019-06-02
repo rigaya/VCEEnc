@@ -51,217 +51,18 @@
 #include "vce_param.h"
 #include "rgy_version.h"
 #include "rgy_bitstream.h"
-#include "vce_input.h"
-#include "vce_output.h"
 #include "chapter_rw.h"
 
 #include "VideoEncoderVCE.h"
 #include "VideoEncoderHEVC.h"
 #include "VideoDecoderUVD.h"
 #include "VideoConverter.h"
-#include "EncoderParamsAVC.h"
-#include "EncoderParamsHEVC.h"
+#include "Factory.h"
 
 #include "h264_level.h"
 #include "hevc_level.h"
 
-#define ENCODER_SUBMIT_TIME     L"EncoderSubmitTime"  // private property to track submit tyme
-
 static const amf::AMF_SURFACE_FORMAT formatOut = amf::AMF_SURFACE_NV12;
-
-typedef decltype(WriteFile)* funcWriteFile;
-static funcWriteFile origWriteFileFunc = nullptr;
-static HANDLE hStdOut = NULL;
-static HANDLE hStdErr = NULL;
-BOOL __stdcall WriteFileHook(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped) {
-    if (hFile == hStdOut || hFile == hStdErr) {
-        //フィルタリングするメッセージ
-        const char *mes_filter[] = {
-            "Found NALU with forbidden_bit set, bit error",
-            "read_new_slice: Found NALU_TYPE_FILL,",
-            "Skipping these filling bits, proceeding w/ next NALU"
-        };
-        for (int i = 0; i < _countof(mes_filter); i++) {
-            if (0 == strncmp((const char *)lpBuffer, mes_filter[i], strlen(mes_filter[i]))) {
-                *lpNumberOfBytesWritten = 0;
-                return FALSE;
-            }
-        }
-    }
-    return origWriteFileFunc(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
-}
-
-class VCECore::PipelineElementAMFComponent : public PipelineElement {
-public:
-    PipelineElementAMFComponent(amf::AMFComponentPtr pComponent) :
-        m_pComponent(pComponent) {
-
-    }
-
-    virtual ~PipelineElementAMFComponent() {
-    }
-
-    virtual AMF_RESULT SubmitInput(amf::AMFData* pData) {
-        __try {
-            AMF_RESULT res = AMF_OK;
-            if (pData == NULL) // EOF
-            {
-                res = m_pComponent->Drain();
-            } else {
-                res = m_pComponent->SubmitInput(pData);
-                if (res == AMF_DECODER_NO_FREE_SURFACES || res == AMF_INPUT_FULL) {
-                    return AMF_INPUT_FULL;
-                }
-            }
-            return res;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            return AMF_FAIL;
-        }
-    }
-
-    virtual AMF_RESULT QueryOutput(amf::AMFData** ppData) {
-        AMF_RESULT res = AMF_OK;
-        amf::AMFDataPtr data;
-        res = m_pComponent->QueryOutput(&data);
-        if (res == AMF_REPEAT) {
-            res = AMF_OK;
-        }
-        if (res == AMF_EOF && data == NULL) {
-        }
-        if (data != NULL) {
-            *ppData = data.Detach();
-        }
-        return res;
-    }
-    virtual AMF_RESULT Drain(amf_int32 inputSlot) {
-        inputSlot;
-        return m_pComponent->Drain();
-    }
-    virtual amf_int32 GetInputSlotCount() const override {
-        return 1;
-    }
-    virtual amf_int32 GetOutputSlotCount() const override {
-        return 1;
-    }
-protected:
-    amf::AMFComponentPtr m_pComponent;
-};
-
-class VCECore::PipelineElementEncoder : public PipelineElementAMFComponent {
-public:
-    PipelineElementEncoder(amf::AMFComponentPtr pComponent,
-        ParametersStorage* pParams, amf_int64 frameParameterFreq,
-        amf_int64 dynamicParameterFreq, bool bCFR) :
-        PipelineElementAMFComponent(pComponent), m_pParams(pParams),
-        m_framesSubmitted(0), m_framesQueried(0),
-        m_frameParameterFreq(frameParameterFreq),
-        m_dynamicParameterFreq(dynamicParameterFreq),
-        m_maxLatencyTime(0), m_TotalLatencyTime(0),
-        m_maxLatencyFrame(0), m_LastReadyFrameTime(0),
-        m_bCFR(bCFR) {
-
-    }
-
-    virtual ~PipelineElementEncoder() {
-    }
-
-    virtual AMF_RESULT SubmitInput(amf::AMFData* pData) {
-        AMF_RESULT res = AMF_OK;
-        if (pData == NULL) // EOF
-        {
-            res = m_pComponent->Drain();
-        } else {
-            amf_int64 submitTime = 0;
-            amf_int64 currentTime = amf_high_precision_clock();
-            if (pData->GetProperty(ENCODER_SUBMIT_TIME, &submitTime) != AMF_OK) {
-                pData->SetProperty(ENCODER_SUBMIT_TIME, currentTime);
-            }
-            amf::AMFSurfacePtr surface(pData);
-            //fprintf(stderr, "%dx%d, format: %d, planes: %d, frame type: %d\n",
-            //    surface->GetPlaneAt(0)->GetWidth(),
-            //    surface->GetPlaneAt(0)->GetHeight(),
-            //    surface->GetFormat(),
-            //    surface->GetPlanesCount(),
-            //    surface->GetFrameType());
-            //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
-            surface->SetFrameType(amf::AMF_FRAME_PROGRESSIVE);
-            if (m_bCFR) {
-                surface->SetPts(m_framesSubmitted);
-            }
-            if (m_frameParameterFreq != 0 && m_framesSubmitted != 0
-                && (m_framesSubmitted % m_frameParameterFreq) == 0) { // apply frame-specific properties to the current frame
-                PushParamsToPropertyStorage(m_pParams, ParamEncoderFrame, pData);
-            }
-            if (m_dynamicParameterFreq != 0 && m_framesSubmitted != 0
-                && (m_framesSubmitted % m_dynamicParameterFreq)
-                == 0) { // apply dynamic properties to the encoder
-                PushParamsToPropertyStorage(m_pParams, ParamEncoderDynamic,
-                    m_pComponent);
-            }
-            //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
-            //フレーム情報のほうもプログレに書き換えなければ、SubmitInputでエラーが返る
-            m_pParams->SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE, AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD);
-            res = m_pComponent->SubmitInput(pData);
-            if (res == AMF_DECODER_NO_FREE_SURFACES || res == AMF_INPUT_FULL) {
-                return AMF_INPUT_FULL;
-            }
-            m_framesSubmitted++;
-        }
-        return res;
-    }
-
-    virtual AMF_RESULT QueryOutput(amf::AMFData** ppData) {
-        AMF_RESULT ret = PipelineElementAMFComponent::QueryOutput(ppData);
-        if (ret == AMF_OK && *ppData != NULL) {
-            amf_int64 currentTime = amf_high_precision_clock();
-            amf_int64 submitTime = 0;
-            if ((*ppData)->GetProperty(ENCODER_SUBMIT_TIME, &submitTime)
-                == AMF_OK) {
-                amf_int64 latencyTime = currentTime - AMF_MAX(submitTime,
-                    m_LastReadyFrameTime);
-                if (m_maxLatencyTime < latencyTime) {
-                    m_maxLatencyTime = latencyTime;
-                    m_maxLatencyFrame = m_framesQueried;
-                }
-                m_TotalLatencyTime += latencyTime;
-            }
-            m_framesQueried++;
-            m_LastReadyFrameTime = currentTime;
-        }
-        return ret;
-    }
-    virtual AMF_RESULT Drain(amf_int32 inputSlot) {
-        inputSlot;
-        return m_pComponent->Drain();
-    }
-    virtual std::wstring GetDisplayResult() {
-        std::wstring ret;
-        if (m_framesSubmitted > 0) {
-            std::wstringstream messageStream;
-            messageStream.precision(1);
-            messageStream.setf(std::ios::fixed, std::ios::floatfield);
-            double averageLatency = double(m_TotalLatencyTime) / 10000.
-                / m_framesQueried;
-            double maxLatency = double(m_maxLatencyTime) / 10000.;
-            messageStream << L" Average (Max, fr#) Encode Latency: "
-                << averageLatency << L" ms (" << maxLatency
-                << " ms frame# " << m_maxLatencyFrame << L")";
-            ret = messageStream.str();
-        }
-        return ret;
-    }
-protected:
-    ParametersStorage* m_pParams;
-    amf_int m_framesSubmitted;
-    amf_int m_framesQueried;
-    amf_int64 m_frameParameterFreq;
-    amf_int64 m_dynamicParameterFreq;
-    amf_int64 m_maxLatencyTime;
-    amf_int64 m_TotalLatencyTime;
-    amf_int64 m_LastReadyFrameTime;
-    amf_int m_maxLatencyFrame;
-    bool m_bCFR;
-};
 
 tstring VCECore::AccelTypeToString(amf::AMF_ACCELERATION_TYPE accelType) {
     tstring strValue;
@@ -298,10 +99,6 @@ void VCECore::PrintMes(int log_level, const TCHAR *format, ...) {
     m_pLog->write(log_level, buffer.data());
 }
 
-
-
-
-
 VCECore::VCECore() :
     m_encCodec(RGY_CODEC_UNKNOWN),
     m_pLog(),
@@ -321,17 +118,22 @@ VCECore::VCECore() :
     m_inputFps(),
     m_outputFps(),
     m_outputTimebase(),
+    m_dll(),
+    m_pFactory(nullptr),
+    m_pDebug(nullptr),
+    m_pTrace(nullptr),
+    m_tracer(),
+    m_AMFRuntimeVersion(0),
     m_pContext(),
-    m_pStreamOut(),
+    m_state(RGY_STATE_STOPPED),
     m_pTrimParam(nullptr),
     m_pDecoder(),
     m_pEncoder(),
     m_pConverter(),
-    m_thStreamSender(),
-    m_deviceDX9(),
-    m_deviceDX11(),
-    m_Params(),
-    m_apihook() {
+    m_thDecoder(),
+    m_thOutput(),
+    m_params(),
+    m_pAbortByUser(nullptr) {
 }
 
 VCECore::~VCECore() {
@@ -344,14 +146,8 @@ void VCECore::Terminate() {
         PrintMes(RGY_LOG_DEBUG, _T("timeEndPeriod(1)\n"));
         m_bTimerPeriodTuning = false;
     }
-    PrintMes(RGY_LOG_DEBUG, _T("Stopping pipeline...\n"));
-    if (m_thStreamSender.joinable()) {
-        m_thStreamSender.join();
-    }
-    Pipeline::Stop();
+    m_state = RGY_STATE_STOPPED;
     PrintMes(RGY_LOG_DEBUG, _T("Pipeline Stopped.\n"));
-
-    m_pStreamOut = NULL;
 
     m_pTrimParam = nullptr;
 
@@ -375,9 +171,6 @@ void VCECore::Terminate() {
         m_pContext = nullptr;
     }
 
-    m_deviceDX9.Terminate();
-    m_deviceDX11.Terminate();
-
     m_pFileWriterListAudio.clear();
     m_pFileWriter.reset();
     m_AudioReaders.clear();
@@ -385,6 +178,11 @@ void VCECore::Terminate() {
     m_pStatus.reset();
     m_pLog.reset();
     m_encCodec = RGY_CODEC_UNKNOWN;
+    m_pAbortByUser = nullptr;
+}
+
+void VCECore::SetAbortFlagPointer(bool *abortFlag) {
+    m_pAbortByUser = abortFlag;
 }
 
 RGY_ERR VCECore::readChapterFile(tstring chapfile) {
@@ -790,7 +588,7 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
     const auto outputVideoInfo = videooutputinfo(
         inputParams->codec,
         formatOut,
-        m_Params,
+        m_params,
         inputParams->input.picstruct,
         inputParams->vui
     );
@@ -1044,63 +842,12 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCECore::initDeviceDX9(VCEParam *prm) {
-    AMF_RESULT res = AMF_OK;
-    const auto inInfo = m_pFileReader->GetInputFrameInfo();
-    if (AMF_OK != (res = m_deviceDX9.Init(true, prm->deviceID, false, inInfo.srcWidth, inInfo.srcHeight))) {
-        PrintMes(RGY_LOG_DEBUG, _T("m_deviceDX9.Init() failed: %s.\n"), AMFRetString(res));
-        return err_to_rgy(res);
+RGY_ERR VCECore::initDevice(int deviceId) {
+    auto amferr = m_pContext->InitOpenCL();
+    if (amferr != AMF_OK) {
+        PrintMes(RGY_LOG_ERROR, _T("Unsupported memory type.\n"));
+        return err_to_rgy(amferr);
     }
-    PrintMes(RGY_LOG_DEBUG, _T("initialized DX9 device.\n"));
-    if (AMF_OK != (res = m_pContext->InitDX9(m_deviceDX9.GetDevice()))) {
-        PrintMes(RGY_LOG_DEBUG, _T("InitDX9: fail: %s.\n"), AMFRetString(res));
-        return err_to_rgy(res);
-    }
-    PrintMes(RGY_LOG_DEBUG, _T("InitDX9: success.\n"));
-    return RGY_ERR_NONE;
-}
-
-RGY_ERR VCECore::initDeviceDX11(VCEParam *prm) {
-    AMF_RESULT res = AMF_OK;
-    if (AMF_OK != (res = m_deviceDX11.Init(prm->deviceID, false))) {
-        PrintMes(RGY_LOG_DEBUG, _T("m_deviceDX11.Init() failed: %s.\n"), AMFRetString(res));
-        return err_to_rgy(res);
-    }
-    PrintMes(RGY_LOG_DEBUG, _T("initialized DX11 device.\n"));
-    if (AMF_OK != (res = m_pContext->InitDX11(m_deviceDX11.GetDevice()))) {
-        PrintMes(RGY_LOG_DEBUG, _T("InitDX11: fail: %s.\n"), AMFRetString(res));
-        return err_to_rgy(res);
-    }
-    PrintMes(RGY_LOG_DEBUG, _T("InitDX11: success.\n"));
-    return RGY_ERR_NONE;
-}
-
-RGY_ERR VCECore::initDevice(VCEParam *prm) {
-    RGY_ERR err = RGY_ERR_NONE;
-    if (prm->memoryTypeIn == amf::AMF_MEMORY_UNKNOWN
-        || prm->memoryTypeIn == amf::AMF_MEMORY_DX9) {
-        if (RGY_ERR_NONE == (err = initDeviceDX9(prm))) {
-            PrintMes(RGY_LOG_DEBUG, _T("initialized context for DX9.\n"));
-            prm->memoryTypeIn = amf::AMF_MEMORY_DX9;
-            return RGY_ERR_NONE;
-        }
-        if (prm->memoryTypeIn == amf::AMF_MEMORY_DX9) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to initialize DX9 device: %s.\n"), get_err_mes(err));
-            return err;
-        }
-        PrintMes(RGY_LOG_DEBUG, _T("Failed to initialize DX9 device (%s), try DX11.\n"), get_err_mes(err));
-    }
-    if (prm->memoryTypeIn == amf::AMF_MEMORY_UNKNOWN
-        || prm->memoryTypeIn == amf::AMF_MEMORY_DX11) {
-        if (RGY_ERR_NONE == (err = initDeviceDX11(prm))) {
-            PrintMes(RGY_LOG_DEBUG, _T("initialized context for DX11.\n"));
-            prm->memoryTypeIn = amf::AMF_MEMORY_DX11;
-            return RGY_ERR_NONE;
-        }
-        PrintMes(RGY_LOG_ERROR, _T("Failed to initialize DX11 device: %s.\n"), get_err_mes(err));
-        return err;
-    }
-    PrintMes(RGY_LOG_ERROR, _T("Unsupported memory type.\n"));
     return RGY_ERR_NONE;
 }
 
@@ -1115,14 +862,14 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
     }
     auto codec_uvd_name = codec_rgy_to_dec(inputCodec);
     if (codec_uvd_name == nullptr) {
-        PrintMes(RGY_LOG_ERROR, _T("Input codec \"%s\" not supported.\n"), CodecToStr(inputCodec));
+        PrintMes(RGY_LOG_ERROR, _T("Input codec \"%s\" not supported.\n"), CodecToStr(inputCodec).c_str());
         return RGY_ERR_UNSUPPORTED;
     }
     if (inputCodec == RGY_CODEC_HEVC && prm->input.csp == RGY_CSP_P010) {
         codec_uvd_name = AMFVideoDecoderHW_H265_MAIN10;
     }
     PrintMes(RGY_LOG_DEBUG, _T("decoder: use codec \"%s\".\n"), wstring_to_tstring(codec_uvd_name).c_str());
-    auto res = g_AMFFactory.GetFactory()->CreateComponent(m_pContext, codec_uvd_name, &m_pDecoder);
+    auto res = m_pFactory->CreateComponent(m_pContext, codec_uvd_name, &m_pDecoder);
     if (res != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to create decoder context: %s\n"), AMFRetString(res));
         return err_to_rgy(res);
@@ -1149,7 +896,7 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
 
     PrintMes(RGY_LOG_DEBUG, _T("initialize decoder: %dx%d, %s.\n"),
         prm->input.srcWidth, prm->input.srcHeight,
-        wstring_to_tstring(g_AMFFactory.GetTrace()->SurfaceGetFormatName(csp_rgy_to_enc(prm->input.csp))).c_str());
+        wstring_to_tstring(m_pTrace->SurfaceGetFormatName(csp_rgy_to_enc(prm->input.csp))).c_str());
     if (AMF_OK != (res = m_pDecoder->Init(csp_rgy_to_enc(prm->input.csp), prm->input.srcWidth, prm->input.srcHeight))) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to init decoder: %s\n"), AMFRetString(res));
         return err_to_rgy(res);
@@ -1169,20 +916,20 @@ RGY_ERR VCECore::initConverter(VCEParam *prm) {
         PrintMes(RGY_LOG_DEBUG, _T("converter not required.\n"));
         return RGY_ERR_NONE;
     }
-    auto res = g_AMFFactory.GetFactory()->CreateComponent(m_pContext, AMFVideoConverter, &m_pConverter);
+    auto res = m_pFactory->CreateComponent(m_pContext, AMFVideoConverter, &m_pConverter);
     if (res != AMF_OK) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to create converter context: %s\n"), AMFRetString(res));
         return err_to_rgy(res);
     }
     PrintMes(RGY_LOG_DEBUG, _T("created converter context.\n"));
 
-    res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_MEMORY_TYPE, prm->memoryTypeIn);
+    res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_MEMORY_TYPE, amf::AMF_MEMORY_OPENCL);
     res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_FORMAT, formatOut);
     res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_SIZE, AMFConstructSize(prm->input.dstWidth, prm->input.dstHeight));
     res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_SCALE, AMF_VIDEO_CONVERTER_SCALE_BICUBIC);
     PrintMes(RGY_LOG_DEBUG, _T("initialize converter by mem type %s, format out %s, output size %dx%x.\n"),
-        wstring_to_tstring(g_AMFFactory.GetTrace()->GetMemoryTypeName(prm->memoryTypeIn)).c_str(),
-        wstring_to_tstring(g_AMFFactory.GetTrace()->SurfaceGetFormatName(formatOut)).c_str(),
+        wstring_to_tstring(m_pTrace->GetMemoryTypeName(amf::AMF_MEMORY_OPENCL)).c_str(),
+        wstring_to_tstring(m_pTrace->SurfaceGetFormatName(formatOut)).c_str(),
         prm->input.dstWidth, prm->input.dstHeight);
     if (AMF_OK != (res = m_pConverter->Init(formatOut, prm->input.srcWidth, prm->input.srcHeight))) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to init converter: %s\n"), AMFRetString(res));
@@ -1190,6 +937,18 @@ RGY_ERR VCECore::initConverter(VCEParam *prm) {
     }
     PrintMes(RGY_LOG_DEBUG, _T("initialized converter.\n"));
     return RGY_ERR_NONE;
+}
+
+RGY_ERR VCECore::getEncCaps(RGY_CODEC codec, amf::AMFCapsPtr &encoderCaps) {
+    amf::AMFComponentPtr p_encoder;
+    auto ret = m_pFactory->CreateComponent(m_pContext, codec_rgy_to_enc(codec), &p_encoder);
+    if (ret == AMF_OK) {
+        //HEVCでのAMFComponent::GetCaps()は、AMFComponent::Init()を呼んでおかないと成功しない
+        p_encoder->Init(amf::AMF_SURFACE_NV12, 1280, 720);
+        auto sts = p_encoder->GetCaps(&encoderCaps);
+    }
+    p_encoder->Release();
+    return err_to_rgy(ret);
 }
 
 tstring VCECore::QueryIOCaps(amf::AMFIOCapsPtr& ioCaps) {
@@ -1217,7 +976,7 @@ tstring VCECore::QueryIOCaps(amf::AMFIOCapsPtr& ioCaps) {
             amf_bool native = false;
             if (ioCaps->GetFormatAt(i, &format, &native) == AMF_OK) {
                 if (i) str += _T(", ");
-                str += wstring_to_tstring(g_AMFFactory.GetTrace()->SurfaceGetFormatName(format)) + ((native) ? _T("(native)") : _T(""));
+                str += wstring_to_tstring(m_pTrace->SurfaceGetFormatName(format)) + ((native) ? _T("(native)") : _T(""));
             }
         }
         str += _T("\n");
@@ -1230,7 +989,7 @@ tstring VCECore::QueryIOCaps(amf::AMFIOCapsPtr& ioCaps) {
                 amf_bool native = false;
                 if (ioCaps->GetMemoryTypeAt(i, &memType, &native) == AMF_OK) {
                     if (i) str += _T(", ");
-                    str += wstring_to_tstring(g_AMFFactory.GetTrace()->GetMemoryTypeName(memType)) + ((native) ? _T("(native)") : _T(""));
+                    str += wstring_to_tstring(m_pTrace->GetMemoryTypeName(memType)) + ((native) ? _T("(native)") : _T(""));
                 }
             }
         }
@@ -1307,22 +1066,22 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     if (m_pLog->getLogLevel() <= RGY_LOG_DEBUG) {
         TCHAR cpuInfo[256] = { 0 };
         TCHAR gpu_info[1024] = { 0 };
-        std::wstring deviceName = (m_deviceDX9.GetDevice() == nullptr) ? m_deviceDX11.GetDisplayDeviceName() : m_deviceDX9.GetDisplayDeviceName();
-        deviceName = str_replace(deviceName, L" (TM)", L"");
-        deviceName = str_replace(deviceName, L" (R)", L"");
-        deviceName = str_replace(deviceName, L" Series", L"");
-        deviceName = str_replace(deviceName, L" Graphics", L"");
+        //std::wstring deviceName = (m_deviceDX9.GetDevice() == nullptr) ? m_deviceDX11.GetDisplayDeviceName() : m_deviceDX9.GetDisplayDeviceName();
+        //deviceName = str_replace(deviceName, L" (TM)", L"");
+        //deviceName = str_replace(deviceName, L" (R)", L"");
+        //deviceName = str_replace(deviceName, L" Series", L"");
+        //deviceName = str_replace(deviceName, L" Graphics", L"");
         getCPUInfo(cpuInfo, _countof(cpuInfo));
         getGPUInfo("Advanced Micro Devices", gpu_info, _countof(gpu_info));
         PrintMes(RGY_LOG_DEBUG, _T("VCEEnc    %s (%s)\n"), VER_STR_FILEVERSION_TCHAR, BUILD_ARCH_STR);
         PrintMes(RGY_LOG_DEBUG, _T("OS        %s (%s)\n"), getOSVersion().c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"));
         PrintMes(RGY_LOG_DEBUG, _T("CPU Info  %s\n"), cpuInfo);
-        PrintMes(RGY_LOG_DEBUG, _T("GPU Info  %s [%s]\n"), wstring_to_string(deviceName).c_str(), gpu_info);
+        PrintMes(RGY_LOG_DEBUG, _T("GPU Info  %s\n"), gpu_info);
     }
 
     m_encCodec = prm->codec;
     const amf::AMF_SURFACE_FORMAT formatIn = amf::AMF_SURFACE_NV12;
-    if (AMF_OK != (res = g_AMFFactory.GetFactory()->CreateComponent(m_pContext, codec_rgy_to_enc(prm->codec), &m_pEncoder))) {
+    if (AMF_OK != (res = m_pFactory->CreateComponent(m_pContext, codec_rgy_to_enc(prm->codec), &m_pEncoder))) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to AMFCreateComponent: %s.\n"), AMFRetString(res));
         return err_to_rgy(res);
     }
@@ -1431,7 +1190,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
                 }
             }
             if (!formatSupported) {
-                PrintMes(RGY_LOG_ERROR, _T("Input format %s not supported on this platform.\n"), g_AMFFactory.GetTrace()->SurfaceGetFormatName(formatIn));
+                PrintMes(RGY_LOG_ERROR, _T("Input format %s not supported on this platform.\n"), m_pTrace->SurfaceGetFormatName(formatIn));
                 return RGY_ERR_UNSUPPORTED;
             }
         }
@@ -1465,39 +1224,39 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
                 }
             }
             if (!formatSupported) {
-                PrintMes(RGY_LOG_ERROR, _T("Output format %s not supported on this platform.\n"), g_AMFFactory.GetTrace()->SurfaceGetFormatName(formatIn));
+                PrintMes(RGY_LOG_ERROR, _T("Output format %s not supported on this platform.\n"), m_pTrace->SurfaceGetFormatName(formatIn));
                 return RGY_ERR_UNSUPPORTED;
             }
         }
     }
 
-    m_Params.SetParamDescription(VCE_PARAM_KEY_INPUT,         ParamCommon, L"Input file name", NULL);
-    m_Params.SetParamDescription(VCE_PARAM_KEY_INPUT_WIDTH,   ParamCommon, L"Input Frame width (integer, default = 0)", ParamConverterInt64);
-    m_Params.SetParamDescription(VCE_PARAM_KEY_INPUT_HEIGHT,  ParamCommon, L"Input Frame height (integer, default = 0)", ParamConverterInt64);
-    m_Params.SetParamDescription(VCE_PARAM_KEY_OUTPUT,        ParamCommon, L"Output file name", NULL);
-    m_Params.SetParamDescription(VCE_PARAM_KEY_OUTPUT_WIDTH,  ParamCommon, L"Output Frame width (integer, default = 0)", ParamConverterInt64);
-    m_Params.SetParamDescription(VCE_PARAM_KEY_OUTPUT_HEIGHT, ParamCommon, L"Output Frame height (integer, default = 0)", ParamConverterInt64);
-    m_Params.SetParamDescription(VCE_PARAM_KEY_ENGINE,        ParamCommon, L"Specifies decoder/encoder engine type (DX9, DX11)", NULL);
-    m_Params.SetParamDescription(VCE_PARAM_KEY_ADAPTERID,     ParamCommon, L"Specifies adapter ID (integer, default = 0)", ParamConverterInt64);
-    m_Params.SetParamDescription(VCE_PARAM_KEY_CAPABILITY,    ParamCommon, L"Enable/Disable to display the device capabilities (true, false default =  false)", ParamConverterBoolean);
+    m_params.SetParamType(VCE_PARAM_KEY_INPUT,         AMF_PARAM_COMMON, L"Input file name");
+    m_params.SetParamType(VCE_PARAM_KEY_INPUT_WIDTH,   AMF_PARAM_COMMON, L"Input Frame width (integer, default = 0)");
+    m_params.SetParamType(VCE_PARAM_KEY_INPUT_HEIGHT,  AMF_PARAM_COMMON, L"Input Frame height (integer, default = 0)");
+    m_params.SetParamType(VCE_PARAM_KEY_OUTPUT,        AMF_PARAM_COMMON, L"Output file name");
+    m_params.SetParamType(VCE_PARAM_KEY_OUTPUT_WIDTH,  AMF_PARAM_COMMON, L"Output Frame width (integer, default = 0)");
+    m_params.SetParamType(VCE_PARAM_KEY_OUTPUT_HEIGHT, AMF_PARAM_COMMON, L"Output Frame height (integer, default = 0)");
+    m_params.SetParamType(VCE_PARAM_KEY_ENGINE,        AMF_PARAM_COMMON, L"Specifies decoder/encoder engine type (DX9, DX11)");
+    m_params.SetParamType(VCE_PARAM_KEY_ADAPTERID,     AMF_PARAM_COMMON, L"Specifies adapter ID (integer, default = 0)");
+    m_params.SetParamType(VCE_PARAM_KEY_CAPABILITY,    AMF_PARAM_COMMON, L"Enable/Disable to display the device capabilities (true, false default =  false)");
 
     switch (prm->codec) {
     case RGY_CODEC_H264:
-        RegisterEncoderParamsAVC(&m_Params);
+        m_params.SetParamTypeAVC();
         break;
     case RGY_CODEC_HEVC:
-        RegisterEncoderParamsHEVC(&m_Params);
+        m_params.SetParamTypeHEVC();
         //なぜかパラメータセットに登録されていないのでここで追加。
-        m_Params.SetParamDescription(AMF_PARAM_ASPECT_RATIO(prm->codec), ParamEncoderStatic, L"", ParamConverterRatio);
+        m_params.SetParamType(AMF_PARAM_ASPECT_RATIO(prm->codec), AMF_PARAM_STATIC, L"");
         break;
     default:
         PrintMes(RGY_LOG_ERROR, _T("Unknown Codec.\n"));
         return RGY_ERR_UNSUPPORTED;
     }
 
-    m_Params.SetParamAsString(VCE_PARAM_KEY_INPUT,     tchar_to_wstring(prm->inputFilename));
-    m_Params.SetParamAsString(VCE_PARAM_KEY_OUTPUT,    tchar_to_wstring(prm->outputFilename));
-    m_Params.SetParam(VCE_PARAM_KEY_ADAPTERID, (amf_int64)0);
+    m_params.SetParam(VCE_PARAM_KEY_INPUT, tchar_to_wstring(prm->inputFilename).c_str());
+    m_params.SetParam(VCE_PARAM_KEY_OUTPUT, tchar_to_wstring(prm->outputFilename).c_str());
+    m_params.SetParam(VCE_PARAM_KEY_ADAPTERID, 0);
 
     int nGOPLen = prm->nGOPLen;
     if (nGOPLen == 0) {
@@ -1538,95 +1297,95 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         }
     }
 
-    m_Params.SetParam(VCE_PARAM_KEY_INPUT_WIDTH,   (amf_int64)prm->input.srcWidth);
-    m_Params.SetParam(VCE_PARAM_KEY_INPUT_HEIGHT,  (amf_int64)prm->input.srcHeight);
-    m_Params.SetParam(VCE_PARAM_KEY_OUTPUT_WIDTH,  (amf_int64)prm->input.dstWidth);
-    m_Params.SetParam(VCE_PARAM_KEY_OUTPUT_HEIGHT, (amf_int64)prm->input.dstHeight);
-    m_Params.SetParam(VCE_PARAM_KEY_CAPABILITY,    false);
-    m_Params.SetParam(SETFRAMEPARAMFREQ_PARAM_NAME,   0);
-    m_Params.SetParam(SETDYNAMICPARAMFREQ_PARAM_NAME, 0);
+    m_params.SetParam(VCE_PARAM_KEY_INPUT_WIDTH, prm->input.srcWidth);
+    m_params.SetParam(VCE_PARAM_KEY_INPUT_HEIGHT, prm->input.srcHeight);
+    m_params.SetParam(VCE_PARAM_KEY_OUTPUT_WIDTH, prm->input.dstWidth);
+    m_params.SetParam(VCE_PARAM_KEY_OUTPUT_HEIGHT, prm->input.dstHeight);
+    m_params.SetParam(VCE_PARAM_KEY_CAPABILITY,    false);
+    m_params.SetParam(SETFRAMEPARAMFREQ_PARAM_NAME,   0);
+    m_params.SetParam(SETDYNAMICPARAMFREQ_PARAM_NAME, 0);
 
-    m_Params.SetParam(AMF_PARAM_FRAMESIZE(prm->codec),      AMFConstructSize(prm->input.dstWidth, prm->input.dstHeight));
-    m_Params.SetParam(AMF_PARAM_FRAMERATE(prm->codec),      AMFConstructRate(m_outputFps.n(), m_outputFps.d()));
-    m_Params.SetParam(AMF_PARAM_ASPECT_RATIO(prm->codec),   AMFConstructRatio(prm->input.sar[0], prm->input.sar[1]));
-    m_Params.SetParam(AMF_PARAM_USAGE(prm->codec),          (amf_int64)((prm->codec == RGY_CODEC_HEVC) ? AMF_VIDEO_ENCODER_HEVC_USAGE_TRANSCONDING : AMF_VIDEO_ENCODER_USAGE_TRANSCONDING));
-    m_Params.SetParam(AMF_PARAM_PROFILE(prm->codec),        (amf_int64)prm->codecParam[prm->codec].nProfile);
-    m_Params.SetParam(AMF_PARAM_PROFILE_LEVEL(prm->codec),  (amf_int64)prm->codecParam[prm->codec].nLevel);
-    m_Params.SetParam(AMF_PARAM_QUALITY_PRESET(prm->codec), (amf_int64)get_quality_preset(prm->codec)[prm->qualityPreset]);
-    m_Params.SetParam(AMF_PARAM_QP_I(prm->codec),           (amf_int64)prm->nQPI);
-    m_Params.SetParam(AMF_PARAM_QP_P(prm->codec),           (amf_int64)prm->nQPP);
-    m_Params.SetParam(AMF_PARAM_TARGET_BITRATE(prm->codec), (amf_int64)prm->nBitrate * 1000);
-    m_Params.SetParam(AMF_PARAM_PEAK_BITRATE(prm->codec),   (amf_int64)prm->nMaxBitrate * 1000);
-    m_Params.SetParam(AMF_PARAM_MAX_NUM_REFRAMES(prm->codec), (amf_int64)prm->nRefFrames);
-    m_Params.SetParam(AMF_PARAM_MAX_LTR_FRAMES(prm->codec), (amf_int64)prm->nLTRFrames);
-    m_Params.SetParam(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(prm->codec),  prm->bEnableSkipFrame);
-    m_Params.SetParam(AMF_PARAM_RATE_CONTROL_METHOD(prm->codec),             (amf_int64)prm->rateControl);
-    m_Params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), prm->preAnalysis);
-    m_Params.SetParam(AMF_PARAM_VBV_BUFFER_SIZE(prm->codec),                 (amf_int64)prm->nVBVBufferSize * 1000);
-    m_Params.SetParam(AMF_PARAM_INITIAL_VBV_BUFFER_FULLNESS(prm->codec),     (amf_int64)prm->nInitialVBVPercent);
+    m_params.SetParam(AMF_PARAM_FRAMESIZE(prm->codec),      AMFConstructSize(prm->input.dstWidth, prm->input.dstHeight));
+    m_params.SetParam(AMF_PARAM_FRAMERATE(prm->codec),      AMFConstructRate(m_outputFps.n(), m_outputFps.d()));
+    m_params.SetParam(AMF_PARAM_ASPECT_RATIO(prm->codec),   AMFConstructRatio(prm->input.sar[0], prm->input.sar[1]));
+    m_params.SetParam(AMF_PARAM_USAGE(prm->codec),          (amf_int64)((prm->codec == RGY_CODEC_HEVC) ? AMF_VIDEO_ENCODER_HEVC_USAGE_TRANSCONDING : AMF_VIDEO_ENCODER_USAGE_TRANSCONDING));
+    m_params.SetParam(AMF_PARAM_PROFILE(prm->codec),        (amf_int64)prm->codecParam[prm->codec].nProfile);
+    m_params.SetParam(AMF_PARAM_PROFILE_LEVEL(prm->codec),  (amf_int64)prm->codecParam[prm->codec].nLevel);
+    m_params.SetParam(AMF_PARAM_QUALITY_PRESET(prm->codec), (amf_int64)get_quality_preset(prm->codec)[prm->qualityPreset]);
+    m_params.SetParam(AMF_PARAM_QP_I(prm->codec),           (amf_int64)prm->nQPI);
+    m_params.SetParam(AMF_PARAM_QP_P(prm->codec),           (amf_int64)prm->nQPP);
+    m_params.SetParam(AMF_PARAM_TARGET_BITRATE(prm->codec), (amf_int64)prm->nBitrate * 1000);
+    m_params.SetParam(AMF_PARAM_PEAK_BITRATE(prm->codec),   (amf_int64)prm->nMaxBitrate * 1000);
+    m_params.SetParam(AMF_PARAM_MAX_NUM_REFRAMES(prm->codec), (amf_int64)prm->nRefFrames);
+    m_params.SetParam(AMF_PARAM_MAX_LTR_FRAMES(prm->codec), (amf_int64)prm->nLTRFrames);
+    m_params.SetParam(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(prm->codec),  prm->bEnableSkipFrame);
+    m_params.SetParam(AMF_PARAM_RATE_CONTROL_METHOD(prm->codec),             (amf_int64)prm->rateControl);
+    m_params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), prm->preAnalysis);
+    m_params.SetParam(AMF_PARAM_VBV_BUFFER_SIZE(prm->codec),                 (amf_int64)prm->nVBVBufferSize * 1000);
+    m_params.SetParam(AMF_PARAM_INITIAL_VBV_BUFFER_FULLNESS(prm->codec),     (amf_int64)prm->nInitialVBVPercent);
 
-    m_Params.SetParam(AMF_PARAM_ENFORCE_HRD(prm->codec),        prm->bEnforceHRD != 0);
-    m_Params.SetParam(AMF_PARAM_FILLER_DATA_ENABLE(prm->codec), prm->bFiller != 0);
-    if (prm->bVBAQ) m_Params.SetParam(AMF_PARAM_ENABLE_VBAQ(prm->codec), true);
-    m_Params.SetParam(AMF_PARAM_SLICES_PER_FRAME(prm->codec),               (amf_int64)prm->nSlices);
-    m_Params.SetParam(AMF_PARAM_GOP_SIZE(prm->codec),                       (amf_int64)nGOPLen);
+    m_params.SetParam(AMF_PARAM_ENFORCE_HRD(prm->codec),        prm->bEnforceHRD != 0);
+    m_params.SetParam(AMF_PARAM_FILLER_DATA_ENABLE(prm->codec), prm->bFiller != 0);
+    if (prm->bVBAQ) m_params.SetParam(AMF_PARAM_ENABLE_VBAQ(prm->codec), true);
+    m_params.SetParam(AMF_PARAM_SLICES_PER_FRAME(prm->codec),               (amf_int64)prm->nSlices);
+    m_params.SetParam(AMF_PARAM_GOP_SIZE(prm->codec),                       (amf_int64)nGOPLen);
 
-    //m_Params.SetParam(AMF_PARAM_END_OF_SEQUENCE(prm->codec),                false);
-    m_Params.SetParam(AMF_PARAM_INSERT_AUD(prm->codec),                     false);
+    //m_params.SetParam(AMF_PARAM_END_OF_SEQUENCE(prm->codec),                false);
+    m_params.SetParam(AMF_PARAM_INSERT_AUD(prm->codec),                     false);
     if (prm->codec == RGY_CODEC_H264) {
-        m_Params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)((prm->input.picstruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
+        m_params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)((prm->input.picstruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
 
-        m_Params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN, (amf_int64)prm->nBframes);
+        m_params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN, (amf_int64)prm->nBframes);
         if (prm->nBframes > 0) {
-            m_Params.SetParam(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrame);
-            m_Params.SetParam(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrameRef);
-            m_Params.SetParam(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE, prm->nBframes > 0 && !!prm->bBPyramid);
-            m_Params.SetParam(AMF_VIDEO_ENCODER_QP_B, (amf_int64)prm->nQPB);
+            m_params.SetParam(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrame);
+            m_params.SetParam(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrameRef);
+            m_params.SetParam(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE, prm->nBframes > 0 && !!prm->bBPyramid);
+            m_params.SetParam(AMF_VIDEO_ENCODER_QP_B, (amf_int64)prm->nQPB);
         }
 
-        m_Params.SetParam(AMF_VIDEO_ENCODER_MIN_QP,                                (amf_int64)prm->nQPMin);
-        m_Params.SetParam(AMF_VIDEO_ENCODER_MAX_QP,                                (amf_int64)prm->nQPMax);
+        m_params.SetParam(AMF_VIDEO_ENCODER_MIN_QP,                                (amf_int64)prm->nQPMin);
+        m_params.SetParam(AMF_VIDEO_ENCODER_MAX_QP,                                (amf_int64)prm->nQPMax);
 
-        //m_Params.SetParam(AMF_VIDEO_ENCODER_HEADER_INSERTION_SPACING,       (amf_int64)0);
-        ////m_Params.SetParam(AMF_VIDEO_ENCODER_INTRA_REFRESH_NUM_MBS_PER_SLOT, false);
+        //m_params.SetParam(AMF_VIDEO_ENCODER_HEADER_INSERTION_SPACING,       (amf_int64)0);
+        ////m_params.SetParam(AMF_VIDEO_ENCODER_INTRA_REFRESH_NUM_MBS_PER_SLOT, false);
 
-        m_Params.SetParam(AMF_PARAM_MOTION_HALF_PIXEL(prm->codec),              !!(prm->nMotionEst & VCE_MOTION_EST_HALF));
-        m_Params.SetParam(AMF_PARAM_MOTION_QUARTERPIXEL(prm->codec),            !!(prm->nMotionEst & VCE_MOTION_EST_QUATER));
+        m_params.SetParam(AMF_PARAM_MOTION_HALF_PIXEL(prm->codec),              !!(prm->nMotionEst & VCE_MOTION_EST_HALF));
+        m_params.SetParam(AMF_PARAM_MOTION_QUARTERPIXEL(prm->codec),            !!(prm->nMotionEst & VCE_MOTION_EST_QUATER));
 
-        //m_Params.SetParam(AMF_VIDEO_ENCODER_FORCE_PICTURE_TYPE,             (amf_int64)AMF_VIDEO_ENCODER_PICTURE_TYPE_NONE);
-        m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_SPS, false);
-        m_Params.SetParam(AMF_VIDEO_ENCODER_INSERT_PPS, false);
-        //m_Params.SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE,                (amf_int64)prm->nPicStruct);
-        //m_Params.SetParam(AMF_VIDEO_ENCODER_MARK_CURRENT_WITH_LTR_INDEX,    false);
-        //m_Params.SetParam(AMF_VIDEO_ENCODER_FORCE_LTR_REFERENCE_BITFIELD,   (amf_int64)0);
+        //m_params.SetParam(AMF_VIDEO_ENCODER_FORCE_PICTURE_TYPE,             (amf_int64)AMF_VIDEO_ENCODER_PICTURE_TYPE_NONE);
+        m_params.SetParam(AMF_VIDEO_ENCODER_INSERT_SPS, false);
+        m_params.SetParam(AMF_VIDEO_ENCODER_INSERT_PPS, false);
+        //m_params.SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE,                (amf_int64)prm->nPicStruct);
+        //m_params.SetParam(AMF_VIDEO_ENCODER_MARK_CURRENT_WITH_LTR_INDEX,    false);
+        //m_params.SetParam(AMF_VIDEO_ENCODER_FORCE_LTR_REFERENCE_BITFIELD,   (amf_int64)0);
 
-        //m_Params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE, AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE_ENUM);
-        //m_Params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_MARKED_LTR_INDEX, (amf_int64)-1);
-        //m_Params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_REFERENCED_LTR_INDEX_BITFIELD, (amf_int64)0);
+        //m_params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE, AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE_ENUM);
+        //m_params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_MARKED_LTR_INDEX, (amf_int64)-1);
+        //m_params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_REFERENCED_LTR_INDEX_BITFIELD, (amf_int64)0);
         if (prm->vui.fullrange) {
-            m_Params.SetParam(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR, true);
+            m_params.SetParam(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR, true);
         }
     } else if (prm->codec == RGY_CODEC_HEVC) {
-        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_TIER,                            (amf_int64)prm->codecParam[prm->codec].nTier);
+        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_TIER,                            (amf_int64)prm->codecParam[prm->codec].nTier);
 
-        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_I,                        (amf_int64)prm->nQPMin);
-        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_I,                        (amf_int64)prm->nQPMax);
-        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_P,                        (amf_int64)prm->nQPMin);
-        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_P,                        (amf_int64)prm->nQPMax);
+        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_I,                        (amf_int64)prm->nQPMin);
+        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_I,                        (amf_int64)prm->nQPMax);
+        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_P,                        (amf_int64)prm->nQPMin);
+        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_P,                        (amf_int64)prm->nQPMax);
 
-        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_DE_BLOCKING_FILTER_DISABLE,      !prm->bDeblockFilter);
+        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_DE_BLOCKING_FILTER_DISABLE,      !prm->bDeblockFilter);
 
-        m_Params.SetParam(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER,                   true);
+        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER,                   true);
     } else {
         PrintMes(RGY_LOG_ERROR, _T("Unsupported codec.\n"));
         return RGY_ERR_UNSUPPORTED;
     }
 
     // Usage is preset that will set many parameters
-    PushParamsToPropertyStorage(&m_Params, ParamEncoderUsage, m_pEncoder);
+    m_params.Apply(m_pEncoder, AMF_PARAM_ENCODER_USAGE, m_pLog.get());
     PrintMes(RGY_LOG_DEBUG, _T("pushed usage params.\n"));
     // override some usage parameters
-    PushParamsToPropertyStorage(&m_Params, ParamEncoderStatic, m_pEncoder);
+    m_params.Apply(m_pEncoder, AMF_PARAM_STATIC, m_pLog.get());
     PrintMes(RGY_LOG_DEBUG, _T("pushed static params.\n"));
 
     if (AMF_OK != (res = m_pEncoder->Init(formatIn, prm->input.dstWidth, prm->input.dstHeight))) {
@@ -1635,29 +1394,77 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     }
     PrintMes(RGY_LOG_DEBUG, _T("initalized encoder.\n"));
 
-    PushParamsToPropertyStorage(&m_Params, ParamEncoderDynamic, m_pEncoder);
+    m_params.Apply(m_pEncoder, AMF_PARAM_DYNAMIC, m_pLog.get());
     PrintMes(RGY_LOG_DEBUG, _T("pushed dynamic params.\n"));
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCECore::init(VCEParam *prm) {
-    Terminate();
-#if !VCE_AUO
-    hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    hStdErr = GetStdHandle(STD_ERROR_HANDLE);
-    m_apihook.hook(_T("kernel32.dll"), "WriteFile", WriteFileHook, (void **)&origWriteFileFunc);
-#endif
-
-    AMF_RESULT res = g_AMFFactory.Init();
+RGY_ERR VCECore::initAMFFactory() {
+    m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(LoadLibrary(AMF_DLL_NAME));
+    if (!m_dll) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to load %s.\n"), AMF_DLL_NAME);
+        return RGY_ERR_NOT_FOUND;
+    }
+    AMFInit_Fn initFun = (AMFInit_Fn)GetProcAddress(m_dll.get(), AMF_INIT_FUNCTION_NAME);
+    if (initFun == NULL) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to load %s.\n"), AMF_INIT_FUNCTION_NAME);
+        return RGY_ERR_NOT_FOUND;
+    }
+    AMF_RESULT res = initFun(AMF_FULL_VERSION, &m_pFactory);
     if (res != AMF_OK) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to initalize VCE: %s"), AMFRetString(res));
         return err_to_rgy(res);
     }
-
-    res = g_AMFFactory.GetFactory()->CreateContext(&m_pContext);
+    AMFQueryVersion_Fn versionFun = (AMFQueryVersion_Fn)GetProcAddress(m_dll.get(), AMF_QUERY_VERSION_FUNCTION_NAME);
+    if (versionFun == NULL) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to load %s.\n"), AMF_QUERY_VERSION_FUNCTION_NAME);
+        return RGY_ERR_NOT_FOUND;
+    }
+    res = versionFun(&m_AMFRuntimeVersion);
     if (res != AMF_OK) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to create AMF Context: %s.\n"), AMFRetString(res));
         return err_to_rgy(res);
+    }
+    m_pFactory->GetTrace(&m_pTrace);
+    m_pFactory->GetDebug(&m_pDebug);
+    PrintMes(RGY_LOG_DEBUG, _T("Loaded %s.\n"), AMF_DLL_NAME);
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR VCECore::initContext(int log_level) {
+    m_pTrace->EnableWriter(AMF_TRACE_WRITER_DEBUG_OUTPUT, log_level < RGY_LOG_INFO);
+    if (log_level < RGY_LOG_INFO)
+        m_pTrace->SetWriterLevel(AMF_TRACE_WRITER_DEBUG_OUTPUT, loglevel_rgy_to_enc(log_level));
+    m_pTrace->EnableWriter(AMF_TRACE_WRITER_CONSOLE, false);
+    m_pTrace->SetGlobalLevel(loglevel_rgy_to_enc(log_level));
+
+    m_tracer.init(m_pLog);
+    m_pTrace->RegisterWriter(L"RGYLOGWriter", &m_tracer, log_level < RGY_LOG_INFO);
+    m_pTrace->SetWriterLevel(L"RGYLOGWriter", loglevel_rgy_to_enc(log_level));
+
+    auto res = m_pFactory->CreateContext(&m_pContext);
+    if (res != AMF_OK) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to CreateContext(): %s.\n"), get_err_mes(err_to_rgy(res)));
+        return err_to_rgy(res);
+    }
+    PrintMes(RGY_LOG_DEBUG, _T("CreateContext() Success.\n"));
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR VCECore::init(VCEParam *prm) {
+    m_pLog.reset(new RGYLog(prm->logfile.c_str(), prm->loglevel));
+    if (prm->logfile.length() > 0) {
+        m_pLog->writeFileHeader(prm->outputFilename.c_str());
+    }
+
+    RGY_ERR err = initAMFFactory();
+    if (err != RGY_ERR_NONE) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to initalize VCE factory: %s"), get_err_mes(err));
+        return err;
+    }
+
+    err = initContext(prm->loglevel);
+    if (err != RGY_ERR_NONE) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to initalize VCE context: %s"), get_err_mes(err));
+        return err;
     }
     PrintMes(RGY_LOG_DEBUG, _T("Created AMF Context.\n"));
 
@@ -1667,10 +1474,6 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         PrintMes(RGY_LOG_DEBUG, _T("timeBeginPeriod(1)\n"));
     }
 
-    m_pLog.reset(new RGYLog(prm->logfile.c_str(), prm->loglevel));
-    if (prm->logfile.length() > 0) {
-        m_pLog->writeFileHeader(prm->outputFilename.c_str());
-    }
     if (!m_pStatus) {
         m_pStatus = std::make_shared<EncodeStatus>();
     }
@@ -1686,7 +1489,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    if (RGY_ERR_NONE != (ret = initDevice(prm))) {
+    if (RGY_ERR_NONE != (ret = initDevice(0))) {
         return ret;
     }
 
@@ -1706,101 +1509,272 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    // Connect pipeline
-    if (AMF_OK != (res = Connect(PipelineElementPtr(new VCEInput(m_pFileReader, m_pContext)), 4, CT_Direct))) {
-        PrintMes(RGY_LOG_ERROR, _T("failed to connect input to pipeline: %s\n"), AMFRetString(res));
-        return err_to_rgy(res);
-    }
-    if (m_pDecoder) {
-        if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementAMFComponent(m_pDecoder)), 4, CT_Direct))) {
-            PrintMes(RGY_LOG_ERROR, _T("failed to connect deocder to pipeline: %s\n"), AMFRetString(res));
-            return err_to_rgy(res);
-        }
-    }
-    if (m_pConverter) {
-        if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementAMFComponent(m_pConverter)), 4, CT_Direct))) {
-            PrintMes(RGY_LOG_ERROR, _T("failed to connect converter to pipeline: %s\n"), AMFRetString(res));
-            return err_to_rgy(res);
-        }
-    }
-    if (AMF_OK != (res = Connect(PipelineElementPtr(new PipelineElementEncoder(m_pEncoder, &m_Params, 0, 0, true)), 30, CT_Direct))) {
-        PrintMes(RGY_LOG_ERROR, _T("failed to connect encoder to pipeline: %s\n"), AMFRetString(res));
-        return err_to_rgy(res);
-    }
-    if (AMF_OK != (res = Connect(PipelineElementPtr(new VCEOutput(m_pFileWriter, m_outputFps, m_outputTimebase)), 10, CT_ThreadPoll))) {
-        PrintMes(RGY_LOG_ERROR, _T("failed to connect output to pipeline: %s\n"), AMFRetString(res));
-        return err_to_rgy(res);
-    }
-    PrintMes(RGY_LOG_DEBUG, _T("connected elements to pipeline.\n"));
-
     return ret;
+}
+
+RGY_ERR VCECore::run_decode() {
+    m_thDecoder = std::thread([this]() {
+        auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
+        if (pAVCodecReader == nullptr) {
+            return RGY_ERR_UNKNOWN;
+        }
+        const auto VCE_TIMEBASE = rgy_rational<int>(1, AMF_SECOND); // In 100 NanoSeconds
+        const auto inTimebase = pAVCodecReader->GetInputVideoStream()->time_base;
+        RGYBitstream bitstream = RGYBitstreamInit();
+        RGY_ERR sts = RGY_ERR_NONE;
+        for (int i = 0; sts == RGY_ERR_NONE && m_state == RGY_STATE_RUNNING; i++) {
+            m_pFileReader->LoadNextFrame(nullptr); //進捗表示のため
+            sts = m_pFileReader->GetNextBitstream(&bitstream);
+
+            amf::AMFBufferPtr pictureBuffer;
+            if (sts == RGY_ERR_NONE) {
+                auto ar = m_pContext->AllocBuffer(amf::AMF_MEMORY_HOST, bitstream.size(), &pictureBuffer);
+                if (ar != AMF_OK) {
+                    return err_to_rgy(ar);
+                }
+                memcpy(pictureBuffer->GetNative(), bitstream.data(), bitstream.size());
+
+                const auto duration = rgy_change_scale(bitstream.duration(), to_rgy(inTimebase), VCE_TIMEBASE);
+                const auto pts = rgy_change_scale(bitstream.pts(), to_rgy(inTimebase), VCE_TIMEBASE);
+                pictureBuffer->SetDuration(duration);
+                pictureBuffer->SetPts(pts);
+                bitstream.clear();
+            }
+            if (pictureBuffer || sts == RGY_ERR_MORE_DATA /*EOFの場合はnullを送る*/) {
+                auto ar = AMF_OK;
+                do {
+                    ar = m_pDecoder->SubmitInput(pictureBuffer);
+                    if (ar != AMF_INPUT_FULL && ar != AMF_DECODER_NO_FREE_SURFACES) break;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                } while (m_state == RGY_STATE_RUNNING);
+                if (ar != AMF_OK) {
+                    return err_to_rgy(ar);
+                }
+            }
+        }
+        m_pDecoder->Drain();
+        return sts;
+    });
+    PrintMes(RGY_LOG_DEBUG, _T("Started Encode thread.\n"));
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR VCECore::run_output() {
+    m_thOutput = std::thread([this]() {
+        const auto VCE_TIMEBASE = rgy_rational<int>(1, AMF_SECOND);
+        while (m_state == RGY_STATE_RUNNING) {
+            amf::AMFDataPtr data;
+            auto ar = m_pEncoder->QueryOutput(&data);
+            if (ar == AMF_REPEAT || (ar == AMF_OK && data == nullptr)) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                continue;
+            }
+            if (ar == AMF_EOF) break;
+            if (ar != AMF_OK) {
+                return err_to_rgy(ar);
+            }
+            amf::AMFBufferPtr buffer(data);
+            int64_t pts = rgy_change_scale(buffer->GetPts(), m_outputFps.inv(), m_outputTimebase);
+            int64_t duration = rgy_change_scale(buffer->GetDuration(), VCE_TIMEBASE, m_outputTimebase);
+
+            RGYBitstream output = RGYBitstreamInit();
+            output.ref((uint8_t *)buffer->GetNative(), buffer->GetSize(), pts, 0, duration);
+            auto err = m_pFileWriter->WriteNextFrame(&output);
+            if (err != RGY_ERR_NONE) {
+                return err;
+            }
+        }
+        return RGY_ERR_NONE;
+    });
+    PrintMes(RGY_LOG_DEBUG, _T("Started Output thread.\n"));
+    return RGY_ERR_NONE;
 }
 
 RGY_ERR VCECore::run() {
     m_pStatus->SetStart();
-    if (m_pFileWriterListAudio.size() > 0) {
-#if ENABLE_AVSW_READER
-        m_thStreamSender = std::thread([this](){
-            //streamのindexから必要なwriteへのポインタを返すテーブルを作成
-            std::map<int, shared_ptr<RGYOutputAvcodec>> pWriterForAudioStreams;
-            for (auto pWriter : m_pFileWriterListAudio) {
-                auto pAVCodecWriter = std::dynamic_pointer_cast<RGYOutputAvcodec>(pWriter);
-                if (pAVCodecWriter) {
-                    auto trackIdList = pAVCodecWriter->GetStreamTrackIdList();
-                    for (auto trackID : trackIdList) {
-                        pWriterForAudioStreams[trackID] = pAVCodecWriter;
-                    }
+    m_state = RGY_STATE_RUNNING;
+    const auto VCE_TIMEBASE = rgy_rational<int>(1, AMF_SECOND);
+    std::map<int, shared_ptr<RGYOutputAvcodec>> pWriterForAudioStreams;
+    if (m_pFileWriterListAudio.size()) {
+        //streamのindexから必要なwriteへのポインタを返すテーブルを作成
+        for (auto pWriter : m_pFileWriterListAudio) {
+            auto pAVCodecWriter = std::dynamic_pointer_cast<RGYOutputAvcodec>(pWriter);
+            if (pAVCodecWriter) {
+                auto trackIdList = pAVCodecWriter->GetStreamTrackIdList();
+                for (auto trackID : trackIdList) {
+                    pWriterForAudioStreams[trackID] = pAVCodecWriter;
                 }
             }
-            AMF_RESULT sts = AMF_OK;
-            PipelineState state = PipelineStateRunning;
-            while ((state = GetState()) == PipelineStateRunning) {
+        }
+    }
+    if (m_pDecoder != nullptr) {
+        auto res = run_decode();
+        if (res != RGY_ERR_NONE) {
+            PrintMes(RGY_LOG_ERROR, _T("failed to start input threads.\n"), get_err_mes(res));
+            return res;
+        }
+    }
+    auto res = run_output();
+    if (res != RGY_ERR_NONE) {
+        PrintMes(RGY_LOG_ERROR, _T("failed to start output threads.\n"), get_err_mes(res));
+        return res;
+    }
+    if (m_pPerfMonitor) {
+        HANDLE thOutput = NULL;
+        HANDLE thInput = NULL;
+        HANDLE thAudProc = NULL;
+        HANDLE thAudEnc = NULL;
+        auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
+        if (pAVCodecReader != nullptr) {
+            thInput = pAVCodecReader->getThreadHandleInput();
+        }
+        auto pAVCodecWriter = std::dynamic_pointer_cast<RGYOutputAvcodec>(m_pFileWriter);
+        if (pAVCodecWriter != nullptr) {
+            thOutput = pAVCodecWriter->getThreadHandleOutput();
+            thAudProc = pAVCodecWriter->getThreadHandleAudProcess();
+            thAudEnc = pAVCodecWriter->getThreadHandleAudEncode();
+        }
+        m_pPerfMonitor->SetThreadHandles((HANDLE)(m_thDecoder.native_handle()), thInput, thOutput, thAudProc, thAudEnc);
+    }
+
+    auto run_send_streams = [this, &pWriterForAudioStreams]() {
+        auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
+        vector<AVPacket> packetList;
+        if (pAVCodecReader != nullptr) {
+            packetList = pAVCodecReader->GetStreamDataPackets();
+        }
+        //音声ファイルリーダーからのトラックを結合する
+        for (const auto &reader : m_AudioReaders) {
+            auto pReader = std::dynamic_pointer_cast<RGYInputAvcodec>(reader);
+            if (pReader != nullptr) {
+                vector_cat(packetList, pReader->GetStreamDataPackets());
+            }
+        }
+        //パケットを各Writerに分配する
+        for (uint32_t i = 0; i < packetList.size(); i++) {
+            const int nTrackId = packetList[i].flags >> 16;
+            if (pWriterForAudioStreams.count(nTrackId)) {
+                auto pWriter = pWriterForAudioStreams[nTrackId];
+                if (pWriter == nullptr) {
+                    PrintMes(RGY_LOG_ERROR, _T("Invalid writer found for track %d\n"), nTrackId);
+                    return RGY_ERR_NULL_PTR;
+                }
+                auto ret = pWriter->WriteNextPacket(&packetList[i]);
+                if (ret != RGY_ERR_NONE) {
+                    return ret;
+                }
+            } else {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to find writer for track %d\n"), nTrackId);
+                return RGY_ERR_NOT_FOUND;
+            }
+        }
+        return RGY_ERR_NONE;
+    };
+
+    auto send_encoder = [this](amf::AMFSurfacePtr &pSurface) {
+        //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
+        pSurface->SetFrameType(amf::AMF_FRAME_PROGRESSIVE);
+        //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
+        //フレーム情報のほうもプログレに書き換えなければ、SubmitInputでエラーが返る
+        m_params.SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE, AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD);
+        // apply frame-specific properties to the current frame
+        m_params.Apply(pSurface, AMF_PARAM_FRAME, m_pLog.get());
+        // apply dynamic properties to the encoder
+        m_params.Apply(m_pEncoder, AMF_PARAM_DYNAMIC, m_pLog.get());
+
+        auto ar = AMF_OK;
+        do {
+            ar = m_pEncoder->SubmitInput(pSurface);
+            if (ar != AMF_INPUT_FULL) break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        } while (m_state == RGY_STATE_RUNNING);
+        return err_to_rgy(ar);
+    };
+
+    const auto inputFrameInfo = m_pFileReader->GetInputFrameInfo();
+    CProcSpeedControl speedCtrl(m_nProcSpeedLimit);
+    int nEncodeFrames = 0;
+    bool bInputEmpty = false;
+    bool bFilterEmpty = false;
+    for (int nInputFrame = 0, nFilterFrame = 0; m_state == RGY_STATE_RUNNING && !bInputEmpty && !bFilterEmpty; ) {
+        if (m_pAbortByUser && *m_pAbortByUser) {
+            m_state = RGY_STATE_ABORT;
+            break;
+        }
+        speedCtrl.wait();
+        if ((res = run_send_streams()) != RGY_ERR_NONE) {
+            return res;
+        }
+        amf::AMFSurfacePtr pSurface;
+        if (m_pDecoder == nullptr) {
+            auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_HOST, csp_rgy_to_enc(inputFrameInfo.csp),
+                inputFrameInfo.srcWidth - inputFrameInfo.crop.e.left - inputFrameInfo.crop.e.right,
+                inputFrameInfo.srcHeight - inputFrameInfo.crop.e.bottom - inputFrameInfo.crop.e.up,
+                &pSurface);
+            if (ar != AMF_OK) return err_to_rgy(ar);
+            auto frame = RGYFrameFromSurface(pSurface);
+            auto ret = m_pFileReader->LoadNextFrame(&frame);
+            if (ret == RGY_ERR_MORE_DATA) {
+                bInputEmpty = true;
+                pSurface.Release();
+            } else if (ret == RGY_ERR_NONE) {
                 auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
-                vector<AVPacket> packetList;
                 if (pAVCodecReader != nullptr) {
-                    packetList = pAVCodecReader->GetStreamDataPackets();
+                    const auto vid_timebase = to_rgy(pAVCodecReader->GetInputVideoStream()->time_base);
+                    pSurface->SetDuration(rgy_change_scale(frame.duration(), vid_timebase, VCE_TIMEBASE));
+                    pSurface->SetPts(rgy_change_scale(frame.timestamp(), vid_timebase, VCE_TIMEBASE));
+                } else {
+                    const auto fps_timebase = rgy_rational<int>(inputFrameInfo.fpsN, inputFrameInfo.fpsD).inv();
+                    pSurface->SetDuration(rgy_change_scale(1, fps_timebase, VCE_TIMEBASE));
+                    pSurface->SetPts(rgy_change_scale(nInputFrame, fps_timebase, VCE_TIMEBASE));
                 }
-                //音声ファイルリーダーからのトラックを結合する
-                for (const auto& reader : m_AudioReaders) {
-                    auto pReader = std::dynamic_pointer_cast<RGYInputAvcodec>(reader);
-                    if (pReader != nullptr) {
-                        vector_cat(packetList, pReader->GetStreamDataPackets());
-                    }
-                }
-                //パケットを各Writerに分配する
-                for (uint32_t i = 0; i < packetList.size(); i++) {
-                    const int nTrackId = packetList[i].flags >> 16;
-                    if (pWriterForAudioStreams.count(nTrackId)) {
-                        auto pWriter = pWriterForAudioStreams[nTrackId];
-                        if (pWriter == nullptr) {
-                            PrintMes(RGY_LOG_ERROR, _T("Invalid writer found for track %d\n"), nTrackId);
-                            return AMF_INVALID_POINTER;
-                        }
-                        auto ret = pWriter->WriteNextPacket(&packetList[i]);
-                        if (ret != RGY_ERR_NONE) {
-                            return AMF_FAIL;
-                        }
-                    } else {
-                        PrintMes(RGY_LOG_ERROR, _T("Failed to find writer for track %d\n"), nTrackId);
-                        return AMF_INVALID_POINTER;
-                    }
-                }
-                amf_sleep(100);
             }
-            if (sts != AMF_OK && sts != AMF_EOF) {
-
+        } else {
+            amf::AMFDataPtr data;
+            auto ar = AMF_REPEAT;
+            while (m_state == RGY_STATE_RUNNING) {
+                ar = m_pDecoder->QueryOutput(&data);
+                if (ar == AMF_EOF) break;
+                if (!(ar == AMF_REPEAT || (ar == AMF_OK && data == nullptr))) break;
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
-            return GetState() == PipelineStateEof ? AMF_OK : AMF_FAIL;
-        });
-#endif //ENABLE_AVSW_READER
+            if (ar == AMF_EOF) {
+                bInputEmpty = true;
+            } else if (ar != AMF_OK) {
+                return err_to_rgy(ar);
+            }
+            pSurface = amf::AMFSurfacePtr(data);
+        }
+        if (bInputEmpty) {
+            bFilterEmpty = true; //filterを実装していないので暫定
+        }
+        if (pSurface != nullptr) {
+            send_encoder(pSurface);
+        }
     }
-    auto res = Pipeline::Start();
-    if (res != AMF_OK) {
-        PrintMes(RGY_LOG_ERROR, _T("failed to start pipeline: %s\n"), AMFRetString(res));
-        return err_to_rgy(res);
+    if (m_thDecoder.joinable()) {
+        m_thDecoder.join();
     }
-    PrintMes(RGY_LOG_DEBUG, _T("started pipeline.\n"));
-
+    for (const auto &writer : m_pFileWriterListAudio) {
+        auto pAVCodecWriter = std::dynamic_pointer_cast<RGYOutputAvcodec>(writer);
+        if (pAVCodecWriter != nullptr) {
+            //エンコーダなどにキャッシュされたパケットを書き出す
+            pAVCodecWriter->WriteNextPacket(nullptr);
+        }
+    }
+    PrintMes(RGY_LOG_INFO, _T("                                                                             \n"));
+    auto ar = m_pEncoder->Drain();
+    if (ar != AMF_OK) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to drain encoder: %s\n"), get_err_mes(err_to_rgy(ar)));
+        return err_to_rgy(ar);
+    }
+    PrintMes(RGY_LOG_DEBUG, _T("Flushed Encoder\n"));
+    if (m_thOutput.joinable()) {
+        m_thOutput.join();
+    }
+    m_pFileWriter->Close();
+    m_pFileReader->Close();
+    m_pStatus->WriteResults();
     return RGY_ERR_NONE;
 }
 
@@ -1855,16 +1829,10 @@ tstring VCECore::GetEncoderParam() {
     nMotionEst |= GetPropertyInt(AMF_PARAM_MOTION_HALF_PIXEL(m_encCodec)) ? VCE_MOTION_EST_HALF : 0;
     nMotionEst |= GetPropertyInt(AMF_PARAM_MOTION_QUARTERPIXEL(m_encCodec)) ? VCE_MOTION_EST_QUATER | VCE_MOTION_EST_HALF : 0;
 
-    std::wstring deviceName = (m_deviceDX9.GetDevice() == nullptr) ? m_deviceDX11.GetDisplayDeviceName() : m_deviceDX9.GetDisplayDeviceName();
-    deviceName = str_replace(deviceName, L"(TM)", L"");
-    deviceName = str_replace(deviceName, L"(R)", L"");
-    deviceName = str_replace(deviceName, L" Series", L"");
-    deviceName = str_replace(deviceName, L" Graphics", L"");
-
     mes += strsprintf(_T("VCEEnc %s (%s) / %s (%s)\n"), VER_STR_FILEVERSION_TCHAR, BUILD_ARCH_STR, getOSVersion().c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"));
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
-    mes += strsprintf(_T("GPU:           %s [%s, AMF %d.%d.%d]\n"), wstring_to_tstring(deviceName).c_str(), gpu_info,
-        (int)AMF_GET_MAJOR_VERSION(g_AMFFactory.AMFQueryVersion()), (int)AMF_GET_MINOR_VERSION(g_AMFFactory.AMFQueryVersion()), (int)AMF_GET_SUBMINOR_VERSION(g_AMFFactory.AMFQueryVersion()));
+    mes += strsprintf(_T("GPU:           %s, AMF %d.%d.%d\n"), gpu_info,
+        (int)AMF_GET_MAJOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_MINOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_SUBMINOR_VERSION(m_AMFRuntimeVersion));
 
     auto inputInfo = m_pFileReader->GetInputFrameInfo();
     mes += strsprintf(_T("Input Info:    %s\n"), m_pFileReader->GetInputMessage());
@@ -1878,11 +1846,11 @@ tstring VCECore::GetEncoderParam() {
         (m_encCodec == RGY_CODEC_HEVC) ? (tstring(_T(" (")) + getPropertyDesc(AMF_VIDEO_ENCODER_HEVC_TIER, get_tier_list(m_encCodec)) + _T(" tier)")).c_str() : _T(""));
     const AMF_VIDEO_ENCODER_SCANTYPE_ENUM scan_type = (m_encCodec == RGY_CODEC_H264) ? (AMF_VIDEO_ENCODER_SCANTYPE_ENUM)GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE) : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE;
     AMFRatio aspectRatio;
-    m_Params.GetParam(AMF_PARAM_ASPECT_RATIO(m_encCodec), aspectRatio);
+    m_params.GetParam(AMF_PARAM_ASPECT_RATIO(m_encCodec), aspectRatio);
     auto frameRate = GetPropertyRate(AMF_PARAM_FRAMERATE(m_encCodec));
     int64_t outWidth, outHeight;
-    m_Params.GetParam(VCE_PARAM_KEY_OUTPUT_WIDTH, outWidth);
-    m_Params.GetParam(VCE_PARAM_KEY_OUTPUT_HEIGHT, outHeight);
+    m_params.GetParam(VCE_PARAM_KEY_OUTPUT_WIDTH, outWidth);
+    m_params.GetParam(VCE_PARAM_KEY_OUTPUT_HEIGHT, outHeight);
     mes += strsprintf(_T("               %dx%d%s %d:%d %0.3ffps (%d/%dfps)\n"),
         (int)outWidth, (int)outHeight,
         scan_type == AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED ? _T("i") : _T("p"),
@@ -2001,88 +1969,44 @@ void VCECore::PrintResult() {
     m_pStatus->WriteResults();
 }
 
-bool check_if_vce_available(RGY_CODEC codec, int nDeviceId) {
-    bool ret = g_AMFFactory.Init() == AMF_OK;
-    if (ret) {
-        amf::AMFContextPtr p_context;
-        ret = g_AMFFactory.GetFactory()->CreateContext(&p_context) == AMF_OK;
-        if (ret) {
-            DeviceDX9 device9;
-            DeviceDX11 device11;
-            ret = device9.Init(true, nDeviceId, false, 1280, 720) == AMF_OK;
-            if (ret) {
-                ret = p_context->InitDX9(device9.GetDevice()) == AMF_OK;
-            }
-            if (!ret) {
-                ret = device11.Init(nDeviceId, false) == AMF_OK;
-                if (ret) {
-                    ret = p_context->InitDX11(device11.GetDevice()) == AMF_OK;
-                }
-            }
-            amf::AMFComponentPtr p_encoder;
-            ret = g_AMFFactory.GetFactory()->CreateComponent(p_context, codec_rgy_to_enc(codec), &p_encoder) == AMF_OK;
-            if (p_encoder) {
-                p_encoder->Terminate();
-            }
-            device9.Terminate();
-            device11.Terminate();
-            if (p_context) {
-                p_context->Terminate();
-            }
+RGY_ERR VCEFeatures::init(int deviceId, int logLevel) {
+    if (!m_core) {
+        auto err = RGY_ERR_NONE;
+        if (   (err = m_core->initAMFFactory()) != RGY_ERR_NONE
+            || (err = m_core->initContext(logLevel)) != RGY_ERR_NONE
+            || (err = m_core->initDevice(deviceId)) != RGY_ERR_NONE) {
+            return err;
         }
     }
-    g_AMFFactory.Terminate();
-    return ret;
+    return RGY_ERR_NONE;
 }
 
-tstring check_vce_features(RGY_CODEC codec, int nDeviceId) {
+tstring VCEFeatures::checkFeatures(RGY_CODEC codec) {
     tstring str;
-    bool ret = g_AMFFactory.Init() == AMF_OK;
-    if (ret) {
-        amf::AMFContextPtr p_context;
-        ret = g_AMFFactory.GetFactory()->CreateContext(&p_context) == AMF_OK;
-        if (ret) {
-            DeviceDX9 device9;
-            DeviceDX11 device11;
-            ret = device9.Init(true, nDeviceId, false, 1280, 720) == AMF_OK;
-            if (ret) {
-                ret = p_context->InitDX9(device9.GetDevice()) == AMF_OK;
-            }
-            if (!ret) {
-                ret = device11.Init(nDeviceId, false) == AMF_OK;
-                if (ret) {
-                    ret = p_context->InitDX11(device11.GetDevice()) == AMF_OK;
-                }
-            }
-            amf::AMFComponentPtr p_encoder;
-            ret = g_AMFFactory.GetFactory()->CreateComponent(p_context, codec_rgy_to_enc(codec), &p_encoder) == AMF_OK;
-            if (ret) {
-                amf::AMFCapsPtr encoderCaps;
-                //HEVCでのAMFComponent::GetCaps()は、AMFComponent::Init()を呼んでおかないと成功しない
-                p_encoder->Init(amf::AMF_SURFACE_NV12, 1280, 720);
-                auto sts = p_encoder->GetCaps(&encoderCaps);
-                if (sts == AMF_OK) {
-                    str = VCECore::QueryIOCaps(codec, encoderCaps);
-                } else {
-                    str += _T("failed to get capability of ") + tstring(CodecToStr(codec)) + _T(" encoder");
-                }
-            } else {
-                str += _T("failed to create ") + tstring(CodecToStr(codec)) + _T(" encoder");
-            }
-            if (p_encoder) {
-                p_encoder->Terminate();
-            }
-            device9.Terminate();
-            device11.Terminate();
-            if (p_context) {
-                p_context->Terminate();
-            }
-        } else {
-            str += _T("failed to create context.\n");
-        }
-    } else {
-        str += _T("failed to initialize AMF.\n");
+    amf::AMFCapsPtr encCaps;
+    if (m_core->getEncCaps(codec, encCaps) == RGY_ERR_NONE) {
+        str = m_core->QueryIOCaps(codec, encCaps);
     }
-    g_AMFFactory.Terminate();
+    return str;
+}
+
+bool check_if_vce_available(int deviceId, int logLevel) {
+    VCEFeatures vce;
+    return vce.init(deviceId, logLevel) == RGY_ERR_NONE;
+}
+
+tstring check_vce_features(const std::vector<RGY_CODEC> &codecs, int deviceId, int logLevel) {
+    VCEFeatures vce;
+    if (vce.init(deviceId, logLevel) != RGY_ERR_NONE) {
+        return _T("VCE not available.\n");
+    }
+    tstring str;
+    for (const auto codec : codecs) {
+        auto ret = vce.checkFeatures(codec);
+        if (ret.length() > 0) {
+            str += CodecToStr(codec) + _T(" encode features\n");
+            str += vce.checkFeatures(codec) + _T("\n");
+        }
+    }
     return str;
 }

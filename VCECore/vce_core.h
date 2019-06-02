@@ -27,33 +27,23 @@
 
 #pragma once
 
-#include <d3d9.h>
-#include <d3d11.h>
 #include <thread>
+#include <future>
 #pragma warning(push)
 #pragma warning(disable:4100)
 #include "VideoEncoderVCE.h"
-#include "DeviceDX9.h"
-#include "DeviceDX11.h"
-
-#include "PipelineElement.h"
-#include "Pipeline.h"
-#include "PipelineMod.h"
-#include "ParametersStorage.h"
-
-#include "AMFFactory.h"
+#include "Factory.h"
+#include "Trace.h"
 
 #include "rgy_version.h"
 #include "rgy_err.h"
 #include "rgy_util.h"
 #include "rgy_log.h"
+#include "rgy_input.h"
+#include "rgy_output.h"
 #include "vce_param.h"
-#include "vce_input.h"
-#include "vce_output.h"
 
 #pragma warning(pop)
-
-#include "api_hook.h"
 
 const TCHAR *AMFRetString(AMF_RESULT ret);
 
@@ -61,17 +51,40 @@ const TCHAR *AMFRetString(AMF_RESULT ret);
 struct AVChapter;
 #endif //#if ENABLE_AVSW_READER
 
-class VCECore : public Pipeline {
-    class PipelineElementAMFComponent;
-    class PipelineElementEncoder;
+enum RGYRunState {
+    RGY_STATE_STOPPED,
+    RGY_STATE_RUNNING,
+    RGY_STATE_ERROR,
+    RGY_STATE_ABORT,
+    RGY_STATE_EOF
+};
+
+class RGYLogTracer : public amf::AMFTraceWriter {
+public:
+    RGYLogTracer() : m_pLog() {};
+    virtual ~RGYLogTracer() { m_pLog.reset(); }
+    virtual void init(shared_ptr<RGYLog> pLog) { m_pLog = pLog; };
+    virtual void Write(const wchar_t *scope, const wchar_t *message) override {
+        m_pLog->write(RGY_LOG_INFO, _T("[%s] %s"), scope, message);
+    };
+    virtual void Flush() override {
+    };
+protected:
+    shared_ptr<RGYLog> m_pLog;
+};
+
+class VCECore {
 public:
     VCECore();
     virtual ~VCECore();
 
-    RGY_ERR init(VCEParam *prm);
+    virtual RGY_ERR init(VCEParam *prm);
+    virtual RGY_ERR initAMFFactory();
+    virtual RGY_ERR initContext(int log_level);
+    virtual RGY_ERR initDevice(int deviceId);
     virtual RGY_ERR initInput(VCEParam *pParams);
-    RGY_ERR initOutput(VCEParam *prm);
-    RGY_ERR run();
+    virtual RGY_ERR initOutput(VCEParam *prm);
+    virtual RGY_ERR run();
     void Terminate();
 
     void PrintMes(int log_level, const TCHAR *format, ...);
@@ -80,19 +93,22 @@ public:
     void PrintEncoderParam();
     void PrintResult();
 
-    static tstring QueryIOCaps(amf::AMFIOCapsPtr& ioCaps);
-    static tstring QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps);
+    RGY_ERR getEncCaps(RGY_CODEC codec, amf::AMFCapsPtr &encoderCaps);
+    tstring QueryIOCaps(amf::AMFIOCapsPtr& ioCaps);
+    tstring QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps);
+
+    void SetAbortFlagPointer(bool *abortFlag);
 protected:
     static tstring AccelTypeToString(amf::AMF_ACCELERATION_TYPE accelType);
-    RGY_ERR readChapterFile(tstring chapfile);
+    virtual RGY_ERR readChapterFile(tstring chapfile);
 
     virtual RGY_ERR checkParam(VCEParam *prm);
-    virtual RGY_ERR initDeviceDX9(VCEParam *prm);
-    virtual RGY_ERR initDeviceDX11(VCEParam *prm);
-    virtual RGY_ERR initDevice(VCEParam *prm);
     virtual RGY_ERR initDecoder(VCEParam *prm);
     virtual RGY_ERR initConverter(VCEParam *prm);
     virtual RGY_ERR initEncoder(VCEParam *prm);
+
+    virtual RGY_ERR run_decode();
+    virtual RGY_ERR run_output();
 
     RGY_CODEC          m_encCodec;
     shared_ptr<RGYLog> m_pLog;
@@ -114,20 +130,38 @@ protected:
     rgy_rational<int>  m_outputFps;             //出力フレームレート
     rgy_rational<int>  m_outputTimebase;        //出力のtimebase
 
+    unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter> m_dll;
+    amf::AMFFactory *m_pFactory;
+    amf::AMFDebug *m_pDebug;
+    amf::AMFTrace *m_pTrace;
+    RGYLogTracer m_tracer;
+    uint64_t m_AMFRuntimeVersion;
     amf::AMFContextPtr m_pContext;
 
-    amf::AMFDataStreamPtr m_pStreamOut;
+    RGYRunState m_state;
 
     sTrimParam *m_pTrimParam;
 
     amf::AMFComponentPtr m_pDecoder;
     amf::AMFComponentPtr m_pEncoder;
     amf::AMFComponentPtr m_pConverter;
-    std::thread m_thStreamSender;
+    std::thread m_thDecoder;
+    std::thread m_thOutput;
 
-    DeviceDX9 m_deviceDX9;
-    DeviceDX11 m_deviceDX11;
+    AMFParams m_params;
 
-    ParametersStorage m_Params;
-    apihook m_apihook;
+    bool *m_pAbortByUser;
+};
+
+class VCEFeatures {
+public:
+    VCEFeatures() : m_core() {};
+    VCEFeatures(std::shared_ptr<VCECore> core) : m_core(core) {};
+
+    virtual ~VCEFeatures() {};
+
+    RGY_ERR init(int deviceId, int logLevel);
+    tstring checkFeatures(RGY_CODEC codec);
+protected:
+    std::shared_ptr<VCECore> m_core;
 };
