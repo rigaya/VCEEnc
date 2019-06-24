@@ -41,7 +41,9 @@
 #include "rgy_log.h"
 #include "rgy_input.h"
 #include "rgy_output.h"
+#include "rgy_opencl.h"
 #include "vce_param.h"
+#include "vce_filter.h"
 
 #pragma warning(pop)
 
@@ -50,6 +52,18 @@ const TCHAR *AMFRetString(AMF_RESULT ret);
 #if ENABLE_AVSW_READER
 struct AVChapter;
 #endif //#if ENABLE_AVSW_READER
+
+class RGYPipelineFrame {
+    RGYPipelineFrame(amf::AMFSurfacePtr surf) : surface(surf), frame() {};
+    RGYPipelineFrame(shared_ptr<RGYCLBufFrame> clframe) : surface(), frame(clframe) {};
+    ~RGYPipelineFrame() {
+        surface->Release();
+        frame.reset();
+    };
+protected:
+    amf::AMFSurfacePtr surface;
+    shared_ptr<RGYCLBufFrame> frame;
+};
 
 enum RGYRunState {
     RGY_STATE_STOPPED,
@@ -102,8 +116,10 @@ protected:
     static tstring AccelTypeToString(amf::AMF_ACCELERATION_TYPE accelType);
     virtual RGY_ERR readChapterFile(tstring chapfile);
 
+    virtual RGY_CSP GetEncoderCSP(const VCEParam *inputParam);
     virtual RGY_ERR checkParam(VCEParam *prm);
     virtual RGY_ERR initDecoder(VCEParam *prm);
+    virtual RGY_ERR initFilters(VCEParam *prm);
     virtual RGY_ERR initConverter(VCEParam *prm);
     virtual RGY_ERR initEncoder(VCEParam *prm);
 
@@ -127,9 +143,13 @@ protected:
     int                m_nProcSpeedLimit;       //処理速度制限 (0で制限なし)
     RGYAVSync          m_nAVSyncMode;           //映像音声同期設定
     rgy_rational<int>  m_inputFps;              //入力フレームレート
-    rgy_rational<int>  m_outputFps;             //出力フレームレート
+    rgy_rational<int>  m_encFps;             //出力フレームレート
     rgy_rational<int>  m_outputTimebase;        //出力のtimebase
+    int                m_encWidth;
+    int                m_encHeight;
+    rgy_rational<int>  m_sar;
 
+    shared_ptr<RGYOpenCLContext> m_cl;
     unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter> m_dll;
     amf::AMFFactory *m_pFactory;
     amf::AMFDebug *m_pDebug;
@@ -137,6 +157,9 @@ protected:
     RGYLogTracer m_tracer;
     uint64_t m_AMFRuntimeVersion;
     amf::AMFContextPtr m_pContext;
+
+    vector<unique_ptr<RGYFilter>> m_vpFilters;
+    shared_ptr<RGYFilterParam>    m_pLastFilterParam;
 
     RGYRunState m_state;
 

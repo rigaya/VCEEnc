@@ -156,7 +156,7 @@ RGY_ERR AMFParams::Apply(amf::AMFPropertyStorage *storage, AMFParamType prmType,
         const auto &name = prm.first;
         const auto type = prm.second.type;
         const auto &value = prm.second.value;
-        if (type == prmType) {
+        if (type == prmType && value.type != amf::AMF_VARIANT_EMPTY) {
             if (storage->SetProperty(name.c_str(), value)) {
                 if (pLog) {
                     pLog->write(RGY_LOG_ERROR, _T("storage->SetProperty(%s)=%s failed."),
@@ -198,10 +198,10 @@ RGY_ERR AMFParams::SetParamTypeAVC() {
     SetParamType(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR, AMF_PARAM_STATIC, L"Inidicates that YUV input is (0,255) (bool, default = false)");
 
     // ------------- Encoder params dynamic ---------------
-//    SetParamType(AMF_VIDEO_ENCODER_WIDTH, AMF_PARAM_DYNAMIC, L"Frame width (integer, default = 0)");
-//    SetParamType(AMF_VIDEO_ENCODER_HEIGHT, AMF_PARAM_DYNAMIC, L"Frame height (integer, default = 0)");
-    SetParamType(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP, AMF_PARAM_DYNAMIC, L"B-picture Delta  (integer, default = depends on USAGE)");
-    SetParamType(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP, AMF_PARAM_DYNAMIC, L"Reference B-picture Delta  (integer, default = depends on USAGE)");
+    //SetParamType(AMF_VIDEO_ENCODER_WIDTH, AMF_PARAM_DYNAMIC, L"Frame width (integer, default = 0)");
+    //SetParamType(AMF_VIDEO_ENCODER_HEIGHT, AMF_PARAM_DYNAMIC, L"Frame height (integer, default = 0)");
+    //SetParamType(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP, AMF_PARAM_DYNAMIC, L"B-picture Delta  (integer, default = depends on USAGE)");
+    //SetParamType(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP, AMF_PARAM_DYNAMIC, L"Reference B-picture Delta  (integer, default = depends on USAGE)");
     SetParamType(AMF_VIDEO_ENCODER_FRAMERATE, AMF_PARAM_DYNAMIC, L"Frame Rate (num,den), default = depends on USAGE)");
     SetParamType(AMF_VIDEO_ENCODER_MAX_AU_SIZE, AMF_PARAM_DYNAMIC, L"Max AU Size (in bits, default = 0)");
     SetParamType(AMF_VIDEO_ENCODER_TARGET_BITRATE, AMF_PARAM_DYNAMIC, L"Target bit rate (in bits, default = depends on USAGE)");
@@ -226,7 +226,7 @@ RGY_ERR AMFParams::SetParamTypeAVC() {
     SetParamType(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE, AMF_PARAM_DYNAMIC, L"Enable B Refrence (true, false default =  true)");
     SetParamType(AMF_VIDEO_ENCODER_MOTION_HALF_PIXEL, AMF_PARAM_DYNAMIC, L"Half Pixel (true, false default =  true)");
     SetParamType(AMF_VIDEO_ENCODER_MOTION_QUARTERPIXEL, AMF_PARAM_DYNAMIC, L"Quarter Pixel (true, false default =  true");
-    SetParamType(AMF_VIDEO_ENCODER_NUM_TEMPORAL_ENHANCMENT_LAYERS, AMF_PARAM_DYNAMIC, L"Num Of Temporal Enhancment Layers (SVC) (integer, default = 0, range = 0, min(2, caps->GetMaxNumOfTemporalLayers())");
+    //SetParamType(AMF_VIDEO_ENCODER_NUM_TEMPORAL_ENHANCMENT_LAYERS, AMF_PARAM_DYNAMIC, L"Num Of Temporal Enhancment Layers (SVC) (integer, default = 0, range = 0, min(2, caps->GetMaxNumOfTemporalLayers())");
     SetParamType(AMF_VIDEO_ENCODER_CABAC_ENABLE, AMF_PARAM_DYNAMIC, L"Encoding method (UNDEFINED, CAABC, CALV) default =UNDEFINED");
 
     SetParamType(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD, AMF_PARAM_DYNAMIC, L"Rate Control Method (CQP, CBR, VBR, VBR_LAT default = depends on USAGE)");

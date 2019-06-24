@@ -82,6 +82,9 @@
     <ClCompile Include="vce_cmd.cpp" />
     <ClCompile Include="vce_core.cpp" />
     <ClCompile Include="rgy_input.cpp" />
+    <ClCompile Include="vce_filter.cpp" />
+    <ClCompile Include="vce_filter_crop.cpp" />
+    <ClCompile Include="vce_filter_resize.cpp" />
     <ClCompile Include="vce_util.cpp" />
     <ClCompile Include="vce_param.cpp" />
   </ItemGroup>
@@ -123,6 +126,7 @@
     <ClInclude Include="vce_cmd.h" />
     <ClInclude Include="vce_core.h" />
     <ClInclude Include="rgy_input.h" />
+    <ClInclude Include="vce_filter.h" />
     <ClInclude Include="vce_util.h" />
     <ClInclude Include="vce_param.h" />
     <ClInclude Include="rgy_version.h" />

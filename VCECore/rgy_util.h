@@ -717,20 +717,6 @@ enum RGY_INPUT_FMT {
     RGY_INPUT_FMT_AVANY,
 };
 
-#pragma warning(push)
-#pragma warning(disable: 4201)
-typedef union sInputCrop {
-    struct {
-        int left, up, right, bottom;
-    } e;
-    int c[4];
-} sInputCrop;
-#pragma warning(pop)
-
-static inline bool cropEnabled(const sInputCrop& crop) {
-    return 0 != (crop.c[0] | crop.c[1] | crop.c[2] | crop.c[3]);
-}
-
 typedef struct CX_DESC {
     const TCHAR *desc;
     int value;

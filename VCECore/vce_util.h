@@ -37,6 +37,8 @@
 #include "VideoEncoderVCE.h"
 #include "vce_param.h"
 #pragma warning(pop)
+#include "convert_csp.h"
+#include "rgy_opencl.h"
 
 bool check_if_vce_available(int deviceId, int logLevel);
 tstring check_vce_features(const std::vector<RGY_CODEC>& codecs, int deviceId, int logLevel);
@@ -314,91 +316,121 @@ static_assert(std::is_pod<RGYBitstream>::value == true, "RGYBitstream should be 
 
 struct RGYFrame {
 private:
-    FrameInfo info;
+    amf::AMFSurfacePtr amfptr;
+    unique_ptr<RGYCLBufFrame> clbuf;
 public:
-    FrameInfo getInfo() const {
+    RGYFrame() : amfptr(), clbuf() {};
+    RGYFrame(const amf::AMFSurfacePtr &pSurface) : amfptr(std::move(pSurface)), clbuf() {
+    }
+    RGYFrame(unique_ptr<RGYCLBufFrame> clframe) : amfptr(), clbuf(std::move(clframe)) {
+    }
+    ~RGYFrame() {
+        if (amfptr) {
+            amfptr->Release();
+        }
+        clbuf.reset();
+    }
+    bool isempty() const {
+        return amfptr == nullptr && clbuf == nullptr;
+    }
+    const amf::AMFSurfacePtr &amf() const {
+        return amfptr;
+    }
+    amf::AMFSurfacePtr &amf() {
+        return amfptr;
+    }
+    const unique_ptr<RGYCLBufFrame> &cl() const {
+        return clbuf;
+    }
+    unique_ptr<RGYCLBufFrame> &cl() {
+        return clbuf;
+    }
+    amf::AMFSurfacePtr detachSurface() {
+        amf::AMFSurfacePtr ptr = amfptr;
+        amfptr = nullptr;
+        return ptr;
+    }
+    unique_ptr<RGYCLBufFrame> detachCLFrame() {
+        return std::move(clbuf);
+    }
+private:
+    FrameInfo infoAMF() const {
+        FrameInfo info;
+        for (int i = 0; i < 3; i++) {
+            auto plane = amfptr->GetPlaneAt(i);
+            if (plane) {
+                info.ptr[i] = (uint8_t *)plane->GetNative();
+                info.pitch[i] = plane->GetHPitch();
+            }
+        }
+        info.width = amfptr->GetPlaneAt(0)->GetWidth();
+        info.height = amfptr->GetPlaneAt(0)->GetHeight();
+        info.csp = csp_enc_to_rgy(amfptr->GetFormat());
+        info.timestamp = amfptr->GetPts();
+        info.duration = amfptr->GetDuration();
+        info.picstruct = RGY_PICSTRUCT_FRAME;
+        info.flags = RGY_FRAME_FLAG_NONE;
         return info;
     }
-    void set(const FrameInfo& frameinfo) {
-        info = frameinfo;
+    FrameInfo infoCL() const {
+        return clbuf->frame;
     }
-    void set(uint8_t *ptr, int width, int height, int pitch, RGY_CSP csp, int64_t timestamp = 0, int64_t duration = 0) {
-        info.ptr = ptr;
-        info.width = width;
-        info.height = height;
-        info.pitch = pitch;
-        info.csp = csp;
-        info.timestamp = timestamp;
-        info.duration = duration;
+public:
+    FrameInfo info() const {
+        if (amfptr) {
+            return infoAMF();
+        } else if (clbuf) {
+            return infoCL();
+        } else {
+            return initFrameInfo();
+        }
     }
     void ptrArray(void *array[3], bool bRGB) {
+        auto frame = info();
         UNREFERENCED_PARAMETER(bRGB);
-        array[0] = info.ptr;
-        array[1] = info.ptr + info.pitch * info.height;
-        array[2] = info.ptr + info.pitch * info.height * 2;
+        array[0] = (void *)frame.ptr[0];
+        array[1] = (void *)frame.ptr[1];
+        array[2] = (void *)frame.ptr[2];
     }
-    uint8_t *ptrY() {
-        return info.ptr;
+    uint8_t *ptrY() const {
+        return info().ptr[0];
     }
-    uint8_t *ptrUV() {
-        return info.ptr + info.pitch * info.height;
+    uint8_t *ptrUV() const {
+        return info().ptr[1];
     }
-    uint8_t *ptrU() {
-        return info.ptr + info.pitch * info.height;
+    uint8_t *ptrU() const {
+        return info().ptr[1];
     }
-    uint8_t *ptrV() {
-        return info.ptr + info.pitch * info.height * 2;
+    uint8_t *ptrV() const {
+        return info().ptr[2];
     }
-    uint8_t *ptrRGB() {
-        return info.ptr;
+    uint8_t *ptrRGB() const {
+        return info().ptr[0];
     }
-    uint32_t pitch() {
-        return info.pitch;
+    uint32_t pitch(int index = 0) const {
+        return info().pitch[index];
     }
-    uint64_t timestamp() {
-        return info.timestamp;
+    uint64_t timestamp() const {
+        return info().timestamp;
     }
-    void setTimestamp(uint64_t frame_timestamp) {
-        info.timestamp = frame_timestamp;
+    void SetTimestamp(uint64_t timestamp) {
+        if (amfptr) {
+            amfptr->SetPts(timestamp);
+        } else {
+            clbuf->frame.timestamp = timestamp;
+        }
     }
-    int64_t duration() {
-        return info.duration;
+    int64_t duration() const {
+        return info().duration;
     }
-    void setDuration(int64_t frame_duration) {
-        info.duration = frame_duration;
+    void SetDuration(uint64_t duration) {
+        if (amfptr) {
+            amfptr->SetDuration(duration);
+        } else {
+            clbuf->frame.duration = duration;
+        }
     }
 };
-
-static inline RGYFrame RGYFrameInit() {
-    RGYFrame frame;
-    memset(&frame, 0, sizeof(frame));
-    return frame;
-}
-
-static inline RGYFrame RGYFrameInit(const FrameInfo& frameinfo) {
-    RGYFrame frame;
-    frame.set(frameinfo);
-    return frame;
-}
-
-static inline RGYFrame RGYFrameFromSurface(const amf::AMFSurfacePtr& pSurface) {
-    auto plane = pSurface->GetPlaneAt(0);
-    const int dst_pitch = plane->GetHPitch();
-    const int dst_height = plane->GetVPitch();
-    RGYFrame frame;
-    frame.set((uint8_t *)plane->GetNative(),
-        plane->GetWidth(),
-        dst_height,
-        dst_pitch,
-        csp_enc_to_rgy(pSurface->GetFormat()),
-        pSurface->GetPts(),
-        pSurface->GetDuration());
-    return frame;
-}
-
-#ifndef __CUDACC__
-static_assert(std::is_pod<RGYFrame>::value == true, "RGYFrame should be POD type.");
-#endif
 
 VideoInfo videooutputinfo(
     RGY_CODEC codec,

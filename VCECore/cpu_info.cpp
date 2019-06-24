@@ -260,6 +260,12 @@ bool get_cpu_info(cpu_info_t *cpu_info) {
 }
 #endif //#if defined(_WIN32) || defined(_WIN64)
 
+cpu_info_t get_cpu_info() {
+    cpu_info_t cpu;
+    get_cpu_info(&cpu);
+    return cpu;
+}
+
 const int LOOP_COUNT = 5000;
 const int CLOCKS_FOR_2_INSTRUCTION = 2;
 const int COUNT_OF_REPEAT = 4; //以下のようにCOUNT_OF_REPEAT分マクロ展開する
@@ -388,33 +394,10 @@ double getCPUMaxTurboClock(unsigned int num_thread) {
     return resultClock;
 }
 
-#if ENABLE_OPENCL
-#include "rgy_opencl.h"
-#endif
-
 #pragma warning (push)
 #pragma warning (disable: 4100)
 double getCPUDefaultClockOpenCL() {
-#if !ENABLE_OPENCL
     return 0.0;
-#else
-    if (!initOpenCLGlobal()) {
-        return 0.0;
-    }
-    int frequency = 0;
-    RGYOpenCL cl;
-    auto platforms = cl.getPlatforms();
-    if (platforms.size() == 0) {
-        return 0.0;
-    }
-    for (const auto& platform : platforms) {
-        if (platform->createDeviceList(CL_DEVICE_TYPE_CPU) == CL_SUCCESS || platform->devs().size() > 0) {
-            frequency = RGYOpenCLDevice(platform->dev(0)).info().max_clock_frequency;
-            break;
-        }
-    }
-    return frequency / 1000.0;
-#endif // !ENABLE_OPENCL
 }
 #pragma warning (pop)
 

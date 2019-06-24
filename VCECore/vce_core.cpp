@@ -116,8 +116,11 @@ VCECore::VCECore() :
     m_nProcSpeedLimit(0),
     m_nAVSyncMode(RGY_AVSYNC_ASSUME_CFR),
     m_inputFps(),
-    m_outputFps(),
+    m_encFps(),
     m_outputTimebase(),
+    m_encWidth(0),
+    m_encHeight(0),
+    m_sar(),
     m_dll(),
     m_pFactory(nullptr),
     m_pDebug(nullptr),
@@ -125,6 +128,8 @@ VCECore::VCECore() :
     m_tracer(),
     m_AMFRuntimeVersion(0),
     m_pContext(),
+    m_vpFilters(),
+    m_pLastFilterParam(),
     m_state(RGY_STATE_STOPPED),
     m_pTrimParam(nullptr),
     m_pDecoder(),
@@ -221,6 +226,16 @@ RGY_ERR VCECore::readChapterFile(tstring chapfile) {
 #endif //#if ENABLE_AVSW_READER
 }
 
+RGY_CSP VCECore::GetEncoderCSP(const VCEParam *inputParam) {
+    const bool highBitDepth = false;
+    const bool yuv444 = false;
+    if (highBitDepth) {
+        return (yuv444) ? RGY_CSP_YUV444_16 : RGY_CSP_P010;
+    } else {
+        return (yuv444) ? RGY_CSP_YUV444 : RGY_CSP_NV12;
+    }
+}
+
 RGY_ERR VCECore::initInput(VCEParam *inputParam) {
 
     int sourceAudioTrackIdStart = 1;    //トラック番号は1スタート
@@ -274,12 +289,14 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
         return RGY_ERR_UNSUPPORTED;
     }
 
+    RGYInputPrm inputPrm;
+    RGYInputPrm *pInputPrm = &inputPrm;
+
 #if ENABLE_AVSW_READER
-    AvcodecReaderPrm inputInfoAVVCE = { 0 };
+    RGYInputAvcodecPrm inputInfoAVVCE(inputPrm);
     DeviceCodecCsp HWDecCodecCsp;
     HWDecCodecCsp.push_back(std::make_pair(0, getHWDecCodecCsp()));
 #endif
-    void *pInputPrm = nullptr;
     switch (inputParam->input.type) {
 #if ENABLE_AVI_READER
     case RGY_INPUT_FMT_AVI:
@@ -376,7 +393,7 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
             m_outputTimebase = to_rgy(pAVCodecReader->GetInputVideoStream()->time_base);
         }
     }
-    m_outputFps = m_inputFps;
+    m_encFps = m_inputFps;
     //if (inputParam->vpp.deinterlace == cudaVideoDeinterlaceMode_Bob) {
     //    outputFps *= 2;
     //}
@@ -403,11 +420,6 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
         PrintMes(RGY_LOG_DEBUG, _T(" (offset: %d)\n"), m_trimParam.offset);
     }
 
-    m_pStatus->Init(m_outputFps.n(), m_outputFps.d(), inputParam->input.frames, inputFileDuration, m_trimParam, m_pLog, m_pPerfMonitor);
-
-    if (inputParam->nPerfMonitorSelect || inputParam->nPerfMonitorSelectMatplot) {
-        m_pPerfMonitor->SetEncStatus(m_pStatus);
-    }
 #if ENABLE_AVSW_READER
     if ((m_nAVSyncMode & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR))/* || inputParam->vpp.rff*/) {
         tstring err_target;
@@ -446,7 +458,7 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
         for (int i = 0; i < (int)inputParam->nAudioSourceCount; i++) {
             VideoInfo inputInfo = inputParam->input;
 
-            AvcodecReaderPrm inputInfoAVAudioReader = { 0 };
+            RGYInputAvcodecPrm inputInfoAVAudioReader(inputPrm);
             inputInfoAVAudioReader.bReadVideo = false;
             inputInfoAVAudioReader.nReadAudio = inputParam->nAudioSourceCount > 0;
             inputInfoAVAudioReader.bReadSubtitle = false;
@@ -610,6 +622,22 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
     //    inputParams->nAVMux &= ~RGY_MUX_VIDEO;
     //}
 
+    double inputFileDuration = 0.0;
+    { auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
+        if (pAVCodecReader != nullptr) {
+            //caption2ass用の解像度情報の提供
+            //これをしないと入力ファイルのデータをずっとバッファし続けるので注意
+            pAVCodecReader->setOutputVideoInfo(m_encWidth, m_encHeight,
+                m_sar.n(), m_sar.d(),
+                (inputParams->nAVMux & RGY_MUX_VIDEO) != 0);
+            inputFileDuration = pAVCodecReader->GetInputVideoDuration();
+        }
+    }
+
+    m_pStatus->Init(m_encFps.n(), m_encFps.d(), inputParams->input.frames, inputFileDuration, m_trimParam, m_pLog, m_pPerfMonitor);
+    if (inputParams->nPerfMonitorSelect || inputParams->nPerfMonitorSelectMatplot) {
+        m_pPerfMonitor->SetEncStatus(m_pStatus);
+    }
 
     { auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
     if (pAVCodecReader != nullptr) {
@@ -843,7 +871,30 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
 }
 
 RGY_ERR VCECore::initDevice(int deviceId) {
-    auto amferr = m_pContext->InitOpenCL();
+    RGYOpenCL cl;
+    auto platforms = cl.getPlatforms("AMD");
+    if (platforms.size() == 0) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to find OpenCL platforms.\n"));
+        return RGY_ERR_DEVICE_LOST;
+    }
+    auto& platform = platforms[0];
+    if (platform->createDeviceList(CL_DEVICE_TYPE_GPU) != CL_SUCCESS || platform->devs().size() == 0) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to find device.\n"));
+        return RGY_ERR_DEVICE_LOST;
+    }
+    auto devices = platform->devs();
+    if (devices.size() <= deviceId) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to device #%d.\n"), deviceId);
+        return RGY_ERR_DEVICE_LOST;
+    }
+    platform->setDev(devices[deviceId]);
+
+    m_cl = std::make_shared<RGYOpenCLContext>(platform, m_pLog);
+    if (m_cl->createContext() != CL_SUCCESS) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to create OpenCL context.\n"));
+        return RGY_ERR_UNKNOWN;
+    }
+    auto amferr = m_pContext->InitOpenCL(m_cl->queue());
     if (amferr != AMF_OK) {
         PrintMes(RGY_LOG_ERROR, _T("Unsupported memory type.\n"));
         return err_to_rgy(amferr);
@@ -1060,8 +1111,213 @@ tstring VCECore::QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
     return str;
 }
 
+RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
+    //hwデコーダの場合、cropを入力時に行っていない
+    const bool cropRequired = cropEnabled(inputParam->input.crop)
+        && m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN;
+
+    FrameInfo inputFrame = { 0 };
+    inputFrame.width = inputParam->input.srcWidth;
+    inputFrame.height = inputParam->input.srcHeight;
+    inputFrame.csp = inputParam->input.csp;
+    const int croppedWidth = inputFrame.width - inputParam->input.crop.e.left - inputParam->input.crop.e.right;
+    const int croppedHeight = inputFrame.height - inputParam->input.crop.e.bottom - inputParam->input.crop.e.up;
+    if (!cropRequired) {
+        //入力時にcrop済み
+        inputFrame.width = croppedWidth;
+        inputFrame.height = croppedHeight;
+    }
+    if (m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN) {
+        inputFrame.deivce_mem = true;
+    }
+    m_encFps = rgy_rational<int>(inputParam->input.fpsN, inputParam->input.fpsD);
+
+    //リサイザの出力すべきサイズ
+    int resizeWidth  = croppedWidth;
+    int resizeHeight = croppedHeight;
+    m_encWidth = resizeWidth;
+    m_encHeight = resizeHeight;
+    //if (inputParam->vpp.pad.enable) {
+    //    m_encWidth  += inputParam->vpp.pad.right + inputParam->vpp.pad.left;
+    //    m_encHeight += inputParam->vpp.pad.bottom + inputParam->vpp.pad.top;
+    //}
+
+    //指定のリサイズがあればそのサイズに設定する
+    if (inputParam->input.dstWidth > 0 && inputParam->input.dstHeight > 0) {
+        m_encWidth = inputParam->input.dstWidth;
+        m_encHeight = inputParam->input.dstHeight;
+        resizeWidth = m_encWidth;
+        resizeHeight = m_encHeight;
+        //if (inputParam->vpp.pad.enable) {
+        //    resizeWidth -= (inputParam->vpp.pad.right + inputParam->vpp.pad.left);
+        //    resizeHeight -= (inputParam->vpp.pad.bottom + inputParam->vpp.pad.top);
+        //}
+    }
+    bool resizeRequired = false;
+    if (croppedWidth != resizeWidth || croppedHeight != resizeHeight) {
+        resizeRequired = true;
+    }
+    //avhw読みではデコード直後にリサイズが可能
+    if (resizeRequired && m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN) {
+        inputFrame.width  = inputParam->input.dstWidth;
+        inputFrame.height = inputParam->input.dstHeight;
+        resizeRequired = false;
+    }
+
+    //picStructの設定
+    //m_stPicStruct = picstruct_rgy_to_enc(inputParam->input.picstruct);
+    //if (inputParam->vpp.deinterlace != cudaVideoDeinterlaceMode_Weave) {
+    //    m_stPicStruct = NV_ENC_PIC_STRUCT_FRAME;
+    //} else if (inputParam->vpp.afs.enable || inputParam->vpp.nnedi.enable || inputParam->vpp.yadif.enable) {
+    //    m_stPicStruct = NV_ENC_PIC_STRUCT_FRAME;
+    //}
+    //インタレ解除の個数をチェック
+    //int deinterlacer = 0;
+    //if (inputParam->vpp.deinterlace != cudaVideoDeinterlaceMode_Weave) deinterlacer++;
+    //if (inputParam->vpp.afs.enable) deinterlacer++;
+    //if (inputParam->vpp.nnedi.enable) deinterlacer++;
+    //if (inputParam->vpp.yadif.enable) deinterlacer++;
+    //if (deinterlacer >= 2) {
+    //    PrintMes(RGY_LOG_ERROR, _T("Activating 2 or more deinterlacer is not supported.\n"));
+    //    return RGY_ERR_UNSUPPORTED;
+    //}
+
+    //フィルタが必要
+    if (resizeRequired
+        || cropRequired) {
+        //swデコードならGPUに上げる必要がある
+        if (m_pFileReader->getInputCodec() == RGY_CODEC_UNKNOWN) {
+            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop());
+            shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
+            param->frameIn = inputFrame;
+            param->frameOut.csp = param->frameIn.csp;
+            param->frameOut.deivce_mem = true;
+            param->baseFps = m_encFps;
+            param->bOutOverwrite = false;
+            auto sts = filterCrop->init(param, m_pLog, m_cl);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filterCrop));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+        const auto encCsp = GetEncoderCSP(inputParam);
+        auto filterCsp = encCsp;
+        switch (filterCsp) {
+        case RGY_CSP_NV12: filterCsp = RGY_CSP_YV12; break;
+        case RGY_CSP_P010: filterCsp = RGY_CSP_YV12_16; break;
+        default: break;
+        }
+        //colorspace
+#if 0
+        if (inputParam->vpp.colorspace.enable) {
+            unique_ptr<RGYFilter> filter(new RGYFilterColorspace());
+            shared_ptr<RGYFilterParamColorspace> param(new RGYFilterParamColorspace());
+            param->colorspace = inputParam->vpp.colorspace;
+            param->encCsp = encCsp;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
+            NVEncCtxAutoLock(cxtlock(m_ctxLock));
+            auto sts = filter->init(param, m_pLog, m_cl);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filter));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+#endif
+        if (filterCsp != inputFrame.csp
+            || cropRequired) { //cropが必要ならただちに適用する
+            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop());
+            shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
+            param->frameIn = inputFrame;
+            param->frameOut.csp = encCsp;
+            switch (param->frameOut.csp) {
+            case RGY_CSP_NV12:
+                param->frameOut.csp = RGY_CSP_YV12;
+                break;
+            case RGY_CSP_P010:
+                param->frameOut.csp = RGY_CSP_YV12_16;
+                break;
+            default:
+                break;
+            }
+            if (cropRequired) {
+                param->crop = inputParam->input.crop;
+            }
+            param->baseFps = m_encFps;
+            param->frameOut.deivce_mem = true;
+            param->bOutOverwrite = false;
+            auto sts = filterCrop->init(param, m_pLog, m_cl);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filterCrop));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+    }
+    //最後のフィルタ
+    {
+        //もし入力がCPUメモリで色空間が違うなら、一度そのままGPUに転送する必要がある
+        if (inputFrame.deivce_mem == false && inputFrame.csp != GetEncoderCSP(inputParam)) {
+            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop());
+            shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
+            param->frameIn = inputFrame;
+            param->frameOut.csp = param->frameIn.csp;
+            //インタレ保持であれば、CPU側にフレームを戻す必要がある
+            //色空間が同じなら、ここでやってしまう
+            param->frameOut.deivce_mem = true;
+            param->bOutOverwrite = false;
+            auto sts = filterCrop->init(param, m_pLog, m_cl);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            m_vpFilters.push_back(std::move(filterCrop));
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+        }
+        unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop());
+        shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
+        param->frameIn = inputFrame;
+        param->frameOut.csp = GetEncoderCSP(inputParam);
+        //インタレ保持であれば、CPU側にフレームを戻す必要がある
+        //色空間が同じなら、ここでやってしまう
+        param->frameOut.deivce_mem = true;
+        param->bOutOverwrite = false;
+        auto sts = filterCrop->init(param, m_pLog, m_cl);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        m_vpFilters.push_back(std::move(filterCrop));
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+    }
+    return RGY_ERR_NONE;
+}
+
 RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     AMF_RESULT res = AMF_OK;
+
+    m_encWidth  = (m_pLastFilterParam) ? m_pLastFilterParam->frameOut.width  : prm->input.srcWidth  - prm->input.crop.e.left - prm->input.crop.e.right;
+    m_encHeight = (m_pLastFilterParam) ? m_pLastFilterParam->frameOut.height : prm->input.srcHeight - prm->input.crop.e.bottom - prm->input.crop.e.up;
 
     if (m_pLog->getLogLevel() <= RGY_LOG_DEBUG) {
         TCHAR cpuInfo[256] = { 0 };
@@ -1199,17 +1455,17 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (encoderCaps->GetOutputCaps(&outputCaps) == AMF_OK) {
             int minWidth, maxWidth;
             outputCaps->GetWidthRange(&minWidth, &maxWidth);
-            if (prm->input.dstWidth < (uint32_t)minWidth || (uint32_t)maxWidth < prm->input.dstWidth) {
+            if (m_encWidth < (uint32_t)minWidth || (uint32_t)maxWidth < m_encWidth) {
                 PrintMes(RGY_LOG_ERROR, _T("Output width should be in range of %d - %d (%d specified).\n"),
-                    minWidth, maxWidth, prm->input.dstWidth);
+                    minWidth, maxWidth, m_encWidth);
                 return RGY_ERR_UNSUPPORTED;
             }
 
             int minHeight, maxHeight;
             outputCaps->GetHeightRange(&minHeight, &maxHeight);
-            if (prm->input.dstHeight < (uint32_t)minHeight || (uint32_t)maxHeight < prm->input.dstHeight) {
+            if (m_encHeight < (uint32_t)minHeight || (uint32_t)maxHeight < m_encHeight) {
                 PrintMes(RGY_LOG_ERROR, _T("Output height should be in range of %d - %d (%d specified).\n"),
-                    minHeight, maxHeight, prm->input.dstHeight);
+                    minHeight, maxHeight, m_encHeight);
                 return RGY_ERR_UNSUPPORTED;
             }
 
@@ -1260,7 +1516,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
     int nGOPLen = prm->nGOPLen;
     if (nGOPLen == 0) {
-        nGOPLen = (int)(m_outputFps.n() / (double)m_outputFps.d() + 0.5) * 10;
+        nGOPLen = (int)(m_encFps.n() / (double)m_encFps.d() + 0.5) * 10;
     }
     //VCEにはlevelを自動で設定してくれる機能はないようで、"0"などとするとエラー終了してしまう。
     if (prm->codecParam[prm->codec].nLevel == 0 || prm->nMaxBitrate == 0) {
@@ -1270,15 +1526,15 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (prm->codec == RGY_CODEC_H264) {
             const int profile = prm->codecParam[prm->codec].nProfile;
             if (level == 0) {
-                level = calc_h264_auto_level(prm->input.dstWidth, prm->input.dstHeight, prm->nRefFrames, false,
-                    m_outputFps.n(), m_outputFps.d(), profile, max_bitrate_kbps, vbv_bufsize_kbps);
+                level = calc_h264_auto_level(m_encWidth, m_encHeight, prm->nRefFrames, false,
+                    m_encFps.n(), m_encFps.d(), profile, max_bitrate_kbps, vbv_bufsize_kbps);
             }
             get_h264_vbv_value(&max_bitrate_kbps, &vbv_bufsize_kbps, level, profile);
         } else if (prm->codec == RGY_CODEC_HEVC) {
             const bool high_tier = prm->codecParam[prm->codec].nTier == AMF_VIDEO_ENCODER_HEVC_TIER_HIGH;
             if (level == 0) {
-                level = calc_hevc_auto_level(prm->input.dstWidth, prm->input.dstHeight, //m_stEncConfig.encodeCodecConfig.hevcConfig.maxNumRefFramesInDPB,
-                    m_outputFps.n(), m_outputFps.d(), high_tier, max_bitrate_kbps);
+                level = calc_hevc_auto_level(m_encWidth, m_encHeight, //m_stEncConfig.encodeCodecConfig.hevcConfig.maxNumRefFramesInDPB,
+                    m_encFps.n(), m_encFps.d(), high_tier, max_bitrate_kbps);
             }
             max_bitrate_kbps = get_hevc_max_bitrate(level, high_tier);
             vbv_bufsize_kbps = max_bitrate_kbps;
@@ -1297,17 +1553,19 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         }
     }
 
+    m_sar = rgy_rational<int>(prm->input.sar[0], prm->input.sar[1]);
+
     m_params.SetParam(VCE_PARAM_KEY_INPUT_WIDTH, prm->input.srcWidth);
     m_params.SetParam(VCE_PARAM_KEY_INPUT_HEIGHT, prm->input.srcHeight);
-    m_params.SetParam(VCE_PARAM_KEY_OUTPUT_WIDTH, prm->input.dstWidth);
-    m_params.SetParam(VCE_PARAM_KEY_OUTPUT_HEIGHT, prm->input.dstHeight);
+    m_params.SetParam(VCE_PARAM_KEY_OUTPUT_WIDTH, m_encWidth);
+    m_params.SetParam(VCE_PARAM_KEY_OUTPUT_HEIGHT, m_encHeight);
     m_params.SetParam(VCE_PARAM_KEY_CAPABILITY,    false);
     m_params.SetParam(SETFRAMEPARAMFREQ_PARAM_NAME,   0);
     m_params.SetParam(SETDYNAMICPARAMFREQ_PARAM_NAME, 0);
 
-    m_params.SetParam(AMF_PARAM_FRAMESIZE(prm->codec),      AMFConstructSize(prm->input.dstWidth, prm->input.dstHeight));
-    m_params.SetParam(AMF_PARAM_FRAMERATE(prm->codec),      AMFConstructRate(m_outputFps.n(), m_outputFps.d()));
-    m_params.SetParam(AMF_PARAM_ASPECT_RATIO(prm->codec),   AMFConstructRatio(prm->input.sar[0], prm->input.sar[1]));
+    m_params.SetParam(AMF_PARAM_FRAMESIZE(prm->codec),      AMFConstructSize(m_encWidth, m_encHeight));
+    m_params.SetParam(AMF_PARAM_FRAMERATE(prm->codec),      AMFConstructRate(m_encFps.n(), m_encFps.d()));
+    m_params.SetParam(AMF_PARAM_ASPECT_RATIO(prm->codec),   AMFConstructRatio(m_sar.n(), m_sar.d()));
     m_params.SetParam(AMF_PARAM_USAGE(prm->codec),          (amf_int64)((prm->codec == RGY_CODEC_HEVC) ? AMF_VIDEO_ENCODER_HEVC_USAGE_TRANSCONDING : AMF_VIDEO_ENCODER_USAGE_TRANSCONDING));
     m_params.SetParam(AMF_PARAM_PROFILE(prm->codec),        (amf_int64)prm->codecParam[prm->codec].nProfile);
     m_params.SetParam(AMF_PARAM_PROFILE_LEVEL(prm->codec),  (amf_int64)prm->codecParam[prm->codec].nLevel);
@@ -1388,7 +1646,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.Apply(m_pEncoder, AMF_PARAM_STATIC, m_pLog.get());
     PrintMes(RGY_LOG_DEBUG, _T("pushed static params.\n"));
 
-    if (AMF_OK != (res = m_pEncoder->Init(formatIn, prm->input.dstWidth, prm->input.dstHeight))) {
+    if (AMF_OK != (res = m_pEncoder->Init(formatIn, m_encWidth, m_encHeight))) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to initalize encoder: %s.\n"), AMFRetString(res));
         return err_to_rgy(res);
     }
@@ -1501,6 +1759,10 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
+    if (RGY_ERR_NONE != (ret = initFilters(prm))) {
+        return ret;
+    }
+
     if (RGY_ERR_NONE != (ret = initEncoder(prm))) {
         return ret;
     }
@@ -1574,7 +1836,7 @@ RGY_ERR VCECore::run_output() {
                 return err_to_rgy(ar);
             }
             amf::AMFBufferPtr buffer(data);
-            int64_t pts = rgy_change_scale(buffer->GetPts(), m_outputFps.inv(), m_outputTimebase);
+            int64_t pts = rgy_change_scale(buffer->GetPts(), m_encFps.inv(), m_outputTimebase);
             int64_t duration = rgy_change_scale(buffer->GetDuration(), VCE_TIMEBASE, m_outputTimebase);
 
             RGYBitstream output = RGYBitstreamInit();
@@ -1593,6 +1855,7 @@ RGY_ERR VCECore::run_output() {
 RGY_ERR VCECore::run() {
     m_pStatus->SetStart();
     m_state = RGY_STATE_RUNNING;
+    const int pipelineDepth = 1;
     const auto VCE_TIMEBASE = rgy_rational<int>(1, AMF_SECOND);
     std::map<int, shared_ptr<RGYOutputAvcodec>> pWriterForAudioStreams;
     if (m_pFileWriterListAudio.size()) {
@@ -1671,7 +1934,111 @@ RGY_ERR VCECore::run() {
         return RGY_ERR_NONE;
     };
 
-    auto send_encoder = [this](amf::AMFSurfacePtr &pSurface) {
+    auto filter_frame = [&](int &nFilterFrame, unique_ptr<RGYFrame> &inframe, deque<unique_ptr<RGYFrame>> &dqEncFrames, bool &bDrain) {
+
+        deque<std::pair<FrameInfo, uint32_t>> filterframes;
+
+        bool skipFilters = false;
+        if (bDrain) {
+            filterframes.push_back(std::make_pair(initFrameInfo(), 0u));
+        } else {
+            auto &lastFilter = m_vpFilters[m_vpFilters.size()-1];
+            const auto inframeInfo = inframe->info();
+            if (typeid(*lastFilter.get()) == typeid(RGYFilterCspCrop)
+                && m_vpFilters.size() == 1
+                && lastFilter->GetFilterParam()->frameOut.csp == inframeInfo.csp
+                && m_encWidth == inframeInfo.width
+                && m_encHeight == inframeInfo.height) {
+                skipFilters = true;
+            }
+            const auto inAmf = inframe->amf();
+            if (!skipFilters && inAmf && inAmf->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
+                amf::AMFSurfacePtr pSurface;
+                auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_OPENCL, inAmf->GetFormat(), m_encWidth, m_encHeight, &pSurface);
+                amf::AMFCompute *compute = nullptr;
+                ar = m_pContext->GetCompute(amf::AMF_MEMORY_OPENCL, &compute);
+                if (ar != AMF_OK) {
+                    PrintMes(RGY_LOG_ERROR, _T("Failed to get AMFCompute: %s.\n"), get_err_mes(err_to_rgy(ar)));
+                    return err_to_rgy(ar);
+                }
+                for (int iplane = 0; iplane < pSurface->GetPlanesCount(); iplane++) {
+                    auto srcPlane = inAmf->GetPlaneAt(iplane);
+                    auto dstPlane = pSurface->GetPlaneAt(iplane);
+                    const amf_size origin[3] = { 0, 0, 0 };
+                    const amf_size region[3] = { srcPlane->GetWidth(), srcPlane->GetHeight(), 1 };
+                    ar = compute->CopyPlane(srcPlane, origin, region, dstPlane, origin);
+                    if (ar != AMF_OK) {
+                        PrintMes(RGY_LOG_ERROR, _T("Failed to copy plane: %s.\n"), get_err_mes(err_to_rgy(ar)));
+                        return err_to_rgy(ar);
+                    }
+                }
+                inframe = std::make_unique<RGYFrame>(pSurface);
+            }
+            filterframes.push_back(std::make_pair(inframe->info(), 0u));
+        }
+
+        while (filterframes.size() > 0 || bDrain) {
+            //フィルタリングするならここ
+            for (uint32_t ifilter = filterframes.front().second; ifilter < m_vpFilters.size() - 1; ifilter++) {
+                int nOutFrames = 0;
+                FrameInfo *outInfo[16] = { 0 };
+                auto sts_filter = m_vpFilters[ifilter]->filter(&filterframes.front().first, (FrameInfo **)&outInfo, &nOutFrames);
+                if (sts_filter != RGY_ERR_NONE) {
+                    PrintMes(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), m_vpFilters[ifilter]->name().c_str());
+                    return sts_filter;
+                }
+                if (nOutFrames == 0) {
+                    if (bDrain) {
+                        filterframes.front().second++;
+                        continue;
+                    }
+                    return RGY_ERR_NONE;
+                }
+                filterframes.pop_front();
+                bDrain = false; //途中でフレームが出てきたら、drain完了していない
+
+                //最初に出てきたフレームは先頭に追加する
+                for (int jframe = nOutFrames-1; jframe >= 0; jframe--) {
+                    filterframes.push_front(std::make_pair(*outInfo[jframe], ifilter+1));
+                }
+            }
+            if (bDrain) {
+                return RGY_ERR_NONE; //最後までbDrain = trueなら、drain完了
+            }
+            if (skipFilters) {
+                dqEncFrames.push_back(std::move(inframe));
+                filterframes.pop_front();
+            } else {
+                //エンコードバッファにコピー
+                auto &lastFilter = m_vpFilters[m_vpFilters.size()-1];
+                amf::AMFSurfacePtr pSurface;
+                auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_OPENCL, csp_rgy_to_enc(lastFilter->GetFilterParam()->frameOut.csp),
+                    m_encWidth, m_encHeight, &pSurface);
+                auto encSurface = std::make_unique<RGYFrame>(pSurface);
+                //最後のフィルタはNVEncFilterCspCropでなければならない
+                if (typeid(*lastFilter.get()) != typeid(RGYFilterCspCrop)) {
+                    PrintMes(RGY_LOG_ERROR, _T("Last filter setting invalid.\n"));
+                    return RGY_ERR_INVALID_PARAM;
+                }
+                //エンコードバッファのポインタを渡す
+                int nOutFrames = 0;
+                auto encSurfaceInfo = encSurface->info();
+                FrameInfo *outInfo[1];
+                outInfo[0] = &encSurfaceInfo;
+                auto sts_filter = lastFilter->filter(&filterframes.front().first, (FrameInfo **)&outInfo, &nOutFrames);
+                filterframes.pop_front();
+                if (sts_filter != RGY_ERR_NONE) {
+                    PrintMes(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), lastFilter->name().c_str());
+                    return sts_filter;
+                }
+                dqEncFrames.push_back(std::move(encSurface));
+            }
+        }
+        return RGY_ERR_NONE;
+    };
+
+    auto send_encoder = [this](unique_ptr<RGYFrame>& encFrame) {
+        amf::AMFSurfacePtr pSurface = encFrame->detachSurface();
         //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
         pSurface->SetFrameType(amf::AMF_FRAME_PROGRESSIVE);
         //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
@@ -1696,6 +2063,8 @@ RGY_ERR VCECore::run() {
     int nEncodeFrames = 0;
     bool bInputEmpty = false;
     bool bFilterEmpty = false;
+    deque<unique_ptr<RGYFrame>> dqInFrames;
+    deque<unique_ptr<RGYFrame>> dqEncFrames;
     for (int nInputFrame = 0, nFilterFrame = 0; m_state == RGY_STATE_RUNNING && !bInputEmpty && !bFilterEmpty; ) {
         if (m_pAbortByUser && *m_pAbortByUser) {
             m_state = RGY_STATE_ABORT;
@@ -1705,28 +2074,29 @@ RGY_ERR VCECore::run() {
         if ((res = run_send_streams()) != RGY_ERR_NONE) {
             return res;
         }
-        amf::AMFSurfacePtr pSurface;
+        unique_ptr<RGYFrame> inputFrame;
         if (m_pDecoder == nullptr) {
+            amf::AMFSurfacePtr pSurface;
             auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_HOST, csp_rgy_to_enc(inputFrameInfo.csp),
                 inputFrameInfo.srcWidth - inputFrameInfo.crop.e.left - inputFrameInfo.crop.e.right,
                 inputFrameInfo.srcHeight - inputFrameInfo.crop.e.bottom - inputFrameInfo.crop.e.up,
                 &pSurface);
             if (ar != AMF_OK) return err_to_rgy(ar);
-            auto frame = RGYFrameFromSurface(pSurface);
-            auto ret = m_pFileReader->LoadNextFrame(&frame);
+            inputFrame = std::make_unique<RGYFrame>(pSurface);
+            auto ret = m_pFileReader->LoadNextFrame(inputFrame.get());
             if (ret == RGY_ERR_MORE_DATA) {
                 bInputEmpty = true;
-                pSurface.Release();
+                inputFrame.reset();
             } else if (ret == RGY_ERR_NONE) {
                 auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
                 if (pAVCodecReader != nullptr) {
                     const auto vid_timebase = to_rgy(pAVCodecReader->GetInputVideoStream()->time_base);
-                    pSurface->SetDuration(rgy_change_scale(frame.duration(), vid_timebase, VCE_TIMEBASE));
-                    pSurface->SetPts(rgy_change_scale(frame.timestamp(), vid_timebase, VCE_TIMEBASE));
+                    inputFrame->SetDuration(rgy_change_scale(inputFrame->duration(), vid_timebase, VCE_TIMEBASE));
+                    inputFrame->SetTimestamp(rgy_change_scale(inputFrame->timestamp(), vid_timebase, VCE_TIMEBASE));
                 } else {
                     const auto fps_timebase = rgy_rational<int>(inputFrameInfo.fpsN, inputFrameInfo.fpsD).inv();
-                    pSurface->SetDuration(rgy_change_scale(1, fps_timebase, VCE_TIMEBASE));
-                    pSurface->SetPts(rgy_change_scale(nInputFrame, fps_timebase, VCE_TIMEBASE));
+                    inputFrame->SetDuration(rgy_change_scale(1, fps_timebase, VCE_TIMEBASE));
+                    inputFrame->SetTimestamp(rgy_change_scale(nInputFrame, fps_timebase, VCE_TIMEBASE));
                 }
             }
         } else {
@@ -1743,13 +2113,33 @@ RGY_ERR VCECore::run() {
             } else if (ar != AMF_OK) {
                 return err_to_rgy(ar);
             }
-            pSurface = amf::AMFSurfacePtr(data);
+            inputFrame = std::make_unique<RGYFrame>(amf::AMFSurfacePtr(data));
         }
-        if (bInputEmpty) {
-            bFilterEmpty = true; //filterを実装していないので暫定
+        if (!bInputEmpty) {
+            dqInFrames.push_back(std::move(inputFrame));
         }
-        if (pSurface != nullptr) {
-            send_encoder(pSurface);
+        while (((dqInFrames.size() || bInputEmpty) && !bFilterEmpty)) {
+            const bool bDrain = (dqInFrames.size()) ? false : bInputEmpty;
+            std::unique_ptr<RGYFrame> inframe;
+            if (dqInFrames.size()) {
+                inframe = std::move(dqInFrames.front());
+            }
+            bool bDrainFin = bDrain;
+            RGY_ERR err = filter_frame(nFilterFrame, inframe, dqEncFrames, bDrainFin);
+            if (err != RGY_ERR_NONE) {
+                break;
+            }
+            bFilterEmpty = bDrainFin;
+            if (!bDrain) {
+                dqInFrames.pop_front();
+            }
+            while (dqEncFrames.size() >= pipelineDepth) {
+                auto &encframe = dqEncFrames.front();
+                if ((err = send_encoder(encframe)) != RGY_ERR_NONE) {
+                    break;
+                }
+                dqEncFrames.pop_front();
+            }
         }
     }
     if (m_thDecoder.joinable()) {

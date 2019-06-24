@@ -34,7 +34,6 @@
 
 #if ENABLE_AVSW_READER
 #include "rgy_avutil.h"
-#include "rgy_caption.h"
 #include "rgy_queue.h"
 #include "rgy_perf_monitor.h"
 #include "convert_csp.h"
@@ -43,7 +42,14 @@
 #include <thread>
 #include <cassert>
 
+#if (defined(_WIN32) || defined(_WIN64))
+#define ENABLE_CAPTION2ASS 1
 #define USE_CUSTOM_INPUT 1
+#include "rgy_caption.h"
+#else
+#define ENABLE_CAPTION2ASS 0
+#define USE_CUSTOM_INPUT 0
+#endif
 
 using std::vector;
 using std::pair;
@@ -488,7 +494,7 @@ public:
 protected:
     //ptsでソート
     void sortPts(uint32_t index, uint32_t len) {
-#if !defined(_MSC_VER) && __cplusplus <= 201103
+#if (!defined(_MSC_VER) && __cplusplus <= 201103) || defined(__NVCC__)
         FramePos *pStart = (FramePos *)m_list.get(index);
         FramePos *pEnd = (FramePos *)m_list.get(index + len);
         std::sort(pStart, pEnd, CompareFramePos());
@@ -711,9 +717,8 @@ typedef struct AVDemuxStream {
     int64_t                   nExtractErrExcess;      //音声抽出のあまり (音声が多くなっていれば正、足りなくなっていれば負)
     int64_t                   trimOffset;             //trimによる補正量 (stream timebase基準)
     int64_t                   aud0_fin;               //直前に有効だったパケットのpts(stream timebase基準)
-    bool                     *trimApplied;            //trim blockを適用済みかどうか
+    int                       appliedTrimBlock;       //trim blockをどこまで適用したか
     AVPacket                  pktSample;              //サンプル用の音声・字幕データ
-    int                       nDelayOfStream;         //音声側の遅延 (pkt_timebase基準)
     uint64_t                  pnStreamChannelSelect[MAX_SPLIT_CHANNELS]; //入力音声の使用するチャンネル
     uint64_t                  pnStreamChannelOut[MAX_SPLIT_CHANNELS];    //出力音声のチャンネル
     AVRational                timebase;               //streamのtimebase [pStream = nullptrの場合でも使えるように]
@@ -752,11 +757,14 @@ enum AVCAPTION_STATE {
     AVCAPTION_IS_TS = 1,
 };
 
+
+#if ENABLE_CAPTION2ASS
 class AVCaption2Ass {
 public:
     AVCaption2Ass() : m_cap2ass(), m_pLog(), m_subList(), m_buffer(),
         m_index(-1), m_trackId(0),
-        m_state(AVCAPTION_UNKNOWN), m_resolutionDetermined(false) {};
+        m_state(AVCAPTION_UNKNOWN), m_resolutionDetermined(false) {
+    };
     ~AVCaption2Ass() { close(); };
     bool enabled() const {
         return m_cap2ass.enabled() && m_state >= AVCAPTION_UNKNOWN;
@@ -863,8 +871,51 @@ protected:
     //出力解像度が決まったかどうかを示すフラグ
     bool m_resolutionDetermined;
 };
+#else
+class AVCaption2Ass {
+public:
+    AVCaption2Ass() {};
+    ~AVCaption2Ass() {  };
+    bool enabled() const {
+        return false;
+    }
+    void close() {
+    }
+    RGY_ERR init(std::shared_ptr<RGYLog> pLog, C2AFormat format) {
+        return RGY_ERR_NONE;
+    }
+    C2AFormat format() const {
+        return FORMAT_INVALID;
+    }
+    AVCAPTION_STATE state() const {
+        return AVCAPTION_DISABLED;
+    }
+    void disable() {
+    }
+    void reset() {
+    }
+    void setIndex(int streamIndex, int trackId) {
+    }
+    void setOutputResolution(int w, int h, int sar_x, int sar_y) {
+    }
+    void printParam(int log_level) {
+    }
+    void setVidFirstKeyPts(int64_t pts) {
+    }
+    AVDemuxStream stream() const {
+        AVDemuxStream stream;
+        memset(&stream, 0, sizeof(AVDemuxStream));
+        return stream;
+    }
+    RGY_ERR proc(uint8_t *buf, int buf_size, decltype(AVDemuxer::qStreamPktL1)& qStreamPkt) {
+        return RGY_ERR_NONE;
+    }
+protected:
+};
+#endif //#if ENABLE_CAPTION2ASS
 
-typedef struct AvcodecReaderPrm {
+class RGYInputAvcodecPrm : public RGYInputPrm {
+public:
     uint8_t        memType;                 //使用するメモリの種類
     const TCHAR   *pInputFormat;            //入力フォーマット
     bool           bReadVideo;              //映像の読み込みを行うかどうか
@@ -893,7 +944,10 @@ typedef struct AvcodecReaderPrm {
     DeviceCodecCsp *pHWDecCodecCsp;          //HWデコーダのサポートするコーデックと色空間
     bool           bVideoDetectPulldown;     //pulldownの検出を試みるかどうか
     C2AFormat      caption2ass;              //caption2assの処理の有効化
-} AvcodecReaderPrm;
+
+    RGYInputAvcodecPrm(RGYInputPrm base);
+    virtual ~RGYInputAvcodecPrm() {};
+};
 
 class RGYInputAvcodec : public RGYInput
 {
@@ -961,7 +1015,7 @@ public:
     int64_t seek(int64_t offset, int whence);
 #endif //USE_CUSTOM_INPUT
 protected:
-    virtual RGY_ERR Init(const TCHAR *strFileName, VideoInfo *pInputInfo, const void *prm) override;
+    virtual RGY_ERR Init(const TCHAR *strFileName, VideoInfo *pInputInfo, const RGYInputPrm *prm) override;
 
     void SetExtraData(AVCodecParameters *pCodecParam, const uint8_t *data, uint32_t size);
 
@@ -979,7 +1033,7 @@ protected:
     int getSample(AVPacket *pkt, bool bTreatFirstPacketAsKeyframe = false);
 
     //対象・字幕の音声パケットを追加するかどうか
-    bool checkStreamPacketToAdd(const AVPacket *pkt, AVDemuxStream *pStream);
+    bool checkStreamPacketToAdd(AVPacket *pkt, AVDemuxStream *pStream);
 
     //対象のパケットの必要な対象のストリーム情報へのポインタ
     AVDemuxStream *getPacketStreamData(const AVPacket *pkt);

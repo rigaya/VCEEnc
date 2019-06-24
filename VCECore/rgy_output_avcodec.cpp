@@ -1209,11 +1209,11 @@ RGY_ERR RGYOutputAvcodec::InitAudio(AVMuxAudio *pMuxAudio, AVOutputStreamPrm *pI
     }
     pMuxAudio->pStreamOut->time_base = av_make_q(1, pMuxAudio->pStreamOut->codecpar->sample_rate);
     if (m_Mux.video.pStreamOut) {
-        pMuxAudio->pStreamOut->start_time = (int)av_rescale_q(pInputAudio->src.nDelayOfStream, pMuxAudio->pStreamIn->time_base, pMuxAudio->pStreamOut->time_base);
+        pMuxAudio->pStreamOut->start_time = (int)av_rescale_q(0, pMuxAudio->pStreamIn->time_base, pMuxAudio->pStreamOut->time_base);
         pMuxAudio->nDelaySamplesOfAudio = (int)pMuxAudio->pStreamOut->start_time;
         pMuxAudio->nLastPtsOut = AV_NOPTS_VALUE;
 
-        AddMessage(RGY_LOG_DEBUG, _T("delay      %6d (timabase %d/%d)\n"), pInputAudio->src.nDelayOfStream, pMuxAudio->pStreamIn->time_base.num, pMuxAudio->pStreamIn->time_base.den);
+        AddMessage(RGY_LOG_DEBUG, _T("delay      %6d (timabase %d/%d)\n"), 0, pMuxAudio->pStreamIn->time_base.num, pMuxAudio->pStreamIn->time_base.den);
         AddMessage(RGY_LOG_DEBUG, _T("start_time %6d (timabase %d/%d)\n"), pMuxAudio->pStreamOut->start_time,  pMuxAudio->pStreamOut->codec->time_base.num, pMuxAudio->pStreamOut->codec->time_base.den);
     }
     if (srcCodecParam) {
