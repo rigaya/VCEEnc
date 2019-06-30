@@ -122,6 +122,8 @@ VCECore::VCECore() :
     m_encHeight(0),
     m_sar(),
     m_dll(),
+    m_dx9(),
+    m_dx11(),
     m_pFactory(nullptr),
     m_pDebug(nullptr),
     m_pTrace(nullptr),
@@ -871,6 +873,28 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
 }
 
 RGY_ERR VCECore::initDevice(int deviceId) {
+    auto err = m_dx9.Init(true, deviceId, false, 1280, 720, m_pLog);
+    if (err != RGY_ERR_NONE) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to get directX9 device.\n"));
+        return RGY_ERR_DEVICE_LOST;
+    }
+    auto amferr = m_pContext->InitDX9(m_dx9.GetDevice());
+    if (amferr != AMF_OK) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by directX9.\n"));
+        return err_to_rgy(amferr);
+    }
+
+    err = m_dx11.Init(deviceId,false, m_pLog);
+    if (err != RGY_ERR_NONE) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to get directX11 device.\n"));
+        return RGY_ERR_DEVICE_LOST;
+    }
+    amferr = m_pContext->InitDX11(m_dx11.GetDevice());
+    if (amferr != AMF_OK) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by directX11.\n"));
+        return err_to_rgy(amferr);
+    }
+
     RGYOpenCL cl;
     auto platforms = cl.getPlatforms("AMD");
     if (platforms.size() == 0) {
@@ -878,7 +902,7 @@ RGY_ERR VCECore::initDevice(int deviceId) {
         return RGY_ERR_DEVICE_LOST;
     }
     auto& platform = platforms[0];
-    if (platform->createDeviceList(CL_DEVICE_TYPE_GPU) != CL_SUCCESS || platform->devs().size() == 0) {
+    if (platform->createDeviceListD3D9(CL_DEVICE_TYPE_GPU, (void*)m_dx9.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to find device.\n"));
         return RGY_ERR_DEVICE_LOST;
     }
@@ -887,16 +911,16 @@ RGY_ERR VCECore::initDevice(int deviceId) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to device #%d.\n"), deviceId);
         return RGY_ERR_DEVICE_LOST;
     }
-    platform->setDev(devices[deviceId]);
+    platform->setDev(devices[deviceId], m_dx9.GetDevice(), m_dx11.GetDevice());
 
     m_cl = std::make_shared<RGYOpenCLContext>(platform, m_pLog);
     if (m_cl->createContext() != CL_SUCCESS) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to create OpenCL context.\n"));
         return RGY_ERR_UNKNOWN;
     }
-    auto amferr = m_pContext->InitOpenCL(m_cl->queue());
+    amferr = m_pContext->InitOpenCL(m_cl->queue());
     if (amferr != AMF_OK) {
-        PrintMes(RGY_LOG_ERROR, _T("Unsupported memory type.\n"));
+        PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by OpenCL.\n"));
         return err_to_rgy(amferr);
     }
     return RGY_ERR_NONE;
@@ -1944,7 +1968,8 @@ RGY_ERR VCECore::run() {
         } else {
             auto &lastFilter = m_vpFilters[m_vpFilters.size()-1];
             const auto inframeInfo = inframe->info();
-            if (typeid(*lastFilter.get()) == typeid(RGYFilterCspCrop)
+            if (false
+                && typeid(*lastFilter.get()) == typeid(RGYFilterCspCrop)
                 && m_vpFilters.size() == 1
                 && lastFilter->GetFilterParam()->frameOut.csp == inframeInfo.csp
                 && m_encWidth == inframeInfo.width
@@ -1953,26 +1978,11 @@ RGY_ERR VCECore::run() {
             }
             const auto inAmf = inframe->amf();
             if (!skipFilters && inAmf && inAmf->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
-                amf::AMFSurfacePtr pSurface;
-                auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_OPENCL, inAmf->GetFormat(), m_encWidth, m_encHeight, &pSurface);
-                amf::AMFCompute *compute = nullptr;
-                ar = m_pContext->GetCompute(amf::AMF_MEMORY_OPENCL, &compute);
+                auto ar = inAmf->Interop(amf::AMF_MEMORY_OPENCL);
                 if (ar != AMF_OK) {
-                    PrintMes(RGY_LOG_ERROR, _T("Failed to get AMFCompute: %s.\n"), get_err_mes(err_to_rgy(ar)));
+                    PrintMes(RGY_LOG_ERROR, _T("Failed to convert plane: %s.\n"), get_err_mes(err_to_rgy(ar)));
                     return err_to_rgy(ar);
                 }
-                for (int iplane = 0; iplane < pSurface->GetPlanesCount(); iplane++) {
-                    auto srcPlane = inAmf->GetPlaneAt(iplane);
-                    auto dstPlane = pSurface->GetPlaneAt(iplane);
-                    const amf_size origin[3] = { 0, 0, 0 };
-                    const amf_size region[3] = { srcPlane->GetWidth(), srcPlane->GetHeight(), 1 };
-                    ar = compute->CopyPlane(srcPlane, origin, region, dstPlane, origin);
-                    if (ar != AMF_OK) {
-                        PrintMes(RGY_LOG_ERROR, _T("Failed to copy plane: %s.\n"), get_err_mes(err_to_rgy(ar)));
-                        return err_to_rgy(ar);
-                    }
-                }
-                inframe = std::make_unique<RGYFrame>(pSurface);
             }
             filterframes.push_back(std::make_pair(inframe->info(), 0u));
         }

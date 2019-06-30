@@ -325,9 +325,6 @@ public:
     RGYFrame(unique_ptr<RGYCLBufFrame> clframe) : amfptr(), clbuf(std::move(clframe)) {
     }
     ~RGYFrame() {
-        if (amfptr) {
-            amfptr->Release();
-        }
         clbuf.reset();
     }
     bool isempty() const {

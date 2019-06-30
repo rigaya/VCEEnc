@@ -34,6 +34,8 @@
 #if ENABLE_OPENCL
 #define CL_TARGET_OPENCL_VERSION 120
 #include <CL/opencl.h>
+#include <CL/cl_dx9_media_sharing.h>
+#include <CL/cl_d3d11.h>
 #include <vector>
 #include <array>
 #include <memory>
@@ -44,10 +46,14 @@
 #define CL_EXTERN extern
 #endif
 
+CL_EXTERN void *(CL_API_CALL *f_clGetExtensionFunctionAddressForPlatform)(cl_platform_id  platform, const char *funcname);
+
 CL_EXTERN cl_int (CL_API_CALL* f_clGetPlatformIDs)(cl_uint num_entries, cl_platform_id *platforms, cl_uint *num_platforms);
 CL_EXTERN cl_int (CL_API_CALL* f_clGetPlatformInfo) (cl_platform_id platform, cl_platform_info param_name, size_t param_value_size, void *param_value, size_t *param_value_size_ret);
 CL_EXTERN cl_int (CL_API_CALL* f_clGetDeviceIDs) (cl_platform_id platform, cl_device_type device_type, cl_uint num_entries, cl_device_id *devices, cl_uint *num_devices);
 CL_EXTERN cl_int (CL_API_CALL* f_clGetDeviceInfo) (cl_device_id device, cl_device_info param_name, size_t param_value_size, void *param_value, size_t *param_value_size_ret);
+CL_EXTERN cl_int (CL_API_CALL *f_clGetDeviceIDsFromDX9MediaAdapterKHR)(cl_platform_id platform, cl_uint num_media_adapters, cl_dx9_media_adapter_type_khr *media_adapter_type, void *media_adapters, cl_dx9_media_adapter_set_khr     media_adapter_set, cl_uint                          num_entries, cl_device_id *devices, cl_uint *num_devices);
+CL_EXTERN cl_int (CL_API_CALL *f_clGetDeviceIDsFromD3D11KHR)(cl_platform_id platform, cl_d3d11_device_source_khr d3d_device_source, void *d3d_object, cl_d3d11_device_set_khr d3d_device_set, cl_uint num_entries, cl_device_id *devices, cl_uint *num_devices);
 
 CL_EXTERN cl_context (CL_API_CALL* f_clCreateContext) (const cl_context_properties * properties, cl_uint num_devices, const cl_device_id * devices, void (CL_CALLBACK * pfn_notify)(const char *, const void *, size_t, void *), void * user_data, cl_int * errcode_ret);
 CL_EXTERN cl_int (CL_API_CALL* f_clReleaseContext) (cl_context context);
@@ -75,6 +81,7 @@ CL_EXTERN cl_int(CL_API_CALL *f_clEnqueueWriteBufferRect)(cl_command_queue comma
 CL_EXTERN cl_int(CL_API_CALL *f_clEnqueueCopyBuffer)(cl_command_queue command_queue, cl_mem src_buffer, cl_mem dst_buffer, size_t src_offset, size_t dst_offset, size_t size, cl_uint num_events_in_wait_list, const cl_event *event_wait_list, cl_event *event);
 CL_EXTERN cl_int(CL_API_CALL *f_clEnqueueCopyBufferRect)(cl_command_queue command_queue, cl_mem src_buffer, cl_mem dst_buffer, const size_t *src_origin, const size_t *dst_origin, const size_t *region, size_t src_row_pitch, size_t src_slice_pitch, size_t dst_row_pitch, size_t dst_slice_pitch, cl_uint num_events_in_wait_list, const cl_event *event_wait_list, cl_event *event);
 
+CL_EXTERN cl_int(CL_API_CALL *f_clEnqueueCopyImage)(cl_command_queue command_queue, cl_mem src_image, cl_mem dst_image, const size_t src_origin[3], const size_t dst_origin[3], const size_t region[3], cl_uint num_events_in_wait_list, const cl_event *event_wait_list, cl_event *event);
 CL_EXTERN cl_int(CL_API_CALL *f_clEnqueueCopyImageToBuffer)(cl_command_queue command_queue, cl_mem src_image, cl_mem dst_buffer, const size_t *src_origin[3], const size_t *region[3], size_t dst_offset, cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event *event);
 CL_EXTERN cl_int(CL_API_CALL *f_clEnqueueCopyBufferToImage)(cl_command_queue command_queue, cl_mem src_buffer, cl_mem dst_image, size_t src_offset, const size_t *dst_origin[3], const size_t *region[3], cl_uint num_events_in_wait_list, const cl_event * event_wait_list, cl_event *event);
 CL_EXTERN void *(CL_API_CALL *f_clEnqueueMapBuffer)(cl_command_queue command_queue, cl_mem buffer, cl_bool blocking_map, cl_map_flags map_flags, size_t offset, size_t size, cl_uint num_events_in_wait_list, const cl_event *event_wait_list, cl_event *event, cl_int *errcode_ret);
@@ -92,10 +99,14 @@ CL_EXTERN cl_int(CL_API_CALL *f_clGetEventProfilingInfo)(cl_event event, cl_prof
 CL_EXTERN cl_int(CL_API_CALL *f_clFlush)(cl_command_queue command_queue);
 CL_EXTERN cl_int(CL_API_CALL *f_clFinish)(cl_command_queue command_queue);
 
+#define clGetExtensionFunctionAddressForPlatform f_clGetExtensionFunctionAddressForPlatform
+
 #define clGetPlatformIDs f_clGetPlatformIDs
 #define clGetPlatformInfo f_clGetPlatformInfo
 #define clGetDeviceIDs f_clGetDeviceIDs
 #define clGetDeviceInfo f_clGetDeviceInfo
+#define clGetDeviceIDsFromDX9MediaAdapterKHR f_clGetDeviceIDsFromDX9MediaAdapterKHR
+#define clGetDeviceIDsFromD3D11KHR f_clGetDeviceIDsFromD3D11KHR
 
 #define clCreateContext f_clCreateContext
 #define clReleaseContext f_clReleaseContext
@@ -123,6 +134,7 @@ CL_EXTERN cl_int(CL_API_CALL *f_clFinish)(cl_command_queue command_queue);
 #define clEnqueueCopyBuffer f_clEnqueueCopyBuffer
 #define clEnqueueCopyBufferRect f_clEnqueueCopyBufferRect
 
+#define clEnqueueCopyImage f_clEnqueueCopyImage
 #define clEnqueueCopyImageToBuffer f_clEnqueueCopyImageToBuffer
 #define clEnqueueCopyBufferToImage f_clEnqueueCopyBufferToImage
 #define clEnqueueMapBuffer f_clEnqueueMapBuffer
@@ -270,17 +282,28 @@ public:
     RGYOpenCLPlatform(cl_platform_id platform, shared_ptr<RGYLog> pLog);
     virtual ~RGYOpenCLPlatform() {};
     RGY_ERR createDeviceList(cl_device_type device_type);
+    RGY_ERR createDeviceListD3D9(cl_device_type device_type, void *d3d9dev);
+    RGY_ERR createDeviceListD3D11(cl_device_type device_type, void *d3d11dev);
     cl_platform_id get() const { return m_platform; };
+    const void *d3d9dev() const { return m_d3d9dev; };
+    const void *d3d11dev() const { return m_d3d11dev; };
     std::vector<cl_device_id>& devs() { return m_devices; };
     cl_device_id dev(int idx) { return m_devices[idx]; };
     const std::vector<cl_device_id>& devs() const { return m_devices; };
     void setDev(cl_device_id dev) { m_devices.clear(); m_devices.push_back(dev); };
+    void setDev(cl_device_id dev, void *d3d9dev, void *d3d11dev) {
+        m_devices.clear(); m_devices.push_back(dev);
+        if (d3d9dev) m_d3d9dev = d3d9dev;
+        if (d3d11dev) m_d3d11dev = d3d11dev;
+    };
     void setDevs(std::vector<cl_device_id> &devs) { m_devices = devs; };
     bool isVendor(const char *vendor);
 protected:
     RGYOpenCLPlatformInfo info();
 
     cl_platform_id m_platform;
+    void *m_d3d9dev;
+    void *m_d3d11dev;
     std::vector<cl_device_id> m_devices;
     shared_ptr<RGYLog> m_pLog;
 };

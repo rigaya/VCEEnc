@@ -227,6 +227,7 @@ int initOpenCLGlobal() {
         return 1; \
     }
 
+    LOAD(clGetExtensionFunctionAddressForPlatform);
     LOAD(clGetDeviceInfo);
     LOAD(clGetPlatformIDs);
     LOAD(clGetDeviceIDs);
@@ -252,9 +253,18 @@ int initOpenCLGlobal() {
     LOAD(clEnqueueTask);
 
     LOAD(clEnqueueReadBuffer);
+    LOAD(clEnqueueReadBufferRect);
     LOAD(clEnqueueWriteBuffer);
+    LOAD(clEnqueueWriteBufferRect);
     LOAD(clEnqueueCopyBuffer);
     LOAD(clEnqueueCopyBufferRect);
+
+    LOAD(clEnqueueCopyImage);
+    LOAD(clEnqueueCopyImageToBuffer);
+    LOAD(clEnqueueCopyBufferToImage);
+    LOAD(clEnqueueMapBuffer);
+    LOAD(clEnqueueMapImage);
+    LOAD(clEnqueueUnmapMemObject);
 
     LOAD(clWaitForEvents);
     LOAD(clGetEventInfo);
@@ -312,7 +322,78 @@ tstring RGYOpenCLDevice::infostr() {
     return char_to_tstring(ts.str());
 }
 
-RGYOpenCLPlatform::RGYOpenCLPlatform(cl_platform_id platform, shared_ptr<RGYLog> pLog) : m_platform(platform), m_devices(), m_pLog(pLog) {
+RGYOpenCLPlatform::RGYOpenCLPlatform(cl_platform_id platform, shared_ptr<RGYLog> pLog) : m_platform(platform), m_d3d9dev(nullptr), m_d3d11dev(nullptr), m_devices(), m_pLog(pLog) {
+}
+
+RGY_ERR RGYOpenCLPlatform::createDeviceListD3D11(cl_device_type device_type, void *d3d11dev) {
+    if (RGYOpenCL::openCLCrush) {
+        return RGY_ERR_OPENCL_CRUSH;
+    }
+    auto ret = RGY_ERR_NONE;
+    cl_uint device_count = 0;
+    if (d3d11dev && clGetDeviceIDsFromD3D11KHR == nullptr) {
+        f_clGetDeviceIDsFromD3D11KHR = (decltype(f_clGetDeviceIDsFromD3D11KHR))clGetExtensionFunctionAddressForPlatform(m_platform, "clGetDeviceIDsFromD3D11KHR");
+    }
+    if (d3d11dev && clGetDeviceIDsFromD3D11KHR) {
+        m_d3d11dev = d3d11dev;
+        try {
+            if ((ret = err_cl_to_rgy(clGetDeviceIDsFromD3D11KHR(m_platform, CL_D3D11_DEVICE_KHR, d3d11dev, CL_PREFERRED_DEVICES_FOR_D3D11_KHR, 0, NULL, &device_count))) != RGY_ERR_NONE) {
+                m_pLog->write(RGY_LOG_ERROR, _T("Error (clGetDeviceIDsFromD3D11KHR): %s\n"), get_err_mes(ret));
+                return ret;
+            }
+        } catch (...) {
+            m_pLog->write(RGY_LOG_ERROR, _T("Crush (clGetDeviceIDsFromD3D11KHR)\n"));
+            RGYOpenCL::openCLCrush = true; //クラッシュフラグを立てる
+            return RGY_ERR_OPENCL_CRUSH;
+        }
+        if (device_count > 0) {
+            std::vector<cl_device_id> devs(device_count, 0);
+            try {
+                ret = err_cl_to_rgy(clGetDeviceIDsFromD3D11KHR(m_platform, CL_D3D11_DEVICE_KHR, d3d11dev, CL_PREFERRED_DEVICES_FOR_D3D11_KHR, device_count, devs.data(), &device_count));
+            } catch (...) {
+                m_pLog->write(RGY_LOG_ERROR, _T("Crush (clGetDeviceIDsFromD3D11KHR)\n"));
+                RGYOpenCL::openCLCrush = true; //クラッシュフラグを立てる
+                return RGY_ERR_OPENCL_CRUSH;
+            }
+            if (ret == RGY_ERR_NONE) {
+                m_devices = devs;
+                return ret;
+            }
+        }
+    } else {
+        ret = createDeviceList(device_type);
+    }
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR RGYOpenCLPlatform::createDeviceListD3D9(cl_device_type device_type, void *d3d9dev) {
+    if (RGYOpenCL::openCLCrush) {
+        return RGY_ERR_OPENCL_CRUSH;
+    }
+    auto ret = RGY_ERR_NONE;
+    cl_uint device_count = 1;
+    if (d3d9dev && clGetDeviceIDsFromDX9MediaAdapterKHR == nullptr) {
+        f_clGetDeviceIDsFromDX9MediaAdapterKHR = (decltype(f_clGetDeviceIDsFromDX9MediaAdapterKHR))clGetExtensionFunctionAddressForPlatform(m_platform, "clGetDeviceIDsFromDX9MediaAdapterKHR");
+    }
+    if (d3d9dev && clGetDeviceIDsFromDX9MediaAdapterKHR) {
+        m_d3d9dev = d3d9dev;
+        std::vector<cl_device_id> devs(device_count, 0);
+        try {
+            cl_dx9_media_adapter_type_khr type = CL_ADAPTER_D3D9EX_KHR;
+            ret = err_cl_to_rgy(clGetDeviceIDsFromDX9MediaAdapterKHR(m_platform, 1, &type, &d3d9dev, CL_PREFERRED_DEVICES_FOR_DX9_MEDIA_ADAPTER_KHR, device_count, devs.data(), &device_count));
+        } catch (...) {
+            m_pLog->write(RGY_LOG_ERROR, _T("Crush (clGetDeviceIDsFromDX9MediaAdapterKHR)\n"));
+            RGYOpenCL::openCLCrush = true; //クラッシュフラグを立てる
+            return RGY_ERR_OPENCL_CRUSH;
+        }
+        if (ret == RGY_ERR_NONE) {
+            m_devices = devs;
+            return ret;
+        }
+    } else {
+        ret = createDeviceList(device_type);
+    }
+    return RGY_ERR_NONE;
 }
 
 RGY_ERR RGYOpenCLPlatform::createDeviceList(cl_device_type device_type) {
@@ -386,8 +467,17 @@ RGY_ERR RGYOpenCLContext::createContext() {
         return RGY_ERR_OPENCL_CRUSH;
     }
     cl_int err = RGY_ERR_NONE;
-    cl_context_properties props[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)(m_platform->get()), 0 };
-    m_context = unique_context(clCreateContext(props, (cl_uint)m_platform->devs().size(), m_platform->devs().data(), nullptr, nullptr, &err), clReleaseContext);
+    std::vector<cl_context_properties> props = { CL_CONTEXT_PLATFORM, (cl_context_properties)(m_platform->get()) };
+    if (m_platform->d3d9dev()) {
+        props.push_back(CL_CONTEXT_ADAPTER_D3D9EX_KHR);
+        props.push_back((cl_context_properties)m_platform->d3d9dev());
+    }
+    if (m_platform->d3d11dev()) {
+        props.push_back(CL_CONTEXT_D3D11_DEVICE_KHR);
+        props.push_back((cl_context_properties)m_platform->d3d11dev());
+    }
+    props.push_back(0);
+    m_context = unique_context(clCreateContext(props.data(), (cl_uint)m_platform->devs().size(), m_platform->devs().data(), nullptr, nullptr, &err), clReleaseContext);
     if (err != CL_SUCCESS) {
         m_pLog->write(RGY_LOG_ERROR, _T("Error (clCreateContext): %s\n"), cl_errmes(err));
         return err_cl_to_rgy(err);
@@ -461,6 +551,7 @@ RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const 
         size_t region[3] = { planeDst.width * pixel_size, planeDst.height, 1 };
         if (src->deivce_mem) {
             if (dst->deivce_mem) {
+                err = clEnqueueCopyImage(m_queue[queue_id].get(), (cl_mem)planeSrc.ptr[0], (cl_mem)planeDst.ptr[0], src_origin, dst_origin, region, 0, nullptr, nullptr);
                 err = clEnqueueCopyBufferRect(m_queue[queue_id].get(), (cl_mem)planeSrc.ptr[0], (cl_mem)planeDst.ptr[0], src_origin, dst_origin,
                     region, planeSrc.pitch[0], 0, planeDst.pitch[0], 0, 0, nullptr, nullptr);
             } else {

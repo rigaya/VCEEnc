@@ -42,6 +42,7 @@
 #include "rgy_input.h"
 #include "rgy_output.h"
 #include "rgy_opencl.h"
+#include "rgy_device.h"
 #include "vce_param.h"
 #include "vce_filter.h"
 
@@ -149,6 +150,8 @@ protected:
     int                m_encHeight;
     rgy_rational<int>  m_sar;
 
+    DeviceDX9 m_dx9;
+    DeviceDX11 m_dx11;
     shared_ptr<RGYOpenCLContext> m_cl;
     unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter> m_dll;
     amf::AMFFactory *m_pFactory;
