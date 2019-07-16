@@ -379,13 +379,19 @@ static RGY_FRAME_FLAGS operator~(RGY_FRAME_FLAGS a) {
 
 static const int RGY_MAX_PLANES = 4;
 
+enum RGY_MEM_TYPE {
+    RGY_MEM_TYPE_CPU = 0,
+    RGY_MEM_TYPE_GPU,
+    RGY_MEM_TYPE_GPU_IMAGE
+};
+
 struct FrameInfo {
     uint8_t *ptr[RGY_MAX_PLANES];
     RGY_CSP csp;
     int width, height, pitch[RGY_MAX_PLANES];
     int64_t timestamp;
     int64_t duration;
-    bool deivce_mem;
+    RGY_MEM_TYPE mem_type;
     RGY_PICSTRUCT picstruct;
     RGY_FRAME_FLAGS flags;
     int inputFrameId;
@@ -505,7 +511,7 @@ static bool cmpFrameInfoCspResolution(const FrameInfo *pA, const FrameInfo *pB) 
     return pA->csp != pB->csp
         || pA->width != pB->width
         || pA->height != pB->height
-        || pA->deivce_mem != pB->deivce_mem
+        || pA->mem_type != pB->mem_type
         || pA->pitch != pB->pitch;
 }
 

@@ -245,7 +245,10 @@ int initOpenCLGlobal() {
     LOAD(clReleaseProgram);
 
     LOAD(clCreateBuffer);
+    LOAD(clCreateImage);
     LOAD(clReleaseMemObject);
+    LOAD(clGetMemObjectInfo);
+    LOAD(clGetImageInfo);
     LOAD(clCreateKernel);
     LOAD(clReleaseKernel);
     LOAD(clSetKernelArg);
@@ -259,6 +262,8 @@ int initOpenCLGlobal() {
     LOAD(clEnqueueCopyBuffer);
     LOAD(clEnqueueCopyBufferRect);
 
+    LOAD(clEnqueueReadImage);
+    LOAD(clEnqueueWriteImage);
     LOAD(clEnqueueCopyImage);
     LOAD(clEnqueueCopyImageToBuffer);
     LOAD(clEnqueueCopyBufferToImage);
@@ -451,7 +456,9 @@ RGYOpenCLContext::RGYOpenCLContext(shared_ptr<RGYOpenCLPlatform> platform, share
     m_platform(std::move(platform)),
     m_context(std::unique_ptr<std::remove_pointer<cl_context>::type, decltype(clReleaseContext)>(nullptr, clReleaseContext)),
     m_queue(),
-    m_pLog(pLog) {
+    m_pLog(pLog),
+    m_copyI2B(),
+    m_copyB2I() {
 
 }
 
@@ -483,7 +490,7 @@ RGY_ERR RGYOpenCLContext::createContext() {
         return err_cl_to_rgy(err);
     }
     for (int idev = 0; idev < (int)m_platform->devs().size(); idev++) {
-        m_queue.push_back(std::move(unique_queue(clCreateCommandQueue(m_context.get(), m_platform->dev(idev), 0, &err), clReleaseCommandQueue)));
+        m_queue.push_back(std::move(RGYOpenCLQueue(clCreateCommandQueue(m_context.get(), m_platform->dev(idev), 0, &err))));
     }
     return RGY_ERR_NONE;
 }
@@ -530,7 +537,106 @@ RGYOpenCLKernel RGYOpenCLProgram::kernel(const char *kernelName) {
     return RGYOpenCLKernel(kernel, kernelName, m_pLog);
 }
 
-RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, int queue_id) {
+RGYOpenCLQueue::RGYOpenCLQueue(cl_command_queue queue) : m_queue(std::move(unique_queue(queue, clReleaseCommandQueue))) {};
+
+RGYOpenCLQueue::~RGYOpenCLQueue() {
+    m_queue.reset();
+}
+
+RGY_ERR RGYOpenCLQueue::flush() const {
+    if (!m_queue) {
+        return RGY_ERR_NULL_PTR;
+    }
+    return err_cl_to_rgy(clFlush(m_queue.get()));
+}
+
+RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDst, const FrameInfo *planeSrc, const sInputCrop *planeCrop, bool blocking, int queue_id) {
+    cl_int err = CL_SUCCESS;
+    const int pixel_size = RGY_CSP_BIT_DEPTH[planeDst->csp] > 8 ? 2 : 1;
+
+    cl_event *ret_event = nullptr;
+    size_t dst_origin[3] = { 0, 0, 0 };
+    size_t src_origin[3] = { 0, 0, 0 };
+    size_t region[3] = { (size_t)planeDst->width * pixel_size, (size_t)planeDst->height, 1 };
+    if (planeSrc->mem_type == RGY_MEM_TYPE_GPU) {
+        if (planeDst->mem_type == RGY_MEM_TYPE_GPU) {
+            err = clEnqueueCopyBufferRect(m_queue[queue_id].get(), (cl_mem)planeSrc->ptr[0], (cl_mem)planeDst->ptr[0], src_origin, dst_origin,
+                region, planeSrc->pitch[0], 0, planeDst->pitch[0], 0, 0, nullptr, ret_event);
+        } else if (planeDst->mem_type == RGY_MEM_TYPE_GPU_IMAGE) {
+            if (!m_copyB2I) {
+                const auto options = strsprintf("-D TypeIn=%s -D TypeOut=%s -D IMAGE_SRC=0 -D IMAGE_DST=1 -D in_bit_depth=%d -D out_bit_depth=%d",
+                    pixel_size >= 2 ? "ushort" : "uchar", pixel_size >= 2 ? "ushort" : "uchar",
+                    RGY_CSP_BIT_DEPTH[planeDst->csp], RGY_CSP_BIT_DEPTH[planeDst->csp]);
+                m_copyB2I = buildResource(_T("VCE_FILTER_CL"), _T("EXE_DATA"), options.c_str());
+                if (!m_copyB2I) {
+                    m_pLog->write(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_CL(m_copyB2I)\n"));
+                    return RGY_ERR_OPENCL_CRUSH;
+                }
+            }
+            RGYWorkSize local(32, 8);
+            RGYWorkSize global(planeDst->width, planeDst->height);
+            auto rgy_err = m_copyB2I->kernel("kernel_copy_plane").config(m_queue[queue_id].get(), local, global).launch(
+                (cl_mem)planeDst->ptr[0], planeDst->pitch[0], (cl_mem)planeSrc->ptr[0], planeSrc->pitch[0], planeSrc->width, planeSrc->height,
+                planeCrop->e.left, planeCrop->e.up);
+            err = err_rgy_to_cl(rgy_err);
+        } else if (planeDst->mem_type == RGY_MEM_TYPE_CPU) {
+            err = clEnqueueReadBufferRect(m_queue[queue_id].get(), (cl_mem)planeSrc->ptr[0], blocking, src_origin, dst_origin,
+                region, planeSrc->pitch[0], 0, planeDst->pitch[0], 0, planeDst->ptr[0], 0, nullptr, ret_event);
+        } else {
+            return RGY_ERR_UNSUPPORTED;
+        }
+    } else if (planeSrc->mem_type == RGY_MEM_TYPE_GPU_IMAGE) {
+        if (planeDst->mem_type == RGY_MEM_TYPE_GPU) {
+            if (!m_copyI2B) {
+                const auto options = strsprintf("-D TypeIn=%s -D TypeOut=%s -D IMAGE_SRC=1 -D IMAGE_DST=0 -D in_bit_depth=%d -D out_bit_depth=%d",
+                    pixel_size >= 2 ? "ushort" : "uchar", pixel_size >= 2 ? "ushort" : "uchar",
+                    RGY_CSP_BIT_DEPTH[planeDst->csp], RGY_CSP_BIT_DEPTH[planeDst->csp]);
+                m_copyI2B = buildResource(_T("VCE_FILTER_CL"), _T("EXE_DATA"), options.c_str());
+                if (!m_copyI2B) {
+                    m_pLog->write(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_CL(m_copyI2B)\n"));
+                    return RGY_ERR_OPENCL_CRUSH;
+                }
+            }
+            RGYWorkSize local(32, 8);
+            RGYWorkSize global(planeDst->width, planeDst->height);
+            auto rgy_err = m_copyI2B->kernel("kernel_copy_plane").config(m_queue[queue_id].get(), local, global).launch(
+                (cl_mem)planeDst->ptr[0], planeDst->pitch[0], (cl_mem)planeSrc->ptr[0], planeSrc->pitch[0], planeSrc->width, planeSrc->height,
+                planeCrop->e.left, planeCrop->e.up);
+            err = err_rgy_to_cl(rgy_err);
+        } else if (planeDst->mem_type == RGY_MEM_TYPE_GPU_IMAGE) {
+            clGetImageInfo((cl_mem)planeDst->ptr[0], CL_IMAGE_WIDTH, sizeof(region[0]), &region[0], nullptr);
+            err = clEnqueueCopyImage(m_queue[queue_id].get(), (cl_mem)planeSrc->ptr[0], (cl_mem)planeDst->ptr[0], src_origin, dst_origin, region, 0, nullptr, ret_event);
+        } else if (planeDst->mem_type == RGY_MEM_TYPE_CPU) {
+            clGetImageInfo((cl_mem)planeSrc->ptr[0], CL_IMAGE_WIDTH, sizeof(region[0]), &region[0], nullptr);
+            err = clEnqueueReadImage(m_queue[queue_id].get(), (cl_mem)planeSrc->ptr[0], blocking, dst_origin,
+                region, planeDst->pitch[0], 0, planeDst->ptr[0], 0, nullptr, ret_event);
+        } else {
+            return RGY_ERR_UNSUPPORTED;
+        }
+    } else if (planeSrc->mem_type == RGY_MEM_TYPE_CPU) {
+        if (planeDst->mem_type == RGY_MEM_TYPE_GPU) {
+            err = clEnqueueWriteBufferRect(m_queue[queue_id].get(), (cl_mem)planeDst->ptr[0], blocking, dst_origin, src_origin,
+                region, planeDst->pitch[0], 0, planeSrc->pitch[0], 0, planeSrc->ptr[0], 0, nullptr, ret_event);
+        } else if (planeDst->mem_type == RGY_MEM_TYPE_GPU_IMAGE) {
+            clGetImageInfo((cl_mem)planeDst->ptr[0], CL_IMAGE_WIDTH, sizeof(region[0]), &region[0], nullptr);
+            err = clEnqueueWriteImage(m_queue[queue_id].get(), (cl_mem)planeDst->ptr[0], blocking, src_origin,
+                region, planeSrc->pitch[0], 0, (void *)planeSrc->ptr[0], 0, nullptr, ret_event);
+        } else if (planeDst->mem_type == RGY_MEM_TYPE_CPU) {
+            for (int y = 0; y < planeDst->height; y++) {
+                memcpy(planeDst->ptr[0] + (y + dst_origin[1]) * planeDst->pitch[0] + dst_origin[0] * pixel_size,
+                        planeSrc->ptr[0] + (y + src_origin[1]) * planeSrc->pitch[0] + src_origin[0] * pixel_size,
+                        planeDst->width * pixel_size);
+            }
+        } else {
+            return RGY_ERR_UNSUPPORTED;
+        }
+    } else {
+        return RGY_ERR_UNSUPPORTED;
+    }
+    return err_cl_to_rgy(err);
+}
+
+RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, bool blocking, int queue_id) {
     size_t dst_origin[3] = { 0, 0, 0 };
     if (dst->csp != src->csp) {
         m_pLog->write(RGY_LOG_ERROR, _T("in/out csp should be same in copyFrame.\n"));
@@ -538,40 +644,20 @@ RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const 
     }
     const int pixel_size = RGY_CSP_BIT_DEPTH[dst->csp] > 8 ? 2 : 1;
 
-    cl_int err = CL_SUCCESS;
+    RGY_ERR err = RGY_ERR_NONE;
     for (int i = 0; i < RGY_CSP_PLANES[dst->csp]; i++) {
         auto planeDst = getPlane(dst, (RGY_PLANE)i);
         auto planeSrc = getPlane(src, (RGY_PLANE)i);
         size_t src_origin[3] = { 0, 0, 0 };
+        sInputCrop planeCrop = { 0 };
         if (srcCrop != nullptr) {
-            auto planeCrop = getPlane(srcCrop, src->csp, (RGY_PLANE)i);
+            planeCrop = getPlane(srcCrop, src->csp, (RGY_PLANE)i);
             src_origin[0] = planeCrop.e.left * pixel_size;
             src_origin[1] = planeCrop.e.up;
         }
-        size_t region[3] = { planeDst.width * pixel_size, planeDst.height, 1 };
-        if (src->deivce_mem) {
-            if (dst->deivce_mem) {
-                err = clEnqueueCopyImage(m_queue[queue_id].get(), (cl_mem)planeSrc.ptr[0], (cl_mem)planeDst.ptr[0], src_origin, dst_origin, region, 0, nullptr, nullptr);
-                err = clEnqueueCopyBufferRect(m_queue[queue_id].get(), (cl_mem)planeSrc.ptr[0], (cl_mem)planeDst.ptr[0], src_origin, dst_origin,
-                    region, planeSrc.pitch[0], 0, planeDst.pitch[0], 0, 0, nullptr, nullptr);
-            } else {
-                err = clEnqueueReadBufferRect(m_queue[queue_id].get(), (cl_mem)planeSrc.ptr[0], false, src_origin, dst_origin,
-                    region, planeSrc.pitch[0], 0, planeDst.pitch[0], 0, dst->ptr, 0, nullptr, nullptr);
-            }
-        } else {
-            if (dst->deivce_mem) {
-                err = clEnqueueWriteBufferRect(m_queue[queue_id].get(), (cl_mem)planeDst.ptr[0], false, dst_origin, src_origin,
-                    region, planeDst.pitch[0], 0, planeSrc.pitch[0], 0, planeSrc.ptr[0], 0, nullptr, nullptr);
-            } else {
-                for (int y = 0; y < planeDst.height; y++) {
-                    memcpy(planeDst.ptr[0] + (y + dst_origin[1]) * planeDst.pitch[0] + dst_origin[0] * pixel_size,
-                           planeSrc.ptr[0] + (y + src_origin[1]) * planeSrc.pitch[0] + src_origin[0] * pixel_size,
-                           planeDst.width * pixel_size);
-                }
-            }
-        }
+        err = copyPlane(&planeDst, &planeSrc, &planeCrop, blocking, queue_id);
         if (err != RGY_ERR_NONE) {
-            m_pLog->write(RGY_LOG_ERROR, _T("Failed to copy frame(%d) %s: %s\n"), i, cl_errmes(err));
+            m_pLog->write(RGY_LOG_ERROR, _T("Failed to copy frame(%d): %s\n"), i, cl_errmes(err));
             return err_cl_to_rgy(err);
         }
     }
@@ -580,10 +666,10 @@ RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const 
     dst->timestamp = src->timestamp;
     dst->flags = src->flags;
     dst->inputFrameId = src->inputFrameId;
-    return err_cl_to_rgy(err);
+    return err;
 }
 
-unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::build(const char *data, const size_t size) {
+unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::build(const char *data, const size_t size, const char *options) {
     if (data == nullptr || size == 0) {
         return nullptr;
     }
@@ -594,7 +680,7 @@ unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::build(const char *data, const siz
         return nullptr;
     }
 
-    err = clBuildProgram(program, m_platform->devs().size(), m_platform->devs().data(), "", NULL, NULL);
+    err = clBuildProgram(program, (cl_uint)m_platform->devs().size(), m_platform->devs().data(), options, NULL, NULL);
     if (err != CL_SUCCESS) {
         m_pLog->write(RGY_LOG_ERROR, _T("Error (clBuildProgram): %s\n"), cl_errmes(err));
 
@@ -606,8 +692,9 @@ unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::build(const char *data, const siz
                 std::vector<char> build_log(log_size);
                 clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, log_size, build_log.data(), NULL);
 
-                m_pLog->write(RGY_LOG_ERROR, _T("build log of %s...\n%s\n"),
-                    RGYOpenCLDevice(device).info().name.c_str(), build_log.data());
+                m_pLog->write(RGY_LOG_ERROR, _T("build log of %s...\n"), char_to_tstring(RGYOpenCLDevice(device).info().name).c_str());
+                auto log = char_to_tstring(build_log.data());
+                m_pLog->write_log(RGY_LOG_ERROR, log.c_str());
             }
         }
         return nullptr;
@@ -615,11 +702,11 @@ unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::build(const char *data, const siz
     return std::make_unique<RGYOpenCLProgram>(program, m_pLog);
 }
 
-unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::build(const std::string &source) {
-    return build(source.c_str(), source.length());
+unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::build(const std::string &source, const char *options) {
+    return build(source.c_str(), source.length(), options);
 }
 
-unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::buildFile(const tstring& filename) {
+unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::buildFile(const tstring& filename, const char *options) {
     std::ifstream inputFile(filename);
     if (inputFile.bad()) {
         m_pLog->write(RGY_LOG_ERROR, _T("Failed to open source file \"%s\".\n"), filename.c_str());
@@ -630,17 +717,17 @@ unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::buildFile(const tstring& filename
     std::istreambuf_iterator<char> data_end;
     std::string source = std::string(data_begin, data_end);
     inputFile.close();
-    return build(source);
+    return build(source, options);
 }
 
-unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::buildResource(const TCHAR *name, const TCHAR *type) {
+unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::buildResource(const TCHAR *name, const TCHAR *type, const char *options) {
     void *data = nullptr;
     int size = getEmbeddedResource(&data, name, type);
     if (data == nullptr || size == 0) {
         m_pLog->write(RGY_LOG_ERROR, _T("Failed to load resource [%s] %s\n"), type, name);
         return nullptr;
     }
-    return build((const char *)data, size);
+    return build((const char *)data, size, options);
 }
 
 std::unique_ptr<RGYCLBuf> RGYOpenCLContext::createBuffer(size_t size, cl_mem_flags flags, void *host_ptr) {
@@ -652,11 +739,68 @@ std::unique_ptr<RGYCLBuf> RGYOpenCLContext::createBuffer(size_t size, cl_mem_fla
     return std::make_unique<RGYCLBuf>(mem, flags, size);
 }
 
-std::unique_ptr<RGYCLBufFrame> RGYOpenCLContext::createFrameBuffer(const FrameInfo& frame, cl_mem_flags flags) {
+unique_ptr<RGYCLBuf> RGYOpenCLContext::copyDataToBuffer(const void *host_ptr, size_t size, cl_mem_flags flags, int queue_id) {
+    auto buffer = createBuffer(size, flags);
+    if (buffer != nullptr) {
+        cl_int err = clEnqueueWriteBuffer(m_queue[queue_id].get(), buffer->mem, true, 0, size, host_ptr, 0, nullptr, nullptr);
+        if (err != CL_SUCCESS) {
+            m_pLog->write(RGY_LOG_ERROR, _T("Failed to copy data to buffer: %s\n"), cl_errmes(err));
+        }
+    }
+    return buffer;
+}
+
+unique_ptr<RGYCLFrame> RGYOpenCLContext::createImageFromFrameBuffer(const FrameInfo &frame, bool normalized, cl_mem_flags flags) {
+    FrameInfo frameImage = frame;
+    frameImage.mem_type = RGY_MEM_TYPE_GPU_IMAGE;
+
+    for (int i = 0; i < RGY_CSP_PLANES[frame.csp]; i++) {
+        const auto plane = getPlane(&frame, (RGY_PLANE)i);
+        //パラメータを適切に設定する
+        cl_image_format format;
+        format.image_channel_order = CL_R;         //チャンネル数
+        format.image_channel_data_type =  //データ型
+            (normalized) ? ((RGY_CSP_BIT_DEPTH[frame.csp] > 8) ? CL_UNORM_INT16 : CL_UNORM_INT8)
+                         : ((RGY_CSP_BIT_DEPTH[frame.csp] > 8) ? CL_UNSIGNED_INT16 : CL_UNSIGNED_INT8);
+
+        cl_image_desc img_desc;
+        img_desc.image_type = CL_MEM_OBJECT_IMAGE2D; //2D
+        img_desc.image_width = plane.width;   //サイズ
+        img_desc.image_height = plane.height; //サイズ
+        img_desc.image_depth = 0;
+        img_desc.image_array_size = 0;
+        img_desc.image_row_pitch = plane.pitch[0];
+        img_desc.image_slice_pitch = 0;
+        img_desc.num_mip_levels = 0;
+        img_desc.num_samples = 0;
+        img_desc.buffer = 0;
+        img_desc.mem_object = (cl_mem)plane.ptr[0]; //作成したOpenCLバッファをここに指定する
+
+        cl_int err = CL_SUCCESS;
+        frameImage.ptr[i] = (uint8_t *)clCreateImage(m_context.get(),
+            flags,
+            &format, &img_desc,
+            nullptr,
+            &err);
+        if (err != CL_SUCCESS) {
+            m_pLog->write(RGY_LOG_ERROR, _T("Failed to allocate memory: %s\n"), cl_errmes(err));
+            for (int j = i-1; j >= 0; j--) {
+                if (frameImage.ptr[j] != nullptr) {
+                    clReleaseMemObject((cl_mem)frameImage.ptr[j]);
+                    frameImage.ptr[j] = nullptr;
+                }
+            }
+            return std::make_unique<RGYCLFrame>();
+        }
+    }
+    return std::make_unique<RGYCLFrame>(frameImage, flags);
+}
+
+std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const FrameInfo& frame, cl_mem_flags flags) {
     cl_int err = CL_SUCCESS;
     const int pixsize = RGY_CSP_BIT_DEPTH[frame.csp] > 8 ? 2 : 1;
     FrameInfo clframe = frame;
-    clframe.deivce_mem = true;
+    clframe.mem_type = RGY_MEM_TYPE_GPU;
     for (int i = 0; i < _countof(clframe.ptr); i++) {
         clframe.ptr[0] = nullptr;
         clframe.pitch[0] = 0;
@@ -675,12 +819,12 @@ std::unique_ptr<RGYCLBufFrame> RGYOpenCLContext::createFrameBuffer(const FrameIn
                     clframe.ptr[j] = nullptr;
                 }
             }
-            return std::make_unique<RGYCLBufFrame>();
+            return std::make_unique<RGYCLFrame>();
         }
         clframe.pitch[i] = memPitch;
         clframe.ptr[i] = (uint8_t *)mem;
     }
-    return std::make_unique<RGYCLBufFrame>(clframe, flags);
+    return std::make_unique<RGYCLFrame>(clframe, flags);
 }
 
 RGYOpenCL::RGYOpenCL() : m_pLog(std::make_shared<RGYLog>(nullptr, RGY_LOG_ERROR)) {

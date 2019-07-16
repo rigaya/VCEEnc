@@ -918,7 +918,7 @@ RGY_ERR VCECore::initDevice(int deviceId) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to create OpenCL context.\n"));
         return RGY_ERR_UNKNOWN;
     }
-    amferr = m_pContext->InitOpenCL(m_cl->queue());
+    amferr = m_pContext->InitOpenCL(m_cl->queue().get());
     if (amferr != AMF_OK) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by OpenCL.\n"));
         return err_to_rgy(amferr);
@@ -1137,7 +1137,7 @@ tstring VCECore::QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
 
 RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     //hwデコーダの場合、cropを入力時に行っていない
-    const bool cropRequired = cropEnabled(inputParam->input.crop)
+    bool cropRequired = cropEnabled(inputParam->input.crop)
         && m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN;
 
     FrameInfo inputFrame = { 0 };
@@ -1152,7 +1152,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         inputFrame.height = croppedHeight;
     }
     if (m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN) {
-        inputFrame.deivce_mem = true;
+        inputFrame.mem_type = RGY_MEM_TYPE_GPU_IMAGE;
     }
     m_encFps = rgy_rational<int>(inputParam->input.fpsN, inputParam->input.fpsD);
 
@@ -1187,7 +1187,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         inputFrame.height = inputParam->input.dstHeight;
         resizeRequired = false;
     }
-
+    cropRequired = true;
     //picStructの設定
     //m_stPicStruct = picstruct_rgy_to_enc(inputParam->input.picstruct);
     //if (inputParam->vpp.deinterlace != cudaVideoDeinterlaceMode_Weave) {
@@ -1215,7 +1215,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
             param->frameIn = inputFrame;
             param->frameOut.csp = param->frameIn.csp;
-            param->frameOut.deivce_mem = true;
+            param->frameOut.mem_type = RGY_MEM_TYPE_GPU;
             param->baseFps = m_encFps;
             param->bOutOverwrite = false;
             auto sts = filterCrop->init(param, m_pLog, m_cl);
@@ -1281,7 +1281,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
                 param->crop = inputParam->input.crop;
             }
             param->baseFps = m_encFps;
-            param->frameOut.deivce_mem = true;
+            param->frameOut.mem_type = RGY_MEM_TYPE_GPU;
             param->bOutOverwrite = false;
             auto sts = filterCrop->init(param, m_pLog, m_cl);
             if (sts != RGY_ERR_NONE) {
@@ -1295,18 +1295,40 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             inputFrame = param->frameOut;
             m_encFps = param->baseFps;
         }
+        //リサイズ
+        if (resizeRequired) {
+            unique_ptr<RGYFilter> filterResize(new RGYFilterResize());
+            shared_ptr<RGYFilterParamResize> param(new RGYFilterParamResize());
+            param->interp = (inputParam->vpp.resize != RGY_VPP_RESIZE_AUTO) ? inputParam->vpp.resize : RGY_VPP_RESIZE_SPLINE36;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->frameOut.width = resizeWidth;
+            param->frameOut.height = resizeHeight;
+            param->baseFps = m_encFps;
+            param->bOutOverwrite = false;
+            auto sts = filterResize->init(param, m_pLog, m_cl);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filterResize));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
     }
     //最後のフィルタ
     {
         //もし入力がCPUメモリで色空間が違うなら、一度そのままGPUに転送する必要がある
-        if (inputFrame.deivce_mem == false && inputFrame.csp != GetEncoderCSP(inputParam)) {
+        if (inputFrame.mem_type == RGY_MEM_TYPE_CPU && inputFrame.csp != GetEncoderCSP(inputParam)) {
             unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop());
             shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
             param->frameIn = inputFrame;
             param->frameOut.csp = param->frameIn.csp;
-            //インタレ保持であれば、CPU側にフレームを戻す必要がある
-            //色空間が同じなら、ここでやってしまう
-            param->frameOut.deivce_mem = true;
+            param->frameOut.mem_type = RGY_MEM_TYPE_GPU_IMAGE;
+            param->baseFps = m_encFps;
             param->bOutOverwrite = false;
             auto sts = filterCrop->init(param, m_pLog, m_cl);
             if (sts != RGY_ERR_NONE) {
@@ -1316,6 +1338,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
             //入力フレーム情報を更新
             inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
         }
         unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop());
         shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
@@ -1323,7 +1346,8 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         param->frameOut.csp = GetEncoderCSP(inputParam);
         //インタレ保持であれば、CPU側にフレームを戻す必要がある
         //色空間が同じなら、ここでやってしまう
-        param->frameOut.deivce_mem = true;
+        param->frameOut.mem_type = RGY_MEM_TYPE_GPU_IMAGE;
+        param->baseFps = m_encFps;
         param->bOutOverwrite = false;
         auto sts = filterCrop->init(param, m_pLog, m_cl);
         if (sts != RGY_ERR_NONE) {
@@ -1333,6 +1357,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
         //入力フレーム情報を更新
         inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
     }
     return RGY_ERR_NONE;
 }
@@ -1479,7 +1504,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (encoderCaps->GetOutputCaps(&outputCaps) == AMF_OK) {
             int minWidth, maxWidth;
             outputCaps->GetWidthRange(&minWidth, &maxWidth);
-            if (m_encWidth < (uint32_t)minWidth || (uint32_t)maxWidth < m_encWidth) {
+            if (m_encWidth < minWidth || maxWidth < m_encWidth) {
                 PrintMes(RGY_LOG_ERROR, _T("Output width should be in range of %d - %d (%d specified).\n"),
                     minWidth, maxWidth, m_encWidth);
                 return RGY_ERR_UNSUPPORTED;
@@ -1487,7 +1512,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
             int minHeight, maxHeight;
             outputCaps->GetHeightRange(&minHeight, &maxHeight);
-            if (m_encHeight < (uint32_t)minHeight || (uint32_t)maxHeight < m_encHeight) {
+            if (m_encHeight < minHeight || maxHeight < m_encHeight) {
                 PrintMes(RGY_LOG_ERROR, _T("Output height should be in range of %d - %d (%d specified).\n"),
                     minHeight, maxHeight, m_encHeight);
                 return RGY_ERR_UNSUPPORTED;
@@ -1969,7 +1994,7 @@ RGY_ERR VCECore::run() {
             auto &lastFilter = m_vpFilters[m_vpFilters.size()-1];
             const auto inframeInfo = inframe->info();
             if (false
-                && typeid(*lastFilter.get()) == typeid(RGYFilterCspCrop)
+                &&  typeid(*lastFilter.get()) == typeid(RGYFilterCspCrop)
                 && m_vpFilters.size() == 1
                 && lastFilter->GetFilterParam()->frameOut.csp == inframeInfo.csp
                 && m_encWidth == inframeInfo.width
@@ -1977,7 +2002,10 @@ RGY_ERR VCECore::run() {
                 skipFilters = true;
             }
             const auto inAmf = inframe->amf();
-            if (!skipFilters && inAmf && inAmf->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
+            if (!skipFilters
+                && inframeInfo.mem_type != RGY_MEM_TYPE_CPU
+                && inAmf
+                && inAmf->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
                 auto ar = inAmf->Interop(amf::AMF_MEMORY_OPENCL);
                 if (ar != AMF_OK) {
                     PrintMes(RGY_LOG_ERROR, _T("Failed to convert plane: %s.\n"), get_err_mes(err_to_rgy(ar)));
@@ -2039,6 +2067,11 @@ RGY_ERR VCECore::run() {
                 filterframes.pop_front();
                 if (sts_filter != RGY_ERR_NONE) {
                     PrintMes(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), lastFilter->name().c_str());
+                    return sts_filter;
+                }
+                auto err = m_cl->queue().flush();
+                if (err != RGY_ERR_NONE) {
+                    PrintMes(RGY_LOG_ERROR, _T("Failed to flush queue after \"%s\".\n"), lastFilter->name().c_str());
                     return sts_filter;
                 }
                 dqEncFrames.push_back(std::move(encSurface));
@@ -2239,6 +2272,11 @@ tstring VCECore::GetEncoderParam() {
     if (cropEnabled(inputInfo.crop)) {
         mes += strsprintf(_T("Crop:          %d,%d,%d,%d\n"), inputInfo.crop.e.left, inputInfo.crop.e.up, inputInfo.crop.e.right, inputInfo.crop.e.bottom);
     }
+    tstring vppFilterMes;
+    for (const auto &filter : m_vpFilters) {
+        vppFilterMes += strsprintf(_T("%s%s\n"), (vppFilterMes.length()) ? _T("               ") : _T("Vpp Filters    "), filter->GetInputMessage().c_str());
+    }
+    mes += vppFilterMes;
     mes += strsprintf(_T("Output:        %s  %s @ Level %s%s\n"),
         CodecToStr(m_encCodec).c_str(),
         getPropertyDesc(AMF_PARAM_PROFILE(m_encCodec), get_profile_list(m_encCodec)).c_str(),

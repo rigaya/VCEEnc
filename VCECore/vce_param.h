@@ -217,6 +217,28 @@ const CX_DESC list_vce_quality_preset[] = {
     { NULL, NULL }
 };
 
+enum RGY_VPP_RESIZE_ALGO {
+    RGY_VPP_RESIZE_AUTO,
+    RGY_VPP_RESIZE_BILINEAR,
+    RGY_VPP_RESIZE_SPLINE16,
+    RGY_VPP_RESIZE_SPLINE36,
+    RGY_VPP_RESIZE_SPLINE64,
+    RGY_VPP_RESIZE_LANCZOS2,
+    RGY_VPP_RESIZE_LANCZOS3,
+    RGY_VPP_RESIZE_LANCZOS4,
+};
+
+const CX_DESC list_vpp_resize[] = {
+    { _T("auto"),     RGY_VPP_RESIZE_AUTO },
+    { _T("spline16"), RGY_VPP_RESIZE_SPLINE16 },
+    { _T("spline36"), RGY_VPP_RESIZE_SPLINE36 },
+    { _T("spline64"), RGY_VPP_RESIZE_SPLINE64 },
+    { _T("lanczos2"), RGY_VPP_RESIZE_LANCZOS2 },
+    { _T("lanczos3"), RGY_VPP_RESIZE_LANCZOS3 },
+    { _T("lanczos4"), RGY_VPP_RESIZE_LANCZOS4 },
+    { NULL, NULL }
+};
+
 static const int H264_QUALITY_PRESET[3] = {
     AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED,
     AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED,
@@ -291,6 +313,12 @@ struct VCECodecParam {
     int nTier;
     int nLevel;
     int nReserved;
+};
+
+struct VCEVppParam {
+    RGY_VPP_RESIZE_ALGO resize;
+
+    VCEVppParam();
 };
 
 struct VCEParam {
@@ -388,6 +416,8 @@ struct VCEParam {
     int nPerfMonitorSelect;
     int nPerfMonitorSelectMatplot;
     int nPerfMonitorInterval;
+
+    VCEVppParam vpp;
 
     VCEParam();
     ~VCEParam();

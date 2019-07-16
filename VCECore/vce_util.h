@@ -317,12 +317,12 @@ static_assert(std::is_pod<RGYBitstream>::value == true, "RGYBitstream should be 
 struct RGYFrame {
 private:
     amf::AMFSurfacePtr amfptr;
-    unique_ptr<RGYCLBufFrame> clbuf;
+    unique_ptr<RGYCLFrame> clbuf;
 public:
     RGYFrame() : amfptr(), clbuf() {};
     RGYFrame(const amf::AMFSurfacePtr &pSurface) : amfptr(std::move(pSurface)), clbuf() {
     }
-    RGYFrame(unique_ptr<RGYCLBufFrame> clframe) : amfptr(), clbuf(std::move(clframe)) {
+    RGYFrame(unique_ptr<RGYCLFrame> clframe) : amfptr(), clbuf(std::move(clframe)) {
     }
     ~RGYFrame() {
         clbuf.reset();
@@ -336,10 +336,10 @@ public:
     amf::AMFSurfacePtr &amf() {
         return amfptr;
     }
-    const unique_ptr<RGYCLBufFrame> &cl() const {
+    const unique_ptr<RGYCLFrame> &cl() const {
         return clbuf;
     }
-    unique_ptr<RGYCLBufFrame> &cl() {
+    unique_ptr<RGYCLFrame> &cl() {
         return clbuf;
     }
     amf::AMFSurfacePtr detachSurface() {
@@ -347,13 +347,13 @@ public:
         amfptr = nullptr;
         return ptr;
     }
-    unique_ptr<RGYCLBufFrame> detachCLFrame() {
+    unique_ptr<RGYCLFrame> detachCLFrame() {
         return std::move(clbuf);
     }
 private:
     FrameInfo infoAMF() const {
         FrameInfo info;
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 4; i++) {
             auto plane = amfptr->GetPlaneAt(i);
             if (plane) {
                 info.ptr[i] = (uint8_t *)plane->GetNative();
@@ -367,6 +367,7 @@ private:
         info.duration = amfptr->GetDuration();
         info.picstruct = RGY_PICSTRUCT_FRAME;
         info.flags = RGY_FRAME_FLAG_NONE;
+        info.mem_type = amfptr->GetMemoryType() == amf::AMF_MEMORY_HOST ? RGY_MEM_TYPE_CPU : RGY_MEM_TYPE_GPU_IMAGE;
         return info;
     }
     FrameInfo infoCL() const {

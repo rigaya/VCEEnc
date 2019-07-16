@@ -32,6 +32,7 @@
 #include "rgy_log.h"
 #include "rgy_opencl.h"
 #include "convert_csp.h"
+#include "vce_param.h"
 
 class RGYFilterParam {
 public:
@@ -129,9 +130,9 @@ protected:
     tstring m_infoStr;
     shared_ptr<RGYLog> m_pLog;  //ログ出力
     shared_ptr<RGYOpenCLContext> m_cl;
-    vector<unique_ptr<RGYCLBufFrame>> m_frameBuf;
-    unique_ptr<RGYCLBufFrame> m_pFieldPairIn;
-    unique_ptr<RGYCLBufFrame> m_pFieldPairOut;
+    vector<unique_ptr<RGYCLFrame>> m_frameBuf;
+    unique_ptr<RGYCLFrame> m_pFieldPairIn;
+    unique_ptr<RGYCLFrame> m_pFieldPairOut;
     shared_ptr<RGYFilterParam> m_param;
     FILTER_PATHTHROUGH_FRAMEINFO m_pathThrough;
 };
@@ -157,11 +158,13 @@ protected:
     RGY_ERR convertCspFromRGB(FrameInfo *pOutputFrame, const FrameInfo *pInputFrame);
     RGY_ERR convertCspFromYUV444(FrameInfo *pOutputFrame, const FrameInfo *pInputFrame);
     virtual void close() override;
+
+    unique_ptr<RGYOpenCLProgram> m_crop;
 };
 
 class RGYFilterParamResize : public RGYFilterParam {
 public:
-    int interp;
+    RGY_VPP_RESIZE_ALGO interp;
     virtual ~RGYFilterParamResize() {};
 };
 
@@ -174,6 +177,11 @@ protected:
     virtual RGY_ERR run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum) override;
     virtual void close() override;
 
+    virtual RGY_ERR resizePlane(FrameInfo *pOutputPlane, const FrameInfo *pInputPlane, int queue_id);
+    virtual RGY_ERR resizeFrame(FrameInfo *pOutputPlane, const FrameInfo *pInputPlane, int queue_id);
+
     bool m_bInterlacedWarn;
-    RGYCLBuf m_weightSpline;
+    unique_ptr<RGYCLBuf> m_weightSpline;
+    unique_ptr<RGYOpenCLProgram> m_resize;
+    unique_ptr<RGYCLFrame> m_srcImage;
 };

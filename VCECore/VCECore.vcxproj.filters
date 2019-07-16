@@ -281,4 +281,12 @@
       <Filter>ソース ファイル</Filter>
     </CustomBuild>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="vce_filter.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="vce_filter_resize.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+  </ItemGroup>
 </Project>

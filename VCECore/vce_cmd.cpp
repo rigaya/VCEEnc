@@ -1217,6 +1217,16 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->bEnforceHRD = TRUE;
         return 0;
     }
+    if (0 == _tcscmp(option_name, _T("vpp-resize"))) {
+        i++;
+        int value;
+        if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_vpp_resize, strInput[i]))) {
+            SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            return 1;
+        }
+        pParams->vpp.resize = (RGY_VPP_RESIZE_ALGO)value;
+        return 0;
+    }
     if (IS_OPTION("log")) {
         i++;
         pParams->logfile = strInput[i];
@@ -1782,6 +1792,10 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_LST(_T("--caption2ass"), caption2ass, list_caption2ass);
     OPT_STR_PATH(_T("--chapter"), sChapterFile);
     OPT_BOOL(_T("--chapter-copy"), _T(""), bCopyChapter);
+
+
+    OPT_LST(_T("--vpp-resize"), vpp.resize, list_vpp_resize);
+
     //OPT_BOOL(_T("--chapter-no-trim"), _T(""), bChapterNoTrim);
     OPT_LST(_T("--avsync"), nAVSyncMode, list_avsync);
 #endif //#if ENABLE_AVSW_READER

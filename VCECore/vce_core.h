@@ -56,14 +56,14 @@ struct AVChapter;
 
 class RGYPipelineFrame {
     RGYPipelineFrame(amf::AMFSurfacePtr surf) : surface(surf), frame() {};
-    RGYPipelineFrame(shared_ptr<RGYCLBufFrame> clframe) : surface(), frame(clframe) {};
+    RGYPipelineFrame(shared_ptr<RGYCLFrame> clframe) : surface(), frame(clframe) {};
     ~RGYPipelineFrame() {
         surface->Release();
         frame.reset();
     };
 protected:
     amf::AMFSurfacePtr surface;
-    shared_ptr<RGYCLBufFrame> frame;
+    shared_ptr<RGYCLFrame> frame;
 };
 
 enum RGYRunState {

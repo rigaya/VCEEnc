@@ -28,6 +28,11 @@
 #include "rgy_util.h"
 #include "vce_param.h"
 
+VCEVppParam::VCEVppParam() :
+    resize(RGY_VPP_RESIZE_AUTO) {
+
+}
+
 VCEParam::VCEParam() :
     input(),
     inputFilename(),
@@ -113,7 +118,8 @@ VCEParam::VCEParam() :
     pAVInputFormat(nullptr),
     nPerfMonitorSelect(0),
     nPerfMonitorSelectMatplot(0),
-    nPerfMonitorInterval(0) {
+    nPerfMonitorInterval(0),
+    vpp() {
     codecParam[RGY_CODEC_H264].nLevel   = 0;
     codecParam[RGY_CODEC_H264].nProfile = list_avc_profile[2].value;
     codecParam[RGY_CODEC_HEVC].nLevel   = 0;
