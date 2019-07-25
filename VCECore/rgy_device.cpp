@@ -28,6 +28,7 @@
 #include <set>
 #include <list>
 #include "rgy_device.h"
+#include "rgy_log.h"
 #include "rgy_util.h"
 
 #pragma comment(lib, "d3d9.lib")

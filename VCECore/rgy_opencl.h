@@ -43,6 +43,7 @@
 #include <memory>
 #include "rgy_osdep.h"
 #include "rgy_log.h"
+#include "rgy_util.h"
 
 #ifndef CL_EXTERN
 #define CL_EXTERN extern

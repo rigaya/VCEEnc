@@ -218,6 +218,7 @@ enum RGY_CHROMAFMT {
     RGY_CHROMAFMT_YUV420,
     RGY_CHROMAFMT_YUV422,
     RGY_CHROMAFMT_YUV444,
+    RGY_CHROMAFMT_YUVA444,
     RGY_CHROMAFMT_RGB_PACKED,
     RGY_CHROMAFMT_RGB,
 };
@@ -247,8 +248,8 @@ static const RGY_CHROMAFMT RGY_CSP_CHROMA_FORMAT[] = {
     RGY_CHROMAFMT_YUV444,
     RGY_CHROMAFMT_YUV444,
     RGY_CHROMAFMT_YUV444, //RGY_CSP_YUV444_16
-    RGY_CHROMAFMT_YUV444, //RGY_CSP_YUVA444
-    RGY_CHROMAFMT_YUV444, //RGY_CSP_YUVA444_16
+    RGY_CHROMAFMT_YUVA444, //RGY_CSP_YUVA444
+    RGY_CHROMAFMT_YUVA444, //RGY_CSP_YUVA444_16
     RGY_CHROMAFMT_RGB_PACKED,
     RGY_CHROMAFMT_RGB_PACKED,
     RGY_CHROMAFMT_RGB_PACKED,
@@ -458,6 +459,11 @@ typedef union sInputCrop {
 
 static inline bool cropEnabled(const sInputCrop &crop) {
     return 0 != (crop.c[0] | crop.c[1] | crop.c[2] | crop.c[3]);
+}
+
+static inline sInputCrop initCrop() {
+    sInputCrop crop = { 0 };
+    return crop;
 }
 
 static sInputCrop getPlane(const sInputCrop *crop, const RGY_CSP csp, const RGY_PLANE plane) {

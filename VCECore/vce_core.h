@@ -119,9 +119,12 @@ protected:
 
     virtual RGY_CSP GetEncoderCSP(const VCEParam *inputParam);
     virtual RGY_ERR checkParam(VCEParam *prm);
+    virtual RGY_ERR initLog(VCEParam *prm);
+    virtual RGY_ERR initPerfMonitor(VCEParam *prm);
     virtual RGY_ERR initDecoder(VCEParam *prm);
     virtual RGY_ERR initFilters(VCEParam *prm);
     virtual RGY_ERR initConverter(VCEParam *prm);
+    virtual RGY_ERR InitChapters(VCEParam *prm);
     virtual RGY_ERR initEncoder(VCEParam *prm);
 
     virtual RGY_ERR run_decode();
@@ -131,8 +134,12 @@ protected:
     shared_ptr<RGYLog> m_pLog;
     bool m_bTimerPeriodTuning;
 #if ENABLE_AVSW_READER
-    vector<unique_ptr<AVChapter>> m_AVChapterFromFile;
+    bool                          m_keyOnChapter;        //チャプター上にキーフレームを配置する
+    vector<int>                   m_keyFile;             //キーフレームの指定
+    vector<unique_ptr<AVChapter>> m_Chapters;            //ファイルから読み込んだチャプター
 #endif //#if ENABLE_AVSW_READER
+    unique_ptr<RGYHDR10Plus>      m_hdr10plus;
+
     sTrimParam m_trimParam;
     shared_ptr<RGYInput> m_pFileReader;
     vector<shared_ptr<RGYInput>> m_AudioReaders;

@@ -58,6 +58,7 @@ const char *get_encoder_version();
 
 #define GPU_VENDOR "AMD"
 #define DECODER_NAME  "vce"
+#define HW_TIMEBASE 10000000L //AMF_SECOND
 
 #define ENABLE_LIBASS_SUBBURN 0
 

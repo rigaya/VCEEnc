@@ -60,6 +60,7 @@ extern "C" {
 #pragma warning (pop)
 
 #include "rgy_util.h"
+#include "rgy_log.h"
 
 #if _DEBUG
 #define RGY_AV_LOG_LEVEL AV_LOG_WARNING
@@ -126,6 +127,12 @@ static inline bool avcodecIsCopy(const TCHAR *codec) {
 static inline bool avcodecIsAuto(const TCHAR *codec) {
     return codec != nullptr && 0 == _tcsicmp(codec, RGY_AVCODEC_AUTO);
 }
+static inline bool avcodecIsCopy(const tstring& codec) {
+    return codec.length() == 0 || avcodecIsCopy(codec.c_str());
+}
+static inline bool avcodecIsAuto(const tstring &codec) {
+    return codec.length() > 0 && avcodecIsAuto(codec.c_str());
+}
 
 //AV_LOG_TRACE    56 - RGY_LOG_TRACE -3
 //AV_LOG_DEBUG    48 - RGY_LOG_DEBUG -2
@@ -146,7 +153,7 @@ static tstring errorMesForCodec(const TCHAR *mes, AVCodecID targetCodec) {
     return mes + tstring(_T(" for ")) + char_to_tstring(avcodec_get_name(targetCodec)) + tstring(_T(".\n"));
 };
 
-static const AVRational HW_NATIVE_TIMEBASE = { 1, (int)AMF_SECOND };
+static const AVRational HW_NATIVE_TIMEBASE = { 1, (int)HW_TIMEBASE };
 static const TCHAR *AVCODEC_DLL_NAME[] = {
     _T("avcodec-58.dll"), _T("avformat-58.dll"), _T("avutil-56.dll"), _T("avfilter-7.dll"), _T("swresample-3.dll")
 };
@@ -209,6 +216,10 @@ tstring getChannelLayoutString(int channels, uint64_t channel_layout);
 //時刻を表示
 std::string getTimestampChar(int64_t ts, const AVRational& timebase);
 tstring getTimestampString(int64_t ts, const AVRational& timebase);
+
+//tag関連
+uint32_t tagFromStr(std::string tagstr);
+std::string tagToStr(uint32_t tag);
 
 //利用可能なプロトコル情報のリストを取得
 vector<std::string> getAVProtocolList(int bOutput);

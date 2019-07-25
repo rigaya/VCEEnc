@@ -32,17 +32,19 @@
 #include <SDKDDKVer.h>
 #include <atlbase.h>
 #include <string>
+#include <memory>
 #include <d3d9.h>
 #include <d3d11.h>
 #include "rgy_err.h"
-#include "rgy_log.h"
+
+class RGYLog;
 
 class DeviceDX9 {
 public:
     DeviceDX9();
     virtual ~DeviceDX9();
 
-    RGY_ERR Init(bool dx9ex, int adapterID, bool bFullScreen, int width, int height, shared_ptr<RGYLog> log);
+    RGY_ERR Init(bool dx9ex, int adapterID, bool bFullScreen, int width, int height, std::shared_ptr<RGYLog> log);
     RGY_ERR Terminate();
 
     ATL::CComPtr<IDirect3DDevice9>     GetDevice();
@@ -57,7 +59,7 @@ private:
     int                          m_adaptersCount;
     int                          m_adaptersIndexes[MAXADAPTERS];
     std::wstring                 m_displayDeviceName;
-    shared_ptr<RGYLog>           m_log;
+    std::shared_ptr<RGYLog>      m_log;
 };
 
 
@@ -66,7 +68,7 @@ public:
     DeviceDX11();
     virtual ~DeviceDX11();
 
-    RGY_ERR Init(int adapterID, bool onlyWithOutputs, shared_ptr<RGYLog> log);
+    RGY_ERR Init(int adapterID, bool onlyWithOutputs, std::shared_ptr<RGYLog> log);
     RGY_ERR Terminate();
 
     ATL::CComPtr<ID3D11Device>      GetDevice();
@@ -80,7 +82,7 @@ private:
     int                          m_adaptersCount;
     int                          m_adaptersIndexes[MAXADAPTERS];
     std::wstring                 m_displayDeviceName;
-    shared_ptr<RGYLog>           m_log;
+    std::shared_ptr<RGYLog>      m_log;
 };
 
 #endif //__RGY_DEVICE_H__

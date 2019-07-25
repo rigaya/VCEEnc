@@ -411,7 +411,7 @@ public:
     uint64_t timestamp() const {
         return info().timestamp;
     }
-    void SetTimestamp(uint64_t timestamp) {
+    void setTimestamp(uint64_t timestamp) {
         if (amfptr) {
             amfptr->SetPts(timestamp);
         } else {
@@ -421,7 +421,7 @@ public:
     int64_t duration() const {
         return info().duration;
     }
-    void SetDuration(uint64_t duration) {
+    void setDuration(uint64_t duration) {
         if (amfptr) {
             amfptr->SetDuration(duration);
         } else {

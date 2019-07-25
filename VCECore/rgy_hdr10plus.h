@@ -1,10 +1,9 @@
 ﻿// -----------------------------------------------------------------------------------------
-// NVEnc by rigaya
+// QSVEnc/NVEnc by rigaya
 // -----------------------------------------------------------------------------------------
-//
 // The MIT License
 //
-// Copyright (c) 2014-2016 rigaya
+// Copyright (c) 2019 rigaya
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,22 +23,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// ------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------
 
 #pragma once
-#ifndef __NVENC_CMD_H__
-#define __NVENC_CMD_H__
+#ifndef __RGY_HDR10PLUS_H__
+#define __RGY_HDR10PLUS_H__
 
-#include <sstream>
-#include "vce_param.h"
-#include "rgy_cmd.h"
+#include <string>
+#include <memory>
+#include "rgy_err.h"
+#include "rgy_pipe.h"
+#include "rgy_util.h"
 
-tstring GetVCEEncVersion();
-const TCHAR *cmd_short_opt_to_long(TCHAR short_opt);
+class RGYHDR10Plus {
+public:
+    static const TCHAR *HDR10PLUS_GEN_EXE_NAME;
+    RGYHDR10Plus();
+    virtual ~RGYHDR10Plus();
 
-int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, ParseCmdError& err, bool ignore_parse_err = false);
-int parse_cmd(VCEParam *pParams, const char *cmda, ParseCmdError& err, bool ignore_parse_err = false);
+    RGY_ERR init(const tstring& inputJson);
+    const vector<uint8_t> *getData(int iframe);
+    const tstring &inputJson() const { return m_inputJson; };
+protected:
+    tstring m_inputJson;
+    std::unique_ptr<RGYPipeProcess> m_proc;
+    ProcessPipe m_pipes;
+    std::unique_ptr<FILE, decltype(&fclose)> m_fpStdOut;
+    std::pair<int, std::vector<uint8_t>> m_buffer;
+};
 
-tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm);
-
-#endif //__NVENC_PARSE_CMD_H__
+#endif //__RGY_HDR10PLUS_H__

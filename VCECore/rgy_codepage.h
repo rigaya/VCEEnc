@@ -1,10 +1,9 @@
 ﻿// -----------------------------------------------------------------------------------------
-// NVEnc by rigaya
+// QSVEnc/NVEnc by rigaya
 // -----------------------------------------------------------------------------------------
-//
 // The MIT License
 //
-// Copyright (c) 2014-2016 rigaya
+// Copyright (c) 2019 rigaya
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,22 +23,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// ------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------
 
 #pragma once
-#ifndef __NVENC_CMD_H__
-#define __NVENC_CMD_H__
+#ifndef __RGY_CODEPAGE_H__
+#define __RGY_CODEPAGE_H__
 
-#include <sstream>
-#include "vce_param.h"
-#include "rgy_cmd.h"
+//日本語環境の一般的なコードページ一覧
+enum : uint32_t {
+    CODE_PAGE_SJIS        = 932, //Shift-JIS
+    CODE_PAGE_JIS         = 50220,
+    CODE_PAGE_EUC_JP      = 51932,
+    CODE_PAGE_UTF8        = 65001,
+    CODE_PAGE_UTF16_LE    = 1200, //WindowsのUnicode WCHAR のコードページ
+    CODE_PAGE_UTF16_BE    = 1201,
+    CODE_PAGE_US_ASCII    = 20127,
+    CODE_PAGE_WEST_EUROPE = 1252,  //厄介な西ヨーロッパ言語
+    CODE_PAGE_UNSET       = 0xffffffff,
+};
 
-tstring GetVCEEncVersion();
-const TCHAR *cmd_short_opt_to_long(TCHAR short_opt);
+uint32_t get_code_page(const void *str, uint32_t size_in_byte);
 
-int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, ParseCmdError& err, bool ignore_parse_err = false);
-int parse_cmd(VCEParam *pParams, const char *cmda, ParseCmdError& err, bool ignore_parse_err = false);
-
-tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm);
-
-#endif //__NVENC_PARSE_CMD_H__
+#endif //__RGY_CODEPAGE_H__

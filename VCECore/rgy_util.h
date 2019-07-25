@@ -48,17 +48,14 @@
 #include <sstream>
 #include <functional>
 #include <type_traits>
+#include "rgy_def.h"
 #include "rgy_osdep.h"
 #include "rgy_err.h"
-#include "cpu_info.h"
-#include "gpu_info.h"
-#include "convert_csp.h"
 
 #ifndef UNREFERENCED_PARAMETER
 #define UNREFERENCED_PARAMETER(x)
 #endif
 
-typedef std::basic_string<TCHAR> tstring;
 using std::vector;
 using std::unique_ptr;
 using std::shared_ptr;
@@ -110,6 +107,10 @@ std::vector<T> make_vector(T(&ptr)[size]) {
 template<typename T, size_t size>
 std::vector<T> make_vector(const T(&ptr)[size]) {
     return std::vector<T>(ptr, ptr + size);
+}
+template<typename T, typename... ArgTypes>
+std::vector<T> make_vector(ArgTypes... args) {
+    return std::vector<T>{ reinterpret_cast<T>(args)... };
 }
 template<typename T0, typename T1>
 std::vector<T0> make_vector(const T0 *ptr, T1 size) {
@@ -191,7 +192,7 @@ struct handle_deleter {
 };
 
 struct module_deleter {
-    void operator()(HMODULE hmodule) const {
+    void operator()(void *hmodule) const {
         if (hmodule) {
 #if defined(_WIN32) || defined(_WIN64)
             FreeLibrary((HMODULE)hmodule);
@@ -450,6 +451,36 @@ static int64_t rgy_change_scale(int64_t t, const rgy_rational<int>& scale_in, co
 
 typedef std::basic_stringstream<TCHAR> TStringStream;
 
+#pragma warning (push)
+#pragma warning (disable: 4244)
+static inline std::string tolowercase(const std::string& str) {
+    std::string str_copy = str;
+    std::transform(str_copy.cbegin(), str_copy.cend(), str_copy.begin(), tolower);
+    return str_copy;
+}
+static inline std::string touppercase(const std::string &str) {
+    std::string str_copy = str;
+    std::transform(str_copy.cbegin(), str_copy.cend(), str_copy.begin(), toupper);
+    return str_copy;
+}
+#if defined(_WIN32) || defined(_WIN64)
+static inline std::wstring tolowercase(const std::wstring &str) {
+    auto temp = wcsdup(str.data());
+    _wcslwr(temp);
+    std::wstring str_lo = temp;
+    free(temp);
+    return str_lo;
+}
+static inline std::wstring touppercase(const std::wstring &str) {
+    auto temp = wcsdup(str.data());
+    _wcsupr(temp);
+    std::wstring str_lo = temp;
+    free(temp);
+    return str_lo;
+}
+#endif //#if defined(_WIN32) || defined(_WIN64)
+#pragma warning (pop)
+
 unsigned int wstring_to_string(const wchar_t *wstr, std::string& str, uint32_t codepage = CP_THREAD_ACP);
 std::string wstring_to_string(const wchar_t *wstr, uint32_t codepage = CP_THREAD_ACP);
 std::string wstring_to_string(const std::wstring& wstr, uint32_t codepage = CP_THREAD_ACP);
@@ -468,7 +499,8 @@ std::wstring PathCombineS(const std::wstring& dir, const std::wstring& filename)
 std::string PathCombineS(const std::string& dir, const std::string& filename);
 bool CreateDirectoryRecursive(const WCHAR *dir);
 std::vector<tstring> get_file_list(const tstring& pattern, const tstring& dir);
-#endif
+tstring getExeDir();
+#endif //#if defined(_WIN32) || defined(_WIN64)
 
 std::wstring tchar_to_wstring(const tstring& tstr, uint32_t codepage = CP_THREAD_ACP);
 std::wstring tchar_to_wstring(const TCHAR *tstr, uint32_t codepage = CP_THREAD_ACP);
@@ -612,254 +644,235 @@ static void RGY_FORCEINLINE sse_memcpy(uint8_t *dst, const uint8_t *src, int siz
 //確保できなかったら、サイズを小さくして再度確保を試みる (最終的にnMinSizeも確保できなかったら諦める)
 size_t malloc_degeneracy(void **ptr, size_t nSize, size_t nMinSize);
 
-const int MAX_FILENAME_LEN = 1024;
-
-enum {
-    RGY_LOG_TRACE = -3,
-    RGY_LOG_DEBUG = -2,
-    RGY_LOG_MORE  = -1,
-    RGY_LOG_INFO  = 0,
-    RGY_LOG_WARN  = 1,
-    RGY_LOG_ERROR = 2,
-    RGY_LOG_QUIET = 3,
-};
-
-enum RGY_FRAMETYPE : uint32_t {
-    RGY_FRAMETYPE_UNKNOWN = 0,
-
-    RGY_FRAMETYPE_I       = 1<<0,
-    RGY_FRAMETYPE_P       = 1<<1,
-    RGY_FRAMETYPE_B       = 1<<2,
-
-    RGY_FRAMETYPE_REF     = 1<<6,
-    RGY_FRAMETYPE_IDR     = 1<<7,
-
-    RGY_FRAMETYPE_xI      = 1<<8,
-    RGY_FRAMETYPE_xP      = 1<<9,
-    RGY_FRAMETYPE_xB      = 1<<10,
-
-    RGY_FRAMETYPE_xREF    = 1<<14,
-    RGY_FRAMETYPE_xIDR    = 1<<15
-};
-
-static RGY_FRAMETYPE operator|(RGY_FRAMETYPE a, RGY_FRAMETYPE b) {
-    return (RGY_FRAMETYPE)((uint32_t)a | (uint32_t)b);
-}
-
-static RGY_FRAMETYPE operator|=(RGY_FRAMETYPE& a, RGY_FRAMETYPE b) {
-    a = a | b;
-    return a;
-}
-
-static RGY_FRAMETYPE operator&(RGY_FRAMETYPE a, RGY_FRAMETYPE b) {
-    return (RGY_FRAMETYPE)((uint32_t)a & (uint32_t)b);
-}
-
-static RGY_FRAMETYPE operator&=(RGY_FRAMETYPE& a, RGY_FRAMETYPE b) {
-    a = (RGY_FRAMETYPE)((uint32_t)a & (uint32_t)b);
-    return a;
-}
-
-enum RGY_CODEC {
-    RGY_CODEC_UNKNOWN = 0,
-    RGY_CODEC_H264,
-    RGY_CODEC_HEVC,
-    RGY_CODEC_MPEG1,
-    RGY_CODEC_MPEG2,
-    RGY_CODEC_MPEG4,
-    RGY_CODEC_VP8,
-    RGY_CODEC_VP9,
-    RGY_CODEC_VC1,
-
-    RGY_CODEC_NUM,
-};
-
-static tstring CodecToStr(RGY_CODEC codec) {
-    switch (codec) {
-    case RGY_CODEC_H264:  return _T("H.264/AVC");
-    case RGY_CODEC_HEVC:  return _T("H.265/HEVC");
-    case RGY_CODEC_MPEG2: return _T("MPEG2");
-    case RGY_CODEC_MPEG1: return _T("MPEG1");
-    case RGY_CODEC_VC1:   return _T("VC-1");
-    case RGY_CODEC_MPEG4: return _T("MPEG4");
-    case RGY_CODEC_VP8:   return _T("VP8");
-    case RGY_CODEC_VP9:   return _T("VP9");
-    default: return _T("unknown");
+class vec3 {
+public:
+    vec3() : v() {
+        for (int i = 0; i < 3; i++)
+            v[i] = 0.0;
     }
-}
-
-struct RGY_CODEC_DATA {
-    RGY_CODEC codec;
-    int codecProfile;
-
-    RGY_CODEC_DATA() : codec(RGY_CODEC_UNKNOWN), codecProfile(0) {}
-    RGY_CODEC_DATA(RGY_CODEC _codec, int profile) : codec(_codec), codecProfile(profile) {}
-
-    bool operator<(const RGY_CODEC_DATA& right) const {
-        return codec == right.codec ? codec < right.codec : codecProfile < right.codecProfile;
+    vec3(const vec3 &m) { memcpy(&v[0], &m.v[0], sizeof(v)); }
+    vec3(double a0, double a1, double a2) {
+        v[0] = a0;
+        v[1] = a1;
+        v[2] = a2;
     }
-    bool operator==(const RGY_CODEC_DATA& right) const {
-        return codec == right.codec && codecProfile == right.codecProfile;
+    vec3 &operator=(const vec3 &m) { memcpy(&v[0], &m.v[0], sizeof(v)); return *this; }
+    const vec3 &m() const {
+        return *this;
     }
+    double &operator()(int i) {
+        return v[i];
+    }
+    const double &operator()(int i) const {
+        return v[i];
+    }
+    vec3 &operator+= (const vec3 &a) {
+        for (int i = 0; i < 3; i++)
+            v[i] += a.v[i];
+        return *this;
+    }
+    vec3 &operator-= (const vec3 &a) {
+        for (int i = 0; i < 3; i++)
+            v[i] -= a.v[i];
+        return *this;
+    }
+    vec3 amdal(const vec3 &a) const {
+        return vec3(
+            v[0] * a.v[0],
+            v[1] * a.v[1],
+            v[2] * a.v[2]
+        );
+    }
+    double dot(const vec3 &a) const {
+        return a.v[0] * v[0] + a.v[1] * v[1] + a.v[2] * v[2];
+    }
+    vec3 cross(const vec3 &a) const {
+        return vec3(
+            v[1] * a.v[2] - v[2] * a.v[1],
+            v[2] * a.v[0] - v[0] * a.v[2],
+            v[0] * a.v[1] - v[1] * a.v[0]
+        );
+    }
+    bool operator== (const vec3 &r) const {
+        return memcmp(&v[0], &r.v[0], sizeof(v)) == 0;
+    }
+    bool operator!= (const vec3 &r) const {
+        return memcmp(&v[0], &r.v[0], sizeof(v)) != 0;
+    }
+private:
+    double v[3];
 };
 
-enum RGY_INPUT_FMT {
-    RGY_INPUT_FMT_AUTO = 0,
-    RGY_INPUT_FMT_AUO = 0,
-    RGY_INPUT_FMT_RAW,
-    RGY_INPUT_FMT_Y4M,
-    RGY_INPUT_FMT_AVI,
-    RGY_INPUT_FMT_AVS,
-    RGY_INPUT_FMT_VPY,
-    RGY_INPUT_FMT_VPY_MT,
-    RGY_INPUT_FMT_AVHW,
-    RGY_INPUT_FMT_AVSW,
-    RGY_INPUT_FMT_AVANY,
-};
+class mat3x3 {
+public:
+    mat3x3() : mat() {
+        for (int j = 0; j < 3; j++)
+            for (int i = 0; i < 3; i++)
+                mat[j][i] = 0.0;
+    }
+    mat3x3(const vec3 &col0, const vec3 &col1, const vec3 &col2) : mat() {
+        for (int i = 0; i < 3; i++) {
+            mat[0][i] = col0(i);
+            mat[1][i] = col1(i);
+            mat[2][i] = col2(i);
+        }
+    }
+    mat3x3(const mat3x3 &m) { memcpy(&this->mat[0][0], &m.mat[0][0], sizeof(mat)); }
+    mat3x3(double a00, double a01, double a02, double a10, double a11, double a12, double a20, double a21, double a22) {
+        mat[0][0] = a00;
+        mat[0][1] = a01;
+        mat[0][2] = a02;
+        mat[1][0] = a10;
+        mat[1][1] = a11;
+        mat[1][2] = a12;
+        mat[2][0] = a20;
+        mat[2][1] = a21;
+        mat[2][2] = a22;
+    }
+    mat3x3 &operator=(const mat3x3 &m) { memcpy(&this->mat[0][0], &m.mat[0][0], sizeof(mat)); return *this; }
 
-typedef struct CX_DESC {
-    const TCHAR *desc;
-    int value;
-} CX_DESC;
+    const mat3x3 &m() const {
+        return *this;
+    }
+    //(行,列)
+    double &operator()(int i, int j) {
+        return mat[i][j];
+    }
+    //(行,列)
+    const double &operator()(int i, int j) const {
+        return mat[i][j];
+    }
 
-typedef struct FEATURE_DESC {
-    const TCHAR *desc;
-    uint64_t value;
-} FEATURE_DESC;
+    mat3x3 &operator+= (const mat3x3& a) {
+        for (int j = 0; j < 3; j++)
+            for (int i = 0; i < 3; i++)
+                mat[j][i] += a.mat[j][i];
+        return *this;
+    }
+    mat3x3 &operator-= (const mat3x3 &a) {
+        for (int j = 0; j < 3; j++)
+            for (int i = 0; i < 3; i++)
+                mat[j][i] -= a.mat[j][i];
+        return *this;
+    }
+    mat3x3 &operator*= (const double a) {
+        for (int j = 0; j < 3; j++)
+            for (int i = 0; i < 3; i++)
+                mat[j][i] *= a;
+        return *this;
+    }
+    mat3x3 &operator*= (const mat3x3 &r) {
+        *this = mul(*this, r);
+        return *this;
+    }
+    mat3x3 &operator/= (const double a) {
+        *this *= (1.0 / a);
+        return *this;
+    }
+    mat3x3 &operator/= (const mat3x3 &r) {
+        *this = mul(*this, r.inv());
+        return *this;
+    }
 
-static const TCHAR *get_chr_from_value(const CX_DESC * list, int v) {
-    for (int i = 0; list[i].desc; i++)
-        if (list[i].value == v)
-            return list[i].desc;
-    return _T("unknown");
-}
+    template<typename Arg>
+    mat3x3 operator + (const Arg &a) const {
+        mat3x3 t(*this);
+        t += a;
+        return t;
+    }
+    template<typename Arg>
+    mat3x3 operator - (const Arg &a) const {
+        mat3x3 t(*this);
+        t -= a;
+        return t;
+    }
+    mat3x3 operator * (const mat3x3 &a) const {
+        mat3x3 t(*this);
+        t *= a;
+        return t;
+    }
+    mat3x3 operator * (const double &a) const {
+        mat3x3 t(*this);
+        t *= a;
+        return t;
+    }
+    vec3 operator * (const vec3 &a) const {
+        vec3 v;
+        for (int j = 0; j < 3; j++) {
+            double d = 0.0;
+            for (int i = 0; i < 3; i++) {
+                d += mat[j][i] * a(i);
+            }
+            v(j) = d;
+        }
+        return v;
+    }
+    template<typename Arg>
+    mat3x3 operator / (const Arg &a) const {
+        mat3x3 t(*this);
+        t /= a;
+        return t;
+    }
+    bool operator== (const mat3x3&r) const {
+        return memcmp(&mat[0][0], &r.mat[0][0], sizeof(mat)) == 0;
+    }
+    bool operator!= (const mat3x3& r) const {
+        return memcmp(&mat[0][0], &r.mat[0][0], sizeof(mat)) != 0;
+    }
+    double det() const {
+        const double determinant =
+            +mat[0][0]*(mat[1][1]*mat[2][2]-mat[2][1]*mat[1][2])
+            -mat[0][1]*(mat[1][0]*mat[2][2]-mat[1][2]*mat[2][0])
+            +mat[0][2]*(mat[1][0]*mat[2][1]-mat[1][1]*mat[2][0]);
+        return determinant;
+    }
+    double det2(double a00, double a01, double a10, double a11) const {
+        return a00 * a11 - a01 * a10;
+    }
+    mat3x3 inv() const {
+        const double invdet = 1.0 / det();
 
-static int get_cx_index(const CX_DESC * list, int v) {
-    for (int i = 0; list[i].desc; i++)
-        if (list[i].value == v)
-            return i;
-    return 0;
-}
-
-static int get_cx_index(const CX_DESC * list, const TCHAR *chr) {
-    for (int i = 0; list[i].desc; i++)
-        if (0 == _tcscmp(list[i].desc, chr))
-            return i;
-    return 0;
-}
-
-static int get_cx_value(const CX_DESC * list, const TCHAR *chr) {
-    for (int i = 0; list[i].desc; i++)
-        if (0 == _tcscmp(list[i].desc, chr))
-            return list[i].value;
-    return 0;
-}
-
-static int PARSE_ERROR_FLAG = INT_MIN;
-static int get_value_from_chr(const CX_DESC *list, const TCHAR *chr) {
-    for (int i = 0; list[i].desc; i++)
-        if (_tcsicmp(list[i].desc, chr) == 0)
-            return list[i].value;
-    return PARSE_ERROR_FLAG;
-}
-
-static const TCHAR *get_cx_desc(const CX_DESC * list, int v) {
-    for (int i = 0; list[i].desc; i++)
-        if (list[i].value == v)
-            return list[i].desc;
-    return nullptr;
-}
-
-struct VideoVUIInfo {
-    int descriptpresent;
-    int colorprim;
-    int matrix;
-    int transfer;
-    int format;
-    int fullrange;
-    int chromaloc;
-};
-
-struct VideoInfo {
-    //[ i    ] 入力モジュールに渡す際にセットする
-    //[    i ] 入力モジュールによってセットされる
-    //[ o    ] 出力モジュールに渡す際にセットする
-
-    //[ i (i)] 種類 (RGY_INPUT_FMT_xxx)
-    //  i      使用する入力モジュールの種類
-    //     i   変更があれば
-    RGY_INPUT_FMT type;
-
-    //[(i) i ] 入力横解像度
-    uint32_t srcWidth;
-
-    //[(i) i ] 入力縦解像度
-    uint32_t srcHeight;
-
-    //[(i)(i)] 入力ピッチ 0なら入力横解像度に同じ
-    uint32_t srcPitch;
-
-    uint32_t codedWidth;     //[   (i)]
-    uint32_t codedHeight;    //[   (i)]
-
-                             //[      ] 出力解像度
-    uint32_t dstWidth;
-
-    //[      ] 出力解像度
-    uint32_t dstHeight;
-
-    //[      ] 出力解像度
-    uint32_t dstPitch;
-
-    //[    i ] 入力の取得した総フレーム数 (不明なら0)
-    int frames;
-
-    //[   (i)] 右shiftすべきビット数
-    int shift;
-
-    //[   (i)] 入力の取得したフレームレート (分子)
-    int fpsN;
-
-    //[   (i)] 入力の取得したフレームレート (分母)
-    int fpsD;
-
-    //[ i    ] 入力時切り落とし
-    sInputCrop crop;
-
-    //[   (i)] 入力の取得したアスペクト比
-    int sar[2];
-
-    //[(i) i ] 入力色空間 (RGY_CSP_xxx)
-    //  i      取得したい色空間をセット
-    //     i   入力の取得する色空間
-    RGY_CSP csp;
-
-    //[(i)(i)] RGY_PICSTRUCT_xxx
-    //  i      ユーザー指定の設定をセット
-    //     i   入力の取得した値、あるいはそのまま
-    RGY_PICSTRUCT picstruct;
-
-    //[    i ] 入力コーデック (デコード時使用)
-    //     i   HWデコード時セット
-    RGY_CODEC codec;
-
-    //[      ] 入力コーデックのヘッダー
-    void *codecExtra;
-
-    //[      ] 入力コーデックのヘッダーの大きさ
-    uint32_t codecExtraSize;
-
-    //[      ] 入力コーデックのレベル
-    int codecLevel;
-
-    //[      ] 入力コーデックのプロファイル
-    int codecProfile;
-
-    //[      ] 入力コーデックの遅延
-    int videoDelay;
-
-    //[      ] 入力コーデックのVUI情報
-    VideoVUIInfo vui;
+        mat3x3 ret;
+        ret.mat[0][0] = det2(mat[1][1], mat[1][2], mat[2][1], mat[2][2]) * invdet;
+        ret.mat[0][1] = det2(mat[0][2], mat[0][1], mat[2][2], mat[2][1]) * invdet;
+        ret.mat[0][2] = det2(mat[0][1], mat[0][2], mat[1][1], mat[1][2]) * invdet;
+        ret.mat[1][0] = det2(mat[1][2], mat[1][0], mat[2][2], mat[2][0]) * invdet;
+        ret.mat[1][1] = det2(mat[0][0], mat[0][2], mat[2][0], mat[2][2]) * invdet;
+        ret.mat[1][2] = det2(mat[0][2], mat[0][0], mat[1][2], mat[1][0]) * invdet;
+        ret.mat[2][0] = det2(mat[1][0], mat[1][1], mat[2][0], mat[2][1]) * invdet;
+        ret.mat[2][1] = det2(mat[0][1], mat[0][0], mat[2][1], mat[2][0]) * invdet;
+        ret.mat[2][2] = det2(mat[0][0], mat[0][1], mat[1][0], mat[1][1]) * invdet;
+        return ret;
+    }
+    mat3x3 trans() const {
+        mat3x3 ret;
+        for (int j = 0; j < 3; j++)
+            for (int i = 0; i < 3; i++)
+                ret.mat[j][i] = mat[i][j];
+        return ret;
+    }
+    mat3x3 mul(const mat3x3& a, const mat3x3& b) {
+        mat3x3 ret;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                double accum = 0;
+                for (int k = 0; k < 3; k++) {
+                    accum += a.mat[i][k] * b.mat[k][j];
+                }
+                ret(i,j) = accum;
+            }
+        }
+        return ret;
+    }
+    static mat3x3 identity() {
+        mat3x3 ret;
+        for (int i = 0; i < 3; i++) {
+            ret.mat[i][i] = 1.0;
+        }
+        return ret;
+    }
+private:
+    double mat[3][3]; //[行][列]
 };
 
 void get_dar_pixels(unsigned int* width, unsigned int* height, int sar_w, int sar_h);
@@ -867,206 +880,6 @@ std::pair<int, int> get_sar(unsigned int width, unsigned int height, unsigned in
 void adjust_sar(int *sar_w, int *sar_h, int width, int height);
 int get_h264_sar_idx(std::pair<int, int>sar);
 std::pair<int, int> get_h264_sar(int idx);
-
-enum {
-    RGY_RESAMPLER_SWR,
-    RGY_RESAMPLER_SOXR,
-};
-
-enum {
-    DELOGO_MODE_REMOVE = 0,
-    DELOGO_MODE_ADD,
-};
-
-static const int RGY_OUTPUT_THREAD_AUTO = -1;
-static const int RGY_AUDIO_THREAD_AUTO = -1;
-static const int RGY_INPUT_THREAD_AUTO = -1;
-
-typedef struct {
-    int start, fin;
-} sTrim;
-
-typedef struct {
-    std::vector<sTrim> list;
-    int offset;
-} sTrimParam;
-
-static const int TRIM_MAX = INT_MAX;
-static const int TRIM_OVERREAD_FRAMES = 128;
-
-typedef std::map<RGY_CODEC, vector<RGY_CSP>> CodecCsp;
-typedef std::vector<std::pair<int, CodecCsp>> DeviceCodecCsp;
-
-typedef std::vector<std::pair<tstring, tstring>> muxOptList;
-
-static bool inline trim_active(const sTrimParam *pTrim) {
-    if (pTrim == nullptr) {
-        return false;
-    }
-    if (pTrim->list.size() == 0) {
-        return false;
-    }
-    if (pTrim->list[0].start == 0 && pTrim->list[0].fin == TRIM_MAX) {
-        return false;
-    }
-    return true;
-}
-
-//block index (空白がtrimで削除された領域)
-//       #0       #0         #1         #1       #2    #2
-//   |        |----------|         |----------|     |------
-static std::pair<bool, int> inline frame_inside_range(int frame, const std::vector<sTrim>& trimList) {
-    int index = 0;
-    if (trimList.size() == 0) {
-        return std::make_pair(true, index);
-    }
-    if (frame < 0) {
-        return std::make_pair(false, index);
-    }
-    for (; index < (int)trimList.size(); index++) {
-        if (frame < trimList[index].start) {
-            return std::make_pair(false, index);
-        }
-        if (frame <= trimList[index].fin) {
-            return std::make_pair(true, index);
-        }
-    }
-    return std::make_pair(false, index);
-}
-
-static bool inline rearrange_trim_list(int frame, int offset, std::vector<sTrim>& trimList) {
-    if (trimList.size() == 0)
-        return true;
-    if (frame < 0)
-        return false;
-    for (uint32_t i = 0; i < trimList.size(); i++) {
-        if (trimList[i].start >= frame) {
-            trimList[i].start = clamp(trimList[i].start + offset, 0, TRIM_MAX);
-        }
-        if (trimList[i].fin && trimList[i].fin >= frame) {
-            trimList[i].fin = (int)clamp((int64_t)trimList[i].fin + offset, 0, (int64_t)TRIM_MAX);
-        }
-    }
-    return false;
-}
-
-enum RGYAVSync : uint32_t {
-    RGY_AVSYNC_ASSUME_CFR = 0x00,
-    RGY_AVSYNC_FORCE_CFR  = 0x01,
-    RGY_AVSYNC_VFR        = 0x02,
-};
-
-static RGYAVSync operator|(RGYAVSync a, RGYAVSync b) {
-    return (RGYAVSync)((uint32_t)a | (uint32_t)b);
-}
-
-static RGYAVSync operator|=(RGYAVSync& a, RGYAVSync b) {
-    a = a | b;
-    return a;
-}
-
-static RGYAVSync operator&(RGYAVSync a, RGYAVSync b) {
-    return (RGYAVSync)((uint32_t)a & (uint32_t)b);
-}
-
-static RGYAVSync operator&=(RGYAVSync& a, RGYAVSync b) {
-    a = a & b;
-    return a;
-}
-
-static RGYAVSync operator~(RGYAVSync a) {
-    return (RGYAVSync)(~(uint32_t)a);
-}
-
-static const int CHECK_PTS_MAX_INSERT_FRAMES = 8;
-
-enum {
-    RGY_MUX_NONE     = 0x00,
-    RGY_MUX_VIDEO    = 0x01,
-    RGY_MUX_AUDIO    = 0x02,
-    RGY_MUX_SUBTITLE = 0x04,
-};
-
-static const uint32_t MAX_SPLIT_CHANNELS = 32;
-static const uint64_t RGY_CHANNEL_AUTO = UINT64_MAX;
-static const int RGY_OUTPUT_BUF_MB_MAX = 128;
-
-template <uint32_t size>
-static bool bSplitChannelsEnabled(uint64_t(&pnStreamChannels)[size]) {
-    bool bEnabled = false;
-    for (uint32_t i = 0; i < size; i++) {
-        bEnabled |= pnStreamChannels[i] != 0;
-    }
-    return bEnabled;
-}
-
-template <uint32_t size>
-static void setSplitChannelAuto(uint64_t(&pnStreamChannels)[size]) {
-    for (uint32_t i = 0; i < size; i++) {
-        pnStreamChannels[i] = ((uint64_t)1) << i;
-    }
-}
-
-template <uint32_t size>
-static bool isSplitChannelAuto(uint64_t(&pnStreamChannels)[size]) {
-    bool isAuto = true;
-    for (uint32_t i = 0; isAuto && i < size; i++) {
-        isAuto &= (pnStreamChannels[i] == (((uint64_t)1) << i));
-    }
-    return isAuto;
-}
-
-typedef struct sAudioSelect {
-    int    nAudioSelect;               //選択した音声トラックのリスト 1,2,...(1から連番で指定)
-    TCHAR *pAVAudioEncodeCodec;        //音声エンコードのコーデック
-    TCHAR *pAVAudioEncodeCodecPrm;     //音声エンコードのコーデックのパラメータ
-    TCHAR *pAVAudioEncodeCodecProfile; //音声エンコードのコーデックのプロファイル
-    int    nAVAudioEncodeBitrate;      //音声エンコードに選択した音声トラックのビットレート
-    int    nAudioSamplingRate;         //サンプリング周波数
-    TCHAR *pAudioExtractFilename;      //抽出する音声のファイル名のリスト
-    TCHAR *pAudioExtractFormat;        //抽出する音声ファイルのフォーマット
-    TCHAR *pAudioFilter;               //音声フィルタ
-    uint64_t pnStreamChannelSelect[MAX_SPLIT_CHANNELS]; //入力音声の使用するチャンネル
-    uint64_t pnStreamChannelOut[MAX_SPLIT_CHANNELS];    //出力音声のチャンネル
-} sAudioSelect;
-
-const CX_DESC list_empty[] = {
-    { NULL, 0 }
-};
-
-const CX_DESC list_log_level[] = {
-    { _T("trace"), RGY_LOG_TRACE },
-    { _T("debug"), RGY_LOG_DEBUG },
-    { _T("more"),  RGY_LOG_MORE  },
-    { _T("info"),  RGY_LOG_INFO  },
-    { _T("warn"),  RGY_LOG_WARN  },
-    { _T("error"), RGY_LOG_ERROR },
-    { NULL, 0 }
-};
-
-const CX_DESC list_avsync[] = {
-    { _T("cfr"),      RGY_AVSYNC_ASSUME_CFR   },
-    { _T("vfr"),      RGY_AVSYNC_VFR       },
-    { _T("forcecfr"), RGY_AVSYNC_FORCE_CFR },
-    { NULL, 0 }
-};
-
-const CX_DESC list_resampler[] = {
-    { _T("swr"),  RGY_RESAMPLER_SWR  },
-    { _T("soxr"), RGY_RESAMPLER_SOXR },
-    { NULL, 0 }
-};
-
-#if ENCODER_QSV == 0
-const CX_DESC list_interlaced[] = {
-    { _T("progressive"), RGY_PICSTRUCT_FRAME     },
-    { _T("tff"),         RGY_PICSTRUCT_FRAME_TFF },
-    { _T("bff"),         RGY_PICSTRUCT_FRAME_BFF },
-    { NULL, 0 }
-};
-#endif
-
-int rgy_avx_dummy_if_avail(int bAVXAvail);
 
 struct rgy_time {
     int h, m, s, ms, us, ns;
@@ -1329,5 +1142,7 @@ public:
         dts_ = dts;
     }
 };
+
+int rgy_avx_dummy_if_avail(int bAVXAvail);
 
 #endif //__RGY_UTIL_H__

@@ -33,6 +33,7 @@
 #include "VideoEncoderHEVC.h"
 #include "rgy_caption.h"
 #include "rgy_util.h"
+#include "rgy_prm.h"
 
 static const wchar_t* VCE_PARAM_KEY_INPUT = L"INPUT";
 static const wchar_t* VCE_PARAM_KEY_INPUT_WIDTH = L"WIDTH";
@@ -128,65 +129,6 @@ const CX_DESC list_hevc_level[] = {
     { _T("6.1"),  AMF_LEVEL_6_1 },
     { _T("6.2"),  AMF_LEVEL_6_2 },
     { NULL, NULL }
-};
-
-const int COLOR_VALUE_AUTO = USHRT_MAX;
-const int HD_HEIGHT_THRESHOLD = 720;
-const int HD_INDEX = 2;
-const int SD_INDEX = 3;
-const CX_DESC list_colorprim[] = {
-    { _T("undef"),     2  },
-    { _T("auto"),      COLOR_VALUE_AUTO },
-    { _T("bt709"),     1  },
-    { _T("smpte170m"), 6  },
-    { _T("bt470m"),    4  },
-    { _T("bt470bg"),   5  },
-    { _T("smpte240m"), 7  },
-    { _T("film"),      8  },
-    { NULL, NULL }
-};
-const CX_DESC list_transfer[] = {
-    { _T("undef"),     2  },
-    { _T("auto"),      COLOR_VALUE_AUTO },
-    { _T("bt709"),     1  },
-    { _T("smpte170m"), 6  },
-    { _T("bt470m"),    4  },
-    { _T("bt470bg"),   5  },
-    { _T("smpte240m"), 7  },
-    { _T("linear"),    8  },
-    { _T("log100"),    9  },
-    { _T("log316"),    10 },
-    { NULL, NULL }
-};
-const CX_DESC list_colormatrix[] = {
-    { _T("undef"),     2  },
-    { _T("auto"),      COLOR_VALUE_AUTO },
-    { _T("bt709"),     1  },
-    { _T("smpte170m"), 6  },
-    { _T("bt470bg"),   5  },
-    { _T("smpte240m"), 7  },
-    { _T("YCgCo"),     8  },
-    { _T("fcc"),       4  },
-    { _T("GBR"),       0  },
-    { NULL, NULL }
-};
-const CX_DESC list_videoformat[] = {
-    { _T("undef"),     5  },
-    { _T("ntsc"),      2  },
-    { _T("component"), 0  },
-    { _T("pal"),       1  },
-    { _T("secam"),     3  },
-    { _T("mac"),       4  },
-    { NULL, NULL }
-};
-const CX_DESC list_chromaloc[] = {
-    { _T("0"), 0 },
-    { _T("1"), 1 },
-    { _T("2"), 2 },
-    { _T("3"), 3 },
-    { _T("4"), 4 },
-    { _T("5"), 5 },
-    { NULL, 0 }
 };
 
 const CX_DESC list_mv_presicion[] = {
@@ -323,12 +265,8 @@ struct VCEVppParam {
 
 struct VCEParam {
     VideoInfo input;              //入力する動画の情報
-    tstring inputFilename;        //入力ファイル名
-    tstring outputFilename;       //出力ファイル名
-    tstring AVMuxOutputFormat;   //出力フォーマット
-
-    tstring logfile;              //ログ出力先
-    int loglevel;                 //ログ出力レベル
+    RGYParamCommon common;
+    RGYParamControl ctrl;
 
     RGY_CODEC codec;
     VCECodecParam codecParam[RGY_CODEC_NUM];
@@ -345,7 +283,6 @@ struct VCEParam {
     int     nSlices;
     int     nMaxLTR;
     bool    bTimerPeriodTuning;
-    tstring sFramePosListLog;     //framePosList出力先
 
     bool    bDeblockFilter;
     bool    bEnableSkipFrame;
@@ -366,56 +303,11 @@ struct VCEParam {
     int nRefFrames;
     int nLTRFrames;
     bool bFiller;
-    bool bReserved;
-
-    int     nVideoTrack;
-    int     nVideoStreamId;
-    bool    bCopyChapter;
-
-    C2AFormat caption2ass;
-    int     nSubtitleSelectCount;
-    int    *pSubtitleSelect;
-    int     nInputThread;
-    int     nOutputThread;
-    int     nAudioThread;
-    int     nAudioResampler;
-
-    int            nAudioSelectCount;
-    sAudioSelect **ppAudioSelectList;
-
-    int         nAudioSourceCount;
-    TCHAR      **ppAudioSourceList;
-
-    TCHAR     *pAVMuxOutputFormat;
-
-    int        nTrimCount;
-    sTrim     *pTrimList;
-    int        nAVMux; //RGY_MUX_xxx
-    int        nAVDemuxAnalyzeSec;
-
-    muxOptList *pMuxOpt;
-    tstring     sChapterFile;
-    uint32_t    nAudioIgnoreDecodeError;
-    RGYAVSync   nAVSyncMode;     //avsyncの方法
-    uint32_t    nProcSpeedLimit; //プリデコードする場合の処理速度制限 (0で制限なし)
-    bool        bAudioIgnoreNoTrackError;
-    float       fSeekSec; //指定された秒数分先頭を飛ばす
-
-    int         nOutputBufSizeMB;
 
     VideoVUIInfo vui;
 
-    std::string  sMaxCll;
-    std::string  sMasterDisplay;
-
     bool        bVBAQ;
     bool        preAnalysis;
-
-    TCHAR *pMuxVidTsLogFile;
-    TCHAR *pAVInputFormat;
-    int nPerfMonitorSelect;
-    int nPerfMonitorSelectMatplot;
-    int nPerfMonitorInterval;
 
     VCEVppParam vpp;
 
