@@ -1040,18 +1040,17 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
     if (m_pLog->getLogLevel() <= RGY_LOG_DEBUG) {
         TCHAR cpuInfo[256] = { 0 };
-        TCHAR gpu_info[1024] = { 0 };
+        tstring gpu_info = getGPUInfo();
         //std::wstring deviceName = (m_deviceDX9.GetDevice() == nullptr) ? m_deviceDX11.GetDisplayDeviceName() : m_deviceDX9.GetDisplayDeviceName();
         //deviceName = str_replace(deviceName, L" (TM)", L"");
         //deviceName = str_replace(deviceName, L" (R)", L"");
         //deviceName = str_replace(deviceName, L" Series", L"");
         //deviceName = str_replace(deviceName, L" Graphics", L"");
         getCPUInfo(cpuInfo, _countof(cpuInfo));
-        getGPUInfo("Advanced Micro Devices", gpu_info, _countof(gpu_info));
         PrintMes(RGY_LOG_DEBUG, _T("VCEEnc    %s (%s)\n"), VER_STR_FILEVERSION_TCHAR, BUILD_ARCH_STR);
         PrintMes(RGY_LOG_DEBUG, _T("OS        %s (%s)\n"), getOSVersion().c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"));
         PrintMes(RGY_LOG_DEBUG, _T("CPU Info  %s\n"), cpuInfo);
-        PrintMes(RGY_LOG_DEBUG, _T("GPU Info  %s\n"), gpu_info);
+        PrintMes(RGY_LOG_DEBUG, _T("GPU Info  %s\n"), gpu_info.c_str());
     }
 
     m_encCodec = prm->codec;
@@ -1521,10 +1520,10 @@ RGY_ERR VCECore::run_decode() {
                 }
                 memcpy(pictureBuffer->GetNative(), bitstream.data(), bitstream.size());
 
-                const auto duration = rgy_change_scale(bitstream.duration(), to_rgy(inTimebase), VCE_TIMEBASE);
-                const auto pts = rgy_change_scale(bitstream.pts(), to_rgy(inTimebase), VCE_TIMEBASE);
-                pictureBuffer->SetDuration(duration);
-                pictureBuffer->SetPts(pts);
+                //const auto duration = rgy_change_scale(bitstream.duration(), to_rgy(inTimebase), VCE_TIMEBASE);
+                //const auto pts = rgy_change_scale(bitstream.pts(), to_rgy(inTimebase), VCE_TIMEBASE);
+                pictureBuffer->SetDuration(bitstream.duration());
+                pictureBuffer->SetPts(bitstream.pts());
                 bitstream.clear();
             }
             if (pictureBuffer || sts == RGY_ERR_MORE_DATA /*EOFの場合はnullを送る*/) {
@@ -1561,11 +1560,28 @@ RGY_ERR VCECore::run_output() {
                 return err_to_rgy(ar);
             }
             amf::AMFBufferPtr buffer(data);
-            int64_t pts = rgy_change_scale(buffer->GetPts(), m_encFps.inv(), m_outputTimebase);
+            int64_t value = 0;
+            int64_t pts = rgy_change_scale(buffer->GetPts(), VCE_TIMEBASE, m_outputTimebase);
             int64_t duration = rgy_change_scale(buffer->GetDuration(), VCE_TIMEBASE, m_outputTimebase);
-
+            if (buffer->GetProperty(RGY_PROP_TIMESTAMP, &value) == AMF_OK) {
+                pts = value;
+            }
+            if (buffer->GetProperty(RGY_PROP_DURATION, &value) == AMF_OK) {
+                duration = value;
+            }
             RGYBitstream output = RGYBitstreamInit();
             output.ref((uint8_t *)buffer->GetNative(), buffer->GetSize(), pts, 0, duration);
+            if (buffer->GetProperty(AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE, &value) == AMF_OK) {
+                switch ((AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE_ENUM)value) {
+                case AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE_P: output.setFrametype(RGY_FRAMETYPE_P); break;
+                case AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE_B: output.setFrametype(RGY_FRAMETYPE_B); break;
+                case AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE_I: output.setFrametype(RGY_FRAMETYPE_I); break;
+                case AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE_IDR:
+                default:
+                    output.setFrametype(RGY_FRAMETYPE_IDR); break;
+                }
+
+            }
             auto err = m_pFileWriter->WriteNextFrame(&output);
             if (err != RGY_ERR_NONE) {
                 return err;
@@ -1582,6 +1598,8 @@ RGY_ERR VCECore::run() {
     m_state = RGY_STATE_RUNNING;
     const int pipelineDepth = 1;
     const auto VCE_TIMEBASE = rgy_rational<int>(1, AMF_SECOND);
+    const bool vpp_rff = false;
+    const bool vpp_afs_rff_aware = false;
     std::map<int, shared_ptr<RGYOutputAvcodec>> pWriterForAudioStreams;
     if (m_pFileWriterListAudio.size()) {
         //streamのindexから必要なwriteへのポインタを返すテーブルを作成
@@ -1657,6 +1675,88 @@ RGY_ERR VCECore::run() {
             }
         }
         return RGY_ERR_NONE;
+    };
+
+    const AVStream *pStreamIn = nullptr;
+    RGYInputAvcodec *pReader = dynamic_cast<RGYInputAvcodec *>(m_pFileReader.get());
+    if (pReader != nullptr) {
+        pStreamIn = pReader->GetInputVideoStream();
+    }
+    const auto srcTimebase = (pStreamIn) ? to_rgy(pStreamIn->time_base) : rgy_rational<int>();
+
+    int64_t outFirstPts = AV_NOPTS_VALUE; //入力のptsに対する補正 (スケール: m_outputTimebase)
+    int64_t lastTrimFramePts = AV_NOPTS_VALUE; //直前のtrimで落とされたフレームのpts, trimで落とされてない場合はAV_NOPTS_VALUE (スケール: m_outputTimebase)
+    int64_t outEstimatedPts = 0; //固定fpsを仮定した時のfps (スケール: m_outputTimebase)
+    const int64_t outFrameDuration = std::max<int64_t>(1, rational_rescale(1, m_inputFps.inv(), m_outputTimebase));
+    uint32_t inputFramePosIdx = UINT32_MAX;
+    auto check_pts = [&](unique_ptr<RGYFrame>& inFrame) {
+        vector<unique_ptr<RGYFrame>> outFrames;
+        int64_t outPtsSource = outEstimatedPts;
+        int64_t outDuration = outFrameDuration; //入力fpsに従ったduration
+#if ENABLE_AVSW_READER
+        if (pStreamIn && ((m_nAVSyncMode & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR)) || vpp_rff || vpp_afs_rff_aware)) {
+            //CFR仮定ではなく、オリジナルの時間を見る
+            outPtsSource = (pStreamIn) ? rational_rescale(inFrame->timestamp(), srcTimebase, m_outputTimebase) : outEstimatedPts;
+        }
+        if (outFirstPts == AV_NOPTS_VALUE) {
+            outFirstPts = outPtsSource; //最初のpts
+        }
+        //最初のptsを0に修正
+        outPtsSource -= outFirstPts;
+
+        if (pStreamIn
+            && ((m_nAVSyncMode & RGY_AVSYNC_VFR) || vpp_rff || vpp_afs_rff_aware)) {
+            if (vpp_rff || vpp_afs_rff_aware) {
+                if (std::abs(outPtsSource - outEstimatedPts) >= 32 * outFrameDuration) {
+                    //timestampに一定以上の差があればそれを無視する
+                    outFirstPts += (outPtsSource - outEstimatedPts); //今後の位置合わせのための補正
+                    outPtsSource = outEstimatedPts;
+                }
+                auto ptsDiff = outPtsSource - outEstimatedPts;
+                if (ptsDiff <= std::min<int64_t>(-1, -1 * outFrameDuration * 7 / 8)) {
+                    //間引きが必要
+                    return outFrames;
+                }
+            }
+            //cuvidデコード時は、timebaseの分子はかならず1なので、pStreamIn->time_baseとズレているかもしれないのでオリジナルを計算
+            const auto orig_pts = rational_rescale(inFrame->timestamp(), srcTimebase, to_rgy(pStreamIn->time_base));
+            //ptsからフレーム情報を取得する
+            const auto framePos = pReader->GetFramePosList()->findpts(orig_pts, &inputFramePosIdx);
+            if (framePos.poc != FRAMEPOS_POC_INVALID && framePos.duration > 0) {
+                //有効な値ならオリジナルのdurationを使用する
+                outDuration = rational_rescale(framePos.duration, to_rgy(pStreamIn->time_base), m_outputTimebase);
+            }
+        }
+        if (m_nAVSyncMode & RGY_AVSYNC_FORCE_CFR) {
+            if (std::abs(outPtsSource - outEstimatedPts) >= CHECK_PTS_MAX_INSERT_FRAMES * outFrameDuration) {
+                //timestampに一定以上の差があればそれを無視する
+                outFirstPts += (outPtsSource - outEstimatedPts); //今後の位置合わせのための補正
+                outPtsSource = outEstimatedPts;
+                PrintMes(RGY_LOG_WARN, _T("Big Gap was found between 2 frames, avsync might be corrupted.\n"));
+            }
+            auto ptsDiff = outPtsSource - outEstimatedPts;
+            if (ptsDiff <= std::min<int64_t>(-1, -1 * outFrameDuration * 7 / 8)) {
+                //間引きが必要
+                return outFrames;
+            }
+            while (ptsDiff >= std::max<int64_t>(1, outFrameDuration * 7 / 8)) {
+                //水増しが必要
+                auto newFrame = inFrame->createCopy();
+                newFrame->setTimestamp(outPtsSource);
+                newFrame->setDuration(outDuration);
+                outFrames.push_back(std::move(newFrame));
+                outEstimatedPts += outFrameDuration;
+                ptsDiff = outPtsSource - outEstimatedPts;
+            }
+            outPtsSource = outEstimatedPts;
+        }
+#endif //#if ENABLE_AVSW_READER
+        //次のフレームのptsの予想
+        outEstimatedPts += outDuration;
+        inFrame->setTimestamp(outPtsSource);
+        inFrame->setDuration(outDuration);
+        outFrames.push_back(std::move(inFrame));
+        return std::move(outFrames);
     };
 
     auto filter_frame = [&](int &nFilterFrame, unique_ptr<RGYFrame> &inframe, deque<unique_ptr<RGYFrame>> &dqEncFrames, bool &bDrain) {
@@ -1750,6 +1850,11 @@ RGY_ERR VCECore::run() {
                     PrintMes(RGY_LOG_ERROR, _T("Failed to flush queue after \"%s\".\n"), lastFilter->name().c_str());
                     return sts_filter;
                 }
+                encSurface->setDuration(encSurfaceInfo.duration);
+                encSurface->setTimestamp(encSurfaceInfo.timestamp);
+                encSurface->setPicstruct(encSurfaceInfo.picstruct);
+                encSurface->setInputFrameId(encSurfaceInfo.inputFrameId);
+                encSurface->setFlags(encSurfaceInfo.flags);
                 dqEncFrames.push_back(std::move(encSurface));
             }
         }
@@ -1757,6 +1862,8 @@ RGY_ERR VCECore::run() {
     };
 
     auto send_encoder = [this](unique_ptr<RGYFrame>& encFrame) {
+        int64_t pts = encFrame->timestamp();
+        int64_t duration = encFrame->duration();
         amf::AMFSurfacePtr pSurface = encFrame->detachSurface();
         //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
         pSurface->SetFrameType(amf::AMF_FRAME_PROGRESSIVE);
@@ -1767,6 +1874,9 @@ RGY_ERR VCECore::run() {
         m_params.Apply(pSurface, AMF_PARAM_FRAME, m_pLog.get());
         // apply dynamic properties to the encoder
         m_params.Apply(m_pEncoder, AMF_PARAM_DYNAMIC, m_pLog.get());
+
+        pSurface->SetProperty(RGY_PROP_TIMESTAMP, pts);
+        pSurface->SetProperty(RGY_PROP_DURATION, duration);
 
         auto ar = AMF_OK;
         do {
@@ -1810,12 +1920,8 @@ RGY_ERR VCECore::run() {
                 auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
                 if (pAVCodecReader != nullptr) {
                     const auto vid_timebase = to_rgy(pAVCodecReader->GetInputVideoStream()->time_base);
-                    inputFrame->setDuration(rgy_change_scale(inputFrame->duration(), vid_timebase, VCE_TIMEBASE));
-                    inputFrame->setTimestamp(rgy_change_scale(inputFrame->timestamp(), vid_timebase, VCE_TIMEBASE));
-                } else {
-                    const auto fps_timebase = rgy_rational<int>(inputFrameInfo.fpsN, inputFrameInfo.fpsD).inv();
-                    inputFrame->setDuration(rgy_change_scale(1, fps_timebase, VCE_TIMEBASE));
-                    inputFrame->setTimestamp(rgy_change_scale(nInputFrame, fps_timebase, VCE_TIMEBASE));
+                    inputFrame->setDuration(rgy_change_scale(inputFrame->duration(), vid_timebase, srcTimebase));
+                    inputFrame->setTimestamp(rgy_change_scale(inputFrame->timestamp(), vid_timebase, srcTimebase));
                 }
             }
         } else {
@@ -1835,7 +1941,29 @@ RGY_ERR VCECore::run() {
             inputFrame = std::make_unique<RGYFrame>(amf::AMFSurfacePtr(data));
         }
         if (!bInputEmpty) {
-            dqInFrames.push_back(std::move(inputFrame));
+            inputFrame->setInputFrameId(nInputFrame);
+            //trim反映
+            const auto trimSts = frame_inside_range(nInputFrame++, m_trimParam.list);
+#if ENABLE_AVSW_READER
+            const auto inputFramePts = rational_rescale(inputFrame->timestamp(), srcTimebase, m_outputTimebase);
+            if (((m_nAVSyncMode & RGY_AVSYNC_VFR) || vpp_rff || vpp_afs_rff_aware)
+                && (trimSts.second > 0) //check_pts内で最初のフレームのptsを0とするようnOutFirstPtsが設定されるので、先頭のtrim blockについてはここでは処理しない
+                && (lastTrimFramePts != AV_NOPTS_VALUE)) { //前のフレームがtrimで脱落させたフレームなら
+                outFirstPts += inputFramePts - lastTrimFramePts; //trimで脱落させたフレームの分の時間を加算
+            }
+            if (!trimSts.first) {
+                lastTrimFramePts = inputFramePts; //脱落させたフレームの時間を記憶
+            }
+#endif
+            if (!trimSts.first) {
+                continue; //trimにより脱落させるフレーム
+            }
+            lastTrimFramePts = AV_NOPTS_VALUE;
+            auto decFrames = check_pts(inputFrame);
+
+            for (auto idf = decFrames.begin(); idf != decFrames.end(); idf++) {
+                dqInFrames.push_back(std::move(*idf));
+            }
         }
         while (((dqInFrames.size() || bInputEmpty) && !bFilterEmpty)) {
             const bool bDrain = (dqInFrames.size()) ? false : bInputEmpty;
@@ -1885,6 +2013,13 @@ RGY_ERR VCECore::run() {
     m_pFileReader->Close();
     m_pStatus->WriteResults();
     return RGY_ERR_NONE;
+}
+
+tstring VCECore::getGPUInfo() {
+    if (m_dx11.GetDevice()) {
+        return wstring_to_tstring(m_dx11.GetDisplayDeviceName());
+    }
+    return RGYOpenCLDevice(m_cl->platform()->dev(0)).infostr();
 }
 
 void VCECore::PrintEncoderParam() {

@@ -50,6 +50,8 @@ MAP_PAIR_0_1_PROTO(loglevel, rgy, int, enc, int);
 
 AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM picstruct_rgy_to_enc(RGY_PICSTRUCT picstruct);
 RGY_PICSTRUCT picstruct_enc_to_rgy(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM picstruct);
+amf::AMF_FRAME_TYPE frame_type_rgy_to_enc(RGY_PICSTRUCT picstruct);
+RGY_PICSTRUCT frame_type_enc_to_rgy(amf::AMF_FRAME_TYPE picstruct);
 
 struct RGYBitstream {
 private:
@@ -316,6 +318,8 @@ static_assert(std::is_pod<RGYBitstream>::value == true, "RGYBitstream should be 
 
 struct RGYFrame {
 private:
+    const wchar_t *PROP_INPUT_FRAMEID = L"RGYFrameInputFrameID";
+    const wchar_t *PROP_FLAGS = L"RGYFrameFlags";
     amf::AMFSurfacePtr amfptr;
     unique_ptr<RGYCLFrame> clbuf;
 public:
@@ -350,7 +354,23 @@ public:
     unique_ptr<RGYCLFrame> detachCLFrame() {
         return std::move(clbuf);
     }
+    unique_ptr<RGYFrame> createCopy() {
+        if (amfptr) {
+            return createCopyAMF();
+        } else if (clbuf) {
+            //未実装
+            return std::make_unique<RGYFrame>();
+        } else {
+            return std::make_unique<RGYFrame>();
+        }
+    }
 private:
+    unique_ptr<RGYFrame> createCopyAMF() {
+        amf::AMFDataPtr data;
+        amfptr->Duplicate(amfptr->GetMemoryType(), &data);
+        return std::make_unique<RGYFrame>(amf::AMFSurfacePtr(data));
+    }
+
     FrameInfo infoAMF() const {
         FrameInfo info;
         for (int i = 0; i < 4; i++) {
@@ -365,9 +385,16 @@ private:
         info.csp = csp_enc_to_rgy(amfptr->GetFormat());
         info.timestamp = amfptr->GetPts();
         info.duration = amfptr->GetDuration();
-        info.picstruct = RGY_PICSTRUCT_FRAME;
+        info.picstruct = frame_type_enc_to_rgy(amfptr->GetFrameType());
         info.flags = RGY_FRAME_FLAG_NONE;
         info.mem_type = amfptr->GetMemoryType() == amf::AMF_MEMORY_HOST ? RGY_MEM_TYPE_CPU : RGY_MEM_TYPE_GPU_IMAGE;
+        int64_t value = 0;
+        if (amfptr->GetProperty(PROP_INPUT_FRAMEID, &value) == AMF_OK) {
+            info.inputFrameId = (int)value;
+        }
+        if (amfptr->GetProperty(PROP_FLAGS, &value) == AMF_OK) {
+            info.flags = (RGY_FRAME_FLAGS)value;
+        }
         return info;
     }
     FrameInfo infoCL() const {
@@ -414,7 +441,7 @@ public:
     void setTimestamp(uint64_t timestamp) {
         if (amfptr) {
             amfptr->SetPts(timestamp);
-        } else {
+        } else if (clbuf) {
             clbuf->frame.timestamp = timestamp;
         }
     }
@@ -424,8 +451,40 @@ public:
     void setDuration(uint64_t duration) {
         if (amfptr) {
             amfptr->SetDuration(duration);
-        } else {
+        } else if (clbuf) {
             clbuf->frame.duration = duration;
+        }
+    }
+    RGY_PICSTRUCT picstruct() const {
+        return info().picstruct;
+    }
+    void setPicstruct(RGY_PICSTRUCT picstruct) {
+        if (amfptr) {
+            amfptr->SetFrameType(frame_type_rgy_to_enc(picstruct));
+        } else if (clbuf) {
+            clbuf->frame.picstruct = picstruct;
+        }
+    }
+    int inputFrameId() const {
+        return info().inputFrameId;
+    }
+    void setInputFrameId(int id) {
+        if (amfptr) {
+            int64_t value = id;
+            amfptr->SetProperty(PROP_INPUT_FRAMEID, value);
+        } else if (clbuf) {
+            clbuf->frame.inputFrameId = id;
+        }
+    }
+    RGY_FRAME_FLAGS flags() const {
+        return info().flags;
+    }
+    void setFlags(RGY_FRAME_FLAGS flags) {
+        if (amfptr) {
+            int64_t value = flags;
+            amfptr->SetProperty(PROP_FLAGS, value);
+        } else if (clbuf) {
+            clbuf->frame.flags = flags;
         }
     }
 };

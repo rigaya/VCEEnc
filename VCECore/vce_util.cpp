@@ -107,6 +107,20 @@ RGY_PICSTRUCT picstruct_enc_to_rgy(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM pics
     return RGY_PICSTRUCT_FRAME;
 }
 
+__declspec(noinline)
+amf::AMF_FRAME_TYPE frame_type_rgy_to_enc(RGY_PICSTRUCT picstruct) {
+    if (picstruct & RGY_PICSTRUCT_TFF) return amf::AMF_FRAME_INTERLEAVED_EVEN_FIRST;
+    if (picstruct & RGY_PICSTRUCT_BFF) return amf::AMF_FRAME_INTERLEAVED_ODD_FIRST;
+    return  amf::AMF_FRAME_PROGRESSIVE;
+}
+
+__declspec(noinline)
+RGY_PICSTRUCT frame_type_enc_to_rgy(amf::AMF_FRAME_TYPE picstruct) {
+    if (picstruct == amf::AMF_FRAME_INTERLEAVED_EVEN_FIRST) return RGY_PICSTRUCT_TFF;
+    if (picstruct == amf::AMF_FRAME_INTERLEAVED_ODD_FIRST) return RGY_PICSTRUCT_BFF;
+    return  RGY_PICSTRUCT_FRAME;
+}
+
 const TCHAR *AMFRetString(AMF_RESULT ret) {
 #define AMFRESULT_TO_STR(x) case x: return _T( #x );
     switch (ret) {

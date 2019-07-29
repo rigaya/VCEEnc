@@ -48,6 +48,9 @@
 
 #pragma warning(pop)
 
+#define RGY_PROP_TIMESTAMP L"RGYPropTimestamp"
+#define RGY_PROP_DURATION  L"RGYPropDuration"
+
 const TCHAR *AMFRetString(AMF_RESULT ret);
 
 #if ENABLE_AVSW_READER
