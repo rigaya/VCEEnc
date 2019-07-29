@@ -2000,7 +2000,11 @@ RGY_ERR VCECore::run() {
         }
     }
     PrintMes(RGY_LOG_INFO, _T("                                                                             \n"));
-    auto ar = m_pEncoder->Drain();
+    auto ar = AMF_INPUT_FULL;
+    while (ar == AMF_INPUT_FULL) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        ar = m_pEncoder->Drain();
+    }
     if (ar != AMF_OK) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to drain encoder: %s\n"), get_err_mes(err_to_rgy(ar)));
         return err_to_rgy(ar);
