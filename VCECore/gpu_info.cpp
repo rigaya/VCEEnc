@@ -76,6 +76,9 @@ static cl_int cl_create_info_string(cl_data_t *cl_data, const cl_func_t *cl, TCH
 #if ENCODER_NVENC && !FOR_AUO
 #include "NVEncCore.h"
 #endif //#if ENCODER_NVENC
+#if ENCODER_VCEENC && !FOR_AUO
+#include "rgy_device.h"
+#endif //#if ENCODER_VCEENC && !FOR_AUO
 
 #pragma warning (push)
 #pragma warning (disable: 4100)
@@ -112,11 +115,20 @@ int getGPUInfo(const char *VendorName, TCHAR *buffer, unsigned int buffer_size, 
         }
     }
 #endif  //#if ENCODER_NVENC && !FOR_AUO
+#if ENCODER_VCEENC && !FOR_AUO
+    DeviceDX11 dx11;
+    auto err = dx11.Init(device_id, false, nullptr);
+    if (err == RGY_ERR_NONE) {
+        tstring str = dx11.GetDisplayDeviceName();
+        _tcsncpy(buffer, str.c_str(), buffer_size);
+        return 0;
+    }
+#endif //#if ENCODER_VCEENC && !FOR_AUO
 #if !ENABLE_OPENCL
     _stprintf_s(buffer, buffer_size, _T("Unknown (not compiled with OpenCL support)"));
     return 0;
 #else
-    if (!initOpenCLGlobal()) {
+    if (initOpenCLGlobal()) {
         _tcscpy_s(buffer, buffer_size, _T("Unknown (Failed to load OpenCL.dll)"));
         return 1;
     }
@@ -135,4 +147,5 @@ int getGPUInfo(const char *VendorName, TCHAR *buffer, unsigned int buffer_size, 
     return 0;
 #endif // !ENABLE_OPENCL
 }
+
 #pragma warning (pop)

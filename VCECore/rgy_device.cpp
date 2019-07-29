@@ -55,7 +55,7 @@ ATL::CComPtr<IDirect3DDevice9> DeviceDX9::GetDevice() {
 }
 
 RGY_ERR DeviceDX9::Init(bool dx9ex, int adapterID, bool bFullScreen, int width, int height, shared_ptr<RGYLog> log) {
-    m_log = log;
+    m_log = (log) ? log : std::make_shared<RGYLog>(nullptr, RGY_LOG_ERROR);
     HRESULT hr = S_OK;
     ATL::CComPtr<IDirect3D9Ex> pD3DEx;
     if (dx9ex) {
@@ -234,7 +234,7 @@ ATL::CComPtr<ID3D11Device>      DeviceDX11::GetDevice() {
 RGY_ERR DeviceDX11::Init(int adapterID, bool onlyWithOutputs, shared_ptr<RGYLog> log) {
     HRESULT hr = S_OK;
     RGY_ERR err = RGY_ERR_NONE;
-    m_log = log;
+    m_log = (log) ? log : std::make_shared<RGYLog>(nullptr, RGY_LOG_ERROR);
     // find adapter
     ATL::CComPtr<IDXGIAdapter> pAdapter;
 

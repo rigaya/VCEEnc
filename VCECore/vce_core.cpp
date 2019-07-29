@@ -1930,9 +1930,9 @@ tstring VCECore::GetEncoderParam() {
 
     tstring mes;
 
-    TCHAR cpu_info[256], gpu_info[256];
+    TCHAR cpu_info[256];
     getCPUInfo(cpu_info);
-    getGPUInfo("Advanced Micro Device", gpu_info, _countof(gpu_info));
+    tstring gpu_info = getGPUInfo();
 
     uint32_t nMotionEst = 0x0;
     nMotionEst |= GetPropertyInt(AMF_PARAM_MOTION_HALF_PIXEL(m_encCodec)) ? VCE_MOTION_EST_HALF : 0;
@@ -1940,7 +1940,7 @@ tstring VCECore::GetEncoderParam() {
 
     mes += strsprintf(_T("VCEEnc %s (%s) / %s (%s)\n"), VER_STR_FILEVERSION_TCHAR, BUILD_ARCH_STR, getOSVersion().c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"));
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
-    mes += strsprintf(_T("GPU:           %s, AMF %d.%d.%d\n"), gpu_info,
+    mes += strsprintf(_T("GPU:           %s, AMF %d.%d.%d\n"), gpu_info.c_str(),
         (int)AMF_GET_MAJOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_MINOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_SUBMINOR_VERSION(m_AMFRuntimeVersion));
 
     auto inputInfo = m_pFileReader->GetInputFrameInfo();

@@ -126,6 +126,7 @@ protected:
     virtual RGY_ERR initConverter(VCEParam *prm);
     virtual RGY_ERR InitChapters(VCEParam *prm);
     virtual RGY_ERR initEncoder(VCEParam *prm);
+    virtual tstring getGPUInfo();
 
     virtual RGY_ERR run_decode();
     virtual RGY_ERR run_output();
