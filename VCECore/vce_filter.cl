@@ -42,34 +42,34 @@ const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_NONE | CLK_F
         : (((int)(a) * 3 + (int)(b) + (2 << (in_bit_depth - out_bit_depth))) >> (in_bit_depth + 2 - out_bit_depth))))
 
 #if IMAGE_SRC
-#define LOAD(src, x, y) (TypeIn)(read_imageui((src), sampler, (int2)((x), (y))).x)
-#define LOAD_NV12_UV(src, src_u, src_v, x, y, cropX, cropY) { \
-	uint4 ret = read_imageui((src), sampler, (int2)((x) + ((cropX)>>1), (y) + ((cropY)>>1))); \
+#define LOAD(src, ix, iy) (TypeIn)(read_imageui((src), sampler, (int2)((ix), (iy))).x)
+#define LOAD_NV12_UV(src, src_u, src_v, ix, iy, cropX, cropY) { \
+	uint4 ret = read_imageui((src), sampler, (int2)((ix) + ((cropX)>>1), (iy) + ((cropY)>>1))); \
     (src_u) = (TypeIn)ret.x; \
-    (src_v) = (TypeIn)ret.w; \
+    (src_v) = (TypeIn)ret.y; \
 }
 #else
-#define LOAD(src, x, y) *(__global TypeIn *)(&(src)[(y) * srcPitch + (x) * sizeof(TypeIn)])
-#define LOAD_NV12_UV(src, src_u, src_v, x, y, cropX, cropY) { \
-    (src_u) = LOAD((src), ((x)<<1) + 0 + (cropX), (y) + ((cropY)>>1)); \
-    (src_v) = LOAD((src), ((x)<<1) + 1 + (cropX), (y) + ((cropY)>>1)); \
+#define LOAD(src, ix, iy) *(__global TypeIn *)(&(src)[(iy) * srcPitch + (ix) * sizeof(TypeIn)])
+#define LOAD_NV12_UV(src, src_u, src_v, ix, iy, cropX, cropY) { \
+    (src_u) = LOAD((src), ((ix)<<1) + 0 + (cropX), (iy) + ((cropY)>>1)); \
+    (src_v) = LOAD((src), ((ix)<<1) + 1 + (cropX), (iy) + ((cropY)>>1)); \
 }
 #endif
 
 #if IMAGE_DST
-#define STORE(dst, x, y, val) write_imageui((dst), (int2)((x), (y)), (val))
-#define STORE_NV12_UV(dst, x, y, val_u, val_v) { \
+#define STORE(dst, ix, iy, val) write_imageui((dst), (int2)((ix), (iy)), (val))
+#define STORE_NV12_UV(dst, ix, iy, val_u, val_v) { \
 	uint4 val = (uint4)(val_u, val_v, val_v, val_v); \
-	STORE((dst), (x), (y), val); \
+	STORE((dst), (ix), (iy), val); \
 }
 #else
-#define STORE(dst, x, y, val)  { \
-	__global TypeOut *ptr = (__global TypeOut *)(&(dst)[(y) * dstPitch + (x) * sizeof(TypeOut)]); \
+#define STORE(dst, ix, iy, val)  { \
+	__global TypeOut *ptr = (__global TypeOut *)(&(dst)[(iy) * dstPitch + (ix) * sizeof(TypeOut)]); \
 	ptr[0] = (TypeOut)(val); \
 }
-#define STORE_NV12_UV(dst, x, y, val_u, val_v) { \
-	STORE(dst, ((x) << 1) + 0, (y), val_u); \
-	STORE(dst, ((x) << 1) + 1, (y), val_v); \
+#define STORE_NV12_UV(dst, ix, iy, val_u, val_v) { \
+	STORE(dst, ((ix) << 1) + 0, (iy), val_u); \
+	STORE(dst, ((ix) << 1) + 1, (iy), val_v); \
 }
 #endif
 
