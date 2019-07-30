@@ -439,21 +439,21 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
         PrintMes(RGY_LOG_ERROR, _T("crop not available with av") DECODER_NAME _T(" reader.\n"));
         return RGY_ERR_UNSUPPORTED;
     }
-    prm->input.srcWidth -= (prm->input.crop.e.left + prm->input.crop.e.right);
-    prm->input.srcHeight -= (prm->input.crop.e.bottom + prm->input.crop.e.up);
-    if (prm->input.srcWidth % 2 != 0) {
-        PrintMes(RGY_LOG_ERROR, _T("Invalid input frame size (after crop) - non mod2 (width: %d).\n"), prm->input.srcWidth);
+    if (prm->input.crop.e.left % 2 != 0) {
+        PrintMes(RGY_LOG_ERROR, _T("Invalid crop - non mod2 (left: %d).\n"), prm->input.crop.e.left);
         return RGY_ERR_INVALID_PARAM;
     }
-    if (prm->input.srcHeight % h_mul != 0) {
-        PrintMes(RGY_LOG_ERROR, _T("Invalid input frame size (after crop) - non mod%d (height: %d).\n"), h_mul, prm->input.srcHeight);
+    if (prm->input.crop.e.right % 2 != 0) {
+        PrintMes(RGY_LOG_ERROR, _T("Invalid crop - non mod2 (right: %d).\n"), prm->input.crop.e.right);
         return RGY_ERR_INVALID_PARAM;
     }
-    if (prm->input.dstWidth <= 0) {
-        prm->input.dstWidth = prm->input.srcWidth;
+    if (prm->input.crop.e.bottom % 2 != 0) {
+        PrintMes(RGY_LOG_ERROR, _T("Invalid crop - non mod2 (bottom: %d).\n"), prm->input.crop.e.bottom);
+        return RGY_ERR_INVALID_PARAM;
     }
-    if (prm->input.dstHeight <= 0) {
-        prm->input.dstHeight = prm->input.srcHeight;
+    if (prm->input.crop.e.up % 2 != 0) {
+        PrintMes(RGY_LOG_ERROR, _T("Invalid crop - non mod2 (up: %d).\n"), prm->input.crop.e.up);
+        return RGY_ERR_INVALID_PARAM;
     }
     if (prm->input.dstWidth % 2 != 0) {
         PrintMes(RGY_LOG_ERROR, _T("Invalid output frame size - non mod2 (width: %d).\n"), prm->input.dstWidth);
@@ -807,7 +807,7 @@ tstring VCECore::QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
 
 RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     //hwデコーダの場合、cropを入力時に行っていない
-    bool cropRequired = cropEnabled(inputParam->input.crop)
+    const bool cropRequired = cropEnabled(inputParam->input.crop)
         && m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN;
 
     FrameInfo inputFrame = { 0 };
@@ -851,13 +851,6 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     if (croppedWidth != resizeWidth || croppedHeight != resizeHeight) {
         resizeRequired = true;
     }
-    //avhw読みではデコード直後にリサイズが可能
-    if (resizeRequired && m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN) {
-        inputFrame.width  = inputParam->input.dstWidth;
-        inputFrame.height = inputParam->input.dstHeight;
-        resizeRequired = false;
-    }
-    cropRequired = true;
     //picStructの設定
     //m_stPicStruct = picstruct_rgy_to_enc(inputParam->input.picstruct);
     //if (inputParam->vpp.deinterlace != cudaVideoDeinterlaceMode_Weave) {
