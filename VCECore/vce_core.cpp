@@ -1526,10 +1526,10 @@ RGY_ERR VCECore::run_decode() {
                 pictureBuffer->SetPts(bitstream.pts());
                 bitstream.clear();
             }
-            if (pictureBuffer || sts == RGY_ERR_MORE_DATA /*EOFの場合はnullを送る*/) {
+            if (pictureBuffer || sts == RGY_ERR_MORE_DATA /*EOFの場合はDrainを送る*/) {
                 auto ar = AMF_OK;
                 do {
-                    ar = m_pDecoder->SubmitInput(pictureBuffer);
+                    ar = (sts == RGY_ERR_MORE_DATA) ? m_pDecoder->Drain() : m_pDecoder->SubmitInput(pictureBuffer);
                     if (ar != AMF_INPUT_FULL && ar != AMF_DECODER_NO_FREE_SURFACES) break;
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 } while (m_state == RGY_STATE_RUNNING);
