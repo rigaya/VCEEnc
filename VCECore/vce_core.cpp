@@ -1762,8 +1762,7 @@ RGY_ERR VCECore::run() {
         } else {
             auto &lastFilter = m_vpFilters[m_vpFilters.size()-1];
             const auto inframeInfo = inframe->info();
-            if (false
-                &&  typeid(*lastFilter.get()) == typeid(RGYFilterCspCrop)
+            if (typeid(*lastFilter.get()) == typeid(RGYFilterCspCrop)
                 && m_vpFilters.size() == 1
                 && lastFilter->GetFilterParam()->frameOut.csp == inframeInfo.csp
                 && m_encWidth == inframeInfo.width
