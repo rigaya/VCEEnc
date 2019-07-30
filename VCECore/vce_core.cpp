@@ -1880,7 +1880,12 @@ RGY_ERR VCECore::run() {
 
         auto ar = AMF_OK;
         do {
-            ar = m_pEncoder->SubmitInput(pSurface);
+            try {
+                ar = m_pEncoder->SubmitInput(pSurface);
+            } catch (...) {
+                PrintMes(RGY_LOG_ERROR, _T("Fatal error when submitting frame to encoder.\n"));
+                return RGY_ERR_UNKNOWN;
+            }
             if (ar != AMF_INPUT_FULL) break;
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         } while (m_state == RGY_STATE_RUNNING);
