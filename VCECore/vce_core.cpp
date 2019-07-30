@@ -2021,7 +2021,12 @@ RGY_ERR VCECore::run() {
 
 tstring VCECore::getGPUInfo() {
     if (m_dx11.GetDevice()) {
-        return wstring_to_tstring(m_dx11.GetDisplayDeviceName());
+        auto str = m_dx11.GetDisplayDeviceName();
+        str = str_replace(str, L" (TM)", L"");
+        str = str_replace(str, L" (R)", L"");
+        str = str_replace(str, L" Series", L"");
+        str = str_replace(str, L" Graphics", L"");
+        return wstring_to_tstring(str);
     }
     return RGYOpenCLDevice(m_cl->platform()->dev(0)).infostr();
 }
