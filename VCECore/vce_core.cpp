@@ -1999,7 +1999,7 @@ RGY_ERR VCECore::run() {
     PrintMes(RGY_LOG_INFO, _T("                                                                             \n"));
     auto ar = AMF_INPUT_FULL;
     while (ar == AMF_INPUT_FULL) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         ar = m_pEncoder->Drain();
     }
     if (ar != AMF_OK) {
