@@ -181,11 +181,17 @@ void VCECore::Terminate() {
         m_pContext->Terminate();
         m_pContext = nullptr;
     }
+    m_vpFilters.clear();
+    m_pLastFilterParam.reset();
+    m_cl.reset();
+    m_dx11.Terminate();
+    m_dx9.Terminate();
 
     m_pFileWriterListAudio.clear();
     m_pFileWriter.reset();
     m_AudioReaders.clear();
     m_pFileReader.reset();
+    m_pPerfMonitor.reset();
     m_pStatus.reset();
     m_pLog.reset();
     m_encCodec = RGY_CODEC_UNKNOWN;
