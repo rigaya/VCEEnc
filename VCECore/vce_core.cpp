@@ -1941,12 +1941,22 @@ RGY_ERR VCECore::run() {
                 }
             }
         } else {
-            amf::AMFDataPtr data;
+            amf::AMFSurfacePtr surf;
             auto ar = AMF_REPEAT;
             while (m_state == RGY_STATE_RUNNING) {
+                amf::AMFDataPtr data;
                 ar = m_pDecoder->QueryOutput(&data);
-                if (ar == AMF_EOF) break;
-                if (!(ar == AMF_REPEAT || (ar == AMF_OK && data == nullptr))) break;
+                if (ar == AMF_EOF) {
+                    break;
+                }
+                if (ar == AMF_REPEAT) {
+                    ar = AMF_OK; //これ重要...ここが欠けると最後の数フレームが欠落する
+                }
+                if (ar == AMF_OK && data != nullptr) {
+                    surf = amf::AMFSurfacePtr(data);
+                    break;
+                }
+                if (ar != AMF_OK) break;
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
             if (ar == AMF_EOF) {
@@ -1954,7 +1964,7 @@ RGY_ERR VCECore::run() {
             } else if (ar != AMF_OK) {
                 return err_to_rgy(ar);
             }
-            inputFrame = std::make_unique<RGYFrame>(amf::AMFSurfacePtr(data));
+            inputFrame = std::make_unique<RGYFrame>(surf);
         }
         if (!bInputEmpty) {
             inputFrame->setInputFrameId(nInputFrame);
