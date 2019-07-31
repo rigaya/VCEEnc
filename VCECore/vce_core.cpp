@@ -441,10 +441,6 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
         PrintMes(RGY_LOG_ERROR, _T("crop size is too big.\n"));
         return RGY_ERR_INVALID_PARAM;
     }
-    if (prm->input.type == RGY_INPUT_FMT_AVHW && cropEnabled(prm->input.crop)) {
-        PrintMes(RGY_LOG_ERROR, _T("crop not available with av") DECODER_NAME _T(" reader.\n"));
-        return RGY_ERR_UNSUPPORTED;
-    }
     if (prm->input.crop.e.left % 2 != 0) {
         PrintMes(RGY_LOG_ERROR, _T("Invalid crop - non mod2 (left: %d).\n"), prm->input.crop.e.left);
         return RGY_ERR_INVALID_PARAM;
