@@ -120,8 +120,8 @@ int getGPUInfo(const char *VendorName, TCHAR *buffer, unsigned int buffer_size, 
     auto err = dx11.Init(device_id, false, nullptr);
     if (err == RGY_ERR_NONE) {
         auto str = dx11.GetDisplayDeviceName();
-        str = str_replace(str, L" (TM)", L"");
-        str = str_replace(str, L" (R)", L"");
+        str = str_replace(str, L"(TM)", L"");
+        str = str_replace(str, L"(R)", L"");
         str = str_replace(str, L" Series", L"");
         str = str_replace(str, L" Graphics", L"");
         _tcsncpy(buffer, wstring_to_tstring(str).c_str(), buffer_size);
