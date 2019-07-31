@@ -1521,19 +1521,29 @@ RGY_ERR VCECore::run_decode() {
                 pictureBuffer->SetPts(bitstream.pts());
                 bitstream.clear();
             }
-            if (pictureBuffer || sts == RGY_ERR_MORE_DATA /*EOFの場合はDrainを送る*/) {
+            if (pictureBuffer || sts == RGY_ERR_MORE_BITSTREAM /*EOFの場合はDrainを送る*/) {
                 auto ar = AMF_OK;
                 do {
-                    ar = (sts == RGY_ERR_MORE_DATA) ? m_pDecoder->Drain() : m_pDecoder->SubmitInput(pictureBuffer);
-                    if (ar != AMF_INPUT_FULL && ar != AMF_DECODER_NO_FREE_SURFACES) break;
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    if (sts == RGY_ERR_MORE_BITSTREAM) {
+                        ar = m_pDecoder->Drain();
+                    } else {
+                        ar = m_pDecoder->SubmitInput(pictureBuffer);
+                    }
+                    if (ar == AMF_NEED_MORE_INPUT) {
+                        break;
+                    } else if (ar == AMF_INPUT_FULL  || ar == AMF_DECODER_NO_FREE_SURFACES) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    } else if (ar == AMF_REPEAT) {
+                        pictureBuffer = nullptr;
+                    } else {
+                        break;
+                    }
                 } while (m_state == RGY_STATE_RUNNING);
                 if (ar != AMF_OK) {
                     return err_to_rgy(ar);
                 }
             }
         }
-        m_pDecoder->Drain();
         return sts;
     });
     PrintMes(RGY_LOG_DEBUG, _T("Started Encode thread.\n"));
