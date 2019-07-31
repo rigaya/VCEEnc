@@ -2018,14 +2018,6 @@ RGY_ERR VCECore::run() {
     if (m_thDecoder.joinable()) {
         m_thDecoder.join();
     }
-    for (const auto &writer : m_pFileWriterListAudio) {
-        auto pAVCodecWriter = std::dynamic_pointer_cast<RGYOutputAvcodec>(writer);
-        if (pAVCodecWriter != nullptr) {
-            //エンコーダなどにキャッシュされたパケットを書き出す
-            pAVCodecWriter->WriteNextPacket(nullptr);
-        }
-    }
-    PrintMes(RGY_LOG_INFO, _T("                                                                             \n"));
     auto ar = AMF_INPUT_FULL;
     while (ar == AMF_INPUT_FULL) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -2039,6 +2031,14 @@ RGY_ERR VCECore::run() {
     if (m_thOutput.joinable()) {
         m_thOutput.join();
     }
+    for (const auto &writer : m_pFileWriterListAudio) {
+        auto pAVCodecWriter = std::dynamic_pointer_cast<RGYOutputAvcodec>(writer);
+        if (pAVCodecWriter != nullptr) {
+            //エンコーダなどにキャッシュされたパケットを書き出す
+            pAVCodecWriter->WriteNextPacket(nullptr);
+        }
+    }
+    PrintMes(RGY_LOG_INFO, _T("                                                                             \n"));
     m_pFileWriter->Close();
     m_pFileReader->Close();
     m_pStatus->WriteResults();
