@@ -694,7 +694,6 @@ RGY_ERR VCECore::getEncCaps(RGY_CODEC codec, amf::AMFCapsPtr &encoderCaps) {
         p_encoder->Init(amf::AMF_SURFACE_NV12, 1280, 720);
         auto sts = p_encoder->GetCaps(&encoderCaps);
     }
-    p_encoder->Release();
     return err_to_rgy(ret);
 }
 
@@ -2254,13 +2253,12 @@ void VCECore::PrintResult() {
 }
 
 RGY_ERR VCEFeatures::init(int deviceId, int logLevel) {
-    if (!m_core) {
-        auto err = RGY_ERR_NONE;
-        if (   (err = m_core->initAMFFactory()) != RGY_ERR_NONE
-            || (err = m_core->initContext(logLevel)) != RGY_ERR_NONE
-            || (err = m_core->initDevice(deviceId)) != RGY_ERR_NONE) {
-            return err;
-        }
+    m_core = std::make_unique<VCECore>();
+    auto err = RGY_ERR_NONE;
+    if (   (err = m_core->initAMFFactory()) != RGY_ERR_NONE
+        || (err = m_core->initContext(logLevel)) != RGY_ERR_NONE
+        || (err = m_core->initDevice(deviceId)) != RGY_ERR_NONE) {
+        return err;
     }
     return RGY_ERR_NONE;
 }

@@ -193,12 +193,11 @@ protected:
 class VCEFeatures {
 public:
     VCEFeatures() : m_core() {};
-    VCEFeatures(std::shared_ptr<VCECore> core) : m_core(core) {};
 
     virtual ~VCEFeatures() {};
 
     RGY_ERR init(int deviceId, int logLevel);
     tstring checkFeatures(RGY_CODEC codec);
 protected:
-    std::shared_ptr<VCECore> m_core;
+    std::unique_ptr<VCECore> m_core;
 };
