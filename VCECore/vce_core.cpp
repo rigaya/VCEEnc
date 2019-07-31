@@ -1890,8 +1890,15 @@ RGY_ERR VCECore::run() {
                 PrintMes(RGY_LOG_ERROR, _T("Fatal error when submitting frame to encoder.\n"));
                 return RGY_ERR_UNKNOWN;
             }
-            if (ar != AMF_INPUT_FULL) break;
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            if (ar == AMF_NEED_MORE_INPUT) {
+                break;
+            } else if (ar == AMF_INPUT_FULL) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            } else if (ar == AMF_REPEAT) {
+                pSurface = nullptr;
+            } else {
+                break;
+            }
         } while (m_state == RGY_STATE_RUNNING);
         return err_to_rgy(ar);
     };
