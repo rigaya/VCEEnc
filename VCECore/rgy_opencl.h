@@ -380,7 +380,7 @@ class RGYOpenCLKernel {
 public:
     RGYOpenCLKernel() : m_kernel(), m_kernelName(), m_pLog() {};
     RGYOpenCLKernel(cl_kernel kernel, std::string kernelName, shared_ptr<RGYLog> pLog);
-    virtual ~RGYOpenCLKernel() {};
+    virtual ~RGYOpenCLKernel();
     RGYOpenCLKernelLauncher config(cl_command_queue queue, const RGYWorkSize& local, const RGYWorkSize& global);
 protected:
     cl_kernel m_kernel;
@@ -391,7 +391,7 @@ protected:
 class RGYOpenCLProgram {
 public:
     RGYOpenCLProgram(cl_program program, shared_ptr<RGYLog> pLog);
-    virtual ~RGYOpenCLProgram() {};
+    virtual ~RGYOpenCLProgram();
 
     RGYOpenCLKernel kernel(const char *kernelName);
 protected:

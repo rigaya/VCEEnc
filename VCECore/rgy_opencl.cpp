@@ -521,7 +521,23 @@ RGYOpenCLKernel::RGYOpenCLKernel(cl_kernel kernel, std::string kernelName, share
 
 }
 
+RGYOpenCLKernel::~RGYOpenCLKernel() {
+    if (m_kernel) {
+        clReleaseKernel(m_kernel);
+        m_kernel = nullptr;
+    }
+    m_kernelName.clear();
+    m_pLog.reset();
+};
+
 RGYOpenCLProgram::RGYOpenCLProgram(cl_program program, shared_ptr<RGYLog> pLog) : m_program(program), m_pLog(pLog) {
+};
+
+RGYOpenCLProgram::~RGYOpenCLProgram() {
+    if (m_program) {
+        clReleaseProgram(m_program);
+        m_program = nullptr;
+    }
 };
 
 RGYOpenCLKernelLauncher RGYOpenCLKernel::config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global) {
