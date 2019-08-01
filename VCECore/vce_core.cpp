@@ -191,8 +191,12 @@ void VCECore::Terminate() {
     m_pFileWriter.reset();
     m_AudioReaders.clear();
     m_pFileReader.reset();
+    m_Chapters.clear();
+    m_keyFile.clear();
+    m_hdr10plus.reset();
     m_pPerfMonitor.reset();
     m_pStatus.reset();
+    m_tracer.reset();
     m_pLog.reset();
     m_encCodec = RGY_CODEC_UNKNOWN;
     m_pAbortByUser = nullptr;

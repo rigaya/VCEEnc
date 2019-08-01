@@ -87,6 +87,9 @@ public:
     };
     virtual void Flush() override {
     };
+    virtual void reset() {
+        m_pLog.reset();
+    }
 protected:
     shared_ptr<RGYLog> m_pLog;
 };
