@@ -125,7 +125,7 @@ inline cl_int clGetInfo(Func f, Target target, cl_uint name, std::string *param)
             return err;
         }
         if (param) {
-            param = value.data();
+            *param = value.data();
         }
     } else if (param) {
         param->assign("");
