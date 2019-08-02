@@ -411,6 +411,7 @@ public:
         return m_queue.get();
     }
     RGY_ERR flush() const;
+    RGY_ERR finish() const;
 protected:
     RGYOpenCLQueue(const RGYOpenCLQueue &) = delete;
     void operator =(const RGYOpenCLQueue &) = delete;

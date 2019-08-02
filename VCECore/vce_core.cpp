@@ -1852,9 +1852,9 @@ RGY_ERR VCECore::run() {
                     PrintMes(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), lastFilter->name().c_str());
                     return sts_filter;
                 }
-                auto err = m_cl->queue().flush();
+                auto err = m_cl->queue().finish();
                 if (err != RGY_ERR_NONE) {
-                    PrintMes(RGY_LOG_ERROR, _T("Failed to flush queue after \"%s\".\n"), lastFilter->name().c_str());
+                    PrintMes(RGY_LOG_ERROR, _T("Failed to finish queue after \"%s\".\n"), lastFilter->name().c_str());
                     return sts_filter;
                 }
                 encSurface->setDuration(encSurfaceInfo.duration);

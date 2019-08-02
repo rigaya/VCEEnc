@@ -119,13 +119,13 @@ inline cl_int clGetInfo(Func f, Target target, cl_uint name, std::string *param)
     // std::string has a constant data member
     // a char vector does not
     if (required > 0) {
-        vector<char> value(required);
+        vector<char> value(required+1, '\0');
         err = f(target, name, required, value.data(), NULL);
         if (err != CL_SUCCESS) {
             return err;
         }
         if (param) {
-            param->assign(begin(value), prev(end(value)));
+            param = value.data();
         }
     } else if (param) {
         param->assign("");
@@ -463,6 +463,8 @@ RGYOpenCLContext::RGYOpenCLContext(shared_ptr<RGYOpenCLPlatform> platform, share
 }
 
 RGYOpenCLContext::~RGYOpenCLContext() {
+    m_copyI2B.reset();
+    m_copyB2I.reset();
     m_queue.clear();
     m_context.reset();
     m_platform.reset();
@@ -484,13 +486,25 @@ RGY_ERR RGYOpenCLContext::createContext() {
         props.push_back((cl_context_properties)m_platform->d3d11dev());
     }
     props.push_back(0);
-    m_context = unique_context(clCreateContext(props.data(), (cl_uint)m_platform->devs().size(), m_platform->devs().data(), nullptr, nullptr, &err), clReleaseContext);
+    try {
+        m_context = unique_context(clCreateContext(props.data(), (cl_uint)m_platform->devs().size(), m_platform->devs().data(), nullptr, nullptr, &err), clReleaseContext);
+    } catch (...) {
+        m_pLog->write(RGY_LOG_ERROR, _T("Crush (clCreateContext)\n"));
+        RGYOpenCL::openCLCrush = true; //クラッシュフラグを立てる
+        return RGY_ERR_OPENCL_CRUSH;
+    }
     if (err != CL_SUCCESS) {
         m_pLog->write(RGY_LOG_ERROR, _T("Error (clCreateContext): %s\n"), cl_errmes(err));
         return err_cl_to_rgy(err);
     }
     for (int idev = 0; idev < (int)m_platform->devs().size(); idev++) {
-        m_queue.push_back(std::move(RGYOpenCLQueue(clCreateCommandQueue(m_context.get(), m_platform->dev(idev), 0, &err))));
+        try {
+            m_queue.push_back(std::move(RGYOpenCLQueue(clCreateCommandQueue(m_context.get(), m_platform->dev(idev), 0, &err))));
+        } catch (...) {
+            m_pLog->write(RGY_LOG_ERROR, _T("Crush (clCreateCommandQueue)\n"));
+            RGYOpenCL::openCLCrush = true; //クラッシュフラグを立てる
+            return RGY_ERR_OPENCL_CRUSH;
+        }
     }
     return RGY_ERR_NONE;
 }
@@ -564,6 +578,13 @@ RGY_ERR RGYOpenCLQueue::flush() const {
         return RGY_ERR_NULL_PTR;
     }
     return err_cl_to_rgy(clFlush(m_queue.get()));
+}
+
+RGY_ERR RGYOpenCLQueue::finish() const {
+    if (!m_queue) {
+        return RGY_ERR_NULL_PTR;
+    }
+    return err_cl_to_rgy(clFinish(m_queue.get()));
 }
 
 RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDst, const FrameInfo *planeSrc, const sInputCrop *planeCrop, bool blocking, int queue_id) {
