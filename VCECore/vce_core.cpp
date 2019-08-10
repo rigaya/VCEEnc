@@ -548,27 +548,30 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCECore::initDevice(int deviceId) {
-    auto err = m_dx9.Init(true, deviceId, false, 1280, 720, m_pLog);
-    if (err != RGY_ERR_NONE) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to get directX9 device.\n"));
-        return RGY_ERR_DEVICE_LOST;
+RGY_ERR VCECore::initDevice(const int deviceId, const bool interlopD3d9, const bool interlopD3d11) {
+    if (interlopD3d9) {
+        auto err = m_dx9.Init(true, deviceId, false, 1280, 720, m_pLog);
+        if (err != RGY_ERR_NONE) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to get directX9 device.\n"));
+            return RGY_ERR_DEVICE_LOST;
+        }
+        auto amferr = m_pContext->InitDX9(m_dx9.GetDevice());
+        if (amferr != AMF_OK) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by directX9.\n"));
+            return err_to_rgy(amferr);
+        }
     }
-    auto amferr = m_pContext->InitDX9(m_dx9.GetDevice());
-    if (amferr != AMF_OK) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by directX9.\n"));
-        return err_to_rgy(amferr);
-    }
-
-    err = m_dx11.Init(deviceId,false, m_pLog);
-    if (err != RGY_ERR_NONE) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to get directX11 device.\n"));
-        return RGY_ERR_DEVICE_LOST;
-    }
-    amferr = m_pContext->InitDX11(m_dx11.GetDevice());
-    if (amferr != AMF_OK) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by directX11.\n"));
-        return err_to_rgy(amferr);
+    if (interlopD3d11) {
+        auto err = m_dx11.Init(deviceId, false, m_pLog);
+        if (err != RGY_ERR_NONE) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to get directX11 device.\n"));
+            return RGY_ERR_DEVICE_LOST;
+        }
+        auto amferr = m_pContext->InitDX11(m_dx11.GetDevice());
+        if (amferr != AMF_OK) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by directX11.\n"));
+            return err_to_rgy(amferr);
+        }
     }
 
     RGYOpenCL cl;
@@ -578,9 +581,21 @@ RGY_ERR VCECore::initDevice(int deviceId) {
         return RGY_ERR_DEVICE_LOST;
     }
     auto& platform = platforms[0];
-    if (platform->createDeviceListD3D9(CL_DEVICE_TYPE_GPU, (void*)m_dx9.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to find device.\n"));
-        return RGY_ERR_DEVICE_LOST;
+    if (interlopD3d9) {
+        if (platform->createDeviceListD3D9(CL_DEVICE_TYPE_GPU, (void *)m_dx9.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to find device.\n"));
+            return RGY_ERR_DEVICE_LOST;
+        }
+    } else if (interlopD3d11) {
+        if (platform->createDeviceListD3D11(CL_DEVICE_TYPE_GPU, (void *)m_dx11.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to find device.\n"));
+            return RGY_ERR_DEVICE_LOST;
+        }
+    } else {
+        if (platform->createDeviceList(CL_DEVICE_TYPE_GPU) != CL_SUCCESS || platform->devs().size() == 0) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to find device.\n"));
+            return RGY_ERR_DEVICE_LOST;
+        }
     }
     auto devices = platform->devs();
     if (devices.size() <= deviceId) {
@@ -594,7 +609,7 @@ RGY_ERR VCECore::initDevice(int deviceId) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to create OpenCL context.\n"));
         return RGY_ERR_UNKNOWN;
     }
-    amferr = m_pContext->InitOpenCL(m_cl->queue().get());
+    auto amferr = m_pContext->InitOpenCL(m_cl->queue().get());
     if (amferr != AMF_OK) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by OpenCL.\n"));
         return err_to_rgy(amferr);
@@ -879,6 +894,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         || cropRequired) {
         //swデコードならGPUに上げる必要がある
         if (m_pFileReader->getInputCodec() == RGY_CODEC_UNKNOWN) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
             unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop());
             shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
             param->frameIn = inputFrame;
@@ -908,6 +924,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         //colorspace
 #if 0
         if (inputParam->vpp.colorspace.enable) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
             unique_ptr<RGYFilter> filter(new RGYFilterColorspace());
             shared_ptr<RGYFilterParamColorspace> param(new RGYFilterParamColorspace());
             param->colorspace = inputParam->vpp.colorspace;
@@ -931,6 +948,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
 #endif
         if (filterCsp != inputFrame.csp
             || cropRequired) { //cropが必要ならただちに適用する
+            amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
             unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop());
             shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
             param->frameIn = inputFrame;
@@ -965,6 +983,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         }
         //リサイズ
         if (resizeRequired) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
             unique_ptr<RGYFilter> filterResize(new RGYFilterResize());
             shared_ptr<RGYFilterParamResize> param(new RGYFilterParamResize());
             param->interp = (inputParam->vpp.resize != RGY_VPP_RESIZE_AUTO) ? inputParam->vpp.resize : RGY_VPP_RESIZE_SPLINE36;
@@ -991,6 +1010,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     {
         //もし入力がCPUメモリで色空間が違うなら、一度そのままGPUに転送する必要がある
         if (inputFrame.mem_type == RGY_MEM_TYPE_CPU && inputFrame.csp != GetEncoderCSP(inputParam)) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
             unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop());
             shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
             param->frameIn = inputFrame;
@@ -1008,6 +1028,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             inputFrame = param->frameOut;
             m_encFps = param->baseFps;
         }
+        amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
         unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop());
         shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
         param->frameIn = inputFrame;
@@ -1465,7 +1486,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    if (RGY_ERR_NONE != (ret = initDevice(0))) {
+    if (RGY_ERR_NONE != (ret = initDevice(0, prm->interlopD3d9, prm->interlopD3d11))) {
         return ret;
     }
 
@@ -1522,8 +1543,9 @@ RGY_ERR VCECore::run_decode() {
                 //const auto pts = rgy_change_scale(bitstream.pts(), to_rgy(inTimebase), VCE_TIMEBASE);
                 pictureBuffer->SetDuration(bitstream.duration());
                 pictureBuffer->SetPts(bitstream.pts());
-                bitstream.clear();
             }
+            bitstream.setSize(0);
+            bitstream.setOffset(0);
             if (pictureBuffer || sts == RGY_ERR_MORE_BITSTREAM /*EOFの場合はDrainを送る*/) {
                 auto ar = AMF_OK;
                 do {
@@ -1534,6 +1556,9 @@ RGY_ERR VCECore::run_decode() {
                     }
                     if (ar == AMF_NEED_MORE_INPUT) {
                         break;
+                    } else if (ar == AMF_RESOLUTION_CHANGED || ar == AMF_RESOLUTION_UPDATED) {
+                        PrintMes(RGY_LOG_ERROR, _T("ERROR: Resolution changed during decoding.\n"));
+                        break;
                     } else if (ar == AMF_INPUT_FULL  || ar == AMF_DECODER_NO_FREE_SURFACES) {
                         std::this_thread::sleep_for(std::chrono::milliseconds(1));
                     } else if (ar == AMF_REPEAT) {
@@ -1543,10 +1568,12 @@ RGY_ERR VCECore::run_decode() {
                     }
                 } while (m_state == RGY_STATE_RUNNING);
                 if (ar != AMF_OK) {
+                    m_state = RGY_STATE_ERROR;
                     return err_to_rgy(ar);
                 }
             }
         }
+        m_pDecoder->Drain();
         return sts;
     });
     PrintMes(RGY_LOG_DEBUG, _T("Started Encode thread.\n"));
@@ -1789,7 +1816,11 @@ RGY_ERR VCECore::run() {
                 && inframeInfo.mem_type != RGY_MEM_TYPE_CPU
                 && inAmf
                 && inAmf->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
+#if 0
                 auto ar = inAmf->Interop(amf::AMF_MEMORY_OPENCL);
+#else
+                auto ar = inAmf->Convert(amf::AMF_MEMORY_OPENCL);
+#endif
                 if (ar != AMF_OK) {
                     PrintMes(RGY_LOG_ERROR, _T("Failed to convert plane: %s.\n"), get_err_mes(err_to_rgy(ar)));
                     return err_to_rgy(ar);
@@ -1799,6 +1830,7 @@ RGY_ERR VCECore::run() {
         }
 
         while (filterframes.size() > 0 || bDrain) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
             //フィルタリングするならここ
             for (uint32_t ifilter = filterframes.front().second; ifilter < m_vpFilters.size() - 1; ifilter++) {
                 int nOutFrames = 0;
@@ -1833,8 +1865,14 @@ RGY_ERR VCECore::run() {
                 //エンコードバッファにコピー
                 auto &lastFilter = m_vpFilters[m_vpFilters.size()-1];
                 amf::AMFSurfacePtr pSurface;
-                auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_OPENCL, csp_rgy_to_enc(lastFilter->GetFilterParam()->frameOut.csp),
-                    m_encWidth, m_encHeight, &pSurface);
+                if (m_dx11.GetDevice() != nullptr) {
+                    auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_DX11, csp_rgy_to_enc(lastFilter->GetFilterParam()->frameOut.csp),
+                        m_encWidth, m_encHeight, &pSurface);
+                    pSurface->Interop(amf::AMF_MEMORY_OPENCL);
+                } else {
+                    auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_OPENCL, csp_rgy_to_enc(lastFilter->GetFilterParam()->frameOut.csp),
+                        m_encWidth, m_encHeight, &pSurface);
+                }
                 auto encSurface = std::make_unique<RGYFrame>(pSurface);
                 //最後のフィルタはNVEncFilterCspCropでなければならない
                 if (typeid(*lastFilter.get()) != typeid(RGYFilterCspCrop)) {
@@ -1920,7 +1958,8 @@ RGY_ERR VCECore::run() {
         }
         speedCtrl.wait();
         if ((res = run_send_streams()) != RGY_ERR_NONE) {
-            return res;
+            m_state = RGY_STATE_ERROR;
+            break;
         }
         unique_ptr<RGYFrame> inputFrame;
         if (m_pDecoder == nullptr) {
@@ -1929,23 +1968,31 @@ RGY_ERR VCECore::run() {
                 inputFrameInfo.srcWidth - inputFrameInfo.crop.e.left - inputFrameInfo.crop.e.right,
                 inputFrameInfo.srcHeight - inputFrameInfo.crop.e.bottom - inputFrameInfo.crop.e.up,
                 &pSurface);
-            if (ar != AMF_OK) return err_to_rgy(ar);
+            if (ar != AMF_OK) {
+                res = err_to_rgy(ar); m_state = RGY_STATE_ERROR;
+                break;
+            }
             inputFrame = std::make_unique<RGYFrame>(pSurface);
-            auto ret = m_pFileReader->LoadNextFrame(inputFrame.get());
-            if (ret == RGY_ERR_MORE_DATA) {
+            res = m_pFileReader->LoadNextFrame(inputFrame.get());
+            if (res == RGY_ERR_MORE_DATA) {
                 bInputEmpty = true;
                 inputFrame.reset();
-            } else if (ret == RGY_ERR_NONE) {
+            } else if (res == RGY_ERR_NONE) {
                 auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
                 if (pAVCodecReader != nullptr) {
                     const auto vid_timebase = to_rgy(pAVCodecReader->GetInputVideoStream()->time_base);
                     inputFrame->setDuration(rgy_change_scale(inputFrame->duration(), vid_timebase, srcTimebase));
                     inputFrame->setTimestamp(rgy_change_scale(inputFrame->timestamp(), vid_timebase, srcTimebase));
                 }
+            } else {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to load input frame.\n"));
+                m_state = RGY_STATE_ERROR;
+                break;
             }
         } else {
             amf::AMFSurfacePtr surf;
             auto ar = AMF_REPEAT;
+            auto timeS = std::chrono::system_clock::now();
             while (m_state == RGY_STATE_RUNNING) {
                 amf::AMFDataPtr data;
                 ar = m_pDecoder->QueryOutput(&data);
@@ -1960,12 +2007,20 @@ RGY_ERR VCECore::run() {
                     break;
                 }
                 if (ar != AMF_OK) break;
+                if ((std::chrono::system_clock::now() - timeS) > std::chrono::seconds(10)) {
+                    PrintMes(RGY_LOG_ERROR, _T("10 sec has passed after getting last frame from decoder.\n"));
+                    PrintMes(RGY_LOG_ERROR, _T("Decoder seems to have crushed.\n"));
+                    ar = AMF_FAIL;
+                    break;
+                }
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
             if (ar == AMF_EOF) {
                 bInputEmpty = true;
             } else if (ar != AMF_OK) {
-                return err_to_rgy(ar);
+                res = err_to_rgy(ar); m_state = RGY_STATE_ERROR;
+                PrintMes(RGY_LOG_ERROR, _T("Failed to load input frame.\n"));
+                break;
             }
             inputFrame = std::make_unique<RGYFrame>(surf);
         }
@@ -2003,6 +2058,9 @@ RGY_ERR VCECore::run() {
             bool bDrainFin = bDrain;
             RGY_ERR err = filter_frame(nFilterFrame, inframe, dqEncFrames, bDrainFin);
             if (err != RGY_ERR_NONE) {
+                res = err;
+                m_state = RGY_STATE_ERROR;
+                PrintMes(RGY_LOG_ERROR, _T("Failed to filter frame.\n"));
                 break;
             }
             bFilterEmpty = bDrainFin;
@@ -2012,6 +2070,9 @@ RGY_ERR VCECore::run() {
             while (dqEncFrames.size() >= pipelineDepth) {
                 auto &encframe = dqEncFrames.front();
                 if ((err = send_encoder(encframe)) != RGY_ERR_NONE) {
+                    res = err;
+                    m_state = RGY_STATE_ERROR;
+                    PrintMes(RGY_LOG_ERROR, _T("Failed to send frame to encoder.\n"));
                     break;
                 }
                 dqEncFrames.pop_front();
@@ -2019,6 +2080,13 @@ RGY_ERR VCECore::run() {
         }
     }
     if (m_thDecoder.joinable()) {
+        DWORD exitCode = 0;
+        while (GetExitCodeThread(m_thDecoder.native_handle(), &exitCode) == STILL_ACTIVE) {
+            if ((res = run_send_streams()) != RGY_ERR_NONE) {
+                m_state = RGY_STATE_ERROR;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
         m_thDecoder.join();
     }
     auto ar = AMF_INPUT_FULL;
@@ -2261,7 +2329,7 @@ RGY_ERR VCEFeatures::init(int deviceId, int logLevel) {
     auto err = RGY_ERR_NONE;
     if (   (err = m_core->initAMFFactory()) != RGY_ERR_NONE
         || (err = m_core->initContext(logLevel)) != RGY_ERR_NONE
-        || (err = m_core->initDevice(deviceId)) != RGY_ERR_NONE) {
+        || (err = m_core->initDevice(deviceId, false, false)) != RGY_ERR_NONE) {
         return err;
     }
     return RGY_ERR_NONE;

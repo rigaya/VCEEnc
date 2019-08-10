@@ -122,6 +122,22 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->deviceID = value;
         return 0;
     }
+    if (IS_OPTION("interlop-d3d9")) {
+        pParams->interlopD3d9 = true;
+        return 0;
+    }
+    if (IS_OPTION("no-interlop-d3d9")) {
+        pParams->interlopD3d9 = false;
+        return 0;
+    }
+    if (IS_OPTION("interlop-d3d11")) {
+        pParams->interlopD3d11 = true;
+        return 0;
+    }
+    if (IS_OPTION("no-interlop-d3d11")) {
+        pParams->interlopD3d11 = false;
+        return 0;
+    }
     if (IS_OPTION("quality")) {
         i++;
         int value = AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED;

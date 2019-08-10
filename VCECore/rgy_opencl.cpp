@@ -485,6 +485,9 @@ RGY_ERR RGYOpenCLContext::createContext() {
         props.push_back(CL_CONTEXT_D3D11_DEVICE_KHR);
         props.push_back((cl_context_properties)m_platform->d3d11dev());
     }
+    //重要: これをいれて、OpenCL使用時はロックするようにしないと、デコードが不安定になり最悪BSOD(0xea)したりする
+    props.push_back(CL_CONTEXT_INTEROP_USER_SYNC);
+    props.push_back(CL_TRUE);
     props.push_back(0);
     try {
         m_context = unique_context(clCreateContext(props.data(), (cl_uint)m_platform->devs().size(), m_platform->devs().data(), nullptr, nullptr, &err), clReleaseContext);

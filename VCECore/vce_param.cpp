@@ -40,6 +40,8 @@ VCEParam::VCEParam() :
     codec(RGY_CODEC_H264),
     codecParam(),
     deviceID(0),
+    interlopD3d9(false),
+    interlopD3d11(true),
     usage(AMF_VIDEO_ENCODER_USAGE_TRANSCONDING),
     rateControl(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP),
     qualityPreset(0),

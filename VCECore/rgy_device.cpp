@@ -41,8 +41,13 @@
     } \
 }
 
-DeviceDX9::DeviceDX9()
-    :m_adaptersCount(0) {
+DeviceDX9::DeviceDX9() :
+    m_pD3D(),
+    m_pD3DDevice(),
+    m_adaptersCount(0),
+    m_adaptersIndexes(),
+    m_displayDeviceName(),
+    m_log() {
     memset(m_adaptersIndexes, 0, sizeof(m_adaptersIndexes));
 }
 
@@ -218,8 +223,12 @@ RGY_ERR DeviceDX9::EnumerateAdapters() {
     return RGY_ERR_NONE;
 }
 
-DeviceDX11::DeviceDX11()
-    :m_adaptersCount(0) {
+DeviceDX11::DeviceDX11() :
+    m_pD3DDevice(),
+    m_adaptersCount(0),
+    m_adaptersIndexes(),
+    m_displayDeviceName(),
+    m_log() {
     memset(m_adaptersIndexes, 0, sizeof(m_adaptersIndexes));
 }
 

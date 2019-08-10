@@ -102,7 +102,7 @@ public:
     virtual RGY_ERR init(VCEParam *prm);
     virtual RGY_ERR initAMFFactory();
     virtual RGY_ERR initContext(int log_level);
-    virtual RGY_ERR initDevice(int deviceId);
+    virtual RGY_ERR initDevice(const int deviceId, const bool interlopD3d9, const bool interlopD3d11);
     virtual RGY_ERR initInput(VCEParam *pParams);
     virtual RGY_ERR initOutput(VCEParam *prm);
     virtual RGY_ERR run();
