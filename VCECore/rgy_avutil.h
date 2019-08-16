@@ -59,8 +59,8 @@ extern "C" {
 #pragma comment (lib, "avfilter.lib")
 #pragma warning (pop)
 
-#include "rgy_util.h"
 #include "rgy_log.h"
+#include "rgy_util.h"
 
 #if _DEBUG
 #define RGY_AV_LOG_LEVEL AV_LOG_WARNING
