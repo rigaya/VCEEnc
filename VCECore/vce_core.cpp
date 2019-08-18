@@ -374,11 +374,13 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
     }
 
 #if ENABLE_AVSW_READER
+    const bool vpp_rff = false; // inputParam->vpp.rff;
+    const bool vpp_afs = false; // inputParam->vpp.afs.enable;
     if ((m_nAVSyncMode & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR))/* || inputParam->vpp.rff*/) {
         tstring err_target;
         if (m_nAVSyncMode & RGY_AVSYNC_VFR)       err_target += _T("avsync vfr, ");
         if (m_nAVSyncMode & RGY_AVSYNC_FORCE_CFR) err_target += _T("avsync forcecfr, ");
-        //if (inputParam->vpp.rff)                  err_target += _T("vpp-rff, ");
+        if (vpp_rff)                  err_target += _T("vpp-rff, ");
         err_target = err_target.substr(0, err_target.length()-2);
 
         if (pAVCodecReader) {
@@ -404,6 +406,15 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
             PrintMes(RGY_LOG_ERROR, _T("%s can only be used with avhw /avsw reader.\n"), err_target.c_str());
             return RGY_ERR_INVALID_VIDEO_PARAM;
         }
+    } else if (pAVCodecReader && ((pAVCodecReader->GetFramePosList()->getStreamPtsStatus() & (~RGY_PTS_NORMAL)) == 0)) {
+        m_nAVSyncMode |= RGY_AVSYNC_VFR;
+        const auto timebaseStreamIn = to_rgy(pAVCodecReader->GetInputVideoStream()->time_base);
+        if ((timebaseStreamIn.inv() * m_inputFps.inv()).d() == 1 || timebaseStreamIn.n() > 1000) { //fpsを割り切れるtimebaseなら
+            if (!vpp_afs && !vpp_rff) {
+                m_outputTimebase = m_inputFps.inv() * rgy_rational<int>(1, 8);
+            }
+        }
+        PrintMes(RGY_LOG_DEBUG, _T("vfr mode automatically enabled with timebase %d/%d\n"), m_outputTimebase.n(), m_outputTimebase.d());
     }
 #endif
 #if ENCODER_NVENC
@@ -1477,6 +1488,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     m_pPerfMonitor = std::make_unique<CPerfMonitor>();
 
     prm->input.csp = RGY_CSP_NV12;
+    m_nAVSyncMode = prm->common.AVSyncMode;
 
     if (RGY_ERR_NONE != (ret = initInput(prm))) {
         return ret;
