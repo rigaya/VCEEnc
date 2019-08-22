@@ -1828,6 +1828,7 @@ RGY_ERR VCECore::run() {
                 && inframeInfo.mem_type != RGY_MEM_TYPE_CPU
                 && inAmf
                 && inAmf->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
+                amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
 #if 0
                 auto ar = inAmf->Interop(amf::AMF_MEMORY_OPENCL);
 #else
@@ -1842,9 +1843,9 @@ RGY_ERR VCECore::run() {
         }
 
         while (filterframes.size() > 0 || bDrain) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
             //フィルタリングするならここ
             for (uint32_t ifilter = filterframes.front().second; ifilter < m_vpFilters.size() - 1; ifilter++) {
+                amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
                 int nOutFrames = 0;
                 FrameInfo *outInfo[16] = { 0 };
                 auto sts_filter = m_vpFilters[ifilter]->filter(&filterframes.front().first, (FrameInfo **)&outInfo, &nOutFrames);
@@ -1875,6 +1876,7 @@ RGY_ERR VCECore::run() {
                 filterframes.pop_front();
             } else {
                 //エンコードバッファにコピー
+                amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
                 auto &lastFilter = m_vpFilters[m_vpFilters.size()-1];
                 amf::AMFSurfacePtr pSurface;
                 if (m_dx11.GetDevice() != nullptr) {
