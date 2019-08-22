@@ -2028,6 +2028,10 @@ RGY_ERR VCECore::run() {
                     break;
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                if ((res = run_send_streams()) != RGY_ERR_NONE) {
+                    m_state = RGY_STATE_ERROR;
+                    break;
+                }
             }
             if (ar == AMF_EOF) {
                 bInputEmpty = true;
