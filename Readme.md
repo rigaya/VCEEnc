@@ -24,6 +24,8 @@ Hardware which supports VCE
 |:---|:---|
 | VCEEnc 3.00 or later | AMD driver 17.1.1 (16.50.2611) or later |
 
+## Usage and options of VCEEncC
+[Option list and details of VCEEncC](./VCEEncC_Options.en.md)
 
 ## Precautions for using VCEEnc
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
