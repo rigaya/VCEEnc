@@ -2127,7 +2127,6 @@ RGY_ERR VCECore::run() {
             pAVCodecWriter->WriteNextPacket(nullptr);
         }
     }
-    PrintMes(RGY_LOG_INFO, _T("                                                                             \n"));
     m_pFileWriter->Close();
     m_pFileReader->Close();
     m_pStatus->WriteResults();
