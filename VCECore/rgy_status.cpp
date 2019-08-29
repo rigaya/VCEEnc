@@ -46,7 +46,7 @@
 EncodeStatus::EncodeStatus() {
     memset(&m_sData, 0, sizeof(m_sData));
 
-    m_sStartTime = std::make_unique<PROCESS_TIME>();
+    m_sStartTime = std::unique_ptr<PROCESS_TIME>(new PROCESS_TIME());
     m_tmLastUpdate = std::chrono::system_clock::now();
     m_pause = false;
     m_bStdErrWriteToConsole = false;
@@ -293,7 +293,7 @@ void EncodeStatus::WriteResults() {
     }
 #endif //#if defined(_WIN32) || defined(_WIN64)
 
-    TCHAR mes[512] ={ 0 };
+    TCHAR mes[512] = { 0 };
     for (int i = 0; i < std::max(consoleWidth-1, 79); i++)
         mes[i] = ' ';
     WriteLine(mes);
