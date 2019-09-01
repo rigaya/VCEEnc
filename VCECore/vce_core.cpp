@@ -1690,17 +1690,17 @@ RGY_ERR VCECore::run() {
         m_pPerfMonitor->SetThreadHandles((HANDLE)(m_thDecoder.native_handle()), thInput, thOutput, thAudProc, thAudEnc);
     }
 
-    auto run_send_streams = [this, &pWriterForAudioStreams]() {
+    auto run_send_streams = [this, &pWriterForAudioStreams](int inputFrames) {
         auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
         vector<AVPacket> packetList;
         if (pAVCodecReader != nullptr) {
-            packetList = pAVCodecReader->GetStreamDataPackets();
+            packetList = pAVCodecReader->GetStreamDataPackets(inputFrames);
         }
         //音声ファイルリーダーからのトラックを結合する
         for (const auto &reader : m_AudioReaders) {
             auto pReader = std::dynamic_pointer_cast<RGYInputAvcodec>(reader);
             if (pReader != nullptr) {
-                vector_cat(packetList, pReader->GetStreamDataPackets());
+                vector_cat(packetList, pReader->GetStreamDataPackets(inputFrames));
             }
         }
         //パケットを各Writerに分配する
@@ -1963,15 +1963,16 @@ RGY_ERR VCECore::run() {
     int nEncodeFrames = 0;
     bool bInputEmpty = false;
     bool bFilterEmpty = false;
+    int nInputFrame = 0;
     deque<unique_ptr<RGYFrame>> dqInFrames;
     deque<unique_ptr<RGYFrame>> dqEncFrames;
-    for (int nInputFrame = 0, nFilterFrame = 0; m_state == RGY_STATE_RUNNING && !bInputEmpty && !bFilterEmpty; ) {
+    for (int nFilterFrame = 0; m_state == RGY_STATE_RUNNING && !bInputEmpty && !bFilterEmpty; ) {
         if (m_pAbortByUser && *m_pAbortByUser) {
             m_state = RGY_STATE_ABORT;
             break;
         }
         speedCtrl.wait();
-        if ((res = run_send_streams()) != RGY_ERR_NONE) {
+        if ((res = run_send_streams(nInputFrame)) != RGY_ERR_NONE) {
             m_state = RGY_STATE_ERROR;
             break;
         }
@@ -2028,7 +2029,7 @@ RGY_ERR VCECore::run() {
                     break;
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                if ((res = run_send_streams()) != RGY_ERR_NONE) {
+                if ((res = run_send_streams(nInputFrame)) != RGY_ERR_NONE) {
                     m_state = RGY_STATE_ERROR;
                     break;
                 }
@@ -2100,7 +2101,7 @@ RGY_ERR VCECore::run() {
     if (m_thDecoder.joinable()) {
         DWORD exitCode = 0;
         while (GetExitCodeThread(m_thDecoder.native_handle(), &exitCode) == STILL_ACTIVE) {
-            if ((res = run_send_streams()) != RGY_ERR_NONE) {
+            if ((res = run_send_streams(nInputFrame)) != RGY_ERR_NONE) {
                 m_state = RGY_STATE_ERROR;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
