@@ -40,7 +40,15 @@
 #include "rgy_err.h"
 #include "rgy_util.h"
 #include "rgy_prm.h"
+#if ENCODER_NVENC
+#include "NVEncUtil.h"
+#endif //#if ENCODER_NVENC
+#if ENCODER_QSV
+#include "qsv_util.h"
+#endif //#if ENCODER_QSV
+#if ENCODER_VCEENC
 #include "vce_util.h"
+#endif //#if ENCODER_VCEENC
 
 std::vector<int> read_keyfile(tstring keyfile);
 
@@ -81,6 +89,8 @@ public:
 
     int run(int interlaced, void **dst, const void **src, int width, int src_y_pitch_byte, int src_uv_pitch_byte, int dst_y_pitch_byte, int height, int dst_height, int *crop);
 };
+
+#if !FOR_AUO
 
 class RGYInputPrm {
 public:
@@ -230,6 +240,8 @@ RGY_ERR initReaders(
     CPerfMonitor *perfMonitor,
     shared_ptr<RGYLog> log
 );
+
+#endif //#if !FOR_AUO
 
 #endif //__RGY_INPUT_H__
 

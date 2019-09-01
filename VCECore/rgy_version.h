@@ -33,7 +33,6 @@
 #define VER_STR_FILEVERSION          "4.02"
 #define VER_STR_FILEVERSION_TCHAR _T("4.02")
 
-#define ENABLE_OPENCL 1
 
 #ifdef _M_IX86
 #define BUILD_ARCH_STR _T("x86")
@@ -71,6 +70,7 @@ const char *get_encoder_version();
 #define ENABLE_AVISYNTH_READER    0
 #define ENABLE_VAPOURSYNTH_READER 0
 #define ENABLE_AVSW_READER        0
+#define ENABLE_OPENCL             0
 #else
 #define ENCODER_NAME  "VCEEnc"
 #define FOR_AUO                   0
@@ -79,6 +79,7 @@ const char *get_encoder_version();
 #define ENABLE_AVISYNTH_READER    1
 #define ENABLE_VAPOURSYNTH_READER 1
 #define ENABLE_AVSW_READER        1
+#define ENABLE_OPENCL             1
 #endif
 
 #endif //##ifndef __RGY_VERSION_H__

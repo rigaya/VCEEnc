@@ -316,6 +316,8 @@ static inline RGYBitstream RGYBitstreamInit() {
 static_assert(std::is_pod<RGYBitstream>::value == true, "RGYBitstream should be POD type.");
 #endif
 
+#if ENABLE_OPENCL
+
 struct RGYFrame {
 private:
     const wchar_t *PROP_INPUT_FRAMEID = L"RGYFrameInputFrameID";
@@ -488,6 +490,8 @@ public:
         }
     }
 };
+
+#endif //#if ENABLE_OPENCL
 
 VideoInfo videooutputinfo(
     RGY_CODEC codec,

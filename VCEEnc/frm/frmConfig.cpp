@@ -970,9 +970,9 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;
     vce.bVBAQ                                   = fcgCBVBAQ->Checked;
     vce.vui.fullrange                           = fcgCBFullrange->Checked;
-    vce.vui.matrix                              = list_colormatrix[fcgCXColorMatrix->SelectedIndex].value;
-    vce.vui.transfer                            = list_transfer[fcgCXTransfer->SelectedIndex].value;
-    vce.vui.colorprim                           = list_colorprim[fcgCXColorPrim->SelectedIndex].value;
+    vce.vui.matrix                              = (CspMatrix)list_colormatrix[fcgCXColorMatrix->SelectedIndex].value;
+    vce.vui.transfer                            = (CspTransfer)list_transfer[fcgCXTransfer->SelectedIndex].value;
+    vce.vui.colorprim                           = (CspColorprim)list_colorprim[fcgCXColorPrim->SelectedIndex].value;
     vce.vui.format                              = list_videoformat[fcgCXVideoFormat->SelectedIndex].value;
     vce.preAnalysis                             = fcgCBPreAnalysis->Checked;
 

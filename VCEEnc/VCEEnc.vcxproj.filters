@@ -218,9 +218,6 @@
     <ClInclude Include="encode\exe_version.h">
       <Filter>ヘッダー ファイル\encode</Filter>
     </ClInclude>
-    <ClInclude Include="prm\cpu_info.h">
-      <Filter>ヘッダー ファイル\prm</Filter>
-    </ClInclude>
     <ClInclude Include="encode\auo_convert.h">
       <Filter>ヘッダー ファイル\encode</Filter>
     </ClInclude>

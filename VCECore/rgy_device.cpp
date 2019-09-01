@@ -27,6 +27,7 @@
 
 #include <set>
 #include <list>
+#include "rgy_tchar.h"
 #include "rgy_device.h"
 #include "rgy_log.h"
 #include "rgy_util.h"

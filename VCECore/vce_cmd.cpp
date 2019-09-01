@@ -37,7 +37,7 @@
 #include "rgy_perf_monitor.h"
 #include "rgy_caption.h"
 #include "vce_param.h"
-#include "vce_core.h"
+#include "core/Version.h"
 #include "rgy_cmd.h"
 #include "vce_cmd.h"
 #include "rgy_avutil.h"

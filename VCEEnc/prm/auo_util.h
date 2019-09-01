@@ -28,6 +28,8 @@
 #ifndef _AUO_UTIL_H_
 #define _AUO_UTIL_H_
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <Windows.h>
 #if (_MSC_VER >= 1800)
 #include <VersionHelpers.h>
@@ -52,7 +54,7 @@ enum : DWORD {
     CODE_PAGE_JIS         = 50220,
     CODE_PAGE_EUC_JP      = 51932,
     CODE_PAGE_UTF8        = CP_UTF8,
-    CODE_PAGE_UTF16_LE    = CP_WINUNICODE, //WindowsのUnicode WCHAR のコードページ
+    CODE_PAGE_UTF16_LE    = 1200, //WindowsのUnicode WCHAR のコードページ
     CODE_PAGE_UTF16_BE    = 1201,
     CODE_PAGE_US_ASCII    = 20127,
     CODE_PAGE_WEST_EUROPE = 1252,  //厄介な西ヨーロッパ言語
@@ -387,6 +389,7 @@ static BOOL check_avx2() {
     return FALSE;
 }
 
+#if 0
 static DWORD get_availableSIMD() {
     int CPUInfo[4];
     __cpuid(CPUInfo, 1);
@@ -412,6 +415,7 @@ static DWORD get_availableSIMD() {
         simd |= AUO_SIMD_AVX2;
     return simd;
 }
+#endif
 
 static BOOL check_OS_Win7orLater() {
 #if (_MSC_VER >= 1800)

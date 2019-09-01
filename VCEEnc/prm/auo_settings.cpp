@@ -25,6 +25,8 @@
 //
 // ------------------------------------------------------------------------------------------
 
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <Windows.h>
 #include <Math.h>
 #include <string.h>
@@ -500,7 +502,7 @@ void guiEx_settings::load_local() {
 
 
     s_local.large_cmdbox = 0;
-    s_local.audio_buffer_size   = min(GetPrivateProfileInt(ini_section_main, "audio_buffer",        AUDIO_BUFFER_DEFAULT, conf_fileName), AUDIO_BUFFER_MAX);
+    s_local.audio_buffer_size   = std::min<DWORD>(GetPrivateProfileInt(ini_section_main, "audio_buffer",        AUDIO_BUFFER_DEFAULT, conf_fileName), AUDIO_BUFFER_MAX);
 
     GetPrivateProfileString(INI_SECTION_VID, "VCEENCC", "", s_vid.fullpath, _countof(s_vid.fullpath), conf_fileName);
     for (int i = 0; i < s_aud_count; i++)

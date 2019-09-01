@@ -702,7 +702,6 @@ exit /B 0</Command>
     <ClInclude Include="frm\frmSetTransparency.h">
       <FileType>CppForm</FileType>
     </ClInclude>
-    <ClInclude Include="prm\cpu_info.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="auo_version.rc" />

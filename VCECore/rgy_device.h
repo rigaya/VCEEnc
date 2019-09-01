@@ -29,6 +29,7 @@
 #ifndef __RGY_DEVICE_H__
 #define __RGY_DEVICE_H__
 
+#include "rgy_osdep.h"
 #include <SDKDDKVer.h>
 #include <atlbase.h>
 #include <string>
