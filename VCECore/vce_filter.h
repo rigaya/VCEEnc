@@ -43,6 +43,7 @@ public:
 
     RGYFilterParam() : frameIn({ 0 }), frameOut({ 0 }), baseFps(), bOutOverwrite(false) {};
     virtual ~RGYFilterParam() {};
+    virtual tstring print() const { return _T(""); };
 };
 
 
@@ -79,12 +80,12 @@ static FILTER_PATHTHROUGH_FRAMEINFO operator~(FILTER_PATHTHROUGH_FRAMEINFO a) {
 
 class RGYFilter {
 public:
-    RGYFilter();
+    RGYFilter(shared_ptr<RGYOpenCLContext> context);
     virtual ~RGYFilter();
     tstring name() {
         return m_name;
     }
-    virtual RGY_ERR init(shared_ptr<RGYFilterParam> param, shared_ptr<RGYLog> pPrintMes, shared_ptr<RGYOpenCLContext> context) = 0;
+    virtual RGY_ERR init(shared_ptr<RGYFilterParam> param, shared_ptr<RGYLog> pPrintMes) = 0;
     RGY_ERR filter(FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum);
     const tstring GetInputMessage() {
         return m_infoStr;
@@ -125,6 +126,10 @@ protected:
         va_end(args);
         AddMessage(log_level, buffer);
     }
+    void setFilterInfo(const tstring &info) {
+        m_infoStr = info;
+        AddMessage(RGY_LOG_DEBUG, info);
+    }
 
     tstring m_name;
     tstring m_infoStr;
@@ -146,9 +151,9 @@ public:
 
 class RGYFilterCspCrop : public RGYFilter {
 public:
-    RGYFilterCspCrop();
+    RGYFilterCspCrop(shared_ptr<RGYOpenCLContext> context);
     virtual ~RGYFilterCspCrop();
-    virtual RGY_ERR init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog> pPrintMes, shared_ptr<RGYOpenCLContext> context) override;
+    virtual RGY_ERR init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog> pPrintMes) override;
 protected:
     virtual RGY_ERR run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum) override;
     RGY_ERR convertYBitDepth(FrameInfo *pOutputFrame, const FrameInfo *pInputFrame);
@@ -170,9 +175,9 @@ public:
 
 class RGYFilterResize : public RGYFilter {
 public:
-    RGYFilterResize();
+    RGYFilterResize(shared_ptr<RGYOpenCLContext> context);
     virtual ~RGYFilterResize();
-    virtual RGY_ERR init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog> pPrintMes, shared_ptr<RGYOpenCLContext> context) override;
+    virtual RGY_ERR init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog> pPrintMes) override;
 protected:
     virtual RGY_ERR run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum) override;
     virtual void close() override;

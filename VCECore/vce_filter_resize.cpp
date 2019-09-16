@@ -79,7 +79,7 @@ RGY_ERR RGYFilterResize::resizePlane(FrameInfo *pOutputPlane, const FrameInfo *p
                 (cl_mem)pOutputPlane->ptr[0], pOutputPlane->pitch[0], pOutputPlane->width, pOutputPlane->height,
                 (cl_mem)pInputPlane->ptr[0],
                 ratioX, ratioY, ratioDistX, ratioDistY,
-                (cl_mem)m_weightSpline->mem);
+                (cl_mem)m_weightSpline->mem());
             break;
         }
         if (err != RGY_ERR_NONE) {
@@ -105,7 +105,7 @@ RGY_ERR RGYFilterResize::resizeFrame(FrameInfo *pOutputFrame, const FrameInfo *p
     return RGY_ERR_NONE;
 }
 
-RGYFilterResize::RGYFilterResize() : m_bInterlacedWarn(false), m_weightSpline(), m_resize() {
+RGYFilterResize::RGYFilterResize(shared_ptr<RGYOpenCLContext> context) : RGYFilter(context), m_bInterlacedWarn(false), m_weightSpline(), m_resize() {
     m_name = _T("resize");
 }
 
@@ -113,10 +113,9 @@ RGYFilterResize::~RGYFilterResize() {
     close();
 }
 
-RGY_ERR RGYFilterResize::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog> pPrintMes, shared_ptr<RGYOpenCLContext> context) {
+RGY_ERR RGYFilterResize::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog> pPrintMes) {
     RGY_ERR sts = RGY_ERR_NONE;
     m_pLog = pPrintMes;
-    m_cl = context;
     auto pResizeParam = std::dynamic_pointer_cast<RGYFilterParamResize>(pParam);
     if (!pResizeParam) {
         AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));

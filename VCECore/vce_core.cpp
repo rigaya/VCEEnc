@@ -49,6 +49,8 @@
 #include "rgy_output_avcodec.h"
 #include "vce_core.h"
 #include "vce_param.h"
+#include "vce_filter.h"
+#include "vce_filter_afs.h"
 #include "rgy_version.h"
 #include "rgy_bitstream.h"
 #include "chapter_rw.h"
@@ -125,6 +127,7 @@ VCECore::VCECore() :
     m_encWidth(0),
     m_encHeight(0),
     m_sar(),
+    m_picStruct(RGY_PICSTRUCT_UNKNOWN),
     m_dll(),
     m_dx9(),
     m_dx11(),
@@ -902,18 +905,19 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
 
     //フィルタが必要
     if (resizeRequired
-        || cropRequired) {
+        || cropRequired
+        || inputParam->vpp.afs.enable) {
         //swデコードならGPUに上げる必要がある
         if (m_pFileReader->getInputCodec() == RGY_CODEC_UNKNOWN) {
             amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
-            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop());
+            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_cl));
             shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
             param->frameIn = inputFrame;
             param->frameOut.csp = param->frameIn.csp;
             param->frameOut.mem_type = RGY_MEM_TYPE_GPU;
             param->baseFps = m_encFps;
             param->bOutOverwrite = false;
-            auto sts = filterCrop->init(param, m_pLog, m_cl);
+            auto sts = filterCrop->init(param, m_pLog);
             if (sts != RGY_ERR_NONE) {
                 return sts;
             }
@@ -936,7 +940,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
 #if 0
         if (inputParam->vpp.colorspace.enable) {
             amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
-            unique_ptr<RGYFilter> filter(new RGYFilterColorspace());
+            unique_ptr<RGYFilter> filter(new RGYFilterColorspace(m_cl));
             shared_ptr<RGYFilterParamColorspace> param(new RGYFilterParamColorspace());
             param->colorspace = inputParam->vpp.colorspace;
             param->encCsp = encCsp;
@@ -944,7 +948,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             param->frameOut = inputFrame;
             param->baseFps = m_encFps;
             NVEncCtxAutoLock(cxtlock(m_ctxLock));
-            auto sts = filter->init(param, m_pLog, m_cl);
+            auto sts = filter->init(param, m_pLog);
             if (sts != RGY_ERR_NONE) {
                 return sts;
             }
@@ -960,7 +964,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         if (filterCsp != inputFrame.csp
             || cropRequired) { //cropが必要ならただちに適用する
             amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
-            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop());
+            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_cl));
             shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
             param->frameIn = inputFrame;
             param->frameOut.csp = encCsp;
@@ -980,7 +984,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             param->baseFps = m_encFps;
             param->frameOut.mem_type = RGY_MEM_TYPE_GPU;
             param->bOutOverwrite = false;
-            auto sts = filterCrop->init(param, m_pLog, m_cl);
+            auto sts = filterCrop->init(param, m_pLog);
             if (sts != RGY_ERR_NONE) {
                 return sts;
             }
@@ -992,10 +996,41 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             inputFrame = param->frameOut;
             m_encFps = param->baseFps;
         }
+        //afs
+        if (inputParam->vpp.afs.enable) {
+            if ((inputParam->input.picstruct & (RGY_PICSTRUCT_TFF | RGY_PICSTRUCT_BFF)) == 0) {
+                PrintMes(RGY_LOG_ERROR, _T("Please set input interlace field order (--interlace tff/bff) for vpp-afs.\n"));
+                return RGY_ERR_INVALID_PARAM;
+            }
+            amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
+            unique_ptr<RGYFilter> filter(new RGYFilterAfs(m_cl));
+            shared_ptr<RGYFilterParamAfs> param(new RGYFilterParamAfs());
+            param->afs = inputParam->vpp.afs;
+            param->afs.tb_order = (inputParam->input.picstruct & RGY_PICSTRUCT_TFF) != 0;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->inFps = m_inputFps;
+            param->inTimebase = m_outputTimebase;
+            param->outTimebase = m_outputTimebase;
+            param->baseFps = m_encFps;
+            param->outFilename = inputParam->common.outputFilename;
+            param->bOutOverwrite = false;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filter));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
         //リサイズ
         if (resizeRequired) {
             amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
-            unique_ptr<RGYFilter> filterResize(new RGYFilterResize());
+            unique_ptr<RGYFilter> filterResize(new RGYFilterResize(m_cl));
             shared_ptr<RGYFilterParamResize> param(new RGYFilterParamResize());
             param->interp = (inputParam->vpp.resize != RGY_VPP_RESIZE_AUTO) ? inputParam->vpp.resize : RGY_VPP_RESIZE_SPLINE36;
             param->frameIn = inputFrame;
@@ -1004,7 +1039,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             param->frameOut.height = resizeHeight;
             param->baseFps = m_encFps;
             param->bOutOverwrite = false;
-            auto sts = filterResize->init(param, m_pLog, m_cl);
+            auto sts = filterResize->init(param, m_pLog);
             if (sts != RGY_ERR_NONE) {
                 return sts;
             }
@@ -1022,14 +1057,14 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         //もし入力がCPUメモリで色空間が違うなら、一度そのままGPUに転送する必要がある
         if (inputFrame.mem_type == RGY_MEM_TYPE_CPU && inputFrame.csp != GetEncoderCSP(inputParam)) {
             amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
-            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop());
+            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_cl));
             shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
             param->frameIn = inputFrame;
             param->frameOut.csp = param->frameIn.csp;
             param->frameOut.mem_type = RGY_MEM_TYPE_GPU_IMAGE;
             param->baseFps = m_encFps;
             param->bOutOverwrite = false;
-            auto sts = filterCrop->init(param, m_pLog, m_cl);
+            auto sts = filterCrop->init(param, m_pLog);
             if (sts != RGY_ERR_NONE) {
                 return sts;
             }
@@ -1040,7 +1075,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             m_encFps = param->baseFps;
         }
         amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
-        unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop());
+        unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_cl));
         shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
         param->frameIn = inputFrame;
         param->frameOut.csp = GetEncoderCSP(inputParam);
@@ -1049,7 +1084,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         param->frameOut.mem_type = RGY_MEM_TYPE_GPU_IMAGE;
         param->baseFps = m_encFps;
         param->bOutOverwrite = false;
-        auto sts = filterCrop->init(param, m_pLog, m_cl);
+        auto sts = filterCrop->init(param, m_pLog);
         if (sts != RGY_ERR_NONE) {
             return sts;
         }
@@ -1059,6 +1094,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
     }
+    m_picStruct = inputFrame.picstruct;
     return RGY_ERR_NONE;
 }
 
@@ -1339,7 +1375,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     //m_params.SetParam(AMF_PARAM_END_OF_SEQUENCE(prm->codec),                false);
     m_params.SetParam(AMF_PARAM_INSERT_AUD(prm->codec),                     false);
     if (prm->codec == RGY_CODEC_H264) {
-        m_params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)((prm->input.picstruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
+        m_params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)((m_picStruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
 
         m_params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN, (amf_int64)prm->nBframes);
         if (prm->nBframes > 0) {

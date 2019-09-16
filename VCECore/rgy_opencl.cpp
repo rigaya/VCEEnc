@@ -211,6 +211,16 @@ static const auto RGY_ERR_TO_OPENCL = make_array<std::pair<RGY_ERR, cl_int>>(
 );
 MAP_PAIR_0_1(err, rgy, RGY_ERR, cl, cl_int, RGY_ERR_TO_OPENCL, RGY_ERR_UNKNOWN, CL_INVALID_VALUE);
 
+std::vector<cl_event> toVec(const std::vector<RGYOpenCLEvent>& wait_list) {
+    std::vector<cl_event> events;
+    if (wait_list.size() > 0) {
+        for (auto &event : wait_list) {
+            events.push_back(event());
+        }
+    }
+    return events;
+}
+
 int initOpenCLGlobal() {
     if (RGYOpenCL::openCLHandle != nullptr) {
         return 0;
@@ -454,7 +464,7 @@ bool RGYOpenCLPlatform::isVendor(const char *vendor) {
 
 RGYOpenCLContext::RGYOpenCLContext(shared_ptr<RGYOpenCLPlatform> platform, shared_ptr<RGYLog> pLog) :
     m_platform(std::move(platform)),
-    m_context(std::unique_ptr<std::remove_pointer<cl_context>::type, decltype(clReleaseContext)>(nullptr, clReleaseContext)),
+    m_context(nullptr, clReleaseContext),
     m_queue(),
     m_pLog(pLog),
     m_copyI2B(),
@@ -501,22 +511,31 @@ RGY_ERR RGYOpenCLContext::createContext() {
         return err_cl_to_rgy(err);
     }
     for (int idev = 0; idev < (int)m_platform->devs().size(); idev++) {
-        try {
-            m_queue.push_back(std::move(RGYOpenCLQueue(clCreateCommandQueue(m_context.get(), m_platform->dev(idev), 0, &err))));
-        } catch (...) {
-            m_pLog->write(RGY_LOG_ERROR, _T("Crush (clCreateCommandQueue)\n"));
-            RGYOpenCL::openCLCrush = true; //クラッシュフラグを立てる
-            return RGY_ERR_OPENCL_CRUSH;
-        }
+        m_queue.push_back(std::move(createQueue(m_platform->dev(idev))));
     }
     return RGY_ERR_NONE;
 }
 
-RGYOpenCLKernelLauncher::RGYOpenCLKernelLauncher(cl_kernel kernel, std::string kernelName, cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, shared_ptr<RGYLog> pLog) :
-    m_kernel(kernel), m_kernelName(kernelName), m_queue(queue), m_local(local), m_global(global), m_pLog(pLog) {
+RGYOpenCLQueue RGYOpenCLContext::createQueue(cl_device_id devid) {
+    RGYOpenCLQueue queue;
+    cl_int err = RGY_ERR_NONE;
+    try {
+        queue = std::move(RGYOpenCLQueue(clCreateCommandQueue(m_context.get(), devid, 0, &err), devid));
+        if (err != RGY_ERR_NONE) {
+            m_pLog->write(RGY_LOG_ERROR, _T("Error (clCreateCommandQueue): %s\n"), cl_errmes(err));
+        }
+    } catch (...) {
+        m_pLog->write(RGY_LOG_ERROR, _T("Crush (clCreateCommandQueue)\n"));
+        RGYOpenCL::openCLCrush = true; //クラッシュフラグを立てる
+    }
+    return std::move(queue);
 }
 
-RGY_ERR RGYOpenCLKernelLauncher::launch(std::vector<void *> arg_ptrs, std::vector<size_t> arg_size) const {
+RGYOpenCLKernelLauncher::RGYOpenCLKernelLauncher(cl_kernel kernel, std::string kernelName, cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, shared_ptr<RGYLog> pLog, const std::vector<RGYOpenCLEvent>& wait_events, RGYOpenCLEvent *event) :
+    m_kernel(kernel), m_kernelName(kernelName), m_queue(queue), m_local(local), m_global(global), m_pLog(pLog), m_wait_events(toVec(wait_events)), m_event(event) {
+}
+
+RGY_ERR RGYOpenCLKernelLauncher::launch(std::vector<void *> arg_ptrs, std::vector<size_t> arg_size) {
     assert(arg_ptrs.size() == arg_size.size());
     for (int i = 0; i < (int)arg_ptrs.size(); i++) {
         auto err = err_cl_to_rgy(clSetKernelArg(m_kernel, i, arg_size[i], arg_ptrs[i]));
@@ -525,8 +544,11 @@ RGY_ERR RGYOpenCLKernelLauncher::launch(std::vector<void *> arg_ptrs, std::vecto
             return err;
         }
     }
-
-    auto err = err_cl_to_rgy(clEnqueueNDRangeKernel(m_queue, m_kernel, 3, NULL, m_global(), m_local(), 0, NULL, NULL));
+    auto globalCeiled = m_global.ceilGlobal(m_local);
+    auto err = err_cl_to_rgy(clEnqueueNDRangeKernel(m_queue, m_kernel, 3, NULL, globalCeiled(), m_local(),
+        (int)m_wait_events.size(),
+        (m_wait_events.size() > 0) ? m_wait_events.data() : nullptr,
+        (m_event) ? m_event->reset_ptr() : nullptr));
     if (err != CL_SUCCESS) {
         m_pLog->write(RGY_LOG_ERROR, _T("Error: Failed to run kernel \"%s\": %s\n"), char_to_tstring(m_kernelName).c_str(), cl_errmes(err));
         return err;
@@ -558,7 +580,15 @@ RGYOpenCLProgram::~RGYOpenCLProgram() {
 };
 
 RGYOpenCLKernelLauncher RGYOpenCLKernel::config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global) {
-    return RGYOpenCLKernelLauncher(m_kernel, m_kernelName, queue, local, global, m_pLog);
+    return RGYOpenCLKernelLauncher(m_kernel, m_kernelName, queue, local, global, m_pLog, {}, nullptr);
+}
+
+RGYOpenCLKernelLauncher RGYOpenCLKernel::config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, RGYOpenCLEvent *event) {
+    return RGYOpenCLKernelLauncher(m_kernel, m_kernelName, queue, local, global, m_pLog, {}, event);
+}
+
+RGYOpenCLKernelLauncher RGYOpenCLKernel::config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+    return RGYOpenCLKernelLauncher(m_kernel, m_kernelName, queue, local, global, m_pLog, wait_events, event);
 }
 
 RGYOpenCLKernel RGYOpenCLProgram::kernel(const char *kernelName) {
@@ -570,7 +600,46 @@ RGYOpenCLKernel RGYOpenCLProgram::kernel(const char *kernelName) {
     return RGYOpenCLKernel(kernel, kernelName, m_pLog);
 }
 
-RGYOpenCLQueue::RGYOpenCLQueue(cl_command_queue queue) : m_queue(std::move(unique_queue(queue, clReleaseCommandQueue))) {};
+RGY_ERR RGYCLBufMap::map(cl_map_flags map_flags, size_t size, cl_command_queue queue) {
+    return map(map_flags, size, queue, {});
+}
+
+RGY_ERR RGYCLBufMap::map(cl_map_flags map_flags, size_t size, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events) {
+    m_queue = queue;
+    const std::vector<cl_event> v_wait_list = toVec(wait_events);
+    const cl_event *wait_list = (v_wait_list.size() > 0) ? v_wait_list.data() : nullptr;
+    cl_int err = 0;
+    m_hostPtr = clEnqueueMapBuffer(m_queue, m_mem, false, map_flags, 0, size, (int)wait_events.size(), wait_list, m_eventMap.reset_ptr(), &err);
+    return err_cl_to_rgy(err);
+}
+
+RGY_ERR RGYCLBufMap::unmap() {
+    return unmap(m_queue);
+}
+RGY_ERR RGYCLBufMap::unmap(cl_command_queue queue) {
+    return unmap(queue, {});
+}
+RGY_ERR RGYCLBufMap::unmap(cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events) {
+    m_queue = queue;
+    const std::vector<cl_event> v_wait_list = toVec(wait_events);
+    const cl_event *wait_list = (v_wait_list.size() > 0) ? v_wait_list.data() : nullptr;
+    return err_cl_to_rgy(clEnqueueUnmapMemObject(m_queue, m_mem, m_hostPtr, (int)wait_events.size(), wait_list, m_eventMap.reset_ptr()));
+}
+
+RGY_ERR RGYCLBuf::queueMapBuffer(cl_command_queue queue, cl_map_flags map_flags, const std::vector<RGYOpenCLEvent> &wait_events) {
+    return m_mapped.map(map_flags, m_size, queue, wait_events);
+}
+
+RGY_ERR RGYCLBuf::unmapBuffer() {
+    return m_mapped.unmap();
+}
+RGY_ERR RGYCLBuf::unmapBuffer(cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events) {
+    return m_mapped.unmap(queue, wait_events);
+}
+
+RGYOpenCLQueue::RGYOpenCLQueue() : m_queue(nullptr, clReleaseCommandQueue), m_devid(0) {};
+
+RGYOpenCLQueue::RGYOpenCLQueue(cl_command_queue queue, cl_device_id devid) : m_queue(queue, clReleaseCommandQueue), m_devid(devid) {};
 
 RGYOpenCLQueue::~RGYOpenCLQueue() {
     m_queue.reset();
@@ -589,19 +658,35 @@ RGY_ERR RGYOpenCLQueue::finish() const {
     }
     return err_cl_to_rgy(clFinish(m_queue.get()));
 }
+RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *dst, const FrameInfo *src) {
+    return copyPlane(dst, src, nullptr);
+}
+RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop) {
+    return copyPlane(dst, src, srcCrop, RGYDefaultQueue);
+}
+RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue) {
+    return copyPlane(dst, src, srcCrop, queue, {}, nullptr);
+}
+RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, RGYOpenCLEvent *event) {
+    return copyPlane(dst, src, srcCrop, queue, {}, event);
+}
 
-RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDst, const FrameInfo *planeSrc, const sInputCrop *planeCrop, bool blocking, int queue_id) {
+RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDst, const FrameInfo *planeSrc, const sInputCrop *planeCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     cl_int err = CL_SUCCESS;
     const int pixel_size = RGY_CSP_BIT_DEPTH[planeDst->csp] > 8 ? 2 : 1;
+    queue = (queue != RGYDefaultQueue) ? queue : m_queue[0].get();
+    const std::vector<cl_event> v_wait_list = toVec(wait_events);
+    const int wait_count = (int)v_wait_list.size();
+    const cl_event *wait_list = (wait_count > 0) ? v_wait_list.data() : nullptr;
+    cl_event *event_ptr = (event) ? event->reset_ptr() : nullptr;
 
-    cl_event *ret_event = nullptr;
     size_t dst_origin[3] = { 0, 0, 0 };
     size_t src_origin[3] = { 0, 0, 0 };
     size_t region[3] = { (size_t)planeDst->width * pixel_size, (size_t)planeDst->height, 1 };
     if (planeSrc->mem_type == RGY_MEM_TYPE_GPU) {
         if (planeDst->mem_type == RGY_MEM_TYPE_GPU) {
-            err = clEnqueueCopyBufferRect(m_queue[queue_id].get(), (cl_mem)planeSrc->ptr[0], (cl_mem)planeDst->ptr[0], src_origin, dst_origin,
-                region, planeSrc->pitch[0], 0, planeDst->pitch[0], 0, 0, nullptr, ret_event);
+            err = clEnqueueCopyBufferRect(queue, (cl_mem)planeSrc->ptr[0], (cl_mem)planeDst->ptr[0], src_origin, dst_origin,
+                region, planeSrc->pitch[0], 0, planeDst->pitch[0], 0, wait_count, wait_list, event_ptr);
         } else if (planeDst->mem_type == RGY_MEM_TYPE_GPU_IMAGE) {
             if (!m_copyB2I) {
                 const auto options = strsprintf("-D TypeIn=%s -D TypeOut=%s -D IMAGE_SRC=0 -D IMAGE_DST=1 -D in_bit_depth=%d -D out_bit_depth=%d",
@@ -615,13 +700,13 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDst, const FrameInfo *planeS
             }
             RGYWorkSize local(32, 8);
             RGYWorkSize global(planeDst->width, planeDst->height);
-            auto rgy_err = m_copyB2I->kernel("kernel_copy_plane").config(m_queue[queue_id].get(), local, global).launch(
+            auto rgy_err = m_copyB2I->kernel("kernel_copy_plane").config(queue, local, global, wait_events, event).launch(
                 (cl_mem)planeDst->ptr[0], planeDst->pitch[0], (cl_mem)planeSrc->ptr[0], planeSrc->pitch[0], planeSrc->width, planeSrc->height,
                 planeCrop->e.left, planeCrop->e.up);
             err = err_rgy_to_cl(rgy_err);
         } else if (planeDst->mem_type == RGY_MEM_TYPE_CPU) {
-            err = clEnqueueReadBufferRect(m_queue[queue_id].get(), (cl_mem)planeSrc->ptr[0], blocking, src_origin, dst_origin,
-                region, planeSrc->pitch[0], 0, planeDst->pitch[0], 0, planeDst->ptr[0], 0, nullptr, ret_event);
+            err = clEnqueueReadBufferRect(queue, (cl_mem)planeSrc->ptr[0], false, src_origin, dst_origin,
+                region, planeSrc->pitch[0], 0, planeDst->pitch[0], 0, planeDst->ptr[0], wait_count, wait_list, event_ptr);
         } else {
             return RGY_ERR_UNSUPPORTED;
         }
@@ -639,28 +724,28 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDst, const FrameInfo *planeS
             }
             RGYWorkSize local(32, 8);
             RGYWorkSize global(planeDst->width, planeDst->height);
-            auto rgy_err = m_copyI2B->kernel("kernel_copy_plane").config(m_queue[queue_id].get(), local, global).launch(
+            auto rgy_err = m_copyI2B->kernel("kernel_copy_plane").config(queue, local, global, wait_events, event).launch(
                 (cl_mem)planeDst->ptr[0], planeDst->pitch[0], (cl_mem)planeSrc->ptr[0], planeSrc->pitch[0], planeSrc->width, planeSrc->height,
                 planeCrop->e.left, planeCrop->e.up);
             err = err_rgy_to_cl(rgy_err);
         } else if (planeDst->mem_type == RGY_MEM_TYPE_GPU_IMAGE) {
             clGetImageInfo((cl_mem)planeDst->ptr[0], CL_IMAGE_WIDTH, sizeof(region[0]), &region[0], nullptr);
-            err = clEnqueueCopyImage(m_queue[queue_id].get(), (cl_mem)planeSrc->ptr[0], (cl_mem)planeDst->ptr[0], src_origin, dst_origin, region, 0, nullptr, ret_event);
+            err = clEnqueueCopyImage(queue, (cl_mem)planeSrc->ptr[0], (cl_mem)planeDst->ptr[0], src_origin, dst_origin, region, wait_count, wait_list, event_ptr);
         } else if (planeDst->mem_type == RGY_MEM_TYPE_CPU) {
             clGetImageInfo((cl_mem)planeSrc->ptr[0], CL_IMAGE_WIDTH, sizeof(region[0]), &region[0], nullptr);
-            err = clEnqueueReadImage(m_queue[queue_id].get(), (cl_mem)planeSrc->ptr[0], blocking, dst_origin,
-                region, planeDst->pitch[0], 0, planeDst->ptr[0], 0, nullptr, ret_event);
+            err = clEnqueueReadImage(queue, (cl_mem)planeSrc->ptr[0], false, dst_origin,
+                region, planeDst->pitch[0], 0, planeDst->ptr[0], wait_count, wait_list, event_ptr);
         } else {
             return RGY_ERR_UNSUPPORTED;
         }
     } else if (planeSrc->mem_type == RGY_MEM_TYPE_CPU) {
         if (planeDst->mem_type == RGY_MEM_TYPE_GPU) {
-            err = clEnqueueWriteBufferRect(m_queue[queue_id].get(), (cl_mem)planeDst->ptr[0], blocking, dst_origin, src_origin,
-                region, planeDst->pitch[0], 0, planeSrc->pitch[0], 0, planeSrc->ptr[0], 0, nullptr, ret_event);
+            err = clEnqueueWriteBufferRect(queue, (cl_mem)planeDst->ptr[0], false, dst_origin, src_origin,
+                region, planeDst->pitch[0], 0, planeSrc->pitch[0], 0, planeSrc->ptr[0], wait_count, wait_list, event_ptr);
         } else if (planeDst->mem_type == RGY_MEM_TYPE_GPU_IMAGE) {
             clGetImageInfo((cl_mem)planeDst->ptr[0], CL_IMAGE_WIDTH, sizeof(region[0]), &region[0], nullptr);
-            err = clEnqueueWriteImage(m_queue[queue_id].get(), (cl_mem)planeDst->ptr[0], blocking, src_origin,
-                region, planeSrc->pitch[0], 0, (void *)planeSrc->ptr[0], 0, nullptr, ret_event);
+            err = clEnqueueWriteImage(queue, (cl_mem)planeDst->ptr[0], false, src_origin,
+                region, planeSrc->pitch[0], 0, (void *)planeSrc->ptr[0], wait_count, wait_list, event_ptr);
         } else if (planeDst->mem_type == RGY_MEM_TYPE_CPU) {
             for (int y = 0; y < planeDst->height; y++) {
                 memcpy(planeDst->ptr[0] + (y + dst_origin[1]) * planeDst->pitch[0] + dst_origin[0] * pixel_size,
@@ -675,8 +760,20 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDst, const FrameInfo *planeS
     }
     return err_cl_to_rgy(err);
 }
+RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src) {
+    return copyFrame(dst, src, nullptr);
+}
+RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop) {
+    return copyFrame(dst, src, srcCrop, RGYDefaultQueue);
+}
+RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue) {
+    return copyFrame(dst, src, srcCrop, queue, {}, nullptr);
+}
+RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, RGYOpenCLEvent *event) {
+    return copyFrame(dst, src, srcCrop, queue, {}, event);
+}
 
-RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, bool blocking, int queue_id) {
+RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     size_t dst_origin[3] = { 0, 0, 0 };
     if (dst->csp != src->csp) {
         m_pLog->write(RGY_LOG_ERROR, _T("in/out csp should be same in copyFrame.\n"));
@@ -695,7 +792,9 @@ RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const 
             src_origin[0] = planeCrop.e.left * pixel_size;
             src_origin[1] = planeCrop.e.up;
         }
-        err = copyPlane(&planeDst, &planeSrc, &planeCrop, blocking, queue_id);
+        err = copyPlane(&planeDst, &planeSrc, &planeCrop, queue,
+            (i == 0) ? wait_events : std::vector<RGYOpenCLEvent>(),
+            (i+1 == RGY_CSP_PLANES[dst->csp]) ? event : nullptr);
         if (err != RGY_ERR_NONE) {
             m_pLog->write(RGY_LOG_ERROR, _T("Failed to copy frame(%d): %s\n"), i, cl_errmes(err));
             return err_cl_to_rgy(err);
@@ -779,15 +878,44 @@ std::unique_ptr<RGYCLBuf> RGYOpenCLContext::createBuffer(size_t size, cl_mem_fla
     return std::make_unique<RGYCLBuf>(mem, flags, size);
 }
 
-unique_ptr<RGYCLBuf> RGYOpenCLContext::copyDataToBuffer(const void *host_ptr, size_t size, cl_mem_flags flags, int queue_id) {
+unique_ptr<RGYCLBuf> RGYOpenCLContext::copyDataToBuffer(const void *host_ptr, size_t size, cl_mem_flags flags, cl_command_queue queue) {
     auto buffer = createBuffer(size, flags);
     if (buffer != nullptr) {
-        cl_int err = clEnqueueWriteBuffer(m_queue[queue_id].get(), buffer->mem, true, 0, size, host_ptr, 0, nullptr, nullptr);
+        cl_int err = clEnqueueWriteBuffer((queue != RGYDefaultQueue) ? queue : m_queue[0].get(), buffer->mem(), true, 0, size, host_ptr, 0, nullptr, nullptr);
         if (err != CL_SUCCESS) {
             m_pLog->write(RGY_LOG_ERROR, _T("Failed to copy data to buffer: %s\n"), cl_errmes(err));
         }
     }
     return buffer;
+}
+
+RGY_ERR RGYOpenCLContext::createImageFromPlane(cl_mem &image, cl_mem buffer, int bit_depth, int channel_order, bool normalized, int pitch, int width, int height, cl_mem_flags flags) {
+    cl_image_format format;
+    format.image_channel_order = channel_order; //チャンネル数
+    format.image_channel_data_type =  //データ型
+        (normalized) ? ((bit_depth > 8) ? CL_UNORM_INT16 : CL_UNORM_INT8)
+                     : ((bit_depth > 8) ? CL_UNSIGNED_INT16 : CL_UNSIGNED_INT8);
+
+    cl_image_desc img_desc;
+    img_desc.image_type = CL_MEM_OBJECT_IMAGE2D; //2D
+    img_desc.image_width = width;   //サイズ
+    img_desc.image_height = height; //サイズ
+    img_desc.image_depth = 0;
+    img_desc.image_array_size = 0;
+    img_desc.image_row_pitch = pitch;
+    img_desc.image_slice_pitch = 0;
+    img_desc.num_mip_levels = 0;
+    img_desc.num_samples = 0;
+    img_desc.buffer = 0;
+    img_desc.mem_object = buffer;
+
+    cl_int err = CL_SUCCESS;
+    image = (cl_mem)clCreateImage(m_context.get(),
+        flags,
+        &format, &img_desc,
+        nullptr,
+        &err);
+    return err_cl_to_rgy(err);
 }
 
 unique_ptr<RGYCLFrame> RGYOpenCLContext::createImageFromFrameBuffer(const FrameInfo &frame, bool normalized, cl_mem_flags flags) {
@@ -796,34 +924,10 @@ unique_ptr<RGYCLFrame> RGYOpenCLContext::createImageFromFrameBuffer(const FrameI
 
     for (int i = 0; i < RGY_CSP_PLANES[frame.csp]; i++) {
         const auto plane = getPlane(&frame, (RGY_PLANE)i);
-        //パラメータを適切に設定する
-        cl_image_format format;
-        format.image_channel_order = CL_R;         //チャンネル数
-        format.image_channel_data_type =  //データ型
-            (normalized) ? ((RGY_CSP_BIT_DEPTH[frame.csp] > 8) ? CL_UNORM_INT16 : CL_UNORM_INT8)
-                         : ((RGY_CSP_BIT_DEPTH[frame.csp] > 8) ? CL_UNSIGNED_INT16 : CL_UNSIGNED_INT8);
-
-        cl_image_desc img_desc;
-        img_desc.image_type = CL_MEM_OBJECT_IMAGE2D; //2D
-        img_desc.image_width = plane.width;   //サイズ
-        img_desc.image_height = plane.height; //サイズ
-        img_desc.image_depth = 0;
-        img_desc.image_array_size = 0;
-        img_desc.image_row_pitch = plane.pitch[0];
-        img_desc.image_slice_pitch = 0;
-        img_desc.num_mip_levels = 0;
-        img_desc.num_samples = 0;
-        img_desc.buffer = 0;
-        img_desc.mem_object = (cl_mem)plane.ptr[0]; //作成したOpenCLバッファをここに指定する
-
-        cl_int err = CL_SUCCESS;
-        frameImage.ptr[i] = (uint8_t *)clCreateImage(m_context.get(),
-            flags,
-            &format, &img_desc,
-            nullptr,
-            &err);
+        cl_mem image;
+        auto err = createImageFromPlane(image, (cl_mem)plane.ptr[0], RGY_CSP_BIT_DEPTH[frame.csp], CL_R, normalized, plane.pitch[0], plane.width, plane.height, flags);
         if (err != CL_SUCCESS) {
-            m_pLog->write(RGY_LOG_ERROR, _T("Failed to allocate memory: %s\n"), cl_errmes(err));
+            m_pLog->write(RGY_LOG_ERROR, _T("Failed to create image from buffer memory: %s\n"), cl_errmes(err));
             for (int j = i-1; j >= 0; j--) {
                 if (frameImage.ptr[j] != nullptr) {
                     clReleaseMemObject((cl_mem)frameImage.ptr[j]);
@@ -832,6 +936,7 @@ unique_ptr<RGYCLFrame> RGYOpenCLContext::createImageFromFrameBuffer(const FrameI
             }
             return std::make_unique<RGYCLFrame>();
         }
+        frameImage.ptr[i] = (uint8_t *)image;
     }
     return std::make_unique<RGYCLFrame>(frameImage, flags);
 }

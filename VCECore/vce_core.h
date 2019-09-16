@@ -163,6 +163,7 @@ protected:
     int                m_encWidth;
     int                m_encHeight;
     rgy_rational<int>  m_sar;
+    RGY_PICSTRUCT      m_picStruct;
 
     DeviceDX9 m_dx9;
     DeviceDX11 m_dx11;

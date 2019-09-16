@@ -226,6 +226,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="vce_filter_afs.cpp" />
+    <ClCompile Include="vce_filter_afs_analyze.cpp" />
+    <ClCompile Include="vce_filter_afs_filter.cpp" />
+    <ClCompile Include="vce_filter_afs_merge.cpp" />
+    <ClCompile Include="vce_filter_afs_synthesize.cpp" />
     <ClCompile Include="vce_filter_crop.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -293,6 +298,7 @@
     <ClInclude Include="vce_core.h" />
     <ClInclude Include="rgy_input.h" />
     <ClInclude Include="vce_filter.h" />
+    <ClInclude Include="vce_filter_afs.h" />
     <ClInclude Include="vce_util.h" />
     <ClInclude Include="vce_param.h" />
     <ClInclude Include="rgy_version.h" />
@@ -394,6 +400,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
+    <None Include="vce_filter_afs_analyze.cl" />
+    <None Include="vce_filter_afs_filter.cl" />
+    <None Include="vce_filter_afs_merge.cl" />
+    <None Include="vce_filter_afs_synthesize.cl" />
     <None Include="vce_filter_resize.cl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>

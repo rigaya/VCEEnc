@@ -49,6 +49,8 @@
 #define CL_EXTERN extern
 #endif
 
+#define RGYDefaultQueue 0
+
 CL_EXTERN void *(CL_API_CALL *f_clGetExtensionFunctionAddressForPlatform)(cl_platform_id  platform, const char *funcname);
 
 CL_EXTERN cl_int (CL_API_CALL* f_clGetPlatformIDs)(cl_uint num_entries, cl_platform_id *platforms, cl_uint *num_platforms);
@@ -167,6 +169,9 @@ CL_EXTERN cl_int(CL_API_CALL *f_clFinish)(cl_command_queue command_queue);
 
 MAP_PAIR_0_1_PROTO(err, rgy, RGY_ERR, cl, cl_int);
 
+typedef std::unique_ptr<std::remove_pointer<cl_context>::type, decltype(clReleaseContext)> unique_context;
+typedef std::unique_ptr<std::remove_pointer<cl_command_queue>::type, decltype(clReleaseCommandQueue)> unique_queue;
+
 static const TCHAR *cl_errmes(cl_int err) {
     return get_err_mes(err_cl_to_rgy(err));
 }
@@ -205,20 +210,103 @@ static const TCHAR *getMemcpyKindStr(RGY_MEM_TYPE inputDevice, RGY_MEM_TYPE outp
     return getMemcpyKindStr(getMemcpyKind(inputDevice, outputDevice));
 }
 
-struct RGYCLBuf {
-    cl_mem mem;
-    cl_mem_flags flags;
-    size_t size;
-    RGYCLBuf(cl_mem mem_, cl_mem_flags flags_, size_t size_) : mem(mem_), flags(flags_), size(size_) {
+struct cl_event_deleter {
+    void operator()(cl_event *e) const {
+        if (*e) {
+            clReleaseEvent(*e);
+        }
+        delete e;
+    }
+};
+
+class RGYOpenCLEvent {
+public:
+    RGYOpenCLEvent(const cl_event event) : event_(new cl_event, cl_event_deleter()) {
+        *event_ = event;
+    }
+
+    RGYOpenCLEvent() : event_(new cl_event, cl_event_deleter()) {
+        *event_ = nullptr;
+    }
+
+    void wait() const {
+        clWaitForEvents(1, &(*event_));
+    }
+    void reset() {
+        if (*event_ != nullptr) {
+            event_ = std::shared_ptr<cl_event>(new cl_event, cl_event_deleter());
+        }
+        *event_ = nullptr;
+    }
+    cl_event *reset_ptr() {
+        reset();
+        return &(*event_);
+    }
+    cl_event &operator()() { return *event_; }
+    const cl_event &operator()() const { return *event_; }
+    const cl_event *ptr() const { return &(*event_); }
+private:
+    std::shared_ptr<cl_event> event_;
+};
+
+class RGYCLBufMap {
+public:
+    RGYCLBufMap(cl_mem mem) : m_mem(mem), m_queue(RGYDefaultQueue), m_hostPtr(nullptr), m_eventMap() {};
+    ~RGYCLBufMap() {
+        unmap();
+    }
+    RGY_ERR map(cl_map_flags map_flags, size_t size, cl_command_queue queue);
+    RGY_ERR map(cl_map_flags map_flags, size_t size, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events);
+    RGY_ERR unmap();
+    RGY_ERR unmap(cl_command_queue queue);
+    RGY_ERR unmap(cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events);
+
+    const RGYOpenCLEvent &event() const { return m_eventMap; }
+    RGYOpenCLEvent &event() { return m_eventMap; }
+    const void *ptr() const { return m_hostPtr; }
+    void *ptr() { return m_hostPtr; }
+protected:
+    RGYCLBufMap(const RGYCLBufMap &) = delete;
+    void operator =(const RGYCLBufMap &) = delete;
+    cl_mem m_mem;
+    cl_command_queue m_queue;
+    void *m_hostPtr;
+    RGYOpenCLEvent m_eventMap;
+};
+
+class RGYCLBuf {
+public:
+    RGYCLBuf(cl_mem mem, cl_mem_flags flags, size_t size) : m_mem(mem), m_flags(flags), m_size(size), m_mapped(mem) {
     };
     ~RGYCLBuf() {
-        if (mem) {
-            clReleaseMemObject(mem);
+        clear();
+    }
+    void clear() {
+        m_mapped.unmap();
+        if (m_mem) {
+            clReleaseMemObject(m_mem);
+            m_mem = nullptr;
         }
     }
+    cl_mem &mem() { return m_mem; }
+    const cl_mem &mem() const { return m_mem; }
+    size_t size() const { return m_size; }
+    cl_mem_flags flags() const { return m_flags; }
+
+    RGY_ERR queueMapBuffer(cl_command_queue queue, cl_map_flags map_flags, const std::vector<RGYOpenCLEvent> &wait_events = {});
+    const RGYOpenCLEvent &mapEvent() const { return m_mapped.event(); }
+    const void *mappedPtr() const { return m_mapped.ptr(); }
+    void *mappedPtr() { return m_mapped.ptr(); }
+    RGY_ERR unmapBuffer();
+    RGY_ERR unmapBuffer(cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events = {});
 protected:
     RGYCLBuf(const RGYCLBuf &) = delete;
     void operator =(const RGYCLBuf &) = delete;
+
+    cl_mem m_mem;
+    cl_mem_flags m_flags;
+    size_t m_size;
+    RGYCLBufMap m_mapped;
 };
 
 struct RGYCLFrame {
@@ -341,27 +429,49 @@ struct RGYWorkSize {
         w[1] = y;
         w[2] = z;
     }
+    size_t total() const {
+        return w[0] * w[1] * w[2];
+    }
     const size_t *operator()() const {
         return &w[0];
     }
     const size_t operator()(int i) const {
         return w[i];
     }
+    RGYWorkSize groups(const RGYWorkSize &local) const {
+        RGYWorkSize group = *this;
+        for (int i = 0; i < 3; i++) {
+            if (local.w[i] > 0) {
+                group.w[i] = divCeil(w[i], local.w[i]);
+            }
+        }
+        return group;
+    }
+    RGYWorkSize ceilGlobal(const RGYWorkSize& local) const {
+        const RGYWorkSize group = groups(local);
+        RGYWorkSize global = *this;
+        for (int i = 0; i < 3; i++) {
+            if (local.w[i] > 0) {
+                global.w[i] = group.w[i] * local.w[i];
+            }
+        }
+        return global;
+    }
 };
 
 class RGYOpenCLKernelLauncher {
 public:
-    RGYOpenCLKernelLauncher(cl_kernel kernel, std::string kernelName, cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, shared_ptr<RGYLog> pLog);
+    RGYOpenCLKernelLauncher(cl_kernel kernel, std::string kernelName, cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, shared_ptr<RGYLog> pLog, const std::vector<RGYOpenCLEvent>& wait_events, RGYOpenCLEvent *event);
     virtual ~RGYOpenCLKernelLauncher() {};
 
-    RGY_ERR launch(std::vector<void *> arg_ptrs = std::vector<void *>(), std::vector<size_t> arg_size = std::vector<size_t>()) const;
+    RGY_ERR launch(std::vector<void *> arg_ptrs = std::vector<void *>(), std::vector<size_t> arg_size = std::vector<size_t>());
 
     template <typename... ArgTypes>
-    RGY_ERR operator()(ArgTypes... args) const {
+    RGY_ERR operator()(ArgTypes... args) {
         return launch(args...);
     }
     template <typename... ArgTypes>
-    RGY_ERR launch(ArgTypes... args) const {
+    RGY_ERR launch(ArgTypes... args) {
         return this->launch(
             std::vector<void *>({ (void *)&args... }),
             std::vector<size_t>({ sizeof(args)... })
@@ -374,6 +484,8 @@ protected:
     RGYWorkSize m_local;
     RGYWorkSize m_global;
     shared_ptr<RGYLog> m_pLog;
+    std::vector<cl_event> m_wait_events;
+    RGYOpenCLEvent *m_event;
 };
 
 class RGYOpenCLKernel {
@@ -381,7 +493,9 @@ public:
     RGYOpenCLKernel() : m_kernel(), m_kernelName(), m_pLog() {};
     RGYOpenCLKernel(cl_kernel kernel, std::string kernelName, shared_ptr<RGYLog> pLog);
     virtual ~RGYOpenCLKernel();
-    RGYOpenCLKernelLauncher config(cl_command_queue queue, const RGYWorkSize& local, const RGYWorkSize& global);
+    RGYOpenCLKernelLauncher config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global);
+    RGYOpenCLKernelLauncher config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, RGYOpenCLEvent *event);
+    RGYOpenCLKernelLauncher config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr);
 protected:
     cl_kernel m_kernel;
     std::string m_kernelName;
@@ -399,16 +513,27 @@ protected:
     shared_ptr<RGYLog> m_pLog;
 };
 
-typedef std::unique_ptr<std::remove_pointer<cl_context>::type, decltype(clReleaseContext)> unique_context;
-typedef std::unique_ptr<std::remove_pointer<cl_command_queue>::type, decltype(clReleaseCommandQueue)> unique_queue;
-
 class RGYOpenCLQueue {
 public:
-    RGYOpenCLQueue(cl_command_queue queue);
+    RGYOpenCLQueue();
+    RGYOpenCLQueue(cl_command_queue queue, cl_device_id devid);
     RGYOpenCLQueue(RGYOpenCLQueue &&) = default;
+    RGYOpenCLQueue &operator=(RGYOpenCLQueue &&rhs) {
+        if (this != &rhs) {
+            m_queue = std::move(rhs.m_queue);
+            m_devid = rhs.m_devid;
+        }
+        return *this;
+    }
     virtual ~RGYOpenCLQueue();
-    cl_command_queue get() const {
+
+    cl_command_queue operator()() { return m_queue.get(); }
+    const cl_command_queue operator()() const { return m_queue.get(); }
+    const cl_command_queue get() const {
         return m_queue.get();
+    }
+    cl_device_id devid() const {
+        return m_devid;
     }
     RGY_ERR flush() const;
     RGY_ERR finish() const;
@@ -416,6 +541,7 @@ protected:
     RGYOpenCLQueue(const RGYOpenCLQueue &) = delete;
     void operator =(const RGYOpenCLQueue &) = delete;
     unique_queue m_queue;
+    cl_device_id m_devid;
 };
 
 class RGYOpenCLContext {
@@ -433,12 +559,22 @@ public:
     unique_ptr<RGYOpenCLProgram> buildFile(const tstring &filename, const char *options);
     unique_ptr<RGYOpenCLProgram> buildResource(const TCHAR *name, const TCHAR *type, const char *options);
 
+    RGYOpenCLQueue createQueue(cl_device_id devid);
     unique_ptr<RGYCLBuf> createBuffer(size_t size, cl_mem_flags flags = CL_MEM_READ_WRITE, void *host_ptr = nullptr);
-    unique_ptr<RGYCLBuf> copyDataToBuffer(const void *host_ptr, size_t size, cl_mem_flags flags = CL_MEM_READ_WRITE, int queue_id = 0);
-    unique_ptr<RGYCLFrame> createImageFromFrameBuffer(const FrameInfo &frame, bool normalized, cl_mem_flags flags = CL_MEM_READ_WRITE);
+    unique_ptr<RGYCLBuf> copyDataToBuffer(const void *host_ptr, size_t size, cl_mem_flags flags = CL_MEM_READ_WRITE, cl_command_queue queue = 0);
+    RGY_ERR createImageFromPlane(cl_mem& image, cl_mem buffer, int bit_depth, int channel_order, bool normalized, int pitch, int width, int height, cl_mem_flags flags);
+    unique_ptr<RGYCLFrame> createImageFromFrameBuffer(const FrameInfo &frame, bool normalized, cl_mem_flags flags);
     unique_ptr<RGYCLFrame> createFrameBuffer(const FrameInfo &frame, cl_mem_flags flags = CL_MEM_READ_WRITE);
-    RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop = nullptr, bool blocking = false, int queue_id = 0);
-    RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop = nullptr, bool blocking = false, int queue_id = 0);
+    RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src);
+    RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop);
+    RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue);
+    RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, RGYOpenCLEvent *event);
+    RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr);
+    RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src);
+    RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop);
+    RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue);
+    RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, RGYOpenCLEvent *event);
+    RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr);
 protected:
     unique_ptr<RGYOpenCLProgram> build(const char *data, const size_t size, const char *options);
 
