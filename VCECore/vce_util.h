@@ -490,6 +490,8 @@ public:
         }
     }
 };
+#else
+typedef void RGYFrame;
 
 #endif //#if ENABLE_OPENCL
 
