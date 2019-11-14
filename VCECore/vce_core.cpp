@@ -1733,10 +1733,10 @@ RGY_ERR VCECore::run() {
         int64_t outPtsSource = outEstimatedPts;
         int64_t outDuration = outFrameDuration; //入力fpsに従ったduration
 #if ENABLE_AVSW_READER
-        if ((m_nAVSyncMode & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR)) || vpp_rff || vpp_afs_rff_aware) {
+        if ((srcTimebase.n() > 0 && srcTimebase.is_valid())
+            && ((m_nAVSyncMode & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR)) || vpp_rff || vpp_afs_rff_aware)) {
             //CFR仮定ではなく、オリジナルの時間を見る
-            outPtsSource = (srcTimebase.n() > 0 && srcTimebase.is_valid()) ? rational_rescale(inFrame->timestamp(), srcTimebase, m_outputTimebase) : outEstimatedPts;
-            outDuration = rational_rescale(inFrame->duration(), srcTimebase, m_outputTimebase);
+            outPtsSource = rational_rescale(inFrame->timestamp(), srcTimebase, m_outputTimebase);
         }
         if (outFirstPts == AV_NOPTS_VALUE) {
             outFirstPts = outPtsSource; //最初のpts
