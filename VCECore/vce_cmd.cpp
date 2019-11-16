@@ -576,15 +576,17 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, ParseCmdEr
             } else {
                 double val_float = 0.0;
                 if (1 == _stscanf_s(argsData.cachedlevel.c_str(), _T("%lf"), &val_float)) {
-                    value = (int)(val_float * 10 + 0.5);
-                    if (value == desc[get_cx_index(desc, value)].value) {
-                        pParams->codecParam[pParams->codec].nLevel = value;
-                        bParsed = true;
-                    } else {
-                        value = (int)(val_float + 0.5);
-                        if (value == desc[get_cx_index(desc, value)].value) {
-                            pParams->codecParam[pParams->codec].nLevel = value;
-                            bParsed = true;
+                    for (int i = 0; desc[i].desc; i++) {
+                        try {
+                            const int target_val = (int)(std::stod(desc[i].desc) * 1000 + 0.5);
+                            if (   (int)(val_float * 1000 + 0.5) == target_val
+                                || (int)(val_float * 100 + 0.5) == target_val) {
+                                pParams->codecParam[pParams->codec].nLevel = desc[i].value;
+                                bParsed = true;
+                                break;
+                            }
+                        } catch (...) {
+                            continue;
                         }
                     }
                 }
