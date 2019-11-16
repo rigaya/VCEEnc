@@ -1931,7 +1931,7 @@ RGY_ERR VCECore::run() {
         // apply frame-specific properties to the current frame
         m_params.Apply(pSurface, AMF_PARAM_FRAME, m_pLog.get());
         // apply dynamic properties to the encoder
-        m_params.Apply(m_pEncoder, AMF_PARAM_DYNAMIC, m_pLog.get());
+        //m_params.Apply(m_pEncoder, AMF_PARAM_DYNAMIC, m_pLog.get());
 
         pSurface->SetProperty(RGY_PROP_TIMESTAMP, pts);
         pSurface->SetProperty(RGY_PROP_DURATION, duration);
