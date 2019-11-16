@@ -159,6 +159,11 @@ const CX_DESC list_vce_quality_preset[] = {
     { NULL, NULL }
 };
 
+const CX_DESC list_vce_preanalysis_h264[] = {
+    { _T("off"), AMF_VIDEO_ENCODER_PREENCODE_DISABLED },
+    { _T("on"),  AMF_VIDEO_ENCODER_PREENCODE_ENABLED },
+};
+
 enum RGY_VPP_RESIZE_ALGO {
     RGY_VPP_RESIZE_AUTO,
     RGY_VPP_RESIZE_BILINEAR,

@@ -1324,7 +1324,6 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_MAX_LTR_FRAMES(prm->codec), (amf_int64)prm->nLTRFrames);
     m_params.SetParam(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(prm->codec),  prm->bEnableSkipFrame);
     m_params.SetParam(AMF_PARAM_RATE_CONTROL_METHOD(prm->codec),             (amf_int64)prm->rateControl);
-    m_params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), prm->preAnalysis);
     m_params.SetParam(AMF_PARAM_VBV_BUFFER_SIZE(prm->codec),                 (amf_int64)prm->nVBVBufferSize * 1000);
     m_params.SetParam(AMF_PARAM_INITIAL_VBV_BUFFER_FULLNESS(prm->codec),     (amf_int64)prm->nInitialVBVPercent);
 
@@ -1337,6 +1336,8 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     //m_params.SetParam(AMF_PARAM_END_OF_SEQUENCE(prm->codec),                false);
     m_params.SetParam(AMF_PARAM_INSERT_AUD(prm->codec),                     false);
     if (prm->codec == RGY_CODEC_H264) {
+        m_params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), (prm->preAnalysis) ? AMF_VIDEO_ENCODER_PREENCODE_ENABLED : AMF_VIDEO_ENCODER_PREENCODE_DISABLED);
+
         m_params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)((prm->input.picstruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
 
         m_params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN, (amf_int64)prm->nBframes);
@@ -1370,6 +1371,8 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             m_params.SetParam(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR, true);
         }
     } else if (prm->codec == RGY_CODEC_HEVC) {
+        m_params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), prm->preAnalysis);
+
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_TIER,                            (amf_int64)prm->codecParam[prm->codec].nTier);
 
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_I,                        (amf_int64)prm->nQPMin);
