@@ -1274,6 +1274,8 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             if (level == 0) {
                 level = calc_h264_auto_level(m_encWidth, m_encHeight, prm->nRefFrames, false,
                     m_encFps.n(), m_encFps.d(), profile, max_bitrate_kbps, vbv_bufsize_kbps);
+                //なんかLevel4.0以上でないと設定に失敗する場合がある
+                level = std::max(level, 40);
             }
             get_h264_vbv_value(&max_bitrate_kbps, &vbv_bufsize_kbps, level, profile);
         } else if (prm->codec == RGY_CODEC_HEVC) {
