@@ -201,7 +201,7 @@ static void build_full_cmd(char *cmd, size_t nSize, const CONF_GUIEX *conf, cons
     //出力ファイル
     sprintf_s(cmd + strlen(cmd), nSize - strlen(cmd), " -o \"%s\"", pe->temp_filename);
     //入力
-    sprintf_s(cmd + strlen(cmd), nSize - strlen(cmd), " --avsync vfr --sm -i -");
+    sprintf_s(cmd + strlen(cmd), nSize - strlen(cmd), " --sm -i -");
 }
 
 //並列処理時に音声データを取得する
@@ -352,6 +352,7 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
     VCEParam enc_prm;
     parse_cmd(&enc_prm, conf->vce.cmd, err);
     enc_prm.common.disableMp4Opt = pe->muxer_to_be_used != MUXER_DISABLED;
+    enc_prm.common.AVSyncMode = conf->vid.afs ? RGY_AVSYNC_VFR : RGY_AVSYNC_ASSUME_CFR;
 
     char exe_cmd[MAX_CMD_LEN] = { 0 };
     char exe_args[MAX_CMD_LEN] = { 0 };
