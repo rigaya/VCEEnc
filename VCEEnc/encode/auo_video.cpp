@@ -353,6 +353,10 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
     parse_cmd(&enc_prm, conf->vce.cmd, err);
     enc_prm.common.disableMp4Opt = pe->muxer_to_be_used != MUXER_DISABLED;
     enc_prm.common.AVSyncMode = conf->vid.afs ? RGY_AVSYNC_VFR : RGY_AVSYNC_ASSUME_CFR;
+    if (conf->vid.resize_enable) {
+        enc_prm.input.dstWidth = conf->vid.resize_width;
+        enc_prm.input.dstHeight = conf->vid.resize_height;
+    }
 
     char exe_cmd[MAX_CMD_LEN] = { 0 };
     char exe_args[MAX_CMD_LEN] = { 0 };
