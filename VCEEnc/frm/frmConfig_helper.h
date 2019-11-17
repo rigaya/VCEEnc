@@ -82,8 +82,6 @@ namespace VCEEnc {
 
     value struct VidEncInfo {
         bool hwencAvail;
-        bool h264Enc;
-        bool hevcEnc;
     };
 };
 
