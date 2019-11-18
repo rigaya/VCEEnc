@@ -281,6 +281,8 @@ struct VCEParam {
     bool interlopD3d9;
     bool interlopD3d11;
 
+    int     par[2];
+
     int     usage;
     int     rateControl;
     int     qualityPreset;

@@ -195,8 +195,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             && 2 != _stscanf_s(strInput[i], _T("%d,%d"), &value[0], &value[1])
             && 2 != _stscanf_s(strInput[i], _T("%d/%d"), &value[0], &value[1])
             && 2 != _stscanf_s(strInput[i], _T("%d:%d"), &value[0], &value[1])) {
-            pParams->input.sar[0] = 0;
-            pParams->input.sar[1] = 0;
+            pParams->par[0] = 0;
+            pParams->par[1] = 0;
             CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
             return -1;
         }
@@ -204,8 +204,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             value[0] = -value[0];
             value[1] = -value[1];
         }
-        pParams->input.sar[0] = value[0];
-        pParams->input.sar[1] = value[1];
+        pParams->par[0] = value[0];
+        pParams->par[1] = value[1];
         return 0;
     }
     if (IS_OPTION("cqp")) {

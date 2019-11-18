@@ -478,6 +478,19 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
         PrintMes(RGY_LOG_ERROR, _T("Invalid output frame size - non mod%d (height: %d).\n"), h_mul, prm->input.dstHeight);
         return RGY_ERR_INVALID_PARAM;
     }
+    if (prm->input.dstWidth < 0 && prm->input.dstHeight < 0) {
+        PrintMes(RGY_LOG_ERROR, _T("Either one of output resolution must be positive value.\n"));
+        return RGY_ERR_INVALID_VIDEO_PARAM;
+    }
+    auto outpar = std::make_pair(prm->par[0], prm->par[1]);
+    if ((!prm->par[0] || !prm->par[1]) //SAR比の指定がない
+        && prm->input.sar[0] && prm->input.sar[1] //入力側からSAR比を取得ずみ
+        && (prm->input.dstWidth == prm->input.srcWidth && prm->input.dstHeight == prm->input.srcHeight)) {//リサイズは行われない
+        outpar = std::make_pair(prm->input.sar[0], prm->input.sar[1]);
+    }
+    set_auto_resolution(prm->input.dstWidth, prm->input.dstHeight, outpar.first, outpar.second,
+        prm->input.srcWidth, prm->input.srcHeight, prm->input.sar[0], prm->input.sar[1], prm->input.crop);
+
     if (prm->codec == RGY_CODEC_UNKNOWN) {
         prm->codec = RGY_CODEC_H264;
     }
@@ -1301,7 +1314,15 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         }
     }
 
-    m_sar = rgy_rational<int>(prm->input.sar[0], prm->input.sar[1]);
+    //SAR自動設定
+    auto par = std::make_pair(prm->par[0], prm->par[1]);
+    if ((!prm->par[0] || !prm->par[1]) //SAR比の指定がない
+        && prm->input.sar[0] && prm->input.sar[1] //入力側からSAR比を取得ずみ
+        && (m_encWidth == prm->input.srcWidth && m_encHeight == prm->input.srcHeight)) {//リサイズは行われない
+        par = std::make_pair(prm->input.sar[0], prm->input.sar[1]);
+    }
+    adjust_sar(&par.first, &par.second, m_encWidth, m_encHeight);
+    m_sar = rgy_rational<int>(par.first, par.second);
 
     m_params.SetParam(VCE_PARAM_KEY_INPUT_WIDTH, prm->input.srcWidth);
     m_params.SetParam(VCE_PARAM_KEY_INPUT_HEIGHT, prm->input.srcHeight);

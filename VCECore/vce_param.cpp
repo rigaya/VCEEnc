@@ -42,6 +42,7 @@ VCEParam::VCEParam() :
     deviceID(0),
     interlopD3d9(false),
     interlopD3d11(true),
+    par(),
     usage(AMF_VIDEO_ENCODER_USAGE_TRANSCONDING),
     rateControl(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP),
     qualityPreset(0),
@@ -79,6 +80,7 @@ VCEParam::VCEParam() :
     codecParam[RGY_CODEC_HEVC].nLevel   = 0;
     codecParam[RGY_CODEC_HEVC].nProfile = AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN;
     codecParam[RGY_CODEC_HEVC].nTier    = AMF_VIDEO_ENCODER_HEVC_TIER_MAIN;
+    par[0] = par[1] = 0;
 }
 
 VCEParam::~VCEParam() {
