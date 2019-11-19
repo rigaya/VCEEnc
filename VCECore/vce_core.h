@@ -82,10 +82,10 @@ public:
     RGYLogTracer() : m_pLog() {};
     virtual ~RGYLogTracer() { m_pLog.reset(); }
     virtual void init(shared_ptr<RGYLog> pLog) { m_pLog = pLog; };
-    virtual void Write(const wchar_t *scope, const wchar_t *message) override {
+    virtual void AMF_CDECL_CALL Write(const wchar_t *scope, const wchar_t *message) override {
         m_pLog->write(RGY_LOG_INFO, _T("[%s] %s"), scope, message);
     };
-    virtual void Flush() override {
+    virtual void AMF_CDECL_CALL Flush() override {
     };
     virtual void reset() {
         m_pLog.reset();
