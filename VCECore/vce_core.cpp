@@ -539,8 +539,6 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
 }
 
 RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
-    RGY_ERR sts = RGY_ERR_NONE;
-    bool stdoutUsed = false;
     const auto outputVideoInfo = videooutputinfo(
         inputParams->codec,
         formatOut,
@@ -620,7 +618,7 @@ RGY_ERR VCECore::initDevice(const int deviceId, const bool interlopD3d9, const b
         }
     }
     auto devices = platform->devs();
-    if (devices.size() <= deviceId) {
+    if ((int)devices.size() <= deviceId) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to device #%d.\n"), deviceId);
         return RGY_ERR_DEVICE_LOST;
     }
@@ -733,7 +731,7 @@ RGY_ERR VCECore::getEncCaps(RGY_CODEC codec, amf::AMFCapsPtr &encoderCaps) {
     if (ret == AMF_OK) {
         //HEVCでのAMFComponent::GetCaps()は、AMFComponent::Init()を呼んでおかないと成功しない
         p_encoder->Init(amf::AMF_SURFACE_NV12, 1280, 720);
-        auto sts = p_encoder->GetCaps(&encoderCaps);
+        ret = p_encoder->GetCaps(&encoderCaps);
     }
     return err_to_rgy(ret);
 }
@@ -1180,7 +1178,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (encoderCaps->GetInputCaps(&inputCaps) == AMF_OK) {
             int minWidth, maxWidth;
             inputCaps->GetWidthRange(&minWidth, &maxWidth);
-            if (prm->input.srcWidth < (uint32_t)minWidth || (uint32_t)maxWidth < prm->input.srcWidth) {
+            if (prm->input.srcWidth < minWidth || maxWidth < prm->input.srcWidth) {
                 PrintMes(RGY_LOG_ERROR, _T("Input width should be in range of %d - %d (%d specified).\n"),
                     minWidth, maxWidth, prm->input.srcWidth);
                 return RGY_ERR_UNSUPPORTED;
@@ -1188,7 +1186,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
             int minHeight, maxHeight;
             inputCaps->GetHeightRange(&minHeight, &maxHeight);
-            if (prm->input.srcHeight < (uint32_t)minHeight || (uint32_t)maxHeight < prm->input.srcHeight) {
+            if (prm->input.srcHeight < minHeight || maxHeight < prm->input.srcHeight) {
                 PrintMes(RGY_LOG_ERROR, _T("Input height should be in range of %d - %d (%d specified).\n"),
                     minHeight, maxHeight, prm->input.srcHeight);
                 return RGY_ERR_UNSUPPORTED;
@@ -1982,7 +1980,6 @@ RGY_ERR VCECore::run() {
 
     const auto inputFrameInfo = m_pFileReader->GetInputFrameInfo();
     CProcSpeedControl speedCtrl(m_nProcSpeedLimit);
-    int nEncodeFrames = 0;
     bool bInputEmpty = false;
     bool bFilterEmpty = false;
     int nInputFrame = 0;
