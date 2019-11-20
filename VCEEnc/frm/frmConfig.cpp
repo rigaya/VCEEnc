@@ -1357,13 +1357,6 @@ System::Void frmConfig::SetVidEncInfo(VidEncInfo info) {
         this->Invoke(gcnew SetVidEncInfoDelegate(this, &frmConfig::SetVidEncInfo), info);
     } else {
         fcgpictureBoxVCEEnabled->Visible = encInfo.hwencAvail;
-        //HEVCエンコができるか
-        if (!encInfo.hevcEnc) {
-            fcgCXCodec->Items[get_cx_index(list_codec, RGY_CODEC_HEVC)] = L"-------------";
-            if (fcgCXCodec->SelectedIndex == get_cx_index(list_codec, RGY_CODEC_HEVC)) {
-                fcgCXCodec->SelectedIndex = get_cx_index(list_codec, RGY_CODEC_H264);
-            }
-        }
         fcgCXCodec_SelectedIndexChanged(nullptr, nullptr);
         fcgRebuildCmd(nullptr, nullptr);
     }
@@ -1375,22 +1368,13 @@ VidEncInfo frmConfig::GetVidEncInfo() {
 
     VidEncInfo info;
     info.hwencAvail = false;
-    info.h264Enc = false;
-    info.hevcEnc = false;
     GetCHARfromString(exe_path, sizeof(exe_path), LocalStg.vidEncPath);
 
     if (get_exe_message(exe_path, "--check-hw", mes, _countof(mes), AUO_PIPE_MUXED) == RP_SUCCESS) {
         auto lines = String(mes).ToString()->Split(String(L"\r\n").ToString()->ToCharArray(), System::StringSplitOptions::RemoveEmptyEntries);
         for (int i = 0; i < lines->Length; i++) {
             if (lines[i]->Contains("VCE available")) {
-                if (lines[i]->ToLower()->Contains("h.264")) {
-                    info.hwencAvail = true;
-                    info.h264Enc = true;
-                }
-                if (lines[i]->ToLower()->Contains("hevc")) {
-                    info.hwencAvail = true;
-                    info.hevcEnc = true;
-                }
+                info.hwencAvail = true;
             }
         }
     }
@@ -1402,8 +1386,6 @@ VidEncInfo frmConfig::GetVidEncInfo() {
 System::Void frmConfig::GetVidEncInfoAsync() {
     if (!File::Exists(LocalStg.vidEncPath)) {
         encInfo.hwencAvail = false;
-        encInfo.h264Enc = false;
-        encInfo.hevcEnc = false;
         return;
     }
     if (taskEncInfo != nullptr && !taskEncInfo->IsCompleted) {

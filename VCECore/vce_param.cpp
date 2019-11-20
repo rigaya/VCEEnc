@@ -274,6 +274,7 @@ VCEParam::VCEParam() :
     deviceID(0),
     interlopD3d9(false),
     interlopD3d11(true),
+    par(),
     usage(AMF_VIDEO_ENCODER_USAGE_TRANSCONDING),
     rateControl(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP),
     qualityPreset(0),
@@ -311,6 +312,7 @@ VCEParam::VCEParam() :
     codecParam[RGY_CODEC_HEVC].nLevel   = 0;
     codecParam[RGY_CODEC_HEVC].nProfile = AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN;
     codecParam[RGY_CODEC_HEVC].nTier    = AMF_VIDEO_ENCODER_HEVC_TIER_MAIN;
+    par[0] = par[1] = 0;
 }
 
 VCEParam::~VCEParam() {
@@ -342,11 +344,13 @@ RGY_ERR AMFParams::Apply(amf::AMFPropertyStorage *storage, AMFParamType prmType,
         const auto type = prm.second.type;
         const auto &value = prm.second.value;
         if (type == prmType && value.type != amf::AMF_VARIANT_EMPTY) {
-            if (storage->SetProperty(name.c_str(), value)) {
+            const auto ret = storage->SetProperty(name.c_str(), value);
+            if (ret != AMF_OK) {
                 if (pLog) {
-                    pLog->write(RGY_LOG_ERROR, _T("storage->SetProperty(%s)=%s failed."),
+                    pLog->write(RGY_LOG_ERROR, _T("storage->SetProperty(%s)=%s failed: %s.\n"),
                         wstring_to_tstring(name).c_str(),
-                        wstring_to_tstring(value.ToWString().c_str()).c_str());
+                        wstring_to_tstring(value.ToWString().c_str()).c_str(),
+                        get_err_mes(err_to_rgy(ret)));
                 }
             }
         }

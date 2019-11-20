@@ -312,6 +312,7 @@ static std::unique_ptr<RGYSharedMemWin> video_create_param_mem(const OUTPUT_INFO
         prmsm->picstruct = picstruct;
         prmsm->csp = out_csp;
         prmsm->abort = false;
+        prmsm->afs = afs;
     }
     return std::move(PrmSm);
 }
@@ -350,6 +351,12 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
     ParseCmdError err;
     VCEParam enc_prm;
     parse_cmd(&enc_prm, conf->vce.cmd, err);
+    enc_prm.common.disableMp4Opt = pe->muxer_to_be_used != MUXER_DISABLED;
+    enc_prm.common.AVSyncMode = conf->vid.afs ? RGY_AVSYNC_VFR : RGY_AVSYNC_ASSUME_CFR;
+    if (conf->vid.resize_enable) {
+        enc_prm.input.dstWidth = conf->vid.resize_width;
+        enc_prm.input.dstHeight = conf->vid.resize_height;
+    }
 
     char exe_cmd[MAX_CMD_LEN] = { 0 };
     char exe_args[MAX_CMD_LEN] = { 0 };
@@ -426,6 +433,8 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
         QueryPerformanceFrequency((LARGE_INTEGER *)&qp_freq);
         const double qp_freq_sec = 1.0 / (double)qp_freq;
         RGYInputSMPrm *const prmsm = (RGYInputSMPrm *)prmSM->ptr();
+        std::unique_ptr<uint8_t, aligned_malloc_deleter> tempBufForNonModWidth;
+        int tempBufForNonModWidthPitch = 0;
         std::unique_ptr<RGYSharedMemWin> inputbuf;
         auto convert = std::unique_ptr<RGYConvertCSP>(new RGYConvertCSP(std::min(MAX_CONV_THREADS, ((int)get_cpu_info().physical_cores + 3) / 4)));
         void *dst_array[3];
@@ -545,19 +554,50 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
                     default:
                         break;
                     }
-                    if (convert->getFunc(input_csp, prmsm->csp, false, 0xffffffff) == nullptr) {
+                    DWORD simd = 0xffffffff;
+                    if (prmsm->w % ((input_csp == RGY_CSP_YC48) ? 16 : 32) != 0) {
+                        if (prmsm->w % ((input_csp == RGY_CSP_YC48) ?  8 : 16) == 0) { //SSEで割り切れるならそちらを使う
+                            simd = AVX|POPCNT|SSE42|SSE41|SSSE3|SSE2;
+                        } else {
+                            //SIMDの要求する値で割り切れない場合は、一時バッファを使用してpitchがあるようにする
+                            tempBufForNonModWidthPitch = ALIGN(oip->w, 128) * ((input_csp == RGY_CSP_YC48) ? 6 : 2);
+                            tempBufForNonModWidth = std::unique_ptr<uint8_t, aligned_malloc_deleter>(
+                                (uint8_t *)_aligned_malloc(tempBufForNonModWidthPitch * oip->h, 128), aligned_malloc_deleter());;
+                        }
+                    }
+                    if (convert->getFunc(input_csp, prmsm->csp, false, simd) == nullptr) {
                         ret |= AUO_RESULT_ERROR; error_video_get_conv_func();
                         break;
                     }
+                    write_log_auo_line_fmt(RGY_LOG_INFO, "Convert %s -> %s [%s]",
+                        RGY_CSP_NAMES[convert->getFunc()->csp_from],
+                        RGY_CSP_NAMES[convert->getFunc()->csp_to],
+                        get_simd_str(convert->getFunc()->simd));
                 }
                 //コピーフレームの場合は、映像バッファの中身を更新せず、そのままパイプに流す
                 if (!copy_frame) {
+                    uint8_t *ptr_src = (uint8_t *)frame;
+                    int src_pitch = (input_csp == RGY_CSP_YC48) ? oip->w * 6 : oip->w * 2;
+                    if (tempBufForNonModWidth) { //SIMDの要求する値で割り切れない場合は、一時バッファを使用してpitchがあるようにする
+                        for (int j = 0; j < oip->h; j++) {
+                            auto dst = tempBufForNonModWidth.get() + tempBufForNonModWidthPitch * j;
+                            auto src = (uint8_t *)frame + src_pitch * j;
+                            memcpy(dst, src, src_pitch);
+                        }
+                        src_pitch = tempBufForNonModWidthPitch;
+                        ptr_src = tempBufForNonModWidth.get();
+                    }
                     int dummy[4] = { 0 };
-                    convert->run((rgy_output_csp & RGY_PICSTRUCT_INTERLACED) ? 1 : 0,
-                        dst_array, (const void **)&frame, oip->w,
-                        (input_csp == RGY_CSP_YC48) ? oip->w * 6 : oip->w * 2,
-                        (input_csp == RGY_CSP_YC48) ? oip->w : oip->w >> 1,
+                    convert->run((enc_prm.input.picstruct & RGY_PICSTRUCT_INTERLACED) ? 1 : 0,
+                        dst_array, (const void **)&ptr_src, oip->w,
+                        src_pitch,
+                        (input_csp == RGY_CSP_YC48) ? src_pitch : src_pitch >> 1,
                         prmsm->pitch, oip->h, oip->h, dummy);
+                }
+                prmsm->timestamp = (int64_t)i * 4;
+                prmsm->duration = 0;
+                if (jitter) {
+                    prmsm->timestamp += next_jitter[-1];
                 }
 
                 //完了通知
@@ -597,7 +637,7 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
         release_audio_parallel_events(pe);
 
         //タイムコード出力
-        if (!ret && (afs || conf->vid.auo_tcfile_out))
+        if (!ret && (afs && pe->muxer_to_be_used != MUXER_DISABLED) || conf->vid.auo_tcfile_out)
             tcfile_out(jitter, oip->n, (double)oip->rate / (double)oip->scale, afs, pe);
 
         //エンコーダ終了待機

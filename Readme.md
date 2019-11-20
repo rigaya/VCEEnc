@@ -14,7 +14,7 @@ VCEEnc.auo … Output plugin for [Aviutl](http://spring-fragrance.mints.ne.jp/av
 [rigayaの日記兼メモ帳＞＞](http://rigaya34589.blog135.fc2.com/blog-category-12.html)
 
 ## System Requirements
-Windows 7, 8, 8.1, 10 (x86 / x64)  
+Windows 7, 8.1, 10 (x86 / x64)  
 Aviutl 0.99g4 or later (VCEEnc.auo)  
 Hardware which supports VCE  
   AMD GPU Radeon HD 7xxx or later  
@@ -23,6 +23,7 @@ Hardware which supports VCE
 | VCEEnc | required graphics driver version |
 |:---|:---|
 | VCEEnc 3.00 or later | AMD driver 17.1.1 (16.50.2611) or later |
+| VCEEnc 5.00 or later | AMD driver 19.7.1 or later |
 
 ## Usage and options of VCEEncC
 [Option list and details of VCEEncC](./VCEEncC_Options.en.md)

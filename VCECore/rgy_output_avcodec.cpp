@@ -133,7 +133,7 @@ void RGYOutputAvcodec::CloseVideo(AVMuxVideo *muxVideo) {
 
 void RGYOutputAvcodec::CloseFormat(AVMuxFormat *muxFormat) {
     if (muxFormat->formatCtx) {
-        if (!muxFormat->streamError) {
+        if (!muxFormat->streamError && m_Mux.format.fileHeaderWritten) {
             av_write_trailer(muxFormat->formatCtx);
         }
 #if USE_CUSTOM_IO
@@ -527,6 +527,7 @@ RGY_ERR RGYOutputAvcodec::InitVideo(const VideoInfo *videoOutputInfo, const Avco
     m_Mux.video.dtsUnavailable   = prm->bVideoDtsUnavailable;
     m_Mux.video.inputFirstKeyPts = prm->videoInputFirstKeyPts;
     m_Mux.video.timestamp        = prm->vidTimestamp;
+    m_Mux.video.afs              = prm->afs;
 
     if (prm->videoInputStream) {
         m_Mux.video.inputStreamTimebase = prm->videoInputStream->time_base;
@@ -1546,6 +1547,7 @@ RGY_ERR RGYOutputAvcodec::Init(const TCHAR *strFileName, const VideoInfo *videoO
         return RGY_ERR_NULL_PTR;
     }
     m_Mux.format.isMatroska = 0 == strcmp(m_Mux.format.formatCtx->oformat->name, "matroska");
+    m_Mux.format.disableMp4Opt = prm->disableMp4Opt;
 
 #if USE_CUSTOM_IO
     if (m_Mux.format.isPipe || usingAVProtocols(filename, 1) || (m_Mux.format.formatCtx->oformat->flags & (AVFMT_NEEDNUMBER | AVFMT_NOFILE))) {
@@ -1790,20 +1792,13 @@ RGY_ERR RGYOutputAvcodec::AddHEVCHeaderToExtraData(const RGYBitstream *bitstream
     const auto hevc_vps_nal = std::find_if(nal_list.begin(), nal_list.end(), [](nal_info info) { return info.type == NALU_HEVC_VPS; });
     const auto hevc_sps_nal = std::find_if(nal_list.begin(), nal_list.end(), [](nal_info info) { return info.type == NALU_HEVC_SPS; });
     const auto hevc_pps_nal = std::find_if(nal_list.begin(), nal_list.end(), [](nal_info info) { return info.type == NALU_HEVC_PPS; });
-    const auto hevc_sei_nal = std::find_if(nal_list.begin(), nal_list.end(), [](nal_info info) { return info.type == NALU_HEVC_PREFIX_SEI; });
     const bool header_check = (nal_list.end() != hevc_vps_nal) && (nal_list.end() != hevc_sps_nal) && (nal_list.end() != hevc_pps_nal);
     if (header_check) {
         m_Mux.video.streamOut->codecpar->extradata_size = (int)(hevc_vps_nal->size + hevc_sps_nal->size + hevc_pps_nal->size);
-        if (nal_list.end() != hevc_sei_nal) {
-            m_Mux.video.streamOut->codecpar->extradata_size += (int)hevc_sei_nal->size;
-        }
         uint8_t *new_ptr = (uint8_t *)av_malloc(m_Mux.video.streamOut->codecpar->extradata_size + AV_INPUT_BUFFER_PADDING_SIZE);
         memcpy(new_ptr, hevc_vps_nal->ptr, hevc_vps_nal->size);
         memcpy(new_ptr + hevc_vps_nal->size, hevc_sps_nal->ptr, hevc_sps_nal->size);
         memcpy(new_ptr + hevc_vps_nal->size + hevc_sps_nal->size, hevc_pps_nal->ptr, hevc_pps_nal->size);
-        if (nal_list.end() != hevc_sei_nal) {
-            memcpy(new_ptr + hevc_vps_nal->size + hevc_sps_nal->size + hevc_pps_nal->size, hevc_sei_nal->ptr, hevc_sei_nal->size);
-        }
         if (m_Mux.video.streamOut->codecpar->extradata) {
             av_free(m_Mux.video.streamOut->codecpar->extradata);
         }
@@ -1847,9 +1842,11 @@ RGY_ERR RGYOutputAvcodec::WriteFileHeader(const RGYBitstream *bitstream) {
             av_dict_set(&m_Mux.format.headerOptions, "brand", "mp42", 0);
             AddMessage(RGY_LOG_DEBUG, _T("set format brand \"mp42\".\n"));
 
-            //moovを先頭に
-            av_dict_set(&m_Mux.format.headerOptions, "movflags", "faststart", 0);
-            AddMessage(RGY_LOG_DEBUG, _T("set faststart.\n"));
+            if (!m_Mux.format.disableMp4Opt) {
+                //moovを先頭に
+                av_dict_set(&m_Mux.format.headerOptions, "movflags", "faststart", 0);
+                AddMessage(RGY_LOG_DEBUG, _T("set faststart.\n"));
+            }
         }
     }
 
@@ -2103,8 +2100,9 @@ RGY_ERR RGYOutputAvcodec::WriteNextFrameInternal(RGYBitstream *bitstream, int64_
         m_Mux.video.dtsUnavailable = true;
 #endif
         if (m_VideoOutputInfo.codec == RGY_CODEC_HEVC && m_Mux.video.seiNal.size() > 0) {
-            RGYBitstream old = *bitstream;
-            std::vector<nal_info> nal_list = parse_nal_unit_hevc(bitstream->data(), bitstream->size());
+            RGYBitstream bsCopy = RGYBitstreamInit();
+            bsCopy.copy(bitstream);
+            std::vector<nal_info> nal_list = parse_nal_unit_hevc(bsCopy.data(), bsCopy.size());
             const auto hevc_vps_nal = std::find_if(nal_list.begin(), nal_list.end(), [](nal_info info) { return info.type == NALU_HEVC_VPS; });
             const auto hevc_sps_nal = std::find_if(nal_list.begin(), nal_list.end(), [](nal_info info) { return info.type == NALU_HEVC_SPS; });
             const auto hevc_pps_nal = std::find_if(nal_list.begin(), nal_list.end(), [](nal_info info) { return info.type == NALU_HEVC_PPS; });
@@ -2135,12 +2133,13 @@ RGY_ERR RGYOutputAvcodec::WriteNextFrameInternal(RGYBitstream *bitstream, int64_
         //dts生成を初期化
         //何フレーム前からにすればよいかは、b-pyramid次第で異なるので、可能な限りエンコーダの情報を使用する
         if (!m_Mux.video.dtsUnavailable) {
-            m_VideoOutputInfo.videoDelay = -1 * (int)av_rescale_q(bitstream->dts(), m_Mux.video.bitstreamTimebase, av_inv_q(m_Mux.video.outputFps));
+            const auto srcTimebase = (ENCODER_QSV) ? HW_NATIVE_TIMEBASE : m_Mux.video.bitstreamTimebase;
+            m_VideoOutputInfo.videoDelay = -1 * (int)av_rescale_q(bitstream->dts(), srcTimebase, av_inv_q(m_Mux.video.outputFps));
         }
         m_Mux.video.fpsBaseNextDts = 0 - m_VideoOutputInfo.videoDelay;
         AddMessage(RGY_LOG_DEBUG, _T("calc dts, first dts %d x (timebase).\n"), m_Mux.video.fpsBaseNextDts);
 
-        const AVRational fpsTimebase = av_inv_q(m_Mux.video.outputFps);
+        const AVRational fpsTimebase = (m_Mux.video.afs) ? av_inv_q(av_mul_q(m_Mux.video.outputFps, av_make_q(4, 5))) : av_inv_q(m_Mux.video.outputFps);
         const AVRational streamTimebase = m_Mux.video.streamOut->codec->pkt_timebase;
         for (int i = m_Mux.video.fpsBaseNextDts; i < 0; i++) {
             m_Mux.video.timestampList.add(av_rescale_q(i, fpsTimebase, streamTimebase));
@@ -2230,7 +2229,6 @@ RGY_ERR RGYOutputAvcodec::WriteNextFrameInternal(RGYBitstream *bitstream, int64_
     memcpy(pkt.data, bitstream->data(), bitstream->size());
     pkt.size = (int)bitstream->size();
 
-    const AVRational fpsTimebase = av_inv_q(m_Mux.video.outputFps);
     const AVRational streamTimebase = m_Mux.video.streamOut->codec->pkt_timebase;
     pkt.stream_index = m_Mux.video.streamOut->index;
     pkt.flags        = isIDR ? AV_PKT_FLAG_KEY : 0;
@@ -2241,12 +2239,17 @@ RGY_ERR RGYOutputAvcodec::WriteNextFrameInternal(RGYBitstream *bitstream, int64_
     pkt.duration = bitstream->duration();
 #endif
     pkt.pts = bitstream->pts();
+#if ENCODER_QSV
+    //QSVエンコーダだけは、HW_NATIVE_TIMEBASEで送られてくる
+    pkt.duration = av_rescale_q(pkt.duration, HW_NATIVE_TIMEBASE, m_Mux.video.bitstreamTimebase);
+    pkt.pts = av_rescale_q(pkt.pts, HW_NATIVE_TIMEBASE, m_Mux.video.bitstreamTimebase);
+#endif
     if (av_cmp_q(m_Mux.video.bitstreamTimebase, streamTimebase) != 0) {
         pkt.duration = av_rescale_q(pkt.duration, m_Mux.video.bitstreamTimebase, streamTimebase);
         pkt.pts      = av_rescale_q(pkt.pts, m_Mux.video.bitstreamTimebase, streamTimebase);
     }
     if (false && !m_Mux.video.dtsUnavailable) {
-        pkt.dts = av_rescale_q(av_rescale_q(bitstream->dts(), m_Mux.video.bitstreamTimebase, fpsTimebase), fpsTimebase, streamTimebase);
+        pkt.dts = av_rescale_q(bitstream->dts(), m_Mux.video.bitstreamTimebase, streamTimebase);
     } else {
         m_Mux.video.timestampList.add(pkt.pts);
         pkt.dts = m_Mux.video.timestampList.get_min_pts();
@@ -2271,7 +2274,7 @@ RGY_ERR RGYOutputAvcodec::WriteNextFrameInternal(RGYBitstream *bitstream, int64_
         const auto frameI = (frameType & (RGY_FRAMETYPE_IDR | RGY_FRAMETYPE_I)) != 0;
         auto& qVideoQueueFree = (frameI) ? m_Mux.thread.qVideobitstreamFreeI : m_Mux.thread.qVideobitstreamFreePB;
         auto queueFavoredSize = (frameI) ? VID_BITSTREAM_QUEUE_SIZE_I : VID_BITSTREAM_QUEUE_SIZE_PB;
-        if (qVideoQueueFree.size() > queueFavoredSize) {
+        if ((int64_t)qVideoQueueFree.size() > queueFavoredSize) {
             //あまり多すぎると無駄にメモリを使用するので減らす
             bitstream->clear();
         } else {
@@ -3327,7 +3330,12 @@ int RGYOutputAvcodec::readPacket(uint8_t *buf, int buf_size) {
     return (int)_fread_nolock(buf, 1, buf_size, m_Mux.format.fpOutput);
 }
 int RGYOutputAvcodec::writePacket(uint8_t *buf, int buf_size) {
-    return (int)_fwrite_nolock(buf, 1, buf_size, m_Mux.format.fpOutput);
+    int res = (int)_fwrite_nolock(buf, 1, buf_size, m_Mux.format.fpOutput);
+    if (res < buf_size) {
+        AddMessage(RGY_LOG_ERROR, _T("Error writing file.\nNot enough disk space!\""));
+        m_Mux.format.streamError = true;
+    }
+    return res;
 }
 int64_t RGYOutputAvcodec::seek(int64_t offset, int whence) {
     return _fseeki64(m_Mux.format.fpOutput, offset, whence);

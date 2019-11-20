@@ -346,12 +346,9 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
 
     m_inputFps = rgy_rational<int>(inputParam->input.fpsN, inputParam->input.fpsD);
     m_outputTimebase = m_inputFps.inv() * rgy_rational<int>(1, 4);
-    auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
-    if (pAVCodecReader) {
-        if (m_nAVSyncMode & RGY_AVSYNC_VFR) {
-            //avsync vfr時は、入力streamのtimebaseをそのまま使用する
-            m_outputTimebase = to_rgy(pAVCodecReader->GetInputVideoStream()->time_base);
-        }
+    if (m_nAVSyncMode & RGY_AVSYNC_VFR) {
+        //avsync vfr時は、入力streamのtimebaseをそのまま使用する
+        m_outputTimebase = m_pFileReader->getInputTimebase();
     }
 
     //trim情報の作成
@@ -377,6 +374,7 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
     }
 
 #if ENABLE_AVSW_READER
+    auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
     const bool vpp_rff = false; // inputParam->vpp.rff;
     const bool vpp_afs = false; // inputParam->vpp.afs.enable;
     if ((m_nAVSyncMode & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR))/* || inputParam->vpp.rff*/) {
@@ -405,8 +403,8 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
                 return RGY_ERR_INVALID_VIDEO_PARAM;
             }
             PrintMes(RGY_LOG_DEBUG, _T("timestamp check: 0x%x\n"), timestamp_status);
-        } else {
-            PrintMes(RGY_LOG_ERROR, _T("%s can only be used with avhw /avsw reader.\n"), err_target.c_str());
+        } else if (m_outputTimebase.n() == 0 || !m_outputTimebase.is_valid()) {
+            PrintMes(RGY_LOG_ERROR, _T("%s cannot be used with current reader.\n"), err_target.c_str());
             return RGY_ERR_INVALID_VIDEO_PARAM;
         }
     } else if (pAVCodecReader && ((pAVCodecReader->GetFramePosList()->getStreamPtsStatus() & (~RGY_PTS_NORMAL)) == 0)) {
@@ -483,6 +481,19 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
         PrintMes(RGY_LOG_ERROR, _T("Invalid output frame size - non mod%d (height: %d).\n"), h_mul, prm->input.dstHeight);
         return RGY_ERR_INVALID_PARAM;
     }
+    if (prm->input.dstWidth < 0 && prm->input.dstHeight < 0) {
+        PrintMes(RGY_LOG_ERROR, _T("Either one of output resolution must be positive value.\n"));
+        return RGY_ERR_INVALID_VIDEO_PARAM;
+    }
+    auto outpar = std::make_pair(prm->par[0], prm->par[1]);
+    if ((!prm->par[0] || !prm->par[1]) //SAR比の指定がない
+        && prm->input.sar[0] && prm->input.sar[1] //入力側からSAR比を取得ずみ
+        && (prm->input.dstWidth == prm->input.srcWidth && prm->input.dstHeight == prm->input.srcHeight)) {//リサイズは行われない
+        outpar = std::make_pair(prm->input.sar[0], prm->input.sar[1]);
+    }
+    set_auto_resolution(prm->input.dstWidth, prm->input.dstHeight, outpar.first, outpar.second,
+        prm->input.srcWidth, prm->input.srcHeight, prm->input.sar[0], prm->input.sar[1], prm->input.crop);
+
     if (prm->codec == RGY_CODEC_UNKNOWN) {
         prm->codec = RGY_CODEC_H264;
     }
@@ -531,8 +542,6 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
 }
 
 RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
-    RGY_ERR sts = RGY_ERR_NONE;
-    bool stdoutUsed = false;
     const auto outputVideoInfo = videooutputinfo(
         inputParams->codec,
         formatOut,
@@ -612,7 +621,7 @@ RGY_ERR VCECore::initDevice(const int deviceId, const bool interlopD3d9, const b
         }
     }
     auto devices = platform->devs();
-    if (devices.size() <= deviceId) {
+    if ((int)devices.size() <= deviceId) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to device #%d.\n"), deviceId);
         return RGY_ERR_DEVICE_LOST;
     }
@@ -725,7 +734,7 @@ RGY_ERR VCECore::getEncCaps(RGY_CODEC codec, amf::AMFCapsPtr &encoderCaps) {
     if (ret == AMF_OK) {
         //HEVCでのAMFComponent::GetCaps()は、AMFComponent::Init()を呼んでおかないと成功しない
         p_encoder->Init(amf::AMF_SURFACE_NV12, 1280, 720);
-        auto sts = p_encoder->GetCaps(&encoderCaps);
+        ret = p_encoder->GetCaps(&encoderCaps);
     }
     return err_to_rgy(ret);
 }
@@ -1205,7 +1214,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (encoderCaps->GetInputCaps(&inputCaps) == AMF_OK) {
             int minWidth, maxWidth;
             inputCaps->GetWidthRange(&minWidth, &maxWidth);
-            if (prm->input.srcWidth < (uint32_t)minWidth || (uint32_t)maxWidth < prm->input.srcWidth) {
+            if (prm->input.srcWidth < minWidth || maxWidth < prm->input.srcWidth) {
                 PrintMes(RGY_LOG_ERROR, _T("Input width should be in range of %d - %d (%d specified).\n"),
                     minWidth, maxWidth, prm->input.srcWidth);
                 return RGY_ERR_UNSUPPORTED;
@@ -1213,7 +1222,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
             int minHeight, maxHeight;
             inputCaps->GetHeightRange(&minHeight, &maxHeight);
-            if (prm->input.srcHeight < (uint32_t)minHeight || (uint32_t)maxHeight < prm->input.srcHeight) {
+            if (prm->input.srcHeight < minHeight || maxHeight < prm->input.srcHeight) {
                 PrintMes(RGY_LOG_ERROR, _T("Input height should be in range of %d - %d (%d specified).\n"),
                     minHeight, maxHeight, prm->input.srcHeight);
                 return RGY_ERR_UNSUPPORTED;
@@ -1312,6 +1321,8 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             if (level == 0) {
                 level = calc_h264_auto_level(m_encWidth, m_encHeight, prm->nRefFrames, false,
                     m_encFps.n(), m_encFps.d(), profile, max_bitrate_kbps, vbv_bufsize_kbps);
+                //なんかLevel4.0以上でないと設定に失敗する場合がある
+                level = std::max(level, 40);
             }
             get_h264_vbv_value(&max_bitrate_kbps, &vbv_bufsize_kbps, level, profile);
         } else if (prm->codec == RGY_CODEC_HEVC) {
@@ -1337,7 +1348,15 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         }
     }
 
-    m_sar = rgy_rational<int>(prm->input.sar[0], prm->input.sar[1]);
+    //SAR自動設定
+    auto par = std::make_pair(prm->par[0], prm->par[1]);
+    if ((!prm->par[0] || !prm->par[1]) //SAR比の指定がない
+        && prm->input.sar[0] && prm->input.sar[1] //入力側からSAR比を取得ずみ
+        && (m_encWidth == prm->input.srcWidth && m_encHeight == prm->input.srcHeight)) {//リサイズは行われない
+        par = std::make_pair(prm->input.sar[0], prm->input.sar[1]);
+    }
+    adjust_sar(&par.first, &par.second, m_encWidth, m_encHeight);
+    m_sar = rgy_rational<int>(par.first, par.second);
 
     m_params.SetParam(VCE_PARAM_KEY_INPUT_WIDTH, prm->input.srcWidth);
     m_params.SetParam(VCE_PARAM_KEY_INPUT_HEIGHT, prm->input.srcHeight);
@@ -1349,7 +1368,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
     m_params.SetParam(AMF_PARAM_FRAMESIZE(prm->codec),      AMFConstructSize(m_encWidth, m_encHeight));
     m_params.SetParam(AMF_PARAM_FRAMERATE(prm->codec),      AMFConstructRate(m_encFps.n(), m_encFps.d()));
-    m_params.SetParam(AMF_PARAM_ASPECT_RATIO(prm->codec),   AMFConstructRatio(m_sar.n(), m_sar.d()));
+    if (m_sar.is_valid()) {
+        m_params.SetParam(AMF_PARAM_ASPECT_RATIO(prm->codec), AMFConstructRatio(m_sar.n(), m_sar.d()));
+    }
     m_params.SetParam(AMF_PARAM_USAGE(prm->codec),          (amf_int64)((prm->codec == RGY_CODEC_HEVC) ? AMF_VIDEO_ENCODER_HEVC_USAGE_TRANSCONDING : AMF_VIDEO_ENCODER_USAGE_TRANSCONDING));
     m_params.SetParam(AMF_PARAM_PROFILE(prm->codec),        (amf_int64)prm->codecParam[prm->codec].nProfile);
     m_params.SetParam(AMF_PARAM_PROFILE_LEVEL(prm->codec),  (amf_int64)prm->codecParam[prm->codec].nLevel);
@@ -1362,7 +1383,6 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_MAX_LTR_FRAMES(prm->codec), (amf_int64)prm->nLTRFrames);
     m_params.SetParam(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(prm->codec),  prm->bEnableSkipFrame);
     m_params.SetParam(AMF_PARAM_RATE_CONTROL_METHOD(prm->codec),             (amf_int64)prm->rateControl);
-    m_params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), prm->preAnalysis);
     m_params.SetParam(AMF_PARAM_VBV_BUFFER_SIZE(prm->codec),                 (amf_int64)prm->nVBVBufferSize * 1000);
     m_params.SetParam(AMF_PARAM_INITIAL_VBV_BUFFER_FULLNESS(prm->codec),     (amf_int64)prm->nInitialVBVPercent);
 
@@ -1375,7 +1395,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     //m_params.SetParam(AMF_PARAM_END_OF_SEQUENCE(prm->codec),                false);
     m_params.SetParam(AMF_PARAM_INSERT_AUD(prm->codec),                     false);
     if (prm->codec == RGY_CODEC_H264) {
-        m_params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)((m_picStruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
+        m_params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), (prm->preAnalysis) ? AMF_VIDEO_ENCODER_PREENCODE_ENABLED : AMF_VIDEO_ENCODER_PREENCODE_DISABLED);
+
+        m_params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)((prm->input.picstruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
 
         m_params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN, (amf_int64)prm->nBframes);
         if (prm->nBframes > 0) {
@@ -1408,6 +1430,8 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             m_params.SetParam(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR, true);
         }
     } else if (prm->codec == RGY_CODEC_HEVC) {
+        m_params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), prm->preAnalysis);
+
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_TIER,                            (amf_int64)prm->codecParam[prm->codec].nTier);
 
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_I,                        (amf_int64)prm->nQPMin);
@@ -1727,17 +1751,11 @@ RGY_ERR VCECore::run() {
     }
 
     auto run_send_streams = [this, &pWriterForAudioStreams](int inputFrames) {
-        auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
-        vector<AVPacket> packetList;
-        if (pAVCodecReader != nullptr) {
-            packetList = pAVCodecReader->GetStreamDataPackets(inputFrames);
-        }
+        vector<AVPacket> packetList = m_pFileReader->GetStreamDataPackets(inputFrames);
+
         //音声ファイルリーダーからのトラックを結合する
         for (const auto &reader : m_AudioReaders) {
-            auto pReader = std::dynamic_pointer_cast<RGYInputAvcodec>(reader);
-            if (pReader != nullptr) {
-                vector_cat(packetList, pReader->GetStreamDataPackets(inputFrames));
-            }
+            vector_cat(packetList, reader->GetStreamDataPackets(inputFrames));
         }
         //パケットを各Writerに分配する
         for (uint32_t i = 0; i < packetList.size(); i++) {
@@ -1765,7 +1783,7 @@ RGY_ERR VCECore::run() {
     if (pReader != nullptr) {
         pStreamIn = pReader->GetInputVideoStream();
     }
-    const auto srcTimebase = (pStreamIn) ? to_rgy(pStreamIn->time_base) : rgy_rational<int>();
+    const auto srcTimebase = (pStreamIn) ? to_rgy(pStreamIn->time_base) : m_pFileReader->getInputTimebase();;
 
     int64_t outFirstPts = AV_NOPTS_VALUE; //入力のptsに対する補正 (スケール: m_outputTimebase)
     int64_t lastTrimFramePts = AV_NOPTS_VALUE; //直前のtrimで落とされたフレームのpts, trimで落とされてない場合はAV_NOPTS_VALUE (スケール: m_outputTimebase)
@@ -1777,9 +1795,10 @@ RGY_ERR VCECore::run() {
         int64_t outPtsSource = outEstimatedPts;
         int64_t outDuration = outFrameDuration; //入力fpsに従ったduration
 #if ENABLE_AVSW_READER
-        if (pStreamIn && ((m_nAVSyncMode & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR)) || vpp_rff || vpp_afs_rff_aware)) {
+        if ((srcTimebase.n() > 0 && srcTimebase.is_valid())
+            && ((m_nAVSyncMode & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR)) || vpp_rff || vpp_afs_rff_aware)) {
             //CFR仮定ではなく、オリジナルの時間を見る
-            outPtsSource = (pStreamIn) ? rational_rescale(inFrame->timestamp(), srcTimebase, m_outputTimebase) : outEstimatedPts;
+            outPtsSource = rational_rescale(inFrame->timestamp(), srcTimebase, m_outputTimebase);
         }
         if (outFirstPts == AV_NOPTS_VALUE) {
             outFirstPts = outPtsSource; //最初のpts
@@ -1787,8 +1806,7 @@ RGY_ERR VCECore::run() {
         //最初のptsを0に修正
         outPtsSource -= outFirstPts;
 
-        if (pStreamIn
-            && ((m_nAVSyncMode & RGY_AVSYNC_VFR) || vpp_rff || vpp_afs_rff_aware)) {
+        if ((m_nAVSyncMode & RGY_AVSYNC_VFR) || vpp_rff || vpp_afs_rff_aware) {
             if (vpp_rff || vpp_afs_rff_aware) {
                 if (std::abs(outPtsSource - outEstimatedPts) >= 32 * outFrameDuration) {
                     //timestampに一定以上の差があればそれを無視する
@@ -1801,13 +1819,15 @@ RGY_ERR VCECore::run() {
                     return outFrames;
                 }
             }
-            //cuvidデコード時は、timebaseの分子はかならず1なので、pStreamIn->time_baseとズレているかもしれないのでオリジナルを計算
-            const auto orig_pts = rational_rescale(inFrame->timestamp(), srcTimebase, to_rgy(pStreamIn->time_base));
-            //ptsからフレーム情報を取得する
-            const auto framePos = pReader->GetFramePosList()->findpts(orig_pts, &inputFramePosIdx);
-            if (framePos.poc != FRAMEPOS_POC_INVALID && framePos.duration > 0) {
-                //有効な値ならオリジナルのdurationを使用する
-                outDuration = rational_rescale(framePos.duration, to_rgy(pStreamIn->time_base), m_outputTimebase);
+            if (pStreamIn) {
+                //cuvidデコード時は、timebaseの分子はかならず1なので、pStreamIn->time_baseとズレているかもしれないのでオリジナルを計算
+                const auto orig_pts = rational_rescale(inFrame->timestamp(), srcTimebase, to_rgy(pStreamIn->time_base));
+                //ptsからフレーム情報を取得する
+                const auto framePos = pReader->GetFramePosList()->findpts(orig_pts, &inputFramePosIdx);
+                if (framePos.poc != FRAMEPOS_POC_INVALID && framePos.duration > 0) {
+                    //有効な値ならオリジナルのdurationを使用する
+                    outDuration = rational_rescale(framePos.duration, to_rgy(pStreamIn->time_base), m_outputTimebase);
+                }
             }
         }
         if (m_nAVSyncMode & RGY_AVSYNC_FORCE_CFR) {
@@ -1968,7 +1988,7 @@ RGY_ERR VCECore::run() {
         // apply frame-specific properties to the current frame
         m_params.Apply(pSurface, AMF_PARAM_FRAME, m_pLog.get());
         // apply dynamic properties to the encoder
-        m_params.Apply(m_pEncoder, AMF_PARAM_DYNAMIC, m_pLog.get());
+        //m_params.Apply(m_pEncoder, AMF_PARAM_DYNAMIC, m_pLog.get());
 
         pSurface->SetProperty(RGY_PROP_TIMESTAMP, pts);
         pSurface->SetProperty(RGY_PROP_DURATION, duration);
@@ -1996,7 +2016,6 @@ RGY_ERR VCECore::run() {
 
     const auto inputFrameInfo = m_pFileReader->GetInputFrameInfo();
     CProcSpeedControl speedCtrl(m_nProcSpeedLimit);
-    int nEncodeFrames = 0;
     bool bInputEmpty = false;
     bool bFilterEmpty = false;
     int nInputFrame = 0;
@@ -2229,11 +2248,15 @@ tstring VCECore::GetEncoderParam() {
     getCPUInfo(cpu_info);
     tstring gpu_info = getGPUInfo();
 
+    OSVERSIONINFOEXW osversioninfo = { 0 };
+    tstring osversionstr = getOSVersion(&osversioninfo);
+
     uint32_t nMotionEst = 0x0;
     nMotionEst |= GetPropertyInt(AMF_PARAM_MOTION_HALF_PIXEL(m_encCodec)) ? VCE_MOTION_EST_HALF : 0;
     nMotionEst |= GetPropertyInt(AMF_PARAM_MOTION_QUARTERPIXEL(m_encCodec)) ? VCE_MOTION_EST_QUATER | VCE_MOTION_EST_HALF : 0;
 
-    mes += strsprintf(_T("VCEEnc %s (%s) / %s (%s)\n"), VER_STR_FILEVERSION_TCHAR, BUILD_ARCH_STR, getOSVersion().c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"));
+    mes += strsprintf(_T("%s\n"), get_encoder_version());
+    mes += strsprintf(_T("OS Version     %s %s (%d)\n"), osversionstr.c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"), osversioninfo.dwBuildNumber);
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
     mes += strsprintf(_T("GPU:           %s, AMF %d.%d.%d\n"), gpu_info.c_str(),
         (int)AMF_GET_MAJOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_MINOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_SUBMINOR_VERSION(m_AMFRuntimeVersion));

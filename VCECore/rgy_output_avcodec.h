@@ -113,6 +113,7 @@ typedef struct AVMuxFormat {
     bool                  isPipe;               //パイプ出力かどうか
     bool                  fileHeaderWritten;    //ファイルヘッダを出力したかどうか
     AVDictionary         *headerOptions;        //ヘッダオプション
+    bool                  disableMp4Opt;        //mp4出力時のmuxの最適化(faststart)を無効にする
 } AVMuxFormat;
 
 typedef struct AVMuxVideo {
@@ -133,6 +134,7 @@ typedef struct AVMuxVideo {
     AVCodecParserContext *parserCtx;            //動画ストリームのParser (VCEのみ)
     int64_t               parserStreamPos;      //動画ストリームのバイト数
 #endif //#if ENCODER_VCEENC
+    bool                  afs;                  //入力が自動フィールドシフト
 } AVMuxVideo;
 
 typedef struct AVMuxAudio {
@@ -304,6 +306,8 @@ struct AvcodecWriterPrm {
     HEVCHDRSei                  *HEVCHdrSei;              //HDR関連のmetadata
     RGYTimestamp                *vidTimestamp;            //動画のtimestampの情報
     std::string                  videoCodecTag;           //動画タグ
+    bool                         afs;                     //入力が自動フィールドシフト
+    bool                         disableMp4Opt;           //mp4出力時のmuxの最適化を無効にする
 
     AvcodecWriterPrm() :
         inputFormatMetadata(nullptr),
@@ -326,7 +330,9 @@ struct AvcodecWriterPrm {
         muxVidTsLogFile(),
         HEVCHdrSei(nullptr),
         vidTimestamp(nullptr),
-        videoCodecTag() {
+        videoCodecTag(),
+        afs(false),
+        disableMp4Opt(false) {
     }
 };
 

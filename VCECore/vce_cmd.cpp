@@ -195,8 +195,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             && 2 != _stscanf_s(strInput[i], _T("%d,%d"), &value[0], &value[1])
             && 2 != _stscanf_s(strInput[i], _T("%d/%d"), &value[0], &value[1])
             && 2 != _stscanf_s(strInput[i], _T("%d:%d"), &value[0], &value[1])) {
-            pParams->input.sar[0] = 0;
-            pParams->input.sar[1] = 0;
+            pParams->par[0] = 0;
+            pParams->par[1] = 0;
             CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
             return -1;
         }
@@ -204,8 +204,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             value[0] = -value[0];
             value[1] = -value[1];
         }
-        pParams->input.sar[0] = value[0];
-        pParams->input.sar[1] = value[1];
+        pParams->par[0] = value[0];
+        pParams->par[1] = value[1];
         return 0;
     }
     if (IS_OPTION("cqp")) {
@@ -809,15 +809,17 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, ParseCmdEr
             } else {
                 double val_float = 0.0;
                 if (1 == _stscanf_s(argsData.cachedlevel.c_str(), _T("%lf"), &val_float)) {
-                    value = (int)(val_float * 10 + 0.5);
-                    if (value == desc[get_cx_index(desc, value)].value) {
-                        pParams->codecParam[pParams->codec].nLevel = value;
-                        bParsed = true;
-                    } else {
-                        value = (int)(val_float + 0.5);
-                        if (value == desc[get_cx_index(desc, value)].value) {
-                            pParams->codecParam[pParams->codec].nLevel = value;
-                            bParsed = true;
+                    for (int i = 0; desc[i].desc; i++) {
+                        try {
+                            const int target_val = (int)(std::stod(desc[i].desc) * 1000 + 0.5);
+                            if (   (int)(val_float * 1000 + 0.5) == target_val
+                                || (int)(val_float * 100 + 0.5) == target_val) {
+                                pParams->codecParam[pParams->codec].nLevel = desc[i].value;
+                                bParsed = true;
+                                break;
+                            }
+                        } catch (...) {
+                            continue;
                         }
                     }
                 }

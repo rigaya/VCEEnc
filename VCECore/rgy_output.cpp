@@ -547,6 +547,7 @@ RGY_ERR RGYOutFrame::WriteNextFrame(RGYFrame *pSurface) {
 
 #endif //#if ENCODER_QSV
 
+#include "rgy_input_sm.h"
 #include "rgy_input_avcodec.h"
 #include "rgy_output_avcodec.h"
 
@@ -599,6 +600,14 @@ RGY_ERR initWriters(
         inputFileDuration = pAVCodecReader->GetInputVideoDuration();
     }
     }
+    bool isAfs = false;
+#if ENABLE_SM_READER
+    { auto pReaderSM = std::dynamic_pointer_cast<RGYInputSM>(pFileReader);
+    if (pReaderSM) {
+        isAfs = pReaderSM->isAfs();
+    }
+    }
+#endif //#if ENABLE_SM_READER
     //if (inputParams->CodecId == MFX_CODEC_RAW) {
     //    inputParams->AVMuxTarget &= ~RGY_MUX_VIDEO;
     //}
@@ -625,6 +634,8 @@ RGY_ERR initWriters(
         writerPrm.bitstreamTimebase      = av_make_q(outputTimebase);
         writerPrm.HEVCHdrSei             = &hedrsei;
         writerPrm.videoCodecTag           = common->videoCodecTag;
+        writerPrm.afs                     = isAfs;
+        writerPrm.disableMp4Opt           = common->disableMp4Opt;
         if (common->muxOpt > 0) {
             writerPrm.muxOpt = *common->muxOpt;
         }
@@ -648,10 +659,7 @@ RGY_ERR initWriters(
             }
             log->write(RGY_LOG_DEBUG, _T("Output: CopyAll=%s\n"), (audioCopyAll) ? _T("true") : _T("false"));
             pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(pFileReader);
-            vector<AVDemuxStream> streamList;
-            if (pAVCodecReader) {
-                streamList = pAVCodecReader->GetInputStreamInfo();
-            }
+            vector<AVDemuxStream> streamList = pFileReader->GetInputStreamInfo();
 
             for (auto& stream : streamList) {
                 const auto streamMediaType = trackMediaType(stream.trackId);

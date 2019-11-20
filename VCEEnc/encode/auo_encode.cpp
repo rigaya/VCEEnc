@@ -228,20 +228,6 @@ void set_enc_prm(CONF_GUIEX *conf, PRM_ENC *pe, const OUTPUT_INFO *oip, const SY
     sys_dat->exstg->apply_fn_replace(filename_replace, _countof(filename_replace));
     PathCombineLong(pe->temp_filename, _countof(pe->temp_filename), pe->temp_filename, filename_replace);
 
-    //ESしか出せないので拡張子を変更
-    //check_muxer_to_be_usedの前に拡張子を変更しないと音声なしのときにmuxされない
-    const char *ext = ".tmp";
-    switch (conf->vce.codec) {
-    case RGY_CODEC_H264:    ext = ".264"; break;
-    case RGY_CODEC_MPEG2:   ext = ".m2v"; break;
-    case RGY_CODEC_VC1:     ext = ".vc1"; break;
-    case RGY_CODEC_HEVC:    ext = ".265"; break;
-    case RGY_CODEC_VP8:     ext = ".vp8"; break;
-    case RGY_CODEC_VP9:     ext = ".vp9"; break;
-    default:                break;
-    }
-    change_ext(pe->temp_filename, _countof(pe->temp_filename), ext);
-
     pe->muxer_to_be_used = check_muxer_to_be_used(conf, pe, sys_dat, pe->temp_filename, pe->video_out_type, (oip->flag & OUTPUT_INFO_FLAG_AUDIO) != 0);
 
     //FAWチェックとオーディオディレイの修正
@@ -430,10 +416,6 @@ void cmd_replace(char *cmd, size_t nSize, const PRM_ENC *pe, const SYSTEM_DATA *
     //%{fps_rate}
     int fps_rate = oip->rate;
     int fps_scale = oip->scale;
-#ifdef MSDK_SAMPLE_VERSION
-    if (conf->qsv.vpp.nDeinterlace == MFX_DEINTERLACE_IT)
-        fps_rate = (fps_rate * 4) / 5;
-#endif
     const int fps_gcd = get_gcd(fps_rate, fps_scale);
     fps_rate /= fps_gcd;
     fps_scale /= fps_gcd;
@@ -565,7 +547,7 @@ BOOL check_output_has_chapter(const CONF_GUIEX *conf, const SYSTEM_DATA *sys_dat
 int check_muxer_to_be_used(const CONF_GUIEX *conf, const PRM_ENC *pe, const SYSTEM_DATA *sys_dat, const char *temp_filename, int video_output_type, BOOL audio_output) {
     int muxer_to_be_used = MUXER_DISABLED;
     if (video_output_type == VIDEO_OUTPUT_MP4 && !conf->mux.disable_mp4ext)
-        muxer_to_be_used = (conf->vid.afs) ? MUXER_TC2MP4 : MUXER_MP4;
+        muxer_to_be_used = MUXER_MP4;
     else if (video_output_type == VIDEO_OUTPUT_MKV && !conf->mux.disable_mkvext)
         muxer_to_be_used = MUXER_MKV;
     else if (video_output_type == VIDEO_OUTPUT_MPEG2 && !conf->mux.disable_mpgext)

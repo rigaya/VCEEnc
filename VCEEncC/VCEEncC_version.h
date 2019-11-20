@@ -7,8 +7,8 @@
 //   以上に了解して頂ける場合、本ソースコードの使用、複製、改変、再頒布を行って頂いて構いません。
 //  -----------------------------------------------------------------------------------------
 
-#ifndef _QSVENCC_VERSION_H_
-#define _QSVENCC_VERSION_H_
+#ifndef _VCEENCC_VERSION_H_
+#define _VCEENCC_VERSION_H_
 
 #include "rgy_version.h"
 
@@ -21,19 +21,19 @@
 #endif
 
 #ifdef _M_IX86
-#define NVENC_FILENAME "NVEncC (x86) - NVEnc Encoder (CUI)"
+#define VCEENC_FILENAME "VCEEncC (x86) - VCEEnc Encoder (CUI)"
 #else
-#define NVENC_FILENAME "NVEncC (x64) - NVEnc Encoder (CUI)"
+#define VCEENC_FILENAME "VCEEncC (x64) - VCEEnc Encoder (CUI)"
 #endif
 
-#define VER_STR_COMMENTS         "based on NVEnc SDK Sample"
+#define VER_STR_COMMENTS         "based on AMF SDK"
 #define VER_STR_COMPANYNAME      ""
-#define VER_STR_FILEDESCRIPTION  NVENC_FILENAME
-#define VER_STR_INTERNALNAME     NVENC_FILENAME
-#define VER_STR_ORIGINALFILENAME "NVEncC.exe"
-#define VER_STR_LEGALCOPYRIGHT   "NVEncC by rigaya"
-#define VER_STR_PRODUCTNAME      NVENC_FILENAME
+#define VER_STR_FILEDESCRIPTION  VCEENC_FILENAME
+#define VER_STR_INTERNALNAME     VCEENC_FILENAME
+#define VER_STR_ORIGINALFILENAME "VCEEncC.exe"
+#define VER_STR_LEGALCOPYRIGHT   "VCEEncC by rigaya"
+#define VER_STR_PRODUCTNAME      VCEENC_FILENAME
 #define VER_PRODUCTVERSION       VER_FILEVERSION
 #define VER_STR_PRODUCTVERSION   VER_STR_FILEVERSION
 
-#endif //_QSVENCC_VERSION_H_
+#endif //_VCEENCC_VERSION_H_

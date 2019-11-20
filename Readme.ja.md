@@ -12,7 +12,7 @@ VCEEncC.exe … 単体で実行できるコマンドライン版です。
 [rigayaの日記兼メモ帳＞＞](http://rigaya34589.blog135.fc2.com/blog-category-12.html)
 
 ## 基本動作環境
-Windows Vista, 7, 8, 8.1, 10 (x86/x64)  
+Windows 7, 8.1, 10 (x86/x64)  
 Aviutl 0.99g4 以降 (VCEEnc.auo)  
 VCEが載ったハードウェア  
   AMD製 GPU Radeon HD 7xxx以降  
@@ -20,7 +20,8 @@ VCEが載ったハードウェア
 
 | VCEEnc | 必要なグラフィックスドライバのバージョン |
 |:---|:---|
-| VCEEnc 3.00以降 | AMD ドライバ 17.1.1 (16.50.2611) 以降|
+| VCEEnc 3.00以降 | AMD ドライバ 17.1.1 (16.50.2611) 以降 |
+| VCEEnc 5.00以降 | AMD ドライバ 19.7.1 以降 |
 
 ## VCEEncCCの使用方法とオプション  
 [VCEEncCのオプションの説明](./VCEEncC_Options.ja.md)

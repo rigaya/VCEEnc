@@ -29,9 +29,9 @@
 #ifndef __RGY_VERSION_H__
 #define __RGY_VERSION_H__
 
-#define VER_FILEVERSION             0,4,2,0
-#define VER_STR_FILEVERSION          "4.02"
-#define VER_STR_FILEVERSION_TCHAR _T("4.02")
+#define VER_FILEVERSION             0,5,0,0
+#define VER_STR_FILEVERSION          "5.00"
+#define VER_STR_FILEVERSION_TCHAR _T("5.00")
 
 
 #ifdef _M_IX86
@@ -70,6 +70,7 @@ const char *get_encoder_version();
 #define ENABLE_AVISYNTH_READER    0
 #define ENABLE_VAPOURSYNTH_READER 0
 #define ENABLE_AVSW_READER        0
+#define ENABLE_SM_READER          0
 #define ENABLE_OPENCL             0
 #else
 #define ENCODER_NAME  "VCEEnc"
@@ -79,6 +80,7 @@ const char *get_encoder_version();
 #define ENABLE_AVISYNTH_READER    1
 #define ENABLE_VAPOURSYNTH_READER 1
 #define ENABLE_AVSW_READER        1
+#define ENABLE_SM_READER          1
 #define ENABLE_OPENCL             1
 #endif
 

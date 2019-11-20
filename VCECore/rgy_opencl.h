@@ -33,7 +33,7 @@
 
 #if ENABLE_OPENCL
 
-#define CL_TARGET_OPENCL_VERSION 120
+#define CL_TARGET_OPENCL_VERSION 200
 #include <CL/opencl.h>
 #include <CL/cl_dx9_media_sharing.h>
 #include <CL/cl_d3d11.h>
