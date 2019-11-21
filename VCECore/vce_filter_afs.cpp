@@ -135,7 +135,7 @@ RGY_ERR afsSourceCache::copyFrame(RGYCLFrame *pOut, int srcFrame, cl_command_que
     afsSourceCacheFrame *pSrc = get(srcFrame);
     if (RGY_CSP_CHROMA_FORMAT[m_csp] == RGY_CHROMAFMT_YUV444) {
         return m_cl->copyFrame(&pOut->frame, &pSrc->y->frame, nullptr, queue);
-    } else if (RGY_CSP_CHROMA_FORMAT[m_csp] == RGY_CHROMAFMT_YUV444) {
+    } else if (RGY_CSP_CHROMA_FORMAT[m_csp] == RGY_CHROMAFMT_YUV420) {
         FrameInfo frameY = getPlane(&pOut->frame, RGY_PLANE_Y);
         FrameInfo frameU = getPlane(&pOut->frame, RGY_PLANE_U);
         FrameInfo frameV = getPlane(&pOut->frame, RGY_PLANE_V);
