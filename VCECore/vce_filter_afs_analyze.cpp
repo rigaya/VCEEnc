@@ -101,7 +101,7 @@ RGY_ERR run_analyze_stripe(uint8_t *dst,
     //横方向は1スレッドで4pixel処理する
     const RGYWorkSize global(divCeil(srcWidth, 4), divCeil(srcHeight, BLOCK_LOOP_Y));
 
-    const uint32_t grid_count = global.groups(local).total();
+    const auto grid_count = global.groups(local).total();
     if (!count_motion || count_motion->size() < grid_count * sizeof(int)) {
         count_motion = cl->createBuffer(grid_count * sizeof(int), CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR);
         if (!count_motion) {
