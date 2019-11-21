@@ -1843,7 +1843,7 @@ RGY_ERR VCECore::run() {
                 && m_encHeight == inframeInfo.height) {
                 skipFilters = true;
             }
-            const auto inAmf = inframe->amf();
+            const auto& inAmf = inframe->amf();
             if (!skipFilters
                 && inframeInfo.mem_type != RGY_MEM_TYPE_CPU
                 && inAmf
@@ -1852,6 +1852,18 @@ RGY_ERR VCECore::run() {
 #if 0
                 auto ar = inAmf->Interop(amf::AMF_MEMORY_OPENCL);
 #else
+#if 1
+                //dummyのCPUへのメモリコピーを行う
+                //こうしないとデコーダからの出力をOpenCLに渡したときに、フレームが壊れる(フレーム順序が入れ替わってガクガクする)
+                amf::AMFDataPtr data;
+                inAmf->Duplicate(amf::AMF_MEMORY_HOST, &data);
+#else
+                auto frameinfo = inframe->info();
+                amf::AMFSurfacePtr pSurface;
+                auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_HOST, csp_rgy_to_enc(frameinfo.csp),
+                    16, 16, &pSurface);
+                auto ar2 = inAmf->CopySurfaceRegion(pSurface, 0, 0, 0, 0, 16, 16);
+#endif
                 auto ar = inAmf->Convert(amf::AMF_MEMORY_OPENCL);
 #endif
                 if (ar != AMF_OK) {
