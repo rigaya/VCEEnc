@@ -592,8 +592,8 @@ __kernel void kernel_synthesize_mode_tune(
     const int tb_order, const uchar status) {
     const int lx = get_local_id(0); //スレッド数=SYN_BLOCK_INT_X
     const int ly = get_local_id(1); //スレッド数=SYN_BLOCK_Y
-    const int imgc_x = get_group_id(0) * get_num_groups(0) + lx;
-    const int imgc_y = get_group_id(1) * get_num_groups(1) + ly;
+    const int imgc_x = get_group_id(0) * get_local_size(0) + lx;
+    const int imgc_y = get_group_id(1) * get_local_size(1) + ly;
     const int imgy_x = imgc_x << 1;
     const int imgy_y = imgc_y << 1;
     const int YUY2_COLOR[4][3] = {
