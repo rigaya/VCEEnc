@@ -990,12 +990,12 @@ RGY_ERR RGYFilterAfs::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOut
     }
 
     const int iframe = m_source.inframe();
-    if (pInputFrame->ptr == nullptr && m_nFrame >= iframe) {
+    if (pInputFrame->ptr[0] == nullptr && m_nFrame >= iframe) {
         //終了
         *pOutputFrameNum = 0;
         ppOutputFrames[0] = nullptr;
         return sts;
-    } else if (pInputFrame->ptr != nullptr) {
+    } else if (pInputFrame->ptr[0] != nullptr) {
         //エラーチェック
         const auto memcpyKind = getMemcpyKind(pInputFrame->mem_type, m_frameBuf[0]->frame.mem_type);
         if (memcpyKind != RGYCLMemcpyD2D) {
@@ -1035,7 +1035,7 @@ RGY_ERR RGYFilterAfs::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOut
     }
     static const int preread_len = 3;
     //十分な数のフレームがたまった、あるいはdrainモードならフレームを出力
-    if (iframe >= (5+preread_len+STREAM_OPT) || pInputFrame == nullptr) {
+    if (iframe >= (5+preread_len+STREAM_OPT) || pInputFrame->ptr[0] == nullptr) {
         int reverse[4] = { 0 }, assume_shift[4] = { 0 }, result_stat[4] = { 0 };
 
         //m_streamsts.get_durationを呼ぶには、3フレーム先までstatusをセットする必要がある
