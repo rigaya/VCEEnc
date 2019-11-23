@@ -846,7 +846,7 @@ RGY_ERR RGYFilterAfs::count_stripe(AFS_STRIPE_DATA *sp, const AFS_SCAN_CLIP *cli
             AddMessage(RGY_LOG_ERROR, _T("failed m_count_stripe.copyDtoH: %s.\n"), get_err_mes(err));
             return err;
         }
-        m_count_motion->mapEvent().wait();
+        sp->buf_count_stripe->mapEvent().wait();
     }
 
     const int nSize = (int)(sp->buf_count_stripe->size() / sizeof(uint32_t));
