@@ -113,18 +113,16 @@ Flag4 analyze_y(
     __read_only image2d_t src_p1,
     int ix, int iy,
     DATA thre_motion, DATA thre_deint, DATA thre_shift) {
-    const float ifx = ix + 0.5f;
-    const float ify = iy + 0.5f;
 
     //motion
-    DATA4 p0 = CONVERT_DATA4(read_imageui(src_p0, sampler_y, (float2)(ifx, ify)));
-    DATA4 p1 = CONVERT_DATA4(read_imageui(src_p1, sampler_y, (float2)(ifx, ify)));
+    DATA4 p0 = CONVERT_DATA4(read_imageui(src_p0, sampler_y, (int2)(ix, iy)));
+    DATA4 p1 = CONVERT_DATA4(read_imageui(src_p1, sampler_y, (int2)(ix, iy)));
     DATA4 p2 = p1;
     Flag4 flag = analyze_motion(p0, p1, thre_motion, thre_shift);
 
-    if (ify >= 1.0f) {
+    if (iy >= 1) {
         //non-shift
-        p1 = CONVERT_DATA4(read_imageui(src_p0, sampler_y, (float2)(ifx, ify-1.0f)));
+        p1 = CONVERT_DATA4(read_imageui(src_p0, sampler_y, (int2)(ix, iy-1)));
         flag |= analyze_stripe(p0, p1, non_shift_sign, non_shift_deint, non_shift_shift, thre_deint, thre_shift);
 
         //shift
@@ -132,11 +130,11 @@ Flag4 analyze_y(
             if (iy & 1) {
                 p0 = p2;
             } else {
-                p1 = CONVERT_DATA4(read_imageui(src_p1, sampler_y, (float2)(ifx, ify-1.0f)));
+                p1 = CONVERT_DATA4(read_imageui(src_p1, sampler_y, (int2)(ix, iy-1)));
             }
         } else {
             if (iy & 1) {
-                p1 = CONVERT_DATA4(read_imageui(src_p1, sampler_y, (float2)(ifx, ify-1.0f)));
+                p1 = CONVERT_DATA4(read_imageui(src_p1, sampler_y, (int2)(ix, iy-1)));
             } else {
                 p0 = p2;
             }
