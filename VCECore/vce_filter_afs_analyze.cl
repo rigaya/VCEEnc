@@ -87,8 +87,8 @@ Flag4 analyze_motion(DATA4 p0, DATA4 p1, DATA thre_motion, DATA thre_shift) {
 
 Flag4 analyze_motionf(float p0, float p1, const float thre_motionf, const float thre_shiftf, int flag_offset) {
     const float absdata = fabs(p0 - p1);
-    Flag4 mask_motion = (thre_motionf > absdata) ? AS_FLAG4(motion_flag  << flag_offset) : (Flag4)0;
-    Flag4 mask_shift  = (thre_shiftf  > absdata) ? AS_FLAG4(motion_shift << flag_offset) : (Flag4)0;
+    Flag4 mask_motion = (thre_motionf > absdata) ? AS_FLAG4((uint)motion_flag  << flag_offset) : (Flag4)0;
+    Flag4 mask_shift  = (thre_shiftf  > absdata) ? AS_FLAG4((uint)motion_shift << flag_offset) : (Flag4)0;
     return mask_motion | mask_shift;
 }
 
@@ -102,9 +102,9 @@ Flag4 analyze_stripe(DATA4 p0, DATA4 p1, Flag flag_sign, Flag flag_deint, Flag f
 
 Flag4 analyze_stripef(float p0, float p1, Flag flag_sign, Flag flag_deint, Flag flag_shift, const float thre_deintf, const float thre_shiftf, int flag_offset) {
     const float absdata = fabs(p1 - p0);
-    Flag4 new_sign   = (p0 >= p1)              ? AS_FLAG4(flag_sign  << flag_offset) : (Flag4)0;
-    Flag4 mask_deint = (absdata > thre_deintf) ? AS_FLAG4(flag_deint << flag_offset) : (Flag4)0;
-    Flag4 mask_shift = (absdata > thre_shiftf) ? AS_FLAG4(flag_shift << flag_offset) : (Flag4)0;
+    Flag4 new_sign   = (p0 >= p1)              ? AS_FLAG4((uint)flag_sign  << flag_offset) : (Flag4)0;
+    Flag4 mask_deint = (absdata > thre_deintf) ? AS_FLAG4((uint)flag_deint << flag_offset) : (Flag4)0;
+    Flag4 mask_shift = (absdata > thre_shiftf) ? AS_FLAG4((uint)flag_shift << flag_offset) : (Flag4)0;
     return new_sign | mask_deint | mask_shift;
 }
 
@@ -224,14 +224,14 @@ void count_flags_skip(Flag4 dat0, Flag4 dat1, Flag4 *restrict count_deint, Flag4
     new_count_shift &= mask;
     new_count_deint  = deint; //deintに値は入っていないので代入でよい
     new_count_shift += shift;
-    *count_deint = as_flag4(new_count_deint);
-    *count_shift = as_flag4(new_count_shift);
+    *count_deint = AS_FLAG4(new_count_deint);
+    *count_shift = AS_FLAG4(new_count_shift);
 #else
     Flag4 deint, shift, mask;
     mask = (dat0 ^ dat1) & (Flag4)(non_shift_sign  | shift_sign);
     deint = dat0         & (Flag4)(non_shift_deint | shift_deint);
     shift = dat0         & (Flag4)(non_shift_shift | shift_shift);
-    mask >>= 1;
+    mask >>= (Flag4)1;
     //最初はshiftの位置にしかビットはたっていない
     //deintにマスクはいらない
     //*count_deint &= mask;
@@ -255,15 +255,15 @@ void count_flags(Flag4 dat0, Flag4 dat1, Flag4 *restrict count_deint, Flag4 *res
     new_count_shift &= mask;
     new_count_deint += deint;
     new_count_shift += shift;
-    *count_deint = as_flag4(new_count_deint);
-    *count_shift = as_flag4(new_count_shift);
+    *count_deint = AS_FLAG4(new_count_deint);
+    *count_shift = AS_FLAG4(new_count_shift);
 #else
     Flag4 deint, shift, mask;
     mask = (dat0 ^ dat1) & (Flag4)(non_shift_sign  | shift_sign);
     deint = dat0         & (Flag4)(non_shift_deint | shift_deint);
     shift = dat0         & (Flag4)(non_shift_shift | shift_shift);
-    mask |= (mask << 1);
-    mask |= (mask >> 2);
+    mask |= (mask << (Flag4)1);
+    mask |= (mask >> (Flag4)2);
     *count_deint &= mask;
     *count_shift &= mask;
     *count_deint += deint;
