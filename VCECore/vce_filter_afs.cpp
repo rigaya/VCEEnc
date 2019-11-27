@@ -763,7 +763,7 @@ RGY_ERR RGYFilterAfs::count_motion(AFS_SCAN_DATA *sp, const AFS_SCAN_CLIP *clip)
     const int nSize = (int)(m_count_motion->size() / sizeof(uint32_t));
     int count0 = 0;
     int count1 = 0;
-    uint32_t *ptrCount = (uint32_t *)m_count_motion->mappedPtr();
+    const uint32_t *ptrCount = (uint32_t *)m_count_motion->mappedPtr();
     for (int i = 0; i < nSize; i++) {
         uint32_t count = ptrCount[i];
         count0 += count & 0xffff;
@@ -843,7 +843,7 @@ RGY_ERR RGYFilterAfs::count_stripe(AFS_STRIPE_DATA *sp, const AFS_SCAN_CLIP *cli
     } else {
         err = sp->buf_count_stripe->queueMapBuffer(m_cl->queue().get(), CL_MAP_READ, {});
         if (err != RGY_ERR_NONE) {
-            AddMessage(RGY_LOG_ERROR, _T("failed m_count_stripe.copyDtoH: %s.\n"), get_err_mes(err));
+            AddMessage(RGY_LOG_ERROR, _T("failed m_count_stripe.queueMapBuffer: %s.\n"), get_err_mes(err));
             return err;
         }
         sp->buf_count_stripe->mapEvent().wait();
@@ -852,7 +852,7 @@ RGY_ERR RGYFilterAfs::count_stripe(AFS_STRIPE_DATA *sp, const AFS_SCAN_CLIP *cli
     const int nSize = (int)(sp->buf_count_stripe->size() / sizeof(uint32_t));
     int count0 = 0;
     int count1 = 0;
-    uint32_t *ptrCount = (uint32_t *)sp->buf_count_stripe->mappedPtr();
+    const uint32_t *ptrCount = (uint32_t *)sp->buf_count_stripe->mappedPtr();
     for (int i = 0; i < nSize; i++) {
         uint32_t count = ptrCount[i];
         count0 += count & 0xffff;
