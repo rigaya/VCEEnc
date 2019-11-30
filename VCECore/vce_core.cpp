@@ -2054,6 +2054,7 @@ RGY_ERR VCECore::run() {
                 res = err_to_rgy(ar); m_state = RGY_STATE_ERROR;
                 break;
             }
+            pSurface->SetFrameType(frametype_rgy_to_enc(inputFrameInfo.picstruct));
             inputFrame = std::make_unique<RGYFrame>(pSurface);
             res = m_pFileReader->LoadNextFrame(inputFrame.get());
             if (res == RGY_ERR_MORE_DATA) {

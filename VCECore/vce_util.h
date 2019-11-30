@@ -47,11 +47,10 @@ MAP_PAIR_0_1_PROTO(codec, rgy, RGY_CODEC, enc, const wchar_t *);
 MAP_PAIR_0_1_PROTO(codec, rgy, RGY_CODEC, dec, const wchar_t *);
 MAP_PAIR_0_1_PROTO(csp, rgy, RGY_CSP, enc, amf::AMF_SURFACE_FORMAT);
 MAP_PAIR_0_1_PROTO(loglevel, rgy, int, enc, int);
+MAP_PAIR_0_1_PROTO(frametype, rgy, RGY_PICSTRUCT, enc, amf::AMF_FRAME_TYPE);
 
 AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM picstruct_rgy_to_enc(RGY_PICSTRUCT picstruct);
 RGY_PICSTRUCT picstruct_enc_to_rgy(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM picstruct);
-amf::AMF_FRAME_TYPE frame_type_rgy_to_enc(RGY_PICSTRUCT picstruct);
-RGY_PICSTRUCT frame_type_enc_to_rgy(amf::AMF_FRAME_TYPE picstruct);
 
 struct RGYBitstream {
 private:
@@ -387,7 +386,7 @@ private:
         info.csp = csp_enc_to_rgy(amfptr->GetFormat());
         info.timestamp = amfptr->GetPts();
         info.duration = amfptr->GetDuration();
-        info.picstruct = frame_type_enc_to_rgy(amfptr->GetFrameType());
+        info.picstruct = frametype_enc_to_rgy(amfptr->GetFrameType());
         info.flags = RGY_FRAME_FLAG_NONE;
         info.mem_type = amfptr->GetMemoryType() == amf::AMF_MEMORY_HOST ? RGY_MEM_TYPE_CPU : RGY_MEM_TYPE_GPU_IMAGE;
         int64_t value = 0;
@@ -462,7 +461,7 @@ public:
     }
     void setPicstruct(RGY_PICSTRUCT picstruct) {
         if (amfptr) {
-            amfptr->SetFrameType(frame_type_rgy_to_enc(picstruct));
+            amfptr->SetFrameType(frametype_rgy_to_enc(picstruct));
         } else if (clbuf) {
             clbuf->frame.picstruct = picstruct;
         }

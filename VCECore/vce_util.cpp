@@ -93,6 +93,19 @@ static const auto RGY_LOGLEVEL_TO_VCE = make_array<std::pair<int, int>>(
     );
 MAP_PAIR_0_1(loglevel, rgy, int, enc, int, RGY_LOGLEVEL_TO_VCE, RGY_LOG_INFO, AMF_TRACE_INFO);
 
+
+static const auto RGY_PICSTRUCT_TO_VCE = make_array<std::pair<RGY_PICSTRUCT, amf::AMF_FRAME_TYPE>>(
+    std::make_pair(RGY_PICSTRUCT_UNKNOWN,      amf::AMF_FRAME_UNKNOWN),
+    std::make_pair(RGY_PICSTRUCT_FRAME,        amf::AMF_FRAME_PROGRESSIVE),
+    std::make_pair(RGY_PICSTRUCT_FRAME_TFF,    amf::AMF_FRAME_INTERLEAVED_EVEN_FIRST),
+    std::make_pair(RGY_PICSTRUCT_FRAME_BFF,    amf::AMF_FRAME_INTERLEAVED_ODD_FIRST),
+    std::make_pair(RGY_PICSTRUCT_TFF,          amf::AMF_FRAME_INTERLEAVED_EVEN_FIRST),
+    std::make_pair(RGY_PICSTRUCT_BFF,          amf::AMF_FRAME_INTERLEAVED_ODD_FIRST),
+    std::make_pair(RGY_PICSTRUCT_FIELD_TOP,    amf::AMF_FRAME_FIELD_SINGLE_EVEN),
+    std::make_pair(RGY_PICSTRUCT_FIELD_BOTTOM, amf::AMF_FRAME_FIELD_SINGLE_ODD)
+    );
+MAP_PAIR_0_1(frametype, rgy, RGY_PICSTRUCT, enc, amf::AMF_FRAME_TYPE, RGY_PICSTRUCT_TO_VCE, RGY_PICSTRUCT_UNKNOWN, amf::AMF_FRAME_UNKNOWN);
+
 __declspec(noinline)
 AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM picstruct_rgy_to_enc(RGY_PICSTRUCT picstruct) {
     if (picstruct & RGY_PICSTRUCT_TFF) return AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD;
@@ -105,20 +118,6 @@ RGY_PICSTRUCT picstruct_enc_to_rgy(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM pics
     if (picstruct == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD) return RGY_PICSTRUCT_FRAME_TFF;
     if (picstruct == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD) return RGY_PICSTRUCT_FRAME_BFF;
     return RGY_PICSTRUCT_FRAME;
-}
-
-__declspec(noinline)
-amf::AMF_FRAME_TYPE frame_type_rgy_to_enc(RGY_PICSTRUCT picstruct) {
-    if (picstruct & RGY_PICSTRUCT_TFF) return amf::AMF_FRAME_INTERLEAVED_EVEN_FIRST;
-    if (picstruct & RGY_PICSTRUCT_BFF) return amf::AMF_FRAME_INTERLEAVED_ODD_FIRST;
-    return  amf::AMF_FRAME_PROGRESSIVE;
-}
-
-__declspec(noinline)
-RGY_PICSTRUCT frame_type_enc_to_rgy(amf::AMF_FRAME_TYPE picstruct) {
-    if (picstruct == amf::AMF_FRAME_INTERLEAVED_EVEN_FIRST) return RGY_PICSTRUCT_TFF;
-    if (picstruct == amf::AMF_FRAME_INTERLEAVED_ODD_FIRST) return RGY_PICSTRUCT_BFF;
-    return  RGY_PICSTRUCT_FRAME;
 }
 
 const TCHAR *AMFRetString(AMF_RESULT ret) {
