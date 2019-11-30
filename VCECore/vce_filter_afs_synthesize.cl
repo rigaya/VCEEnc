@@ -539,8 +539,8 @@ __kernel void kernel_synthesize_mode_0(
 
         if (YUV420 && ((imgy << 1) < height)) {
             //u
-            const int uv_pos_dst = imgy                    * dst_c_pitch + imgx * sizeof(DATA4);
-            const int uv_pos_src = yuv420c_h(imgy, height) * src_c_pitch + imgx * sizeof(DATA4);
+            const int uv_pos_dst = imgy        * dst_c_pitch + imgx * sizeof(DATA4);
+            const int uv_pos_src = (imgy >> 1) * src_c_pitch + imgx * sizeof(DATA4);
             dst_u += uv_pos_dst;
             dst_v += uv_pos_dst;
             src_u += uv_pos_src;
