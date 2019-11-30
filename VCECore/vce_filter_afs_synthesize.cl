@@ -56,6 +56,7 @@ typedef ushort        DATA;
 typedef ushort2       DATA2;
 typedef ushort4       DATA4;
 typedef ushort8       DATA8;
+#define CONVERT_DATA8 convert_ushort8
 #define CONVERT_DATA4 convert_ushort4
 #define AS_DATA4      as_ushort4
 #else
@@ -63,6 +64,7 @@ typedef uchar         DATA;
 typedef uchar2        DATA2;
 typedef uchar4        DATA4;
 typedef uchar8        DATA8;
+#define CONVERT_DATA8 convert_uchar8
 #define CONVERT_DATA4 convert_uchar4
 #define AS_DATA4      as_uchar4
 #endif
@@ -84,14 +86,10 @@ int is_latter_field(int pos_y, int tb_order) {
     return (((pos_y + tb_order + 1) & 1));
 }
 
-int yuv420c_h(int y, const int height_y) {
-    return (y >> 1) + ((y & 1) ? (height_y >> 2) : 0);
-}
-
 DATA8 deint8(DATA8 src1, DATA8 src3, DATA8 src4, DATA8 src5, DATA8 src7, Flag8 flag, Flag mask) {
-    const DATA8 tmp2 = src1 + src7;
-    const DATA8 tmp3 = src3 + src5;
-    const DATA8 tmp = (tmp3 - ((tmp2 - tmp3) >> 3) + (DATA8)1) >> 1;
+    const int8 tmp2 = convert_int8(src1) + convert_int8(src7);
+    const int8 tmp3 = convert_int8(src3) + convert_int8(src5);
+    const DATA8 tmp = CONVERT_DATA8((tmp3 - ((tmp2 - tmp3) >> 3) + (int8)1) >> 1);
     return (((flag & (Flag8)mask) == (Flag8)0) ? tmp : src4);
 }
 
@@ -104,7 +102,7 @@ float deintf(float src1, float src3, float src4, float src5, float src7, Flag fl
 }
 
 DATA8 blend8(DATA8 src1, DATA8 src2, DATA8 src3, Flag8 flag, Flag mask) {
-    DATA8 tmp = (src1 + src3 + src2 + src2 + (DATA8)2) >> 2;
+    DATA8 tmp = CONVERT_DATA8((convert_int8(src1) + convert_int8(src3) + convert_int8(src2) + convert_int8(src2) + (int8)2) >> 2);
     return (((flag & (Flag8)mask) == (Flag8)0) ? tmp : src2);
 }
 
@@ -114,7 +112,7 @@ float blendf(float src1, float src2, float src3, Flag flag, Flag mask) {
 }
 
 DATA8 mie_inter8(DATA8 src1, DATA8 src2, DATA8 src3, DATA8 src4) {
-    return ((src1 + src2 + src3 + src4 + (DATA8)2) >> 2);
+    return CONVERT_DATA8((convert_int8(src1) + convert_int8(src2) + convert_int8(src3) + convert_int8(src4) + (int8)2) >> 2);
 }
 
 float mie_interf(float src1, float src2, float src3, float src4) {
@@ -122,7 +120,7 @@ float mie_interf(float src1, float src2, float src3, float src4) {
 }
 
 DATA8 mie_spot8(DATA8 src1, DATA8 src2, DATA8 src3, DATA8 src4, DATA8 src_spot) {
-    return (mie_inter8(src1, src2, src3, src4) + src_spot + (DATA8)1) >> 1;
+    return CONVERT_DATA8((convert_int8(mie_inter8(src1, src2, src3, src4)) + convert_int8(src_spot) + (int8)1) >> 1);
 }
 
 float mie_spotf(float src1, float src2, float src3, float src4, float src_spot) {
