@@ -163,6 +163,8 @@ RGY_ERR RGYFilter::filter_as_interlaced_pair(const FrameInfo *pInputFrame, Frame
     }
     return RGY_ERR_NONE;
 #else
+    UNREFERENCED_PARAMETER(pInputFrame);
+    UNREFERENCED_PARAMETER(pOutputFrame);
     return RGY_ERR_UNSUPPORTED;
 #endif
 }

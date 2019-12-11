@@ -1950,10 +1950,22 @@ RGY_ERR VCECore::run() {
                 if (m_dx11.GetDevice() != nullptr) {
                     auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_DX11, csp_rgy_to_enc(lastFilter->GetFilterParam()->frameOut.csp),
                         m_encWidth, m_encHeight, &pSurface);
-                    pSurface->Interop(amf::AMF_MEMORY_OPENCL);
+                    if (ar != AMF_OK) {
+                        PrintMes(RGY_LOG_ERROR, _T("Failed to allocate surface: %s.\n"), get_err_mes(err_to_rgy(ar)));
+                        return err_to_rgy(ar);
+                    }
+                    ar = pSurface->Interop(amf::AMF_MEMORY_OPENCL);
+                    if (ar != AMF_OK) {
+                        PrintMes(RGY_LOG_ERROR, _T("Failed to get interop of surface: %s.\n"), get_err_mes(err_to_rgy(ar)));
+                        return err_to_rgy(ar);
+                    }
                 } else {
                     auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_OPENCL, csp_rgy_to_enc(lastFilter->GetFilterParam()->frameOut.csp),
                         m_encWidth, m_encHeight, &pSurface);
+                    if (ar != AMF_OK) {
+                        PrintMes(RGY_LOG_ERROR, _T("Failed to allocate surface: %s.\n"), get_err_mes(err_to_rgy(ar)));
+                        return err_to_rgy(ar);
+                    }
                 }
                 auto encSurface = std::make_unique<RGYFrame>(pSurface);
                 //最後のフィルタはNVEncFilterCspCropでなければならない

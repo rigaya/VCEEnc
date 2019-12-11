@@ -243,7 +243,6 @@ ATL::CComPtr<ID3D11Device>      DeviceDX11::GetDevice() {
 
 RGY_ERR DeviceDX11::Init(int adapterID, bool onlyWithOutputs, shared_ptr<RGYLog> log) {
     HRESULT hr = S_OK;
-    RGY_ERR err = RGY_ERR_NONE;
     m_log = (log) ? log : std::make_shared<RGYLog>(nullptr, RGY_LOG_ERROR);
     // find adapter
     ATL::CComPtr<IDXGIAdapter> pAdapter;
@@ -286,9 +285,6 @@ RGY_ERR DeviceDX11::Init(int adapterID, bool onlyWithOutputs, shared_ptr<RGYLog>
 #ifdef _DEBUG
     createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
-
-    HMONITOR hMonitor = NULL;
-    DWORD vp = 0;
 
     D3D_FEATURE_LEVEL featureLevels[] =
     {
