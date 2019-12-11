@@ -48,6 +48,25 @@ static const wchar_t* VCE_PARAM_KEY_ENGINE = L"ENGINE";
 static const wchar_t* VCE_PARAM_KEY_ADAPTERID = L"ADAPTERID";
 static const wchar_t* VCE_PARAM_KEY_CAPABILITY = L"DISPLAYCAPABILITY";
 
+static const int   FILTER_DEFAULT_AFS_CLIP_TB = 16;
+static const int   FILTER_DEFAULT_AFS_CLIP_LR = 32;
+static const int   FILTER_DEFAULT_AFS_TB_ORDER = 0;
+static const int   FILTER_DEFAULT_AFS_METHOD_SWITCH = 0;
+static const int   FILTER_DEFAULT_AFS_COEFF_SHIFT = 192;
+static const int   FILTER_DEFAULT_AFS_THRE_SHIFT = 128;
+static const int   FILTER_DEFAULT_AFS_THRE_DEINT = 48;
+static const int   FILTER_DEFAULT_AFS_THRE_YMOTION = 112;
+static const int   FILTER_DEFAULT_AFS_THRE_CMOTION = 224;
+static const int   FILTER_DEFAULT_AFS_ANALYZE = 3;
+static const bool  FILTER_DEFAULT_AFS_SHIFT = true;
+static const bool  FILTER_DEFAULT_AFS_DROP = false;
+static const bool  FILTER_DEFAULT_AFS_SMOOTH = false;
+static const bool  FILTER_DEFAULT_AFS_FORCE24 = false;
+static const bool  FILTER_DEFAULT_AFS_TUNE = false;
+static const bool  FILTER_DEFAULT_AFS_RFF = false;
+static const bool  FILTER_DEFAULT_AFS_TIMECODE = false;
+static const bool  FILTER_DEFAULT_AFS_LOG = false;
+
 enum {
     VCE_RC_CQP = 0,
     VCE_RC_CBR = 3,
@@ -262,8 +281,78 @@ struct VCECodecParam {
     int nReserved;
 };
 
+enum {
+    AFS_PRESET_DEFAULT = 0,
+    AFS_PRESET_TRIPLE,        //動き重視
+    AFS_PRESET_DOUBLE,        //二重化
+    AFS_PRESET_ANIME,                     //映画/アニメ
+    AFS_PRESET_CINEMA = AFS_PRESET_ANIME, //映画/アニメ
+    AFS_PRESET_MIN_AFTERIMG,              //残像最小化
+    AFS_PRESET_FORCE24_SD,                //24fps固定
+    AFS_PRESET_FORCE24_HD,                //24fps固定 (HD)
+    AFS_PRESET_FORCE30,                   //30fps固定
+};
+
+const CX_DESC list_afs_preset[] = {
+    { _T("default"),      AFS_PRESET_DEFAULT },
+    { _T("triple"),       AFS_PRESET_TRIPLE },
+    { _T("double"),       AFS_PRESET_DOUBLE },
+    { _T("anime/cinema"), AFS_PRESET_ANIME },
+    { _T("anime"),        AFS_PRESET_ANIME },
+    { _T("cinema"),       AFS_PRESET_CINEMA },
+    { _T("min_afterimg"), AFS_PRESET_MIN_AFTERIMG },
+    { _T("24fps"),        AFS_PRESET_FORCE24_HD },
+    { _T("24fps_sd"),     AFS_PRESET_FORCE24_SD },
+    { _T("30fps"),        AFS_PRESET_FORCE30 },
+    { NULL, NULL }
+};
+
+typedef struct {
+    int top, bottom, left, right;
+} AFS_SCAN_CLIP;
+
+static inline AFS_SCAN_CLIP scan_clip(int top, int bottom, int left, int right) {
+    AFS_SCAN_CLIP clip;
+    clip.top = top;
+    clip.bottom = bottom;
+    clip.left = left;
+    clip.right = right;
+    return clip;
+}
+
+struct VppAfs {
+    bool enable;
+    int tb_order;
+    AFS_SCAN_CLIP clip;    //上下左右
+    int method_switch;     //切替点
+    int coeff_shift;       //判定比
+    int thre_shift;        //縞(ｼﾌﾄ)
+    int thre_deint;        //縞(解除)
+    int thre_Ymotion;      //Y動き
+    int thre_Cmotion;      //C動き
+    int analyze;           //解除Lv
+    bool shift;            //フィールドシフト
+    bool drop;             //間引き
+    bool smooth;           //スムージング
+    bool force24;          //24fps化
+    bool tune;             //調整モード
+    bool rff;              //rffフラグを認識して調整
+    bool timecode;         //timecode出力
+    bool log;              //log出力
+
+    VppAfs();
+    void set_preset(int preset);
+    int read_afs_inifile(const TCHAR *inifile);
+    bool operator==(const VppAfs &x) const;
+    bool operator!=(const VppAfs &x) const;
+    tstring print() const;
+
+    void check();
+};
+
 struct VCEVppParam {
     RGY_VPP_RESIZE_ALGO resize;
+    VppAfs afs;
 
     VCEVppParam();
 };

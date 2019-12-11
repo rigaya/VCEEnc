@@ -27,8 +27,8 @@
 
 #include "vce_filter.h"
 
-RGYFilter::RGYFilter() :
-    m_name(), m_infoStr(), m_pLog(), m_frameBuf(),
+RGYFilter::RGYFilter(shared_ptr<RGYOpenCLContext> context) :
+    m_name(), m_infoStr(), m_pLog(), m_cl(context), m_frameBuf(),
     m_pFieldPairIn(), m_pFieldPairOut(),
     m_param(),
     m_pathThrough(FILTER_PATHTHROUGH_ALL) {

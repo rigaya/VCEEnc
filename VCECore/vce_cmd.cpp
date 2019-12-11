@@ -513,6 +513,241 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->vpp.resize = (RGY_VPP_RESIZE_ALGO)value;
         return 0;
     }
+    if (IS_OPTION("vpp-afs")) {
+        pParams->vpp.afs.enable = true;
+
+        if (i+1 >= nArgNum || strInput[i+1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+        vector<tstring> param_list;
+        bool flag_comma = false;
+        const TCHAR *pstr = strInput[i];
+        const TCHAR *qstr = strInput[i];
+        for (; *pstr; pstr++) {
+            if (*pstr == _T('\"')) {
+                flag_comma ^= true;
+            }
+            if (!flag_comma && *pstr == _T(',')) {
+                param_list.push_back(tstring(qstr, pstr - qstr));
+                qstr = pstr+1;
+            }
+        }
+        param_list.push_back(tstring(qstr, pstr - qstr));
+        for (const auto &param : param_list) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos+1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("ini")) {
+                    if (pParams->vpp.afs.read_afs_inifile(param_val.c_str())) {
+                        CMD_PARSE_SET_ERR(strInput[0], _T("ini file does not exist."), option_name, strInput[i]);
+                        return -1;
+                    }
+                }
+                if (param_arg == _T("preset")) {
+                    try {
+                        int value = 0;
+                        if (get_list_value(list_afs_preset, param_val.c_str(), &value)) {
+                            pParams->vpp.afs.set_preset(value);
+                        } else {
+                            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                            return -1;
+                        }
+                    } catch (...) {
+                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                        return -1;
+                    }
+                    continue;
+                }
+            }
+        }
+        for (const auto &param : param_list) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos+1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    if (param_val == _T("true")) {
+                        pParams->vpp.afs.enable = true;
+                    } else if (param_val == _T("false")) {
+                        pParams->vpp.afs.enable = false;
+                    } else {
+                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                        return -1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("top")) {
+                    try {
+                        pParams->vpp.afs.clip.top = std::stoi(param_val);
+                    } catch (...) {
+                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                        return -1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("bottom")) {
+                    try {
+                        pParams->vpp.afs.clip.bottom = std::stoi(param_val);
+                    } catch (...) {
+                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                        return -1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("left")) {
+                    try {
+                        pParams->vpp.afs.clip.left = std::stoi(param_val);
+                    } catch (...) {
+                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                        return -1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("right")) {
+                    try {
+                        pParams->vpp.afs.clip.right = std::stoi(param_val);
+                    } catch (...) {
+                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                        return -1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("method_switch")) {
+                    try {
+                        pParams->vpp.afs.method_switch = std::stoi(param_val);
+                    } catch (...) {
+                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                        return -1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("coeff_shift")) {
+                    try {
+                        pParams->vpp.afs.coeff_shift = std::stoi(param_val);
+                    } catch (...) {
+                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                        return -1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thre_shift")) {
+                    try {
+                        pParams->vpp.afs.thre_shift = std::stoi(param_val);
+                    } catch (...) {
+                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                        return -1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thre_deint")) {
+                    try {
+                        pParams->vpp.afs.thre_deint = std::stoi(param_val);
+                    } catch (...) {
+                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                        return -1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thre_motion_y")) {
+                    try {
+                        pParams->vpp.afs.thre_Ymotion = std::stoi(param_val);
+                    } catch (...) {
+                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                        return -1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thre_motion_c")) {
+                    try {
+                        pParams->vpp.afs.thre_Cmotion = std::stoi(param_val);
+                    } catch (...) {
+                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                        return -1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("level")) {
+                    try {
+                        pParams->vpp.afs.analyze = std::stoi(param_val);
+                    } catch (...) {
+                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                        return -1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("shift")) {
+                    pParams->vpp.afs.shift = (param_val == _T("true")) || (param_val == _T("on"));
+                    continue;
+                }
+                if (param_arg == _T("drop")) {
+                    pParams->vpp.afs.drop = (param_val == _T("true")) || (param_val == _T("on"));
+                    continue;
+                }
+                if (param_arg == _T("smooth")) {
+                    pParams->vpp.afs.smooth = (param_val == _T("true")) || (param_val == _T("on"));
+                    continue;
+                }
+                if (param_arg == _T("24fps")) {
+                    pParams->vpp.afs.force24 = (param_val == _T("true")) || (param_val == _T("on"));
+                    continue;
+                }
+                if (param_arg == _T("tune")) {
+                    pParams->vpp.afs.tune = (param_val == _T("true")) || (param_val == _T("on"));
+                    continue;
+                }
+#if 0
+                if (param_arg == _T("rff")) {
+                    pParams->vpp.afs.rff = (param_val == _T("true")) || (param_val == _T("on"));
+                    continue;
+                }
+#endif
+                if (param_arg == _T("timecode")) {
+                    pParams->vpp.afs.timecode = (param_val == _T("true")) || (param_val == _T("on"));
+                    continue;
+                }
+                if (param_arg == _T("log")) {
+                    pParams->vpp.afs.log = (param_val == _T("true")) || (param_val == _T("on"));
+                    continue;
+                }
+                if (param_arg == _T("ini")) {
+                    continue;
+                }
+                if (param_arg == _T("preset")) {
+                    continue;
+                }
+                CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                return -1;
+            } else {
+                if (param == _T("shift")) {
+                    pParams->vpp.afs.shift = true;
+                    continue;
+                }
+                if (param == _T("drop")) {
+                    pParams->vpp.afs.drop = true;
+                    continue;
+                }
+                if (param == _T("smooth")) {
+                    pParams->vpp.afs.smooth = true;
+                    continue;
+                }
+                if (param == _T("24fps")) {
+                    pParams->vpp.afs.force24 = true;
+                    continue;
+                }
+                if (param == _T("tune")) {
+                    pParams->vpp.afs.tune = true;
+                    continue;
+                }
+                CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+                return -1;
+            }
+        }
+        return 0;
+    }
 
     auto ret = parse_one_input_option(option_name, strInput, i, nArgNum, &pParams->input, argData, err);
     if (ret >= 0) return ret;
@@ -805,6 +1040,47 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     std::basic_stringstream<TCHAR> tmp;
 
     OPT_LST(_T("--vpp-resize"), vpp.resize, list_vpp_resize);
+
+#define ADD_FLOAT(str, opt, prec) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << std::setprecision(prec) << (pParams->opt);
+#define ADD_NUM(str, opt) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << (pParams->opt);
+#define ADD_LST(str, opt, list) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << get_chr_from_value(list, (pParams->opt));
+#define ADD_BOOL(str, opt) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << ((pParams->opt) ? (_T("true")) : (_T("false")));
+#define ADD_CHAR(str, opt) if ((pParams->opt) && _tcslen(pParams->opt)) tmp << _T(",") << (str) << _T("=") << (pParams->opt);
+#define ADD_PATH(str, opt) if ((pParams->opt) && _tcslen(pParams->opt)) tmp << _T(",") << (str) << _T("=\"") << (pParams->opt) << _T("\"");
+#define ADD_STR(str, opt) if (pParams->opt.length() > 0) tmp << _T(",") << (str) << _T("=") << (pParams->opt.c_str());
+
+    if (pParams->vpp.afs != encPrmDefault.vpp.afs) {
+        tmp.str(tstring());
+        if (!pParams->vpp.afs.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (pParams->vpp.afs.enable || save_disabled_prm) {
+            ADD_NUM(_T("top"), vpp.afs.clip.top);
+            ADD_NUM(_T("bottom"), vpp.afs.clip.bottom);
+            ADD_NUM(_T("left"), vpp.afs.clip.left);
+            ADD_NUM(_T("right"), vpp.afs.clip.right);
+            ADD_NUM(_T("method_switch"), vpp.afs.method_switch);
+            ADD_NUM(_T("coeff_shift"), vpp.afs.coeff_shift);
+            ADD_NUM(_T("thre_shift"), vpp.afs.thre_shift);
+            ADD_NUM(_T("thre_deint"), vpp.afs.thre_deint);
+            ADD_NUM(_T("thre_motion_y"), vpp.afs.thre_Ymotion);
+            ADD_NUM(_T("thre_motion_c"), vpp.afs.thre_Cmotion);
+            ADD_NUM(_T("level"), vpp.afs.analyze);
+            ADD_BOOL(_T("shift"), vpp.afs.shift);
+            ADD_BOOL(_T("drop"), vpp.afs.drop);
+            ADD_BOOL(_T("smooth"), vpp.afs.smooth);
+            ADD_BOOL(_T("24fps"), vpp.afs.force24);
+            ADD_BOOL(_T("tune"), vpp.afs.tune);
+            ADD_BOOL(_T("rff"), vpp.afs.rff);
+            ADD_BOOL(_T("timecode"), vpp.afs.timecode);
+            ADD_BOOL(_T("log"), vpp.afs.log);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-afs ") << tmp.str().substr(1);
+        } else if (pParams->vpp.afs.enable) {
+            cmd << _T(" --vpp-afs");
+        }
+    }
 
     cmd << gen_cmd(&pParams->ctrl, &encPrmDefault.ctrl, save_disabled_prm);
 

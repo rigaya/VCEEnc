@@ -165,6 +165,21 @@
     <ClCompile Include="rgy_input_sm.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="vce_filter_afs.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="vce_filter_afs_analyze.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="vce_filter_afs_filter.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="vce_filter_afs_merge.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="vce_filter_afs_synthesize.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu_info.h">
@@ -314,6 +329,9 @@
     <ClInclude Include="rgy_shared_mem.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="vce_filter_afs.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="ram_speed_x64.asm">
@@ -334,6 +352,18 @@
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="vce_filter_resize.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="vce_filter_afs_analyze.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="vce_filter_afs_filter.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="vce_filter_afs_merge.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="vce_filter_afs_synthesize.cl">
       <Filter>ソース ファイル</Filter>
     </None>
   </ItemGroup>

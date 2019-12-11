@@ -1,4 +1,4 @@
-
+﻿
 // Type
 // bit_depth
 // radius

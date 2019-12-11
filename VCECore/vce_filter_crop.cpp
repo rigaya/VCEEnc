@@ -160,7 +160,7 @@ RGY_ERR RGYFilterCspCrop::convertCspFromYV12(FrameInfo *pOutputFrame, const Fram
     return RGY_ERR_NONE;
 }
 
-RGYFilterCspCrop::RGYFilterCspCrop() {
+RGYFilterCspCrop::RGYFilterCspCrop(shared_ptr<RGYOpenCLContext> context) : RGYFilter(context), m_crop() {
     m_name = _T("copy/cspconv/crop");
 }
 
@@ -168,10 +168,9 @@ RGYFilterCspCrop::~RGYFilterCspCrop() {
     close();
 }
 
-RGY_ERR RGYFilterCspCrop::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog> pPrintMes, shared_ptr<RGYOpenCLContext> context) {
+RGY_ERR RGYFilterCspCrop::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog> pPrintMes) {
     RGY_ERR sts = RGY_ERR_NONE;
     m_pLog = pPrintMes;
-    m_cl = context;
     auto pCropParam = std::dynamic_pointer_cast<RGYFilterParamCrop>(pParam);
     if (!pCropParam) {
         AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
@@ -249,6 +248,10 @@ RGY_ERR RGYFilterCspCrop::run_filter(const FrameInfo *pInputFrame, FrameInfo **p
     if (m_param->frameOut.csp == m_param->frameIn.csp) {
         //cropがなければ、一度に転送可能
         auto err = m_cl->copyFrame(ppOutputFrames[0], pInputFrame, &pCropParam->crop);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("Failed to copy frame: %s.\n"), get_err_mes(err));
+            return RGY_ERR_INVALID_PARAM;
+        }
     } else if (memcpyKind != RGYCLMemcpyD2D) {
         AddMessage(RGY_LOG_ERROR, _T("converting csp while copying from host to device is not supported.\n"));
         return RGY_ERR_UNSUPPORTED;
