@@ -699,10 +699,12 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     pParams->vpp.afs.tune = (param_val == _T("true")) || (param_val == _T("on"));
                     continue;
                 }
+#if 0
                 if (param_arg == _T("rff")) {
                     pParams->vpp.afs.rff = (param_val == _T("true")) || (param_val == _T("on"));
                     continue;
                 }
+#endif
                 if (param_arg == _T("timecode")) {
                     pParams->vpp.afs.timecode = (param_val == _T("true")) || (param_val == _T("on"));
                     continue;
