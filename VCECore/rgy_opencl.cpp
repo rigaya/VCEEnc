@@ -503,7 +503,7 @@ RGY_ERR RGYOpenCLContext::createContext() {
     {
         tstring devstr = _T("[");
         for (const auto dev : m_platform->devs()) {
-            devstr += strsprintf(_T("%p,"), devstr);
+            devstr += strsprintf(_T("%p,"), dev);
         }
         devstr = devstr.substr(0, devstr.length() - 1) + _T("]");
         m_pLog->write(RGY_LOG_DEBUG, _T("create OpenCL Context for %s\n"), devstr.c_str());
