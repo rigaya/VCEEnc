@@ -372,6 +372,8 @@ struct RGYOpenCLPlatformInfo {
     std::string name;
     std::string vendor;
     std::string extension;
+
+    std::string print();
 };
 
 class RGYOpenCLPlatform {
@@ -395,8 +397,8 @@ public:
     };
     void setDevs(std::vector<cl_device_id> &devs) { m_devices = devs; };
     bool isVendor(const char *vendor);
-protected:
     RGYOpenCLPlatformInfo info();
+protected:
 
     cl_platform_id m_platform;
     void *m_d3d9dev;

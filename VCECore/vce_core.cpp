@@ -597,7 +597,7 @@ RGY_ERR VCECore::initDevice(const int deviceId, const bool interlopD3d9, const b
         }
     }
 
-    RGYOpenCL cl;
+    RGYOpenCL cl(m_pLog);
     auto platforms = cl.getPlatforms("AMD");
     if (platforms.size() == 0) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to find OpenCL platforms.\n"));
