@@ -336,9 +336,10 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
     }
 #endif
 
+    const bool vpp_rff = false; // inputParam->vpp.rff;
     auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input,
         m_pStatus, &inputParam->common, &inputParam->ctrl, HWDecCodecCsp, subburnTrackId,
-        false, false, m_pPerfMonitor.get(), m_pLog);
+        inputParam->vpp.afs.enable, vpp_rff, m_pPerfMonitor.get(), m_pLog);
     if (err != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("failed to initialize file reader(s).\n"));
         return err;
@@ -375,8 +376,7 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
 
 #if ENABLE_AVSW_READER
     auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
-    const bool vpp_rff = false; // inputParam->vpp.rff;
-    const bool vpp_afs = false; // inputParam->vpp.afs.enable;
+    const bool vpp_afs = inputParam->vpp.afs.enable;
     if ((m_nAVSyncMode & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR))/* || inputParam->vpp.rff*/) {
         tstring err_target;
         if (m_nAVSyncMode & RGY_AVSYNC_VFR)       err_target += _T("avsync vfr, ");
@@ -571,8 +571,8 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCECore::initDevice(const int deviceId, const bool interlopD3d9, const bool interlopD3d11) {
-    if (interlopD3d9) {
+RGY_ERR VCECore::initDevice(const int deviceId, const bool interopD3d9, const bool interopD3d11) {
+    if (interopD3d9) {
         auto err = m_dx9.Init(true, deviceId, false, 1280, 720, m_pLog);
         if (err != RGY_ERR_NONE) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to get directX9 device.\n"));
@@ -584,7 +584,7 @@ RGY_ERR VCECore::initDevice(const int deviceId, const bool interlopD3d9, const b
             return err_to_rgy(amferr);
         }
     }
-    if (interlopD3d11) {
+    if (interopD3d11) {
         auto err = m_dx11.Init(deviceId, false, m_pLog);
         if (err != RGY_ERR_NONE) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to get directX11 device.\n"));
@@ -604,12 +604,12 @@ RGY_ERR VCECore::initDevice(const int deviceId, const bool interlopD3d9, const b
         return RGY_ERR_DEVICE_LOST;
     }
     auto& platform = platforms[0];
-    if (interlopD3d9) {
+    if (interopD3d9) {
         if (platform->createDeviceListD3D9(CL_DEVICE_TYPE_GPU, (void *)m_dx9.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to find device.\n"));
             return RGY_ERR_DEVICE_LOST;
         }
-    } else if (interlopD3d11) {
+    } else if (interopD3d11) {
         if (platform->createDeviceListD3D11(CL_DEVICE_TYPE_GPU, (void *)m_dx11.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to find device.\n"));
             return RGY_ERR_DEVICE_LOST;
@@ -902,15 +902,14 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     //    m_stPicStruct = NV_ENC_PIC_STRUCT_FRAME;
     //}
     //インタレ解除の個数をチェック
-    //int deinterlacer = 0;
-    //if (inputParam->vpp.deinterlace != cudaVideoDeinterlaceMode_Weave) deinterlacer++;
-    //if (inputParam->vpp.afs.enable) deinterlacer++;
+    int deinterlacer = 0;
+    if (inputParam->vpp.afs.enable) deinterlacer++;
     //if (inputParam->vpp.nnedi.enable) deinterlacer++;
     //if (inputParam->vpp.yadif.enable) deinterlacer++;
-    //if (deinterlacer >= 2) {
-    //    PrintMes(RGY_LOG_ERROR, _T("Activating 2 or more deinterlacer is not supported.\n"));
-    //    return RGY_ERR_UNSUPPORTED;
-    //}
+    if (deinterlacer >= 2) {
+        PrintMes(RGY_LOG_ERROR, _T("Activating 2 or more deinterlacer is not supported.\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
 
     //フィルタが必要
     if (resizeRequired
@@ -944,6 +943,9 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         case RGY_CSP_NV12: filterCsp = RGY_CSP_YV12; break;
         case RGY_CSP_P010: filterCsp = RGY_CSP_YV12_16; break;
         default: break;
+        }
+        if (inputParam->vpp.afs.enable && RGY_CSP_CHROMA_FORMAT[inputFrame.csp] == RGY_CHROMAFMT_YUV444) {
+            filterCsp = (RGY_CSP_BIT_DEPTH[inputFrame.csp] > 8) ? RGY_CSP_YUV444_16 : RGY_CSP_YUV444;
         }
         //colorspace
 #if 0
@@ -1558,7 +1560,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    if (RGY_ERR_NONE != (ret = initDevice(0, prm->interlopD3d9, prm->interlopD3d11))) {
+    if (RGY_ERR_NONE != (ret = initDevice(0, prm->interopD3d9, prm->interopD3d11))) {
         return ret;
     }
 

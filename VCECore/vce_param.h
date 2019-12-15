@@ -367,8 +367,8 @@ struct VCEParam {
 
     int     deviceID;
 
-    bool interlopD3d9;
-    bool interlopD3d11;
+    bool interopD3d9;
+    bool interopD3d11;
 
     int     par[2];
 
