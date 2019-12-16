@@ -278,6 +278,11 @@ RGY_ERR VCECore::InitChapters(VCEParam *prm) {
     return RGY_ERR_NONE;
 }
 
+RGY_ERR VCECore::initLog(int loglevel) {
+    m_pLog.reset(new RGYLog(nullptr, loglevel));
+    return RGY_ERR_NONE;
+}
+
 RGY_ERR VCECore::initLog(VCEParam *prm) {
     m_pLog.reset(new RGYLog(prm->ctrl.logfile.c_str(), prm->ctrl.loglevel));
     if (prm->ctrl.logfile.length() > 0) {
@@ -2431,7 +2436,8 @@ void VCECore::PrintResult() {
 RGY_ERR VCEFeatures::init(int deviceId, int logLevel) {
     m_core = std::make_unique<VCECore>();
     auto err = RGY_ERR_NONE;
-    if (   (err = m_core->initAMFFactory()) != RGY_ERR_NONE
+    if (   (err = m_core->initLog(logLevel)) != RGY_ERR_NONE
+        || (err = m_core->initAMFFactory()) != RGY_ERR_NONE
         || (err = m_core->initContext(logLevel)) != RGY_ERR_NONE
         || (err = m_core->initDevice(deviceId, false, false)) != RGY_ERR_NONE) {
         return err;

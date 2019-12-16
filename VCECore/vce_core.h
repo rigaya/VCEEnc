@@ -100,6 +100,8 @@ public:
     virtual ~VCECore();
 
     virtual RGY_ERR init(VCEParam *prm);
+    virtual RGY_ERR initLog(int loglevel);
+    virtual RGY_ERR initLog(VCEParam *prm);
     virtual RGY_ERR initAMFFactory();
     virtual RGY_ERR initContext(int log_level);
     virtual RGY_ERR initDevice(const int deviceId, const bool interopD3d9, const bool interopD3d11);
@@ -125,7 +127,6 @@ protected:
 
     virtual RGY_CSP GetEncoderCSP(const VCEParam *inputParam);
     virtual RGY_ERR checkParam(VCEParam *prm);
-    virtual RGY_ERR initLog(VCEParam *prm);
     virtual RGY_ERR initPerfMonitor(VCEParam *prm);
     virtual RGY_ERR initDecoder(VCEParam *prm);
     virtual RGY_ERR initFilters(VCEParam *prm);
