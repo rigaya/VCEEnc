@@ -183,6 +183,38 @@ const CX_DESC list_vce_preanalysis_h264[] = {
     { _T("on"),  AMF_VIDEO_ENCODER_PREENCODE_ENABLED },
 };
 
+#define AMF_PA_SCENE_CHANGE_DETECTION_NONE (AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_LOW-1)
+#define AMF_PA_STATIC_SCENE_DETECTION_NONE (AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY_LOW-1)
+
+const CX_DESC list_pa_sc_sensitivity[] = {
+    { _T("none"),   AMF_PA_SCENE_CHANGE_DETECTION_NONE },
+    { _T("low"),    AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_LOW },
+    { _T("medium"), AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_MEDIUM },
+    { _T("high"),   AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_HIGH },
+    { NULL, NULL }
+};
+
+const CX_DESC list_pa_ss_sensitivity[] = {
+    { _T("none"),   AMF_PA_STATIC_SCENE_DETECTION_NONE },
+    { _T("low"),    AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY_LOW },
+    { _T("medium"), AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY_MEDIUM },
+    { _T("high"),   AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY_HIGH },
+    { NULL, NULL }
+};
+
+const CX_DESC list_pa_activity[] = {
+    { _T("y"),   AMF_PA_ACTIVITY_Y },
+    { _T("yuv"), AMF_PA_ACTIVITY_YUV },
+    { NULL, NULL }
+};
+
+const CX_DESC list_pa_caq_strength[] = {
+    { _T("low"),    AMF_PA_CAQ_STRENGTH_LOW },
+    { _T("medium"), AMF_PA_CAQ_STRENGTH_MEDIUM },
+    { _T("high"),   AMF_PA_CAQ_STRENGTH_HIGH },
+    { NULL, NULL }
+};
+
 enum RGY_VPP_RESIZE_ALGO {
     RGY_VPP_RESIZE_AUTO,
     RGY_VPP_RESIZE_BILINEAR,
@@ -357,6 +389,20 @@ struct VCEVppParam {
     VCEVppParam();
 };
 
+static const int AMF_PA_INITQPSC_AUTO = -1;
+
+struct VCEParamPA {
+    bool sc;
+    AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_ENUM scSensitivity;
+    bool ss;
+    AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY_ENUM ssSensitivity;
+    AMF_PA_ACTIVITY_TYPE_ENUM activityType;
+    int initQPSC;
+    int maxQPBeforeForceSkip;
+    AMF_PA_CAQ_STRENGTH_ENUM CAQStrength;
+    VCEParamPA();
+};
+
 struct VCEParam {
     VideoInfo input;              //入力する動画の情報
     RGYParamCommon common;
@@ -367,8 +413,8 @@ struct VCEParam {
 
     int     deviceID;
 
-    bool interopD3d9;
-    bool interopD3d11;
+    bool    interopD3d9;
+    bool    interopD3d11;
 
     int     par[2];
 
@@ -402,6 +448,8 @@ struct VCEParam {
     int nRefFrames;
     int nLTRFrames;
     bool bFiller;
+
+    VCEParamPA pa;
 
     VideoVUIInfo vui;
 
@@ -454,7 +502,7 @@ AMF_PARAM(SLICES_PER_FRAME);
 AMF_PARAM(RATE_CONTROL_METHOD);
 AMF_PARAM(VBV_BUFFER_SIZE);
 AMF_PARAM(INITIAL_VBV_BUFFER_FULLNESS);
-AMF_PARAM(RATE_CONTROL_PREANALYSIS_ENABLE);
+//AMF_PARAM(RATE_CONTROL_PREANALYSIS_ENABLE);
 AMF_PARAM(ENABLE_VBAQ);
 AMF_PARAM(ENFORCE_HRD);
 AMF_PARAM(FILLER_DATA_ENABLE);
