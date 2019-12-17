@@ -890,6 +890,44 @@ private: System::Windows::Forms::CheckBox^  fcgCBFullrange;
 private: System::Windows::Forms::Label^  fcgLBFullrange;
 private: System::Windows::Forms::ComboBox^  fcgCXVideoFormat;
 private: System::Windows::Forms::Label^  fcgLBVideoFormat;
+private: System::Windows::Forms::GroupBox ^fcggroupBoxVppDeinterlace;
+private: System::Windows::Forms::Label ^fcgLBVppDeinterlace;
+private: System::Windows::Forms::ComboBox ^fcgCXVppDeinterlace;
+private: System::Windows::Forms::Panel ^fcgPNVppAfs;
+private: System::Windows::Forms::TrackBar ^fcgTBVppAfsThreCMotion;
+private: System::Windows::Forms::Label ^fcgLBVppAfsThreCMotion;
+private: System::Windows::Forms::TrackBar ^fcgTBVppAfsThreYMotion;
+private: System::Windows::Forms::Label ^fcgLBVppAfsThreYmotion;
+private: System::Windows::Forms::TrackBar ^fcgTBVppAfsThreDeint;
+private: System::Windows::Forms::Label ^fcgLBVppAfsThreDeint;
+private: System::Windows::Forms::TrackBar ^fcgTBVppAfsThreShift;
+private: System::Windows::Forms::Label ^fcgLBVppAfsThreShift;
+private: System::Windows::Forms::TrackBar ^fcgTBVppAfsCoeffShift;
+private: System::Windows::Forms::Label ^fcgLBVppAfsCoeffShift;
+private: System::Windows::Forms::Label ^label20;
+private: System::Windows::Forms::Label ^label19;
+private: System::Windows::Forms::Label ^label4;
+private: System::Windows::Forms::Label ^fcgLBVppAfsUp;
+private: System::Windows::Forms::NumericUpDown ^fcgNUVppAfsRight;
+private: System::Windows::Forms::NumericUpDown ^fcgNUVppAfsLeft;
+private: System::Windows::Forms::NumericUpDown ^fcgNUVppAfsBottom;
+private: System::Windows::Forms::NumericUpDown ^fcgNUVppAfsUp;
+private: System::Windows::Forms::TrackBar ^fcgTBVppAfsMethodSwitch;
+private: System::Windows::Forms::CheckBox ^fcgCBVppAfs24fps;
+private: System::Windows::Forms::CheckBox ^fcgCBVppAfsTune;
+private: System::Windows::Forms::CheckBox ^fcgCBVppAfsSmooth;
+private: System::Windows::Forms::CheckBox ^fcgCBVppAfsDrop;
+private: System::Windows::Forms::CheckBox ^fcgCBVppAfsShift;
+private: System::Windows::Forms::Label ^fcgLBVppAfsAnalyze;
+private: System::Windows::Forms::NumericUpDown ^fcgNUVppAfsThreCMotion;
+private: System::Windows::Forms::NumericUpDown ^fcgNUVppAfsThreShift;
+private: System::Windows::Forms::NumericUpDown ^fcgNUVppAfsThreDeint;
+private: System::Windows::Forms::NumericUpDown ^fcgNUVppAfsThreYMotion;
+private: System::Windows::Forms::Label ^fcgLBVppAfsMethodSwitch;
+private: System::Windows::Forms::ComboBox ^fcgCXVppAfsAnalyze;
+private: System::Windows::Forms::NumericUpDown ^fcgNUVppAfsCoeffShift;
+private: System::Windows::Forms::NumericUpDown ^fcgNUVppAfsMethodSwitch;
+private: System::Windows::Forms::ComboBox ^fcgCXVppResizeAlg;
 
 
 
@@ -1005,7 +1043,7 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
         void InitializeComponent(void)
         {
             this->components = (gcnew System::ComponentModel::Container());
-            System::ComponentModel::ComponentResourceManager^  resources = (gcnew System::ComponentModel::ComponentResourceManager(frmConfig::typeid));
+            System::ComponentModel::ComponentResourceManager ^resources = (gcnew System::ComponentModel::ComponentResourceManager(frmConfig::typeid));
             this->fcgtoolStripSettings = (gcnew System::Windows::Forms::ToolStrip());
             this->fcgTSBSave = (gcnew System::Windows::Forms::ToolStripButton());
             this->fcgTSBSaveNew = (gcnew System::Windows::Forms::ToolStripButton());
@@ -1079,6 +1117,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgTTEx = (gcnew System::Windows::Forms::ToolTip(this->components));
             this->fcgtabControlVCE = (gcnew System::Windows::Forms::TabControl());
             this->tabPageVideoEnc = (gcnew System::Windows::Forms::TabPage());
+            this->fcgCXVideoFormat = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgLBVideoFormat = (gcnew System::Windows::Forms::Label());
+            this->fcggroupBoxColor = (gcnew System::Windows::Forms::GroupBox());
+            this->fcgCBFullrange = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgLBFullrange = (gcnew System::Windows::Forms::Label());
+            this->fcgCXTransfer = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgCXColorPrim = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgCXColorMatrix = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgLBTransfer = (gcnew System::Windows::Forms::Label());
+            this->fcgLBColorPrim = (gcnew System::Windows::Forms::Label());
+            this->fcgLBColorMatrix = (gcnew System::Windows::Forms::Label());
+            this->fcgLBQPMin = (gcnew System::Windows::Forms::Label());
             this->fcgCBPreAnalysis = (gcnew System::Windows::Forms::CheckBox());
             this->fcgPNHEVCLevelProfile = (gcnew System::Windows::Forms::Panel());
             this->fcgCXHEVCLevel = (gcnew System::Windows::Forms::ComboBox());
@@ -1156,9 +1206,47 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgLBBRefDeltaQP = (gcnew System::Windows::Forms::Label());
             this->fcgNUBRefDeltaQP = (gcnew System::Windows::Forms::NumericUpDown());
             this->tabPageExOpt = (gcnew System::Windows::Forms::TabPage());
+            this->fcggroupBoxVppDeinterlace = (gcnew System::Windows::Forms::GroupBox());
+            this->fcgLBVppDeinterlace = (gcnew System::Windows::Forms::Label());
+            this->fcgCXVppDeinterlace = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgPNVppAfs = (gcnew System::Windows::Forms::Panel());
+            this->fcgTBVppAfsThreCMotion = (gcnew System::Windows::Forms::TrackBar());
+            this->fcgLBVppAfsThreCMotion = (gcnew System::Windows::Forms::Label());
+            this->fcgTBVppAfsThreYMotion = (gcnew System::Windows::Forms::TrackBar());
+            this->fcgLBVppAfsThreYmotion = (gcnew System::Windows::Forms::Label());
+            this->fcgTBVppAfsThreDeint = (gcnew System::Windows::Forms::TrackBar());
+            this->fcgLBVppAfsThreDeint = (gcnew System::Windows::Forms::Label());
+            this->fcgTBVppAfsThreShift = (gcnew System::Windows::Forms::TrackBar());
+            this->fcgLBVppAfsThreShift = (gcnew System::Windows::Forms::Label());
+            this->fcgTBVppAfsCoeffShift = (gcnew System::Windows::Forms::TrackBar());
+            this->fcgLBVppAfsCoeffShift = (gcnew System::Windows::Forms::Label());
+            this->label20 = (gcnew System::Windows::Forms::Label());
+            this->label19 = (gcnew System::Windows::Forms::Label());
+            this->label4 = (gcnew System::Windows::Forms::Label());
+            this->fcgLBVppAfsUp = (gcnew System::Windows::Forms::Label());
+            this->fcgNUVppAfsRight = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUVppAfsLeft = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUVppAfsBottom = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUVppAfsUp = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgTBVppAfsMethodSwitch = (gcnew System::Windows::Forms::TrackBar());
+            this->fcgCBVppAfs24fps = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgCBVppAfsTune = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgCBVppAfsSmooth = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgCBVppAfsDrop = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgCBVppAfsShift = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgLBVppAfsAnalyze = (gcnew System::Windows::Forms::Label());
+            this->fcgNUVppAfsThreCMotion = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUVppAfsThreShift = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUVppAfsThreDeint = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUVppAfsThreYMotion = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgLBVppAfsMethodSwitch = (gcnew System::Windows::Forms::Label());
+            this->fcgCXVppAfsAnalyze = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgNUVppAfsCoeffShift = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUVppAfsMethodSwitch = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgCBTimerPeriodTuning = (gcnew System::Windows::Forms::CheckBox());
             this->fcgCBResize = (gcnew System::Windows::Forms::CheckBox());
             this->fcggroupboxResize = (gcnew System::Windows::Forms::GroupBox());
+            this->fcgCXVppResizeAlg = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBResize = (gcnew System::Windows::Forms::Label());
             this->fcgNUResizeH = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgNUResizeW = (gcnew System::Windows::Forms::NumericUpDown());
@@ -1208,18 +1296,6 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBRunBatBeforeAudio = (gcnew System::Windows::Forms::CheckBox());
             this->fcgCXAudioPriority = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBAudioPriority = (gcnew System::Windows::Forms::Label());
-            this->fcgLBQPMin = (gcnew System::Windows::Forms::Label());
-            this->fcggroupBoxColor = (gcnew System::Windows::Forms::GroupBox());
-            this->fcgCXTransfer = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgCXColorPrim = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgCXColorMatrix = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgLBTransfer = (gcnew System::Windows::Forms::Label());
-            this->fcgLBColorPrim = (gcnew System::Windows::Forms::Label());
-            this->fcgLBColorMatrix = (gcnew System::Windows::Forms::Label());
-            this->fcgCBFullrange = (gcnew System::Windows::Forms::CheckBox());
-            this->fcgLBFullrange = (gcnew System::Windows::Forms::Label());
-            this->fcgCXVideoFormat = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgLBVideoFormat = (gcnew System::Windows::Forms::Label());
             this->fcgtoolStripSettings->SuspendLayout();
             this->fcgtabControlMux->SuspendLayout();
             this->fcgtabPageMP4->SuspendLayout();
@@ -1229,45 +1305,63 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgtabPageBat->SuspendLayout();
             this->fcgtabControlVCE->SuspendLayout();
             this->tabPageVideoEnc->SuspendLayout();
+            this->fcggroupBoxColor->SuspendLayout();
             this->fcgPNHEVCLevelProfile->SuspendLayout();
             this->fcgPNH264Features->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNURefFrames))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVBVBufSize))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMax))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMin))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgpictureBoxVCEEnabled))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgpictureBoxVCEDisabled))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUSlices))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNURefFrames))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVBVBufSize))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPMax))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPMin))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgpictureBoxVCEEnabled))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgpictureBoxVCEDisabled))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUSlices))->BeginInit();
             this->fcgGroupBoxAspectRatio->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioY))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioX))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUGopLength))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUAspectRatioY))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUAspectRatioX))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUGopLength))->BeginInit();
             this->fcgPNBitrate->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBitrate))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUMaxkbps))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBitrate))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUMaxkbps))->BeginInit();
             this->fcgPNQP->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPI))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPP))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPB))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPI))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPP))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPB))->BeginInit();
             this->fcgPNBframes->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBframes))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBDeltaQP))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBRefDeltaQP))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBframes))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBDeltaQP))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBRefDeltaQP))->BeginInit();
             this->tabPageExOpt->SuspendLayout();
+            this->fcggroupBoxVppDeinterlace->SuspendLayout();
+            this->fcgPNVppAfs->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreCMotion))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreYMotion))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreDeint))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreShift))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsCoeffShift))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsRight))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsLeft))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsBottom))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsUp))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsMethodSwitch))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreCMotion))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreShift))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreDeint))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreYMotion))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsCoeffShift))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsMethodSwitch))->BeginInit();
             this->fcggroupboxResize->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUResizeH))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUResizeW))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUResizeH))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUResizeW))->BeginInit();
             this->fcgCSExeFiles->SuspendLayout();
             this->fcgtabControlAudio->SuspendLayout();
             this->fcgtabPageAudioMain->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrate))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUAudioBitrate))->BeginInit();
             this->fcgtabPageAudioOther->SuspendLayout();
-            this->fcggroupBoxColor->SuspendLayout();
             this->SuspendLayout();
-            // 
+            //
             // fcgtoolStripSettings
-            // 
-            this->fcgtoolStripSettings->Items->AddRange(gcnew cli::array< System::Windows::Forms::ToolStripItem^  >(10) {
+            //
+            this->fcgtoolStripSettings->Items->AddRange(gcnew cli::array< System::Windows::Forms::ToolStripItem ^  >(10) {
                 this->fcgTSBSave,
                     this->fcgTSBSaveNew, this->fcgTSBDelete, this->fcgtoolStripSeparator1, this->fcgTSSettings, this->fcgTSBBitrateCalc, this->toolStripSeparator2,
                     this->fcgTSBOtherSettings, this->fcgTSLSettingsNotes, this->fcgTSTSettingsNotes
@@ -1277,80 +1371,80 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgtoolStripSettings->Size = System::Drawing::Size(1008, 25);
             this->fcgtoolStripSettings->TabIndex = 1;
             this->fcgtoolStripSettings->Text = L"toolStrip1";
-            // 
+            //
             // fcgTSBSave
-            // 
-            this->fcgTSBSave->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgTSBSave.Image")));
+            //
+            this->fcgTSBSave->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgTSBSave.Image")));
             this->fcgTSBSave->ImageTransparentColor = System::Drawing::Color::Magenta;
             this->fcgTSBSave->Name = L"fcgTSBSave";
             this->fcgTSBSave->Size = System::Drawing::Size(84, 22);
             this->fcgTSBSave->Text = L"上書き保存";
             this->fcgTSBSave->Click += gcnew System::EventHandler(this, &frmConfig::fcgTSBSave_Click);
-            // 
+            //
             // fcgTSBSaveNew
-            // 
-            this->fcgTSBSaveNew->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgTSBSaveNew.Image")));
+            //
+            this->fcgTSBSaveNew->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgTSBSaveNew.Image")));
             this->fcgTSBSaveNew->ImageTransparentColor = System::Drawing::Color::Black;
             this->fcgTSBSaveNew->Name = L"fcgTSBSaveNew";
             this->fcgTSBSaveNew->Size = System::Drawing::Size(75, 22);
             this->fcgTSBSaveNew->Text = L"新規保存";
             this->fcgTSBSaveNew->Click += gcnew System::EventHandler(this, &frmConfig::fcgTSBSaveNew_Click);
-            // 
+            //
             // fcgTSBDelete
-            // 
-            this->fcgTSBDelete->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgTSBDelete.Image")));
+            //
+            this->fcgTSBDelete->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgTSBDelete.Image")));
             this->fcgTSBDelete->ImageTransparentColor = System::Drawing::Color::Magenta;
             this->fcgTSBDelete->Name = L"fcgTSBDelete";
             this->fcgTSBDelete->Size = System::Drawing::Size(51, 22);
             this->fcgTSBDelete->Text = L"削除";
             this->fcgTSBDelete->Click += gcnew System::EventHandler(this, &frmConfig::fcgTSBDelete_Click);
-            // 
+            //
             // fcgtoolStripSeparator1
-            // 
+            //
             this->fcgtoolStripSeparator1->Name = L"fcgtoolStripSeparator1";
             this->fcgtoolStripSeparator1->Size = System::Drawing::Size(6, 25);
-            // 
+            //
             // fcgTSSettings
-            // 
-            this->fcgTSSettings->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgTSSettings.Image")));
+            //
+            this->fcgTSSettings->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgTSSettings.Image")));
             this->fcgTSSettings->ImageTransparentColor = System::Drawing::Color::Magenta;
             this->fcgTSSettings->Name = L"fcgTSSettings";
             this->fcgTSSettings->Size = System::Drawing::Size(79, 22);
             this->fcgTSSettings->Text = L"プリセット";
             this->fcgTSSettings->DropDownItemClicked += gcnew System::Windows::Forms::ToolStripItemClickedEventHandler(this, &frmConfig::fcgTSSettings_DropDownItemClicked);
             this->fcgTSSettings->Click += gcnew System::EventHandler(this, &frmConfig::fcgTSSettings_Click);
-            // 
+            //
             // fcgTSBBitrateCalc
-            // 
+            //
             this->fcgTSBBitrateCalc->Alignment = System::Windows::Forms::ToolStripItemAlignment::Right;
             this->fcgTSBBitrateCalc->CheckOnClick = true;
             this->fcgTSBBitrateCalc->DisplayStyle = System::Windows::Forms::ToolStripItemDisplayStyle::Text;
-            this->fcgTSBBitrateCalc->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgTSBBitrateCalc.Image")));
+            this->fcgTSBBitrateCalc->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgTSBBitrateCalc.Image")));
             this->fcgTSBBitrateCalc->ImageTransparentColor = System::Drawing::Color::Magenta;
             this->fcgTSBBitrateCalc->Name = L"fcgTSBBitrateCalc";
             this->fcgTSBBitrateCalc->Size = System::Drawing::Size(96, 22);
             this->fcgTSBBitrateCalc->Text = L"ビットレート計算機";
             this->fcgTSBBitrateCalc->CheckedChanged += gcnew System::EventHandler(this, &frmConfig::fcgTSBBitrateCalc_CheckedChanged);
-            // 
+            //
             // toolStripSeparator2
-            // 
+            //
             this->toolStripSeparator2->Alignment = System::Windows::Forms::ToolStripItemAlignment::Right;
             this->toolStripSeparator2->Name = L"toolStripSeparator2";
             this->toolStripSeparator2->Size = System::Drawing::Size(6, 25);
-            // 
+            //
             // fcgTSBOtherSettings
-            // 
+            //
             this->fcgTSBOtherSettings->Alignment = System::Windows::Forms::ToolStripItemAlignment::Right;
             this->fcgTSBOtherSettings->DisplayStyle = System::Windows::Forms::ToolStripItemDisplayStyle::Text;
-            this->fcgTSBOtherSettings->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgTSBOtherSettings.Image")));
+            this->fcgTSBOtherSettings->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgTSBOtherSettings.Image")));
             this->fcgTSBOtherSettings->ImageTransparentColor = System::Drawing::Color::Magenta;
             this->fcgTSBOtherSettings->Name = L"fcgTSBOtherSettings";
             this->fcgTSBOtherSettings->Size = System::Drawing::Size(76, 22);
             this->fcgTSBOtherSettings->Text = L"その他の設定";
             this->fcgTSBOtherSettings->Click += gcnew System::EventHandler(this, &frmConfig::fcgTSBOtherSettings_Click);
-            // 
+            //
             // fcgTSLSettingsNotes
-            // 
+            //
             this->fcgTSLSettingsNotes->DoubleClickEnabled = true;
             this->fcgTSLSettingsNotes->Font = (gcnew System::Drawing::Font(L"Meiryo UI", 8.25F, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
                 static_cast<System::Byte>(128)));
@@ -1360,9 +1454,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgTSLSettingsNotes->Size = System::Drawing::Size(45, 22);
             this->fcgTSLSettingsNotes->Text = L"メモ表示";
             this->fcgTSLSettingsNotes->DoubleClick += gcnew System::EventHandler(this, &frmConfig::fcgTSLSettingsNotes_DoubleClick);
-            // 
+            //
             // fcgTSTSettingsNotes
-            // 
+            //
             this->fcgTSTSettingsNotes->BackColor = System::Drawing::SystemColors::Window;
             this->fcgTSTSettingsNotes->Font = (gcnew System::Drawing::Font(L"Meiryo UI", 8.25F, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
                 static_cast<System::Byte>(128)));
@@ -1374,9 +1468,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgTSTSettingsNotes->Leave += gcnew System::EventHandler(this, &frmConfig::fcgTSTSettingsNotes_Leave);
             this->fcgTSTSettingsNotes->KeyDown += gcnew System::Windows::Forms::KeyEventHandler(this, &frmConfig::fcgTSTSettingsNotes_KeyDown);
             this->fcgTSTSettingsNotes->TextChanged += gcnew System::EventHandler(this, &frmConfig::fcgTSTSettingsNotes_TextChanged);
-            // 
+            //
             // fcgtabControlMux
-            // 
+            //
             this->fcgtabControlMux->Controls->Add(this->fcgtabPageMP4);
             this->fcgtabControlMux->Controls->Add(this->fcgtabPageMKV);
             this->fcgtabControlMux->Controls->Add(this->fcgtabPageMPG);
@@ -1389,9 +1483,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgtabControlMux->SelectedIndex = 0;
             this->fcgtabControlMux->Size = System::Drawing::Size(384, 201);
             this->fcgtabControlMux->TabIndex = 3;
-            // 
+            //
             // fcgtabPageMP4
-            // 
+            //
             this->fcgtabPageMP4->Controls->Add(this->fcgBTMP4RawPath);
             this->fcgtabPageMP4->Controls->Add(this->fcgTXMP4RawPath);
             this->fcgtabPageMP4->Controls->Add(this->fcgLBMP4RawPath);
@@ -1416,9 +1510,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgtabPageMP4->TabIndex = 0;
             this->fcgtabPageMP4->Text = L"mp4";
             this->fcgtabPageMP4->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgBTMP4RawPath
-            // 
+            //
             this->fcgBTMP4RawPath->Location = System::Drawing::Point(340, 102);
             this->fcgBTMP4RawPath->Name = L"fcgBTMP4RawPath";
             this->fcgBTMP4RawPath->Size = System::Drawing::Size(30, 23);
@@ -1427,9 +1521,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTMP4RawPath->UseVisualStyleBackColor = true;
             this->fcgBTMP4RawPath->Visible = false;
             this->fcgBTMP4RawPath->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTMP4RawMuxerPath_Click);
-            // 
+            //
             // fcgTXMP4RawPath
-            // 
+            //
             this->fcgTXMP4RawPath->AllowDrop = true;
             this->fcgTXMP4RawPath->Location = System::Drawing::Point(136, 103);
             this->fcgTXMP4RawPath->Name = L"fcgTXMP4RawPath";
@@ -1439,9 +1533,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgTXMP4RawPath->TextChanged += gcnew System::EventHandler(this, &frmConfig::fcgTXMP4RawMuxerPath_TextChanged);
             this->fcgTXMP4RawPath->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_DragDrop);
             this->fcgTXMP4RawPath->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_Enter);
-            // 
+            //
             // fcgLBMP4RawPath
-            // 
+            //
             this->fcgLBMP4RawPath->AutoSize = true;
             this->fcgLBMP4RawPath->Location = System::Drawing::Point(4, 106);
             this->fcgLBMP4RawPath->Name = L"fcgLBMP4RawPath";
@@ -1449,9 +1543,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgLBMP4RawPath->TabIndex = 21;
             this->fcgLBMP4RawPath->Text = L"～の指定";
             this->fcgLBMP4RawPath->Visible = false;
-            // 
+            //
             // fcgCBMP4MuxApple
-            // 
+            //
             this->fcgCBMP4MuxApple->AutoSize = true;
             this->fcgCBMP4MuxApple->Location = System::Drawing::Point(254, 34);
             this->fcgCBMP4MuxApple->Name = L"fcgCBMP4MuxApple";
@@ -1460,9 +1554,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBMP4MuxApple->Tag = L"chValue";
             this->fcgCBMP4MuxApple->Text = L"Apple形式に対応";
             this->fcgCBMP4MuxApple->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgBTMP4BoxTempDir
-            // 
+            //
             this->fcgBTMP4BoxTempDir->Location = System::Drawing::Point(340, 146);
             this->fcgBTMP4BoxTempDir->Name = L"fcgBTMP4BoxTempDir";
             this->fcgBTMP4BoxTempDir->Size = System::Drawing::Size(30, 23);
@@ -1470,17 +1564,17 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTMP4BoxTempDir->Text = L"...";
             this->fcgBTMP4BoxTempDir->UseVisualStyleBackColor = true;
             this->fcgBTMP4BoxTempDir->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTMP4BoxTempDir_Click);
-            // 
+            //
             // fcgTXMP4BoxTempDir
-            // 
+            //
             this->fcgTXMP4BoxTempDir->Location = System::Drawing::Point(107, 147);
             this->fcgTXMP4BoxTempDir->Name = L"fcgTXMP4BoxTempDir";
             this->fcgTXMP4BoxTempDir->Size = System::Drawing::Size(227, 21);
             this->fcgTXMP4BoxTempDir->TabIndex = 7;
             this->fcgTXMP4BoxTempDir->TextChanged += gcnew System::EventHandler(this, &frmConfig::fcgTXMP4BoxTempDir_TextChanged);
-            // 
+            //
             // fcgCXMP4BoxTempDir
-            // 
+            //
             this->fcgCXMP4BoxTempDir->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXMP4BoxTempDir->FormattingEnabled = true;
             this->fcgCXMP4BoxTempDir->Location = System::Drawing::Point(145, 119);
@@ -1488,18 +1582,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXMP4BoxTempDir->Size = System::Drawing::Size(206, 22);
             this->fcgCXMP4BoxTempDir->TabIndex = 6;
             this->fcgCXMP4BoxTempDir->Tag = L"chValue";
-            // 
+            //
             // fcgLBMP4BoxTempDir
-            // 
+            //
             this->fcgLBMP4BoxTempDir->AutoSize = true;
             this->fcgLBMP4BoxTempDir->Location = System::Drawing::Point(25, 122);
             this->fcgLBMP4BoxTempDir->Name = L"fcgLBMP4BoxTempDir";
             this->fcgLBMP4BoxTempDir->Size = System::Drawing::Size(105, 14);
             this->fcgLBMP4BoxTempDir->TabIndex = 18;
             this->fcgLBMP4BoxTempDir->Text = L"mp4box一時フォルダ";
-            // 
+            //
             // fcgBTTC2MP4Path
-            // 
+            //
             this->fcgBTTC2MP4Path->Location = System::Drawing::Point(340, 80);
             this->fcgBTTC2MP4Path->Name = L"fcgBTTC2MP4Path";
             this->fcgBTTC2MP4Path->Size = System::Drawing::Size(30, 23);
@@ -1508,9 +1602,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTTC2MP4Path->UseVisualStyleBackColor = true;
             this->fcgBTTC2MP4Path->Visible = false;
             this->fcgBTTC2MP4Path->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTTC2MP4Path_Click);
-            // 
+            //
             // fcgTXTC2MP4Path
-            // 
+            //
             this->fcgTXTC2MP4Path->AllowDrop = true;
             this->fcgTXTC2MP4Path->Location = System::Drawing::Point(136, 81);
             this->fcgTXTC2MP4Path->Name = L"fcgTXTC2MP4Path";
@@ -1520,9 +1614,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgTXTC2MP4Path->TextChanged += gcnew System::EventHandler(this, &frmConfig::fcgTXTC2MP4Path_TextChanged);
             this->fcgTXTC2MP4Path->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_DragDrop);
             this->fcgTXTC2MP4Path->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_Enter);
-            // 
+            //
             // fcgBTMP4MuxerPath
-            // 
+            //
             this->fcgBTMP4MuxerPath->Location = System::Drawing::Point(340, 58);
             this->fcgBTMP4MuxerPath->Name = L"fcgBTMP4MuxerPath";
             this->fcgBTMP4MuxerPath->Size = System::Drawing::Size(30, 23);
@@ -1530,9 +1624,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTMP4MuxerPath->Text = L"...";
             this->fcgBTMP4MuxerPath->UseVisualStyleBackColor = true;
             this->fcgBTMP4MuxerPath->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTMP4MuxerPath_Click);
-            // 
+            //
             // fcgTXMP4MuxerPath
-            // 
+            //
             this->fcgTXMP4MuxerPath->AllowDrop = true;
             this->fcgTXMP4MuxerPath->Location = System::Drawing::Point(136, 59);
             this->fcgTXMP4MuxerPath->Name = L"fcgTXMP4MuxerPath";
@@ -1542,9 +1636,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgTXMP4MuxerPath->TextChanged += gcnew System::EventHandler(this, &frmConfig::fcgTXMP4MuxerPath_TextChanged);
             this->fcgTXMP4MuxerPath->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_DragDrop);
             this->fcgTXMP4MuxerPath->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_Enter);
-            // 
+            //
             // fcgLBTC2MP4Path
-            // 
+            //
             this->fcgLBTC2MP4Path->AutoSize = true;
             this->fcgLBTC2MP4Path->Location = System::Drawing::Point(4, 84);
             this->fcgLBTC2MP4Path->Name = L"fcgLBTC2MP4Path";
@@ -1552,18 +1646,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgLBTC2MP4Path->TabIndex = 4;
             this->fcgLBTC2MP4Path->Text = L"～の指定";
             this->fcgLBTC2MP4Path->Visible = false;
-            // 
+            //
             // fcgLBMP4MuxerPath
-            // 
+            //
             this->fcgLBMP4MuxerPath->AutoSize = true;
             this->fcgLBMP4MuxerPath->Location = System::Drawing::Point(4, 62);
             this->fcgLBMP4MuxerPath->Name = L"fcgLBMP4MuxerPath";
             this->fcgLBMP4MuxerPath->Size = System::Drawing::Size(49, 14);
             this->fcgLBMP4MuxerPath->TabIndex = 3;
             this->fcgLBMP4MuxerPath->Text = L"～の指定";
-            // 
+            //
             // fcgCXMP4CmdEx
-            // 
+            //
             this->fcgCXMP4CmdEx->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXMP4CmdEx->FormattingEnabled = true;
             this->fcgCXMP4CmdEx->Location = System::Drawing::Point(213, 7);
@@ -1571,18 +1665,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXMP4CmdEx->Size = System::Drawing::Size(157, 22);
             this->fcgCXMP4CmdEx->TabIndex = 1;
             this->fcgCXMP4CmdEx->Tag = L"chValue";
-            // 
+            //
             // fcgLBMP4CmdEx
-            // 
+            //
             this->fcgLBMP4CmdEx->AutoSize = true;
             this->fcgLBMP4CmdEx->Location = System::Drawing::Point(139, 10);
             this->fcgLBMP4CmdEx->Name = L"fcgLBMP4CmdEx";
             this->fcgLBMP4CmdEx->Size = System::Drawing::Size(68, 14);
             this->fcgLBMP4CmdEx->TabIndex = 1;
             this->fcgLBMP4CmdEx->Text = L"拡張オプション";
-            // 
+            //
             // fcgCBMP4MuxerExt
-            // 
+            //
             this->fcgCBMP4MuxerExt->AutoSize = true;
             this->fcgCBMP4MuxerExt->Location = System::Drawing::Point(10, 9);
             this->fcgCBMP4MuxerExt->Name = L"fcgCBMP4MuxerExt";
@@ -1591,9 +1685,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBMP4MuxerExt->Tag = L"chValue";
             this->fcgCBMP4MuxerExt->Text = L"外部muxerを使用";
             this->fcgCBMP4MuxerExt->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgtabPageMKV
-            // 
+            //
             this->fcgtabPageMKV->Controls->Add(this->fcgBTMKVMuxerPath);
             this->fcgtabPageMKV->Controls->Add(this->fcgTXMKVMuxerPath);
             this->fcgtabPageMKV->Controls->Add(this->fcgLBMKVMuxerPath);
@@ -1607,9 +1701,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgtabPageMKV->TabIndex = 1;
             this->fcgtabPageMKV->Text = L"mkv";
             this->fcgtabPageMKV->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgBTMKVMuxerPath
-            // 
+            //
             this->fcgBTMKVMuxerPath->Location = System::Drawing::Point(340, 76);
             this->fcgBTMKVMuxerPath->Name = L"fcgBTMKVMuxerPath";
             this->fcgBTMKVMuxerPath->Size = System::Drawing::Size(30, 23);
@@ -1617,9 +1711,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTMKVMuxerPath->Text = L"...";
             this->fcgBTMKVMuxerPath->UseVisualStyleBackColor = true;
             this->fcgBTMKVMuxerPath->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTMKVMuxerPath_Click);
-            // 
+            //
             // fcgTXMKVMuxerPath
-            // 
+            //
             this->fcgTXMKVMuxerPath->Location = System::Drawing::Point(131, 77);
             this->fcgTXMKVMuxerPath->Name = L"fcgTXMKVMuxerPath";
             this->fcgTXMKVMuxerPath->Size = System::Drawing::Size(207, 21);
@@ -1627,18 +1721,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgTXMKVMuxerPath->TextChanged += gcnew System::EventHandler(this, &frmConfig::fcgTXMKVMuxerPath_TextChanged);
             this->fcgTXMKVMuxerPath->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_DragDrop);
             this->fcgTXMKVMuxerPath->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_Enter);
-            // 
+            //
             // fcgLBMKVMuxerPath
-            // 
+            //
             this->fcgLBMKVMuxerPath->AutoSize = true;
             this->fcgLBMKVMuxerPath->Location = System::Drawing::Point(4, 80);
             this->fcgLBMKVMuxerPath->Name = L"fcgLBMKVMuxerPath";
             this->fcgLBMKVMuxerPath->Size = System::Drawing::Size(49, 14);
             this->fcgLBMKVMuxerPath->TabIndex = 19;
             this->fcgLBMKVMuxerPath->Text = L"～の指定";
-            // 
+            //
             // fcgCXMKVCmdEx
-            // 
+            //
             this->fcgCXMKVCmdEx->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXMKVCmdEx->FormattingEnabled = true;
             this->fcgCXMKVCmdEx->Location = System::Drawing::Point(213, 43);
@@ -1646,18 +1740,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXMKVCmdEx->Size = System::Drawing::Size(157, 22);
             this->fcgCXMKVCmdEx->TabIndex = 1;
             this->fcgCXMKVCmdEx->Tag = L"chValue";
-            // 
+            //
             // fcgLBMKVMuxerCmdEx
-            // 
+            //
             this->fcgLBMKVMuxerCmdEx->AutoSize = true;
             this->fcgLBMKVMuxerCmdEx->Location = System::Drawing::Point(139, 46);
             this->fcgLBMKVMuxerCmdEx->Name = L"fcgLBMKVMuxerCmdEx";
             this->fcgLBMKVMuxerCmdEx->Size = System::Drawing::Size(68, 14);
             this->fcgLBMKVMuxerCmdEx->TabIndex = 17;
             this->fcgLBMKVMuxerCmdEx->Text = L"拡張オプション";
-            // 
+            //
             // fcgCBMKVMuxerExt
-            // 
+            //
             this->fcgCBMKVMuxerExt->AutoSize = true;
             this->fcgCBMKVMuxerExt->Location = System::Drawing::Point(10, 45);
             this->fcgCBMKVMuxerExt->Name = L"fcgCBMKVMuxerExt";
@@ -1666,9 +1760,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBMKVMuxerExt->Tag = L"chValue";
             this->fcgCBMKVMuxerExt->Text = L"外部muxerを使用";
             this->fcgCBMKVMuxerExt->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgtabPageMPG
-            // 
+            //
             this->fcgtabPageMPG->Controls->Add(this->fcgBTMPGMuxerPath);
             this->fcgtabPageMPG->Controls->Add(this->fcgTXMPGMuxerPath);
             this->fcgtabPageMPG->Controls->Add(this->fcgLBMPGMuxerPath);
@@ -1681,9 +1775,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgtabPageMPG->TabIndex = 4;
             this->fcgtabPageMPG->Text = L"mpg";
             this->fcgtabPageMPG->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgBTMPGMuxerPath
-            // 
+            //
             this->fcgBTMPGMuxerPath->Location = System::Drawing::Point(341, 92);
             this->fcgBTMPGMuxerPath->Name = L"fcgBTMPGMuxerPath";
             this->fcgBTMPGMuxerPath->Size = System::Drawing::Size(30, 23);
@@ -1691,9 +1785,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTMPGMuxerPath->Text = L"...";
             this->fcgBTMPGMuxerPath->UseVisualStyleBackColor = true;
             this->fcgBTMPGMuxerPath->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTMPGMuxerPath_Click);
-            // 
+            //
             // fcgTXMPGMuxerPath
-            // 
+            //
             this->fcgTXMPGMuxerPath->Location = System::Drawing::Point(132, 93);
             this->fcgTXMPGMuxerPath->Name = L"fcgTXMPGMuxerPath";
             this->fcgTXMPGMuxerPath->Size = System::Drawing::Size(207, 21);
@@ -1701,18 +1795,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgTXMPGMuxerPath->TextChanged += gcnew System::EventHandler(this, &frmConfig::fcgTXMPGMuxerPath_TextChanged);
             this->fcgTXMPGMuxerPath->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_DragDrop);
             this->fcgTXMPGMuxerPath->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_Enter);
-            // 
+            //
             // fcgLBMPGMuxerPath
-            // 
+            //
             this->fcgLBMPGMuxerPath->AutoSize = true;
             this->fcgLBMPGMuxerPath->Location = System::Drawing::Point(5, 96);
             this->fcgLBMPGMuxerPath->Name = L"fcgLBMPGMuxerPath";
             this->fcgLBMPGMuxerPath->Size = System::Drawing::Size(49, 14);
             this->fcgLBMPGMuxerPath->TabIndex = 25;
             this->fcgLBMPGMuxerPath->Text = L"～の指定";
-            // 
+            //
             // fcgCXMPGCmdEx
-            // 
+            //
             this->fcgCXMPGCmdEx->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXMPGCmdEx->FormattingEnabled = true;
             this->fcgCXMPGCmdEx->Location = System::Drawing::Point(214, 59);
@@ -1720,18 +1814,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXMPGCmdEx->Size = System::Drawing::Size(157, 22);
             this->fcgCXMPGCmdEx->TabIndex = 21;
             this->fcgCXMPGCmdEx->Tag = L"chValue";
-            // 
+            //
             // label3
-            // 
+            //
             this->label3->AutoSize = true;
             this->label3->Location = System::Drawing::Point(140, 62);
             this->label3->Name = L"label3";
             this->label3->Size = System::Drawing::Size(68, 14);
             this->label3->TabIndex = 24;
             this->label3->Text = L"拡張オプション";
-            // 
+            //
             // fcgCBMPGMuxerExt
-            // 
+            //
             this->fcgCBMPGMuxerExt->AutoSize = true;
             this->fcgCBMPGMuxerExt->Location = System::Drawing::Point(11, 61);
             this->fcgCBMPGMuxerExt->Name = L"fcgCBMPGMuxerExt";
@@ -1740,9 +1834,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBMPGMuxerExt->Tag = L"chValue";
             this->fcgCBMPGMuxerExt->Text = L"外部muxerを使用";
             this->fcgCBMPGMuxerExt->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgtabPageMux
-            // 
+            //
             this->fcgtabPageMux->Controls->Add(this->fcgCXMuxPriority);
             this->fcgtabPageMux->Controls->Add(this->fcgLBMuxPriority);
             this->fcgtabPageMux->Controls->Add(this->fcgCBMuxMinimize);
@@ -1752,9 +1846,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgtabPageMux->TabIndex = 2;
             this->fcgtabPageMux->Text = L"Mux共通設定";
             this->fcgtabPageMux->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgCXMuxPriority
-            // 
+            //
             this->fcgCXMuxPriority->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXMuxPriority->FormattingEnabled = true;
             this->fcgCXMuxPriority->Location = System::Drawing::Point(102, 64);
@@ -1762,18 +1856,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXMuxPriority->Size = System::Drawing::Size(198, 22);
             this->fcgCXMuxPriority->TabIndex = 1;
             this->fcgCXMuxPriority->Tag = L"chValue";
-            // 
+            //
             // fcgLBMuxPriority
-            // 
+            //
             this->fcgLBMuxPriority->AutoSize = true;
             this->fcgLBMuxPriority->Location = System::Drawing::Point(15, 67);
             this->fcgLBMuxPriority->Name = L"fcgLBMuxPriority";
             this->fcgLBMuxPriority->Size = System::Drawing::Size(62, 14);
             this->fcgLBMuxPriority->TabIndex = 1;
             this->fcgLBMuxPriority->Text = L"Mux優先度";
-            // 
+            //
             // fcgCBMuxMinimize
-            // 
+            //
             this->fcgCBMuxMinimize->AutoSize = true;
             this->fcgCBMuxMinimize->Location = System::Drawing::Point(18, 26);
             this->fcgCBMuxMinimize->Name = L"fcgCBMuxMinimize";
@@ -1782,9 +1876,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBMuxMinimize->Tag = L"chValue";
             this->fcgCBMuxMinimize->Text = L"最小化";
             this->fcgCBMuxMinimize->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgtabPageBat
-            // 
+            //
             this->fcgtabPageBat->Controls->Add(this->fcgLBBatAfterString);
             this->fcgtabPageBat->Controls->Add(this->fcgLBBatBeforeString);
             this->fcgtabPageBat->Controls->Add(this->fcgPNSeparator);
@@ -1804,9 +1898,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgtabPageBat->TabIndex = 3;
             this->fcgtabPageBat->Text = L"エンコ前後バッチ処理";
             this->fcgtabPageBat->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgLBBatAfterString
-            // 
+            //
             this->fcgLBBatAfterString->AutoSize = true;
             this->fcgLBBatAfterString->Font = (gcnew System::Drawing::Font(L"Meiryo UI", 9, static_cast<System::Drawing::FontStyle>((System::Drawing::FontStyle::Italic | System::Drawing::FontStyle::Underline)),
                 System::Drawing::GraphicsUnit::Point, static_cast<System::Byte>(128)));
@@ -1817,9 +1911,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgLBBatAfterString->TabIndex = 20;
             this->fcgLBBatAfterString->Text = L" 後& ";
             this->fcgLBBatAfterString->TextAlign = System::Drawing::ContentAlignment::TopCenter;
-            // 
+            //
             // fcgLBBatBeforeString
-            // 
+            //
             this->fcgLBBatBeforeString->AutoSize = true;
             this->fcgLBBatBeforeString->Font = (gcnew System::Drawing::Font(L"Meiryo UI", 9, static_cast<System::Drawing::FontStyle>((System::Drawing::FontStyle::Italic | System::Drawing::FontStyle::Underline)),
                 System::Drawing::GraphicsUnit::Point, static_cast<System::Byte>(128)));
@@ -1830,17 +1924,17 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgLBBatBeforeString->TabIndex = 19;
             this->fcgLBBatBeforeString->Text = L" 前& ";
             this->fcgLBBatBeforeString->TextAlign = System::Drawing::ContentAlignment::TopCenter;
-            // 
+            //
             // fcgPNSeparator
-            // 
+            //
             this->fcgPNSeparator->BorderStyle = System::Windows::Forms::BorderStyle::FixedSingle;
             this->fcgPNSeparator->Location = System::Drawing::Point(18, 88);
             this->fcgPNSeparator->Name = L"fcgPNSeparator";
             this->fcgPNSeparator->Size = System::Drawing::Size(342, 1);
             this->fcgPNSeparator->TabIndex = 18;
-            // 
+            //
             // fcgBTBatBeforePath
-            // 
+            //
             this->fcgBTBatBeforePath->Location = System::Drawing::Point(330, 55);
             this->fcgBTBatBeforePath->Name = L"fcgBTBatBeforePath";
             this->fcgBTBatBeforePath->Size = System::Drawing::Size(30, 23);
@@ -1849,9 +1943,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTBatBeforePath->Text = L"...";
             this->fcgBTBatBeforePath->UseVisualStyleBackColor = true;
             this->fcgBTBatBeforePath->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTBatBeforePath_Click);
-            // 
+            //
             // fcgTXBatBeforePath
-            // 
+            //
             this->fcgTXBatBeforePath->AllowDrop = true;
             this->fcgTXBatBeforePath->Location = System::Drawing::Point(126, 56);
             this->fcgTXBatBeforePath->Name = L"fcgTXBatBeforePath";
@@ -1860,18 +1954,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgTXBatBeforePath->Tag = L"chValue";
             this->fcgTXBatBeforePath->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_DragDrop);
             this->fcgTXBatBeforePath->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_Enter);
-            // 
+            //
             // fcgLBBatBeforePath
-            // 
+            //
             this->fcgLBBatBeforePath->AutoSize = true;
             this->fcgLBBatBeforePath->Location = System::Drawing::Point(40, 59);
             this->fcgLBBatBeforePath->Name = L"fcgLBBatBeforePath";
             this->fcgLBBatBeforePath->Size = System::Drawing::Size(61, 14);
             this->fcgLBBatBeforePath->TabIndex = 15;
             this->fcgLBBatBeforePath->Text = L"バッチファイル";
-            // 
+            //
             // fcgCBWaitForBatBefore
-            // 
+            //
             this->fcgCBWaitForBatBefore->AutoSize = true;
             this->fcgCBWaitForBatBefore->Location = System::Drawing::Point(40, 30);
             this->fcgCBWaitForBatBefore->Name = L"fcgCBWaitForBatBefore";
@@ -1880,9 +1974,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBWaitForBatBefore->Tag = L"chValue";
             this->fcgCBWaitForBatBefore->Text = L"バッチ処理の終了を待機する";
             this->fcgCBWaitForBatBefore->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgCBRunBatBefore
-            // 
+            //
             this->fcgCBRunBatBefore->AutoSize = true;
             this->fcgCBRunBatBefore->Location = System::Drawing::Point(18, 6);
             this->fcgCBRunBatBefore->Name = L"fcgCBRunBatBefore";
@@ -1891,9 +1985,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBRunBatBefore->Tag = L"chValue";
             this->fcgCBRunBatBefore->Text = L"エンコード開始前、バッチ処理を行う";
             this->fcgCBRunBatBefore->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgBTBatAfterPath
-            // 
+            //
             this->fcgBTBatAfterPath->Location = System::Drawing::Point(330, 146);
             this->fcgBTBatAfterPath->Name = L"fcgBTBatAfterPath";
             this->fcgBTBatAfterPath->Size = System::Drawing::Size(30, 23);
@@ -1902,9 +1996,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTBatAfterPath->Text = L"...";
             this->fcgBTBatAfterPath->UseVisualStyleBackColor = true;
             this->fcgBTBatAfterPath->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTBatAfterPath_Click);
-            // 
+            //
             // fcgTXBatAfterPath
-            // 
+            //
             this->fcgTXBatAfterPath->AllowDrop = true;
             this->fcgTXBatAfterPath->Location = System::Drawing::Point(126, 147);
             this->fcgTXBatAfterPath->Name = L"fcgTXBatAfterPath";
@@ -1913,18 +2007,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgTXBatAfterPath->Tag = L"chValue";
             this->fcgTXBatAfterPath->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_DragDrop);
             this->fcgTXBatAfterPath->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_Enter);
-            // 
+            //
             // fcgLBBatAfterPath
-            // 
+            //
             this->fcgLBBatAfterPath->AutoSize = true;
             this->fcgLBBatAfterPath->Location = System::Drawing::Point(40, 150);
             this->fcgLBBatAfterPath->Name = L"fcgLBBatAfterPath";
             this->fcgLBBatAfterPath->Size = System::Drawing::Size(61, 14);
             this->fcgLBBatAfterPath->TabIndex = 8;
             this->fcgLBBatAfterPath->Text = L"バッチファイル";
-            // 
+            //
             // fcgCBWaitForBatAfter
-            // 
+            //
             this->fcgCBWaitForBatAfter->AutoSize = true;
             this->fcgCBWaitForBatAfter->Location = System::Drawing::Point(40, 122);
             this->fcgCBWaitForBatAfter->Name = L"fcgCBWaitForBatAfter";
@@ -1933,9 +2027,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBWaitForBatAfter->Tag = L"chValue";
             this->fcgCBWaitForBatAfter->Text = L"バッチ処理の終了を待機する";
             this->fcgCBWaitForBatAfter->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgCBRunBatAfter
-            // 
+            //
             this->fcgCBRunBatAfter->AutoSize = true;
             this->fcgCBRunBatAfter->Location = System::Drawing::Point(18, 98);
             this->fcgCBRunBatAfter->Name = L"fcgCBRunBatAfter";
@@ -1944,9 +2038,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBRunBatAfter->Tag = L"chValue";
             this->fcgCBRunBatAfter->Text = L"エンコード終了後、バッチ処理を行う";
             this->fcgCBRunBatAfter->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgTXCmd
-            // 
+            //
             this->fcgTXCmd->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Left)
                 | System::Windows::Forms::AnchorStyles::Right));
             this->fcgTXCmd->Font = (gcnew System::Drawing::Font(L"Meiryo UI", 8.25F, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
@@ -1957,9 +2051,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgTXCmd->Size = System::Drawing::Size(992, 21);
             this->fcgTXCmd->TabIndex = 4;
             this->fcgTXCmd->DoubleClick += gcnew System::EventHandler(this, &frmConfig::fcgTXCmd_DoubleClick);
-            // 
+            //
             // fcgBTCancel
-            // 
+            //
             this->fcgBTCancel->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((System::Windows::Forms::AnchorStyles::Bottom | System::Windows::Forms::AnchorStyles::Right));
             this->fcgBTCancel->Location = System::Drawing::Point(771, 570);
             this->fcgBTCancel->Name = L"fcgBTCancel";
@@ -1968,9 +2062,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTCancel->Text = L"キャンセル";
             this->fcgBTCancel->UseVisualStyleBackColor = true;
             this->fcgBTCancel->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTCancel_Click);
-            // 
+            //
             // fcgBTOK
-            // 
+            //
             this->fcgBTOK->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((System::Windows::Forms::AnchorStyles::Bottom | System::Windows::Forms::AnchorStyles::Right));
             this->fcgBTOK->Location = System::Drawing::Point(893, 570);
             this->fcgBTOK->Name = L"fcgBTOK";
@@ -1979,9 +2073,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTOK->Text = L"OK";
             this->fcgBTOK->UseVisualStyleBackColor = true;
             this->fcgBTOK->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTOK_Click);
-            // 
+            //
             // fcgBTDefault
-            // 
+            //
             this->fcgBTDefault->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((System::Windows::Forms::AnchorStyles::Bottom | System::Windows::Forms::AnchorStyles::Left));
             this->fcgBTDefault->Location = System::Drawing::Point(9, 572);
             this->fcgBTDefault->Name = L"fcgBTDefault";
@@ -1990,9 +2084,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTDefault->Text = L"デフォルト";
             this->fcgBTDefault->UseVisualStyleBackColor = true;
             this->fcgBTDefault->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTDefault_Click);
-            // 
+            //
             // fcgLBVersionDate
-            // 
+            //
             this->fcgLBVersionDate->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((System::Windows::Forms::AnchorStyles::Bottom | System::Windows::Forms::AnchorStyles::Left));
             this->fcgLBVersionDate->AutoSize = true;
             this->fcgLBVersionDate->Font = (gcnew System::Drawing::Font(L"Meiryo UI", 8.25F, System::Drawing::FontStyle::Italic, System::Drawing::GraphicsUnit::Point,
@@ -2003,9 +2097,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgLBVersionDate->Size = System::Drawing::Size(47, 14);
             this->fcgLBVersionDate->TabIndex = 8;
             this->fcgLBVersionDate->Text = L"Version";
-            // 
+            //
             // fcgLBVersion
-            // 
+            //
             this->fcgLBVersion->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((System::Windows::Forms::AnchorStyles::Bottom | System::Windows::Forms::AnchorStyles::Left));
             this->fcgLBVersion->AutoSize = true;
             this->fcgLBVersion->Font = (gcnew System::Drawing::Font(L"Meiryo UI", 8.25F, System::Drawing::FontStyle::Italic, System::Drawing::GraphicsUnit::Point,
@@ -2016,13 +2110,13 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgLBVersion->Size = System::Drawing::Size(47, 14);
             this->fcgLBVersion->TabIndex = 9;
             this->fcgLBVersion->Text = L"Version";
-            // 
+            //
             // fcgOpenFileDialog
-            // 
+            //
             this->fcgOpenFileDialog->FileName = L"openFileDialog1";
-            // 
+            //
             // fcgTTEx
-            // 
+            //
             this->fcgTTEx->AutomaticDelay = 200;
             this->fcgTTEx->AutoPopDelay = 9999;
             this->fcgTTEx->InitialDelay = 200;
@@ -2031,9 +2125,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgTTEx->ShowAlways = true;
             this->fcgTTEx->UseAnimation = false;
             this->fcgTTEx->UseFading = false;
-            // 
+            //
             // fcgtabControlVCE
-            // 
+            //
             this->fcgtabControlVCE->Controls->Add(this->tabPageVideoEnc);
             this->fcgtabControlVCE->Controls->Add(this->tabPageExOpt);
             this->fcgtabControlVCE->Location = System::Drawing::Point(4, 31);
@@ -2041,9 +2135,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgtabControlVCE->SelectedIndex = 0;
             this->fcgtabControlVCE->Size = System::Drawing::Size(616, 509);
             this->fcgtabControlVCE->TabIndex = 49;
-            // 
+            //
             // tabPageVideoEnc
-            // 
+            //
             this->tabPageVideoEnc->Controls->Add(this->fcgCXVideoFormat);
             this->tabPageVideoEnc->Controls->Add(this->fcgLBVideoFormat);
             this->tabPageVideoEnc->Controls->Add(this->fcggroupBoxColor);
@@ -2103,9 +2197,130 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->tabPageVideoEnc->TabIndex = 0;
             this->tabPageVideoEnc->Text = L"動画エンコード";
             this->tabPageVideoEnc->UseVisualStyleBackColor = true;
-            // 
+            //
+            // fcgCXVideoFormat
+            //
+            this->fcgCXVideoFormat->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXVideoFormat->FormattingEnabled = true;
+            this->fcgCXVideoFormat->Location = System::Drawing::Point(458, 330);
+            this->fcgCXVideoFormat->Name = L"fcgCXVideoFormat";
+            this->fcgCXVideoFormat->Size = System::Drawing::Size(121, 22);
+            this->fcgCXVideoFormat->TabIndex = 183;
+            this->fcgCXVideoFormat->Tag = L"reCmd";
+            //
+            // fcgLBVideoFormat
+            //
+            this->fcgLBVideoFormat->AutoSize = true;
+            this->fcgLBVideoFormat->Location = System::Drawing::Point(360, 333);
+            this->fcgLBVideoFormat->Name = L"fcgLBVideoFormat";
+            this->fcgLBVideoFormat->Size = System::Drawing::Size(73, 14);
+            this->fcgLBVideoFormat->TabIndex = 184;
+            this->fcgLBVideoFormat->Text = L"videoformat";
+            //
+            // fcggroupBoxColor
+            //
+            this->fcggroupBoxColor->Controls->Add(this->fcgCBFullrange);
+            this->fcggroupBoxColor->Controls->Add(this->fcgLBFullrange);
+            this->fcggroupBoxColor->Controls->Add(this->fcgCXTransfer);
+            this->fcggroupBoxColor->Controls->Add(this->fcgCXColorPrim);
+            this->fcggroupBoxColor->Controls->Add(this->fcgCXColorMatrix);
+            this->fcggroupBoxColor->Controls->Add(this->fcgLBTransfer);
+            this->fcggroupBoxColor->Controls->Add(this->fcgLBColorPrim);
+            this->fcggroupBoxColor->Controls->Add(this->fcgLBColorMatrix);
+            this->fcggroupBoxColor->Location = System::Drawing::Point(354, 355);
+            this->fcggroupBoxColor->Name = L"fcggroupBoxColor";
+            this->fcggroupBoxColor->Size = System::Drawing::Size(241, 121);
+            this->fcggroupBoxColor->TabIndex = 182;
+            this->fcggroupBoxColor->TabStop = false;
+            this->fcggroupBoxColor->Text = L"色設定";
+            //
+            // fcgCBFullrange
+            //
+            this->fcgCBFullrange->AutoSize = true;
+            this->fcgCBFullrange->Location = System::Drawing::Point(106, 101);
+            this->fcgCBFullrange->Name = L"fcgCBFullrange";
+            this->fcgCBFullrange->Size = System::Drawing::Size(15, 14);
+            this->fcgCBFullrange->TabIndex = 176;
+            this->fcgCBFullrange->Tag = L"reCmd";
+            this->fcgCBFullrange->UseVisualStyleBackColor = true;
+            //
+            // fcgLBFullrange
+            //
+            this->fcgLBFullrange->AutoSize = true;
+            this->fcgLBFullrange->Location = System::Drawing::Point(18, 100);
+            this->fcgLBFullrange->Name = L"fcgLBFullrange";
+            this->fcgLBFullrange->Size = System::Drawing::Size(55, 14);
+            this->fcgLBFullrange->TabIndex = 175;
+            this->fcgLBFullrange->Text = L"fullrange";
+            //
+            // fcgCXTransfer
+            //
+            this->fcgCXTransfer->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXTransfer->FormattingEnabled = true;
+            this->fcgCXTransfer->Location = System::Drawing::Point(105, 72);
+            this->fcgCXTransfer->Name = L"fcgCXTransfer";
+            this->fcgCXTransfer->Size = System::Drawing::Size(121, 22);
+            this->fcgCXTransfer->TabIndex = 2;
+            this->fcgCXTransfer->Tag = L"reCmd";
+            //
+            // fcgCXColorPrim
+            //
+            this->fcgCXColorPrim->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXColorPrim->FormattingEnabled = true;
+            this->fcgCXColorPrim->Location = System::Drawing::Point(105, 44);
+            this->fcgCXColorPrim->Name = L"fcgCXColorPrim";
+            this->fcgCXColorPrim->Size = System::Drawing::Size(121, 22);
+            this->fcgCXColorPrim->TabIndex = 1;
+            this->fcgCXColorPrim->Tag = L"reCmd";
+            //
+            // fcgCXColorMatrix
+            //
+            this->fcgCXColorMatrix->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXColorMatrix->FormattingEnabled = true;
+            this->fcgCXColorMatrix->Location = System::Drawing::Point(105, 16);
+            this->fcgCXColorMatrix->Name = L"fcgCXColorMatrix";
+            this->fcgCXColorMatrix->Size = System::Drawing::Size(121, 22);
+            this->fcgCXColorMatrix->TabIndex = 0;
+            this->fcgCXColorMatrix->Tag = L"reCmd";
+            //
+            // fcgLBTransfer
+            //
+            this->fcgLBTransfer->AutoSize = true;
+            this->fcgLBTransfer->Location = System::Drawing::Point(18, 75);
+            this->fcgLBTransfer->Name = L"fcgLBTransfer";
+            this->fcgLBTransfer->Size = System::Drawing::Size(49, 14);
+            this->fcgLBTransfer->TabIndex = 2;
+            this->fcgLBTransfer->Text = L"transfer";
+            //
+            // fcgLBColorPrim
+            //
+            this->fcgLBColorPrim->AutoSize = true;
+            this->fcgLBColorPrim->Location = System::Drawing::Point(18, 47);
+            this->fcgLBColorPrim->Name = L"fcgLBColorPrim";
+            this->fcgLBColorPrim->Size = System::Drawing::Size(61, 14);
+            this->fcgLBColorPrim->TabIndex = 1;
+            this->fcgLBColorPrim->Text = L"colorprim";
+            //
+            // fcgLBColorMatrix
+            //
+            this->fcgLBColorMatrix->AutoSize = true;
+            this->fcgLBColorMatrix->Location = System::Drawing::Point(18, 19);
+            this->fcgLBColorMatrix->Name = L"fcgLBColorMatrix";
+            this->fcgLBColorMatrix->Size = System::Drawing::Size(70, 14);
+            this->fcgLBColorMatrix->TabIndex = 0;
+            this->fcgLBColorMatrix->Text = L"colormatrix";
+            //
+            // fcgLBQPMin
+            //
+            this->fcgLBQPMin->AutoSize = true;
+            this->fcgLBQPMin->Location = System::Drawing::Point(97, 369);
+            this->fcgLBQPMin->Name = L"fcgLBQPMin";
+            this->fcgLBQPMin->Size = System::Drawing::Size(29, 14);
+            this->fcgLBQPMin->TabIndex = 180;
+            this->fcgLBQPMin->Text = L"下限";
+            //
             // fcgCBPreAnalysis
-            // 
+            //
             this->fcgCBPreAnalysis->AutoSize = true;
             this->fcgCBPreAnalysis->Location = System::Drawing::Point(459, 231);
             this->fcgCBPreAnalysis->Name = L"fcgCBPreAnalysis";
@@ -2113,9 +2328,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBPreAnalysis->TabIndex = 179;
             this->fcgCBPreAnalysis->Tag = L"reCmd";
             this->fcgCBPreAnalysis->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgPNHEVCLevelProfile
-            // 
+            //
             this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCLevel);
             this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCProfile);
             this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCLevel);
@@ -2124,9 +2339,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgPNHEVCLevelProfile->Name = L"fcgPNHEVCLevelProfile";
             this->fcgPNHEVCLevelProfile->Size = System::Drawing::Size(255, 63);
             this->fcgPNHEVCLevelProfile->TabIndex = 166;
-            // 
+            //
             // fcgCXHEVCLevel
-            // 
+            //
             this->fcgCXHEVCLevel->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXHEVCLevel->FormattingEnabled = true;
             this->fcgCXHEVCLevel->Location = System::Drawing::Point(112, 36);
@@ -2134,9 +2349,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXHEVCLevel->Size = System::Drawing::Size(121, 22);
             this->fcgCXHEVCLevel->TabIndex = 86;
             this->fcgCXHEVCLevel->Tag = L"reCmd";
-            // 
+            //
             // fcgCXHEVCProfile
-            // 
+            //
             this->fcgCXHEVCProfile->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXHEVCProfile->FormattingEnabled = true;
             this->fcgCXHEVCProfile->Location = System::Drawing::Point(112, 4);
@@ -2144,27 +2359,27 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXHEVCProfile->Size = System::Drawing::Size(121, 22);
             this->fcgCXHEVCProfile->TabIndex = 85;
             this->fcgCXHEVCProfile->Tag = L"reCmd";
-            // 
+            //
             // fcgLBHEVCLevel
-            // 
+            //
             this->fcgLBHEVCLevel->AutoSize = true;
             this->fcgLBHEVCLevel->Location = System::Drawing::Point(13, 39);
             this->fcgLBHEVCLevel->Name = L"fcgLBHEVCLevel";
             this->fcgLBHEVCLevel->Size = System::Drawing::Size(33, 14);
             this->fcgLBHEVCLevel->TabIndex = 88;
             this->fcgLBHEVCLevel->Text = L"レベル";
-            // 
+            //
             // fcgLBHEVCProfile
-            // 
+            //
             this->fcgLBHEVCProfile->AutoSize = true;
             this->fcgLBHEVCProfile->Location = System::Drawing::Point(13, 7);
             this->fcgLBHEVCProfile->Name = L"fcgLBHEVCProfile";
             this->fcgLBHEVCProfile->Size = System::Drawing::Size(53, 14);
             this->fcgLBHEVCProfile->TabIndex = 87;
             this->fcgLBHEVCProfile->Text = L"プロファイル";
-            // 
+            //
             // fcgBTVideoEncoderPath
-            // 
+            //
             this->fcgBTVideoEncoderPath->Location = System::Drawing::Point(274, 78);
             this->fcgBTVideoEncoderPath->Name = L"fcgBTVideoEncoderPath";
             this->fcgBTVideoEncoderPath->Size = System::Drawing::Size(30, 23);
@@ -2172,9 +2387,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTVideoEncoderPath->Text = L"...";
             this->fcgBTVideoEncoderPath->UseVisualStyleBackColor = true;
             this->fcgBTVideoEncoderPath->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTVideoEncoderPath_Click);
-            // 
+            //
             // fcgTXVideoEncoderPath
-            // 
+            //
             this->fcgTXVideoEncoderPath->AllowDrop = true;
             this->fcgTXVideoEncoderPath->Location = System::Drawing::Point(21, 80);
             this->fcgTXVideoEncoderPath->Name = L"fcgTXVideoEncoderPath";
@@ -2183,36 +2398,36 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgTXVideoEncoderPath->TextChanged += gcnew System::EventHandler(this, &frmConfig::fcgTXVideoEncoderPath_TextChanged);
             this->fcgTXVideoEncoderPath->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_DragDrop);
             this->fcgTXVideoEncoderPath->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_Enter);
-            // 
+            //
             // fcgLBVideoEncoderPath
-            // 
+            //
             this->fcgLBVideoEncoderPath->AutoSize = true;
             this->fcgLBVideoEncoderPath->Location = System::Drawing::Point(9, 62);
             this->fcgLBVideoEncoderPath->Name = L"fcgLBVideoEncoderPath";
             this->fcgLBVideoEncoderPath->Size = System::Drawing::Size(49, 14);
             this->fcgLBVideoEncoderPath->TabIndex = 178;
             this->fcgLBVideoEncoderPath->Text = L"～の指定";
-            // 
+            //
             // fcgPNH264Features
-            // 
+            //
             this->fcgPNH264Features->Controls->Add(this->fcgLBVBAQ);
             this->fcgPNH264Features->Controls->Add(this->fcgCBVBAQ);
             this->fcgPNH264Features->Location = System::Drawing::Point(344, 297);
             this->fcgPNH264Features->Name = L"fcgPNH264Features";
             this->fcgPNH264Features->Size = System::Drawing::Size(258, 26);
             this->fcgPNH264Features->TabIndex = 175;
-            // 
+            //
             // fcgLBVBAQ
-            // 
+            //
             this->fcgLBVBAQ->AutoSize = true;
             this->fcgLBVBAQ->Location = System::Drawing::Point(16, 6);
             this->fcgLBVBAQ->Name = L"fcgLBVBAQ";
             this->fcgLBVBAQ->Size = System::Drawing::Size(37, 14);
             this->fcgLBVBAQ->TabIndex = 161;
             this->fcgLBVBAQ->Text = L"VBAQ";
-            // 
+            //
             // fcgCBVBAQ
-            // 
+            //
             this->fcgCBVBAQ->AutoSize = true;
             this->fcgCBVBAQ->Location = System::Drawing::Point(115, 7);
             this->fcgCBVBAQ->Name = L"fcgCBVBAQ";
@@ -2220,9 +2435,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBVBAQ->TabIndex = 160;
             this->fcgCBVBAQ->Tag = L"reCmd";
             this->fcgCBVBAQ->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgNURefFrames
-            // 
+            //
             this->fcgNURefFrames->Location = System::Drawing::Point(133, 310);
             this->fcgNURefFrames->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 16, 0, 0, 0 });
             this->fcgNURefFrames->Name = L"fcgNURefFrames";
@@ -2231,48 +2446,48 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNURefFrames->Tag = L"reCmd";
             this->fcgNURefFrames->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
             this->fcgNURefFrames->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 0 });
-            // 
+            //
             // fcgLBRefFrames
-            // 
+            //
             this->fcgLBRefFrames->AutoSize = true;
             this->fcgLBRefFrames->Location = System::Drawing::Point(14, 312);
             this->fcgLBRefFrames->Name = L"fcgLBRefFrames";
             this->fcgLBRefFrames->Size = System::Drawing::Size(51, 14);
             this->fcgLBRefFrames->TabIndex = 170;
             this->fcgLBRefFrames->Text = L"参照距離";
-            // 
+            //
             // fcgLBCodec
-            // 
+            //
             this->fcgLBCodec->AutoSize = true;
             this->fcgLBCodec->Location = System::Drawing::Point(13, 117);
             this->fcgLBCodec->Name = L"fcgLBCodec";
             this->fcgLBCodec->Size = System::Drawing::Size(47, 14);
             this->fcgLBCodec->TabIndex = 165;
             this->fcgLBCodec->Text = L"コーデック";
-            // 
+            //
             // fcgCXCodec
-            // 
+            //
             this->fcgCXCodec->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXCodec->FormattingEnabled = true;
-            this->fcgCXCodec->Items->AddRange(gcnew cli::array< System::Object^  >(3) { L"高品質", L"標準", L"高速" });
+            this->fcgCXCodec->Items->AddRange(gcnew cli::array< System::Object ^  >(3) { L"高品質", L"標準", L"高速" });
             this->fcgCXCodec->Location = System::Drawing::Point(81, 114);
             this->fcgCXCodec->Name = L"fcgCXCodec";
             this->fcgCXCodec->Size = System::Drawing::Size(160, 22);
             this->fcgCXCodec->TabIndex = 164;
             this->fcgCXCodec->Tag = L"reCmd";
             this->fcgCXCodec->SelectedIndexChanged += gcnew System::EventHandler(this, &frmConfig::fcgCXCodec_SelectedIndexChanged);
-            // 
+            //
             // fcgLBPreAnalysis
-            // 
+            //
             this->fcgLBPreAnalysis->AutoSize = true;
             this->fcgLBPreAnalysis->Location = System::Drawing::Point(359, 231);
             this->fcgLBPreAnalysis->Name = L"fcgLBPreAnalysis";
             this->fcgLBPreAnalysis->Size = System::Drawing::Size(51, 14);
             this->fcgLBPreAnalysis->TabIndex = 163;
             this->fcgLBPreAnalysis->Text = L"先行探索";
-            // 
+            //
             // fcgNUVBVBufSize
-            // 
+            //
             this->fcgNUVBVBufSize->Location = System::Drawing::Point(132, 283);
             this->fcgNUVBVBufSize->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 100000, 0, 0, 0 });
             this->fcgNUVBVBufSize->Name = L"fcgNUVBVBufSize";
@@ -2280,36 +2495,36 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUVBVBufSize->TabIndex = 81;
             this->fcgNUVBVBufSize->Tag = L"reCmd";
             this->fcgNUVBVBufSize->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgLBSkipFrame
-            // 
+            //
             this->fcgLBSkipFrame->AutoSize = true;
             this->fcgLBSkipFrame->Location = System::Drawing::Point(359, 278);
             this->fcgLBSkipFrame->Name = L"fcgLBSkipFrame";
             this->fcgLBSkipFrame->Size = System::Drawing::Size(71, 14);
             this->fcgLBSkipFrame->TabIndex = 159;
             this->fcgLBSkipFrame->Text = L"スキップフレーム";
-            // 
+            //
             // fcgLBVBVBufSize
-            // 
+            //
             this->fcgLBVBVBufSize->AutoSize = true;
             this->fcgLBVBVBufSize->Location = System::Drawing::Point(14, 287);
             this->fcgLBVBVBufSize->Name = L"fcgLBVBVBufSize";
             this->fcgLBVBVBufSize->Size = System::Drawing::Size(84, 14);
             this->fcgLBVBVBufSize->TabIndex = 82;
             this->fcgLBVBVBufSize->Text = L"VBVバッファサイズ";
-            // 
+            //
             // fcgLBVBVBufSizeKbps
-            // 
+            //
             this->fcgLBVBVBufSizeKbps->AutoSize = true;
             this->fcgLBVBVBufSizeKbps->Location = System::Drawing::Point(216, 285);
             this->fcgLBVBVBufSizeKbps->Name = L"fcgLBVBVBufSizeKbps";
             this->fcgLBVBVBufSizeKbps->Size = System::Drawing::Size(32, 14);
             this->fcgLBVBVBufSizeKbps->TabIndex = 83;
             this->fcgLBVBVBufSizeKbps->Text = L"kbps";
-            // 
+            //
             // fcgCBSkipFrame
-            // 
+            //
             this->fcgCBSkipFrame->AutoSize = true;
             this->fcgCBSkipFrame->Location = System::Drawing::Point(459, 279);
             this->fcgCBSkipFrame->Name = L"fcgCBSkipFrame";
@@ -2317,9 +2532,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBSkipFrame->TabIndex = 158;
             this->fcgCBSkipFrame->Tag = L"reCmd";
             this->fcgCBSkipFrame->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgCBAFS
-            // 
+            //
             this->fcgCBAFS->AutoSize = true;
             this->fcgCBAFS->Location = System::Drawing::Point(362, 5);
             this->fcgCBAFS->Name = L"fcgCBAFS";
@@ -2328,9 +2543,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBAFS->Tag = L"reCmd";
             this->fcgCBAFS->Text = L"自動フィールドシフト(afs)を使用する";
             this->fcgCBAFS->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgNUQPMax
-            // 
+            //
             this->fcgNUQPMax->Location = System::Drawing::Point(235, 363);
             this->fcgNUQPMax->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
             this->fcgNUQPMax->Name = L"fcgNUQPMax";
@@ -2338,27 +2553,27 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUQPMax->TabIndex = 154;
             this->fcgNUQPMax->Tag = L"reCmd";
             this->fcgNUQPMax->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgLBQPMax
-            // 
+            //
             this->fcgLBQPMax->AutoSize = true;
             this->fcgLBQPMax->Location = System::Drawing::Point(199, 367);
             this->fcgLBQPMax->Name = L"fcgLBQPMax";
             this->fcgLBQPMax->Size = System::Drawing::Size(29, 14);
             this->fcgLBQPMax->TabIndex = 153;
             this->fcgLBQPMax->Text = L"上限";
-            // 
+            //
             // fcgLBQPMinMAX
-            // 
+            //
             this->fcgLBQPMinMAX->AutoSize = true;
             this->fcgLBQPMinMAX->Location = System::Drawing::Point(14, 366);
             this->fcgLBQPMinMAX->Name = L"fcgLBQPMinMAX";
             this->fcgLBQPMinMAX->Size = System::Drawing::Size(48, 14);
             this->fcgLBQPMinMAX->TabIndex = 152;
             this->fcgLBQPMinMAX->Text = L"QP 最小";
-            // 
+            //
             // fcgNUQPMin
-            // 
+            //
             this->fcgNUQPMin->Location = System::Drawing::Point(132, 364);
             this->fcgNUQPMin->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
             this->fcgNUQPMin->Name = L"fcgNUQPMin";
@@ -2366,29 +2581,29 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUQPMin->TabIndex = 151;
             this->fcgNUQPMin->Tag = L"reCmd";
             this->fcgNUQPMin->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgLBQualityPreset
-            // 
+            //
             this->fcgLBQualityPreset->AutoSize = true;
             this->fcgLBQualityPreset->Location = System::Drawing::Point(13, 173);
             this->fcgLBQualityPreset->Name = L"fcgLBQualityPreset";
             this->fcgLBQualityPreset->Size = System::Drawing::Size(29, 14);
             this->fcgLBQualityPreset->TabIndex = 143;
             this->fcgLBQualityPreset->Text = L"品質";
-            // 
+            //
             // fcgCXQualityPreset
-            // 
+            //
             this->fcgCXQualityPreset->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXQualityPreset->FormattingEnabled = true;
-            this->fcgCXQualityPreset->Items->AddRange(gcnew cli::array< System::Object^  >(3) { L"高品質", L"標準", L"高速" });
+            this->fcgCXQualityPreset->Items->AddRange(gcnew cli::array< System::Object ^  >(3) { L"高品質", L"標準", L"高速" });
             this->fcgCXQualityPreset->Location = System::Drawing::Point(81, 170);
             this->fcgCXQualityPreset->Name = L"fcgCXQualityPreset";
             this->fcgCXQualityPreset->Size = System::Drawing::Size(160, 22);
             this->fcgCXQualityPreset->TabIndex = 142;
             this->fcgCXQualityPreset->Tag = L"reCmd";
-            // 
+            //
             // fcgCXMotionEst
-            // 
+            //
             this->fcgCXMotionEst->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXMotionEst->FormattingEnabled = true;
             this->fcgCXMotionEst->Location = System::Drawing::Point(81, 454);
@@ -2396,47 +2611,47 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXMotionEst->Size = System::Drawing::Size(160, 22);
             this->fcgCXMotionEst->TabIndex = 136;
             this->fcgCXMotionEst->Tag = L"reCmd";
-            // 
+            //
             // fcgLBMotionEst
-            // 
+            //
             this->fcgLBMotionEst->AutoSize = true;
             this->fcgLBMotionEst->Location = System::Drawing::Point(13, 457);
             this->fcgLBMotionEst->Name = L"fcgLBMotionEst";
             this->fcgLBMotionEst->Size = System::Drawing::Size(48, 14);
             this->fcgLBMotionEst->TabIndex = 137;
             this->fcgLBMotionEst->Text = L"動き予測";
-            // 
+            //
             // fcgLBDeblock
-            // 
+            //
             this->fcgLBDeblock->AutoSize = true;
             this->fcgLBDeblock->Location = System::Drawing::Point(360, 254);
             this->fcgLBDeblock->Name = L"fcgLBDeblock";
             this->fcgLBDeblock->Size = System::Drawing::Size(76, 14);
             this->fcgLBDeblock->TabIndex = 134;
             this->fcgLBDeblock->Text = L"デブロックフィルタ";
-            // 
+            //
             // fcgpictureBoxVCEEnabled
-            // 
-            this->fcgpictureBoxVCEEnabled->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgpictureBoxVCEEnabled.Image")));
+            //
+            this->fcgpictureBoxVCEEnabled->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgpictureBoxVCEEnabled.Image")));
             this->fcgpictureBoxVCEEnabled->Location = System::Drawing::Point(16, 5);
             this->fcgpictureBoxVCEEnabled->Name = L"fcgpictureBoxVCEEnabled";
             this->fcgpictureBoxVCEEnabled->Size = System::Drawing::Size(153, 53);
             this->fcgpictureBoxVCEEnabled->SizeMode = System::Windows::Forms::PictureBoxSizeMode::StretchImage;
             this->fcgpictureBoxVCEEnabled->TabIndex = 133;
             this->fcgpictureBoxVCEEnabled->TabStop = false;
-            // 
+            //
             // fcgpictureBoxVCEDisabled
-            // 
-            this->fcgpictureBoxVCEDisabled->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgpictureBoxVCEDisabled.Image")));
+            //
+            this->fcgpictureBoxVCEDisabled->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgpictureBoxVCEDisabled.Image")));
             this->fcgpictureBoxVCEDisabled->Location = System::Drawing::Point(16, 5);
             this->fcgpictureBoxVCEDisabled->Name = L"fcgpictureBoxVCEDisabled";
             this->fcgpictureBoxVCEDisabled->Size = System::Drawing::Size(153, 53);
             this->fcgpictureBoxVCEDisabled->SizeMode = System::Windows::Forms::PictureBoxSizeMode::StretchImage;
             this->fcgpictureBoxVCEDisabled->TabIndex = 130;
             this->fcgpictureBoxVCEDisabled->TabStop = false;
-            // 
+            //
             // fcgCBDeblock
-            // 
+            //
             this->fcgCBDeblock->AutoSize = true;
             this->fcgCBDeblock->Location = System::Drawing::Point(459, 255);
             this->fcgCBDeblock->Name = L"fcgCBDeblock";
@@ -2444,9 +2659,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBDeblock->TabIndex = 25;
             this->fcgCBDeblock->Tag = L"reCmd";
             this->fcgCBDeblock->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgNUSlices
-            // 
+            //
             this->fcgNUSlices->Location = System::Drawing::Point(459, 203);
             this->fcgNUSlices->Minimum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 0 });
             this->fcgNUSlices->Name = L"fcgNUSlices";
@@ -2455,27 +2670,27 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUSlices->Tag = L"reCmd";
             this->fcgNUSlices->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
             this->fcgNUSlices->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 0 });
-            // 
+            //
             // fcgLBSlices
-            // 
+            //
             this->fcgLBSlices->AutoSize = true;
             this->fcgLBSlices->Location = System::Drawing::Point(359, 205);
             this->fcgLBSlices->Name = L"fcgLBSlices";
             this->fcgLBSlices->Size = System::Drawing::Size(50, 14);
             this->fcgLBSlices->TabIndex = 103;
             this->fcgLBSlices->Text = L"スライス数";
-            // 
+            //
             // fcgLBGOPLengthAuto
-            // 
+            //
             this->fcgLBGOPLengthAuto->AutoSize = true;
             this->fcgLBGOPLengthAuto->Location = System::Drawing::Point(214, 340);
             this->fcgLBGOPLengthAuto->Name = L"fcgLBGOPLengthAuto";
             this->fcgLBGOPLengthAuto->Size = System::Drawing::Size(66, 14);
             this->fcgLBGOPLengthAuto->TabIndex = 101;
             this->fcgLBGOPLengthAuto->Text = L"※\"0\"で自動";
-            // 
+            //
             // fcgGroupBoxAspectRatio
-            // 
+            //
             this->fcgGroupBoxAspectRatio->Controls->Add(this->fcgLBAspectRatio);
             this->fcgGroupBoxAspectRatio->Controls->Add(this->fcgNUAspectRatioY);
             this->fcgGroupBoxAspectRatio->Controls->Add(this->fcgNUAspectRatioX);
@@ -2486,18 +2701,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgGroupBoxAspectRatio->TabIndex = 27;
             this->fcgGroupBoxAspectRatio->TabStop = false;
             this->fcgGroupBoxAspectRatio->Text = L"アスペクト比";
-            // 
+            //
             // fcgLBAspectRatio
-            // 
+            //
             this->fcgLBAspectRatio->AutoSize = true;
             this->fcgLBAspectRatio->Location = System::Drawing::Point(102, 48);
             this->fcgLBAspectRatio->Name = L"fcgLBAspectRatio";
             this->fcgLBAspectRatio->Size = System::Drawing::Size(12, 14);
             this->fcgLBAspectRatio->TabIndex = 3;
             this->fcgLBAspectRatio->Text = L":";
-            // 
+            //
             // fcgNUAspectRatioY
-            // 
+            //
             this->fcgNUAspectRatioY->Location = System::Drawing::Point(120, 46);
             this->fcgNUAspectRatioY->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 65535, 0, 0, 0 });
             this->fcgNUAspectRatioY->Name = L"fcgNUAspectRatioY";
@@ -2505,9 +2720,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUAspectRatioY->TabIndex = 2;
             this->fcgNUAspectRatioY->Tag = L"reCmd";
             this->fcgNUAspectRatioY->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgNUAspectRatioX
-            // 
+            //
             this->fcgNUAspectRatioX->Location = System::Drawing::Point(26, 46);
             this->fcgNUAspectRatioX->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 65535, 0, 0, 0 });
             this->fcgNUAspectRatioX->Name = L"fcgNUAspectRatioX";
@@ -2515,9 +2730,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUAspectRatioX->TabIndex = 1;
             this->fcgNUAspectRatioX->Tag = L"reCmd";
             this->fcgNUAspectRatioX->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgCXAspectRatio
-            // 
+            //
             this->fcgCXAspectRatio->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXAspectRatio->FormattingEnabled = true;
             this->fcgCXAspectRatio->Location = System::Drawing::Point(26, 20);
@@ -2525,9 +2740,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXAspectRatio->Size = System::Drawing::Size(174, 22);
             this->fcgCXAspectRatio->TabIndex = 0;
             this->fcgCXAspectRatio->Tag = L"reCmd";
-            // 
+            //
             // fcgCXInterlaced
-            // 
+            //
             this->fcgCXInterlaced->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXInterlaced->FormattingEnabled = true;
             this->fcgCXInterlaced->Location = System::Drawing::Point(458, 109);
@@ -2536,9 +2751,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXInterlaced->TabIndex = 20;
             this->fcgCXInterlaced->Tag = L"reCmd";
             this->fcgCXInterlaced->Visible = false;
-            // 
+            //
             // fcgLBInterlaced
-            // 
+            //
             this->fcgLBInterlaced->AutoSize = true;
             this->fcgLBInterlaced->Location = System::Drawing::Point(359, 112);
             this->fcgLBInterlaced->Name = L"fcgLBInterlaced";
@@ -2546,9 +2761,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgLBInterlaced->TabIndex = 86;
             this->fcgLBInterlaced->Text = L"フレームタイプ";
             this->fcgLBInterlaced->Visible = false;
-            // 
+            //
             // fcgNUGopLength
-            // 
+            //
             this->fcgNUGopLength->Location = System::Drawing::Point(132, 337);
             this->fcgNUGopLength->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1000, 0, 0, 0 });
             this->fcgNUGopLength->Name = L"fcgNUGopLength";
@@ -2556,18 +2771,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUGopLength->TabIndex = 10;
             this->fcgNUGopLength->Tag = L"reCmd";
             this->fcgNUGopLength->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgLBGOPLength
-            // 
+            //
             this->fcgLBGOPLength->AutoSize = true;
             this->fcgLBGOPLength->Location = System::Drawing::Point(14, 340);
             this->fcgLBGOPLength->Name = L"fcgLBGOPLength";
             this->fcgLBGOPLength->Size = System::Drawing::Size(41, 14);
             this->fcgLBGOPLength->TabIndex = 85;
             this->fcgLBGOPLength->Text = L"GOP長";
-            // 
+            //
             // fcgCXCodecLevel
-            // 
+            //
             this->fcgCXCodecLevel->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXCodecLevel->FormattingEnabled = true;
             this->fcgCXCodecLevel->Location = System::Drawing::Point(458, 171);
@@ -2575,9 +2790,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXCodecLevel->Size = System::Drawing::Size(121, 22);
             this->fcgCXCodecLevel->TabIndex = 22;
             this->fcgCXCodecLevel->Tag = L"reCmd";
-            // 
+            //
             // fcgCXCodecProfile
-            // 
+            //
             this->fcgCXCodecProfile->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXCodecProfile->FormattingEnabled = true;
             this->fcgCXCodecProfile->Location = System::Drawing::Point(458, 139);
@@ -2585,48 +2800,48 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXCodecProfile->Size = System::Drawing::Size(121, 22);
             this->fcgCXCodecProfile->TabIndex = 21;
             this->fcgCXCodecProfile->Tag = L"reCmd";
-            // 
+            //
             // fcgLBCodecLevel
-            // 
+            //
             this->fcgLBCodecLevel->AutoSize = true;
             this->fcgLBCodecLevel->Location = System::Drawing::Point(359, 174);
             this->fcgLBCodecLevel->Name = L"fcgLBCodecLevel";
             this->fcgLBCodecLevel->Size = System::Drawing::Size(33, 14);
             this->fcgLBCodecLevel->TabIndex = 84;
             this->fcgLBCodecLevel->Text = L"レベル";
-            // 
+            //
             // fcgLBCodecProfile
-            // 
+            //
             this->fcgLBCodecProfile->AutoSize = true;
             this->fcgLBCodecProfile->Location = System::Drawing::Point(359, 142);
             this->fcgLBCodecProfile->Name = L"fcgLBCodecProfile";
             this->fcgLBCodecProfile->Size = System::Drawing::Size(53, 14);
             this->fcgLBCodecProfile->TabIndex = 83;
             this->fcgLBCodecProfile->Text = L"プロファイル";
-            // 
+            //
             // fcgLBEncMode
-            // 
+            //
             this->fcgLBEncMode->AutoSize = true;
             this->fcgLBEncMode->Location = System::Drawing::Point(13, 145);
             this->fcgLBEncMode->Name = L"fcgLBEncMode";
             this->fcgLBEncMode->Size = System::Drawing::Size(32, 14);
             this->fcgLBEncMode->TabIndex = 79;
             this->fcgLBEncMode->Text = L"モード";
-            // 
+            //
             // fcgCXEncMode
-            // 
+            //
             this->fcgCXEncMode->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXEncMode->FormattingEnabled = true;
-            this->fcgCXEncMode->Items->AddRange(gcnew cli::array< System::Object^  >(3) { L"高品質", L"標準", L"高速" });
+            this->fcgCXEncMode->Items->AddRange(gcnew cli::array< System::Object ^  >(3) { L"高品質", L"標準", L"高速" });
             this->fcgCXEncMode->Location = System::Drawing::Point(81, 142);
             this->fcgCXEncMode->Name = L"fcgCXEncMode";
             this->fcgCXEncMode->Size = System::Drawing::Size(160, 22);
             this->fcgCXEncMode->TabIndex = 4;
             this->fcgCXEncMode->Tag = L"reCmd";
             this->fcgCXEncMode->SelectedIndexChanged += gcnew System::EventHandler(this, &frmConfig::fcgChangeEnabled);
-            // 
+            //
             // fcgPNBitrate
-            // 
+            //
             this->fcgPNBitrate->Controls->Add(this->fcgLBBitrate);
             this->fcgPNBitrate->Controls->Add(this->fcgNUBitrate);
             this->fcgPNBitrate->Controls->Add(this->fcgLBBitrate2);
@@ -2637,18 +2852,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgPNBitrate->Name = L"fcgPNBitrate";
             this->fcgPNBitrate->Size = System::Drawing::Size(289, 54);
             this->fcgPNBitrate->TabIndex = 114;
-            // 
+            //
             // fcgLBBitrate
-            // 
+            //
             this->fcgLBBitrate->AutoSize = true;
             this->fcgLBBitrate->Location = System::Drawing::Point(5, 4);
             this->fcgLBBitrate->Name = L"fcgLBBitrate";
             this->fcgLBBitrate->Size = System::Drawing::Size(54, 14);
             this->fcgLBBitrate->TabIndex = 66;
             this->fcgLBBitrate->Text = L"ビットレート";
-            // 
+            //
             // fcgNUBitrate
-            // 
+            //
             this->fcgNUBitrate->Location = System::Drawing::Point(124, 2);
             this->fcgNUBitrate->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 128000, 0, 0, 0 });
             this->fcgNUBitrate->Name = L"fcgNUBitrate";
@@ -2656,18 +2871,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUBitrate->TabIndex = 5;
             this->fcgNUBitrate->Tag = L"reCmd";
             this->fcgNUBitrate->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgLBBitrate2
-            // 
+            //
             this->fcgLBBitrate2->AutoSize = true;
             this->fcgLBBitrate2->Location = System::Drawing::Point(207, 4);
             this->fcgLBBitrate2->Name = L"fcgLBBitrate2";
             this->fcgLBBitrate2->Size = System::Drawing::Size(32, 14);
             this->fcgLBBitrate2->TabIndex = 69;
             this->fcgLBBitrate2->Text = L"kbps";
-            // 
+            //
             // fcgNUMaxkbps
-            // 
+            //
             this->fcgNUMaxkbps->Location = System::Drawing::Point(124, 29);
             this->fcgNUMaxkbps->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 100000, 0, 0, 0 });
             this->fcgNUMaxkbps->Name = L"fcgNUMaxkbps";
@@ -2675,27 +2890,27 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUMaxkbps->TabIndex = 6;
             this->fcgNUMaxkbps->Tag = L"reCmd";
             this->fcgNUMaxkbps->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgLBMaxkbps
-            // 
+            //
             this->fcgLBMaxkbps->AutoSize = true;
             this->fcgLBMaxkbps->Location = System::Drawing::Point(5, 33);
             this->fcgLBMaxkbps->Name = L"fcgLBMaxkbps";
             this->fcgLBMaxkbps->Size = System::Drawing::Size(76, 14);
             this->fcgLBMaxkbps->TabIndex = 78;
             this->fcgLBMaxkbps->Text = L"最大ビットレート";
-            // 
+            //
             // fcgLBMaxBitrate2
-            // 
+            //
             this->fcgLBMaxBitrate2->AutoSize = true;
             this->fcgLBMaxBitrate2->Location = System::Drawing::Point(207, 31);
             this->fcgLBMaxBitrate2->Name = L"fcgLBMaxBitrate2";
             this->fcgLBMaxBitrate2->Size = System::Drawing::Size(32, 14);
             this->fcgLBMaxBitrate2->TabIndex = 80;
             this->fcgLBMaxBitrate2->Text = L"kbps";
-            // 
+            //
             // fcgPNQP
-            // 
+            //
             this->fcgPNQP->Controls->Add(this->fcgLBQPI);
             this->fcgPNQP->Controls->Add(this->fcgNUQPI);
             this->fcgPNQP->Controls->Add(this->fcgNUQPP);
@@ -2706,18 +2921,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgPNQP->Name = L"fcgPNQP";
             this->fcgPNQP->Size = System::Drawing::Size(289, 79);
             this->fcgPNQP->TabIndex = 113;
-            // 
+            //
             // fcgLBQPI
-            // 
+            //
             this->fcgLBQPI->AutoSize = true;
             this->fcgLBQPI->Location = System::Drawing::Point(10, 4);
             this->fcgLBQPI->Name = L"fcgLBQPI";
             this->fcgLBQPI->Size = System::Drawing::Size(66, 14);
             this->fcgLBQPI->TabIndex = 75;
             this->fcgLBQPI->Text = L"QP I frame";
-            // 
+            //
             // fcgNUQPI
-            // 
+            //
             this->fcgNUQPI->Location = System::Drawing::Point(124, 2);
             this->fcgNUQPI->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
             this->fcgNUQPI->Name = L"fcgNUQPI";
@@ -2725,9 +2940,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUQPI->TabIndex = 7;
             this->fcgNUQPI->Tag = L"reCmd";
             this->fcgNUQPI->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgNUQPP
-            // 
+            //
             this->fcgNUQPP->Location = System::Drawing::Point(124, 29);
             this->fcgNUQPP->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
             this->fcgNUQPP->Name = L"fcgNUQPP";
@@ -2735,9 +2950,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUQPP->TabIndex = 8;
             this->fcgNUQPP->Tag = L"reCmd";
             this->fcgNUQPP->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgNUQPB
-            // 
+            //
             this->fcgNUQPB->Location = System::Drawing::Point(124, 55);
             this->fcgNUQPB->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
             this->fcgNUQPB->Name = L"fcgNUQPB";
@@ -2745,27 +2960,27 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUQPB->TabIndex = 9;
             this->fcgNUQPB->Tag = L"reCmd";
             this->fcgNUQPB->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgLBQPP
-            // 
+            //
             this->fcgLBQPP->AutoSize = true;
             this->fcgLBQPP->Location = System::Drawing::Point(10, 31);
             this->fcgLBQPP->Name = L"fcgLBQPP";
             this->fcgLBQPP->Size = System::Drawing::Size(69, 14);
             this->fcgLBQPP->TabIndex = 76;
             this->fcgLBQPP->Text = L"QP P frame";
-            // 
+            //
             // fcgLBQPB
-            // 
+            //
             this->fcgLBQPB->AutoSize = true;
             this->fcgLBQPB->Location = System::Drawing::Point(6, 57);
             this->fcgLBQPB->Name = L"fcgLBQPB";
             this->fcgLBQPB->Size = System::Drawing::Size(74, 14);
             this->fcgLBQPB->TabIndex = 77;
             this->fcgLBQPB->Text = L"QP B frames";
-            // 
+            //
             // fcgPNBframes
-            // 
+            //
             this->fcgPNBframes->Controls->Add(this->fcgLBBframes);
             this->fcgPNBframes->Controls->Add(this->fcgNUBframes);
             this->fcgPNBframes->Controls->Add(this->fcgCBBPyramid);
@@ -2778,18 +2993,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgPNBframes->Name = L"fcgPNBframes";
             this->fcgPNBframes->Size = System::Drawing::Size(330, 57);
             this->fcgPNBframes->TabIndex = 167;
-            // 
+            //
             // fcgLBBframes
-            // 
+            //
             this->fcgLBBframes->AutoSize = true;
             this->fcgLBBframes->Location = System::Drawing::Point(7, 6);
             this->fcgLBBframes->Name = L"fcgLBBframes";
             this->fcgLBBframes->Size = System::Drawing::Size(58, 14);
             this->fcgLBBframes->TabIndex = 139;
             this->fcgLBBframes->Text = L"Bフレーム数";
-            // 
+            //
             // fcgNUBframes
-            // 
+            //
             this->fcgNUBframes->Location = System::Drawing::Point(125, 3);
             this->fcgNUBframes->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 3, 0, 0, 0 });
             this->fcgNUBframes->Name = L"fcgNUBframes";
@@ -2797,9 +3012,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUBframes->TabIndex = 138;
             this->fcgNUBframes->Tag = L"reCmd";
             this->fcgNUBframes->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgCBBPyramid
-            // 
+            //
             this->fcgCBBPyramid->AutoSize = true;
             this->fcgCBBPyramid->Location = System::Drawing::Point(303, 8);
             this->fcgCBBPyramid->Name = L"fcgCBBPyramid";
@@ -2807,27 +3022,27 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBBPyramid->TabIndex = 140;
             this->fcgCBBPyramid->Tag = L"reCmd";
             this->fcgCBBPyramid->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgLBBPyramid
-            // 
+            //
             this->fcgLBBPyramid->AutoSize = true;
             this->fcgLBBPyramid->Location = System::Drawing::Point(224, 6);
             this->fcgLBBPyramid->Name = L"fcgLBBPyramid";
             this->fcgLBBPyramid->Size = System::Drawing::Size(66, 14);
             this->fcgLBBPyramid->TabIndex = 141;
             this->fcgLBBPyramid->Text = L"ピラミッド参照";
-            // 
+            //
             // fcgLBBDeltaQP
-            // 
+            //
             this->fcgLBBDeltaQP->AutoSize = true;
             this->fcgLBBDeltaQP->Location = System::Drawing::Point(7, 33);
             this->fcgLBBDeltaQP->Name = L"fcgLBBDeltaQP";
             this->fcgLBBDeltaQP->Size = System::Drawing::Size(116, 14);
             this->fcgLBBDeltaQP->TabIndex = 145;
             this->fcgLBBDeltaQP->Text = L"QPオフセット    Bフレーム";
-            // 
+            //
             // fcgNUBDeltaQP
-            // 
+            //
             this->fcgNUBDeltaQP->Location = System::Drawing::Point(126, 30);
             this->fcgNUBDeltaQP->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, 0 });
             this->fcgNUBDeltaQP->Minimum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, System::Int32::MinValue });
@@ -2836,18 +3051,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUBDeltaQP->TabIndex = 144;
             this->fcgNUBDeltaQP->Tag = L"reCmd";
             this->fcgNUBDeltaQP->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgLBBRefDeltaQP
-            // 
+            //
             this->fcgLBBRefDeltaQP->AutoSize = true;
             this->fcgLBBRefDeltaQP->Location = System::Drawing::Point(193, 33);
             this->fcgLBBRefDeltaQP->Name = L"fcgLBBRefDeltaQP";
             this->fcgLBBRefDeltaQP->Size = System::Drawing::Size(69, 14);
             this->fcgLBBRefDeltaQP->TabIndex = 157;
             this->fcgLBBRefDeltaQP->Text = L"参照Bフレーム";
-            // 
+            //
             // fcgNUBRefDeltaQP
-            // 
+            //
             this->fcgNUBRefDeltaQP->Location = System::Drawing::Point(267, 31);
             this->fcgNUBRefDeltaQP->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, 0 });
             this->fcgNUBRefDeltaQP->Minimum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, System::Int32::MinValue });
@@ -2856,9 +3071,10 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgNUBRefDeltaQP->TabIndex = 156;
             this->fcgNUBRefDeltaQP->Tag = L"reCmd";
             this->fcgNUBRefDeltaQP->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // tabPageExOpt
-            // 
+            //
+            this->tabPageExOpt->Controls->Add(this->fcggroupBoxVppDeinterlace);
             this->tabPageExOpt->Controls->Add(this->fcgCBTimerPeriodTuning);
             this->tabPageExOpt->Controls->Add(this->fcgCBResize);
             this->tabPageExOpt->Controls->Add(this->fcggroupboxResize);
@@ -2875,135 +3091,557 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->tabPageExOpt->TabIndex = 1;
             this->tabPageExOpt->Text = L"その他";
             this->tabPageExOpt->UseVisualStyleBackColor = true;
-            // 
+            //
+            // fcggroupBoxVppDeinterlace
+            //
+            this->fcggroupBoxVppDeinterlace->Controls->Add(this->fcgLBVppDeinterlace);
+            this->fcggroupBoxVppDeinterlace->Controls->Add(this->fcgCXVppDeinterlace);
+            this->fcggroupBoxVppDeinterlace->Controls->Add(this->fcgPNVppAfs);
+            this->fcggroupBoxVppDeinterlace->Location = System::Drawing::Point(343, 6);
+            this->fcggroupBoxVppDeinterlace->Name = L"fcggroupBoxVppDeinterlace";
+            this->fcggroupBoxVppDeinterlace->Size = System::Drawing::Size(262, 338);
+            this->fcggroupBoxVppDeinterlace->TabIndex = 137;
+            this->fcggroupBoxVppDeinterlace->TabStop = false;
+            this->fcggroupBoxVppDeinterlace->Text = L"インタレ解除";
+            //
+            // fcgLBVppDeinterlace
+            //
+            this->fcgLBVppDeinterlace->AutoSize = true;
+            this->fcgLBVppDeinterlace->Location = System::Drawing::Point(15, 19);
+            this->fcgLBVppDeinterlace->Name = L"fcgLBVppDeinterlace";
+            this->fcgLBVppDeinterlace->Size = System::Drawing::Size(54, 14);
+            this->fcgLBVppDeinterlace->TabIndex = 105;
+            this->fcgLBVppDeinterlace->Text = L"解除モード";
+            //
+            // fcgCXVppDeinterlace
+            //
+            this->fcgCXVppDeinterlace->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXVppDeinterlace->FormattingEnabled = true;
+            this->fcgCXVppDeinterlace->Location = System::Drawing::Point(83, 15);
+            this->fcgCXVppDeinterlace->Name = L"fcgCXVppDeinterlace";
+            this->fcgCXVppDeinterlace->Size = System::Drawing::Size(164, 22);
+            this->fcgCXVppDeinterlace->TabIndex = 102;
+            this->fcgCXVppDeinterlace->Tag = L"reCmd";
+            //
+            // fcgPNVppAfs
+            //
+            this->fcgPNVppAfs->Controls->Add(this->fcgTBVppAfsThreCMotion);
+            this->fcgPNVppAfs->Controls->Add(this->fcgLBVppAfsThreCMotion);
+            this->fcgPNVppAfs->Controls->Add(this->fcgTBVppAfsThreYMotion);
+            this->fcgPNVppAfs->Controls->Add(this->fcgLBVppAfsThreYmotion);
+            this->fcgPNVppAfs->Controls->Add(this->fcgTBVppAfsThreDeint);
+            this->fcgPNVppAfs->Controls->Add(this->fcgLBVppAfsThreDeint);
+            this->fcgPNVppAfs->Controls->Add(this->fcgTBVppAfsThreShift);
+            this->fcgPNVppAfs->Controls->Add(this->fcgLBVppAfsThreShift);
+            this->fcgPNVppAfs->Controls->Add(this->fcgTBVppAfsCoeffShift);
+            this->fcgPNVppAfs->Controls->Add(this->fcgLBVppAfsCoeffShift);
+            this->fcgPNVppAfs->Controls->Add(this->label20);
+            this->fcgPNVppAfs->Controls->Add(this->label19);
+            this->fcgPNVppAfs->Controls->Add(this->label4);
+            this->fcgPNVppAfs->Controls->Add(this->fcgLBVppAfsUp);
+            this->fcgPNVppAfs->Controls->Add(this->fcgNUVppAfsRight);
+            this->fcgPNVppAfs->Controls->Add(this->fcgNUVppAfsLeft);
+            this->fcgPNVppAfs->Controls->Add(this->fcgNUVppAfsBottom);
+            this->fcgPNVppAfs->Controls->Add(this->fcgNUVppAfsUp);
+            this->fcgPNVppAfs->Controls->Add(this->fcgTBVppAfsMethodSwitch);
+            this->fcgPNVppAfs->Controls->Add(this->fcgCBVppAfs24fps);
+            this->fcgPNVppAfs->Controls->Add(this->fcgCBVppAfsTune);
+            this->fcgPNVppAfs->Controls->Add(this->fcgCBVppAfsSmooth);
+            this->fcgPNVppAfs->Controls->Add(this->fcgCBVppAfsDrop);
+            this->fcgPNVppAfs->Controls->Add(this->fcgCBVppAfsShift);
+            this->fcgPNVppAfs->Controls->Add(this->fcgLBVppAfsAnalyze);
+            this->fcgPNVppAfs->Controls->Add(this->fcgNUVppAfsThreCMotion);
+            this->fcgPNVppAfs->Controls->Add(this->fcgNUVppAfsThreShift);
+            this->fcgPNVppAfs->Controls->Add(this->fcgNUVppAfsThreDeint);
+            this->fcgPNVppAfs->Controls->Add(this->fcgNUVppAfsThreYMotion);
+            this->fcgPNVppAfs->Controls->Add(this->fcgLBVppAfsMethodSwitch);
+            this->fcgPNVppAfs->Controls->Add(this->fcgCXVppAfsAnalyze);
+            this->fcgPNVppAfs->Controls->Add(this->fcgNUVppAfsCoeffShift);
+            this->fcgPNVppAfs->Controls->Add(this->fcgNUVppAfsMethodSwitch);
+            this->fcgPNVppAfs->Location = System::Drawing::Point(6, 41);
+            this->fcgPNVppAfs->Name = L"fcgPNVppAfs";
+            this->fcgPNVppAfs->Size = System::Drawing::Size(251, 294);
+            this->fcgPNVppAfs->TabIndex = 101;
+            //
+            // fcgTBVppAfsThreCMotion
+            //
+            this->fcgTBVppAfsThreCMotion->AutoSize = false;
+            this->fcgTBVppAfsThreCMotion->Location = System::Drawing::Point(60, 179);
+            this->fcgTBVppAfsThreCMotion->Maximum = 1024;
+            this->fcgTBVppAfsThreCMotion->Name = L"fcgTBVppAfsThreCMotion";
+            this->fcgTBVppAfsThreCMotion->Size = System::Drawing::Size(115, 18);
+            this->fcgTBVppAfsThreCMotion->TabIndex = 133;
+            this->fcgTBVppAfsThreCMotion->TickStyle = System::Windows::Forms::TickStyle::None;
+            this->fcgTBVppAfsThreCMotion->Scroll += gcnew System::EventHandler(this, &frmConfig::fcgTBVppAfsScroll);
+            //
+            // fcgLBVppAfsThreCMotion
+            //
+            this->fcgLBVppAfsThreCMotion->AutoSize = true;
+            this->fcgLBVppAfsThreCMotion->Location = System::Drawing::Point(9, 179);
+            this->fcgLBVppAfsThreCMotion->Name = L"fcgLBVppAfsThreCMotion";
+            this->fcgLBVppAfsThreCMotion->Size = System::Drawing::Size(33, 14);
+            this->fcgLBVppAfsThreCMotion->TabIndex = 132;
+            this->fcgLBVppAfsThreCMotion->Text = L"C動き";
+            //
+            // fcgTBVppAfsThreYMotion
+            //
+            this->fcgTBVppAfsThreYMotion->AutoSize = false;
+            this->fcgTBVppAfsThreYMotion->Location = System::Drawing::Point(60, 154);
+            this->fcgTBVppAfsThreYMotion->Maximum = 1024;
+            this->fcgTBVppAfsThreYMotion->Name = L"fcgTBVppAfsThreYMotion";
+            this->fcgTBVppAfsThreYMotion->Size = System::Drawing::Size(115, 18);
+            this->fcgTBVppAfsThreYMotion->TabIndex = 131;
+            this->fcgTBVppAfsThreYMotion->TickStyle = System::Windows::Forms::TickStyle::None;
+            this->fcgTBVppAfsThreYMotion->Scroll += gcnew System::EventHandler(this, &frmConfig::fcgTBVppAfsScroll);
+            //
+            // fcgLBVppAfsThreYmotion
+            //
+            this->fcgLBVppAfsThreYmotion->AutoSize = true;
+            this->fcgLBVppAfsThreYmotion->Location = System::Drawing::Point(9, 154);
+            this->fcgLBVppAfsThreYmotion->Name = L"fcgLBVppAfsThreYmotion";
+            this->fcgLBVppAfsThreYmotion->Size = System::Drawing::Size(33, 14);
+            this->fcgLBVppAfsThreYmotion->TabIndex = 130;
+            this->fcgLBVppAfsThreYmotion->Text = L"Y動き";
+            //
+            // fcgTBVppAfsThreDeint
+            //
+            this->fcgTBVppAfsThreDeint->AutoSize = false;
+            this->fcgTBVppAfsThreDeint->Location = System::Drawing::Point(60, 129);
+            this->fcgTBVppAfsThreDeint->Maximum = 1024;
+            this->fcgTBVppAfsThreDeint->Name = L"fcgTBVppAfsThreDeint";
+            this->fcgTBVppAfsThreDeint->Size = System::Drawing::Size(115, 18);
+            this->fcgTBVppAfsThreDeint->TabIndex = 129;
+            this->fcgTBVppAfsThreDeint->TickStyle = System::Windows::Forms::TickStyle::None;
+            this->fcgTBVppAfsThreDeint->Scroll += gcnew System::EventHandler(this, &frmConfig::fcgTBVppAfsScroll);
+            //
+            // fcgLBVppAfsThreDeint
+            //
+            this->fcgLBVppAfsThreDeint->AutoSize = true;
+            this->fcgLBVppAfsThreDeint->Location = System::Drawing::Point(9, 129);
+            this->fcgLBVppAfsThreDeint->Name = L"fcgLBVppAfsThreDeint";
+            this->fcgLBVppAfsThreDeint->Size = System::Drawing::Size(50, 14);
+            this->fcgLBVppAfsThreDeint->TabIndex = 128;
+            this->fcgLBVppAfsThreDeint->Text = L"縞(解除)";
+            //
+            // fcgTBVppAfsThreShift
+            //
+            this->fcgTBVppAfsThreShift->AutoSize = false;
+            this->fcgTBVppAfsThreShift->Location = System::Drawing::Point(60, 104);
+            this->fcgTBVppAfsThreShift->Maximum = 1024;
+            this->fcgTBVppAfsThreShift->Name = L"fcgTBVppAfsThreShift";
+            this->fcgTBVppAfsThreShift->Size = System::Drawing::Size(115, 18);
+            this->fcgTBVppAfsThreShift->TabIndex = 127;
+            this->fcgTBVppAfsThreShift->TickStyle = System::Windows::Forms::TickStyle::None;
+            this->fcgTBVppAfsThreShift->Scroll += gcnew System::EventHandler(this, &frmConfig::fcgTBVppAfsScroll);
+            //
+            // fcgLBVppAfsThreShift
+            //
+            this->fcgLBVppAfsThreShift->AutoSize = true;
+            this->fcgLBVppAfsThreShift->Location = System::Drawing::Point(9, 104);
+            this->fcgLBVppAfsThreShift->Name = L"fcgLBVppAfsThreShift";
+            this->fcgLBVppAfsThreShift->Size = System::Drawing::Size(46, 14);
+            this->fcgLBVppAfsThreShift->TabIndex = 126;
+            this->fcgLBVppAfsThreShift->Text = L"縞(ｼﾌﾄ)";
+            //
+            // fcgTBVppAfsCoeffShift
+            //
+            this->fcgTBVppAfsCoeffShift->AutoSize = false;
+            this->fcgTBVppAfsCoeffShift->Location = System::Drawing::Point(60, 79);
+            this->fcgTBVppAfsCoeffShift->Maximum = 256;
+            this->fcgTBVppAfsCoeffShift->Name = L"fcgTBVppAfsCoeffShift";
+            this->fcgTBVppAfsCoeffShift->Size = System::Drawing::Size(115, 18);
+            this->fcgTBVppAfsCoeffShift->TabIndex = 125;
+            this->fcgTBVppAfsCoeffShift->TickStyle = System::Windows::Forms::TickStyle::None;
+            this->fcgTBVppAfsCoeffShift->Scroll += gcnew System::EventHandler(this, &frmConfig::fcgTBVppAfsScroll);
+            //
+            // fcgLBVppAfsCoeffShift
+            //
+            this->fcgLBVppAfsCoeffShift->AutoSize = true;
+            this->fcgLBVppAfsCoeffShift->Location = System::Drawing::Point(9, 79);
+            this->fcgLBVppAfsCoeffShift->Name = L"fcgLBVppAfsCoeffShift";
+            this->fcgLBVppAfsCoeffShift->Size = System::Drawing::Size(40, 14);
+            this->fcgLBVppAfsCoeffShift->TabIndex = 124;
+            this->fcgLBVppAfsCoeffShift->Text = L"判定比";
+            //
+            // label20
+            //
+            this->label20->AutoSize = true;
+            this->label20->Location = System::Drawing::Point(163, 29);
+            this->label20->Name = L"label20";
+            this->label20->Size = System::Drawing::Size(18, 14);
+            this->label20->TabIndex = 123;
+            this->label20->Text = L"右";
+            //
+            // label19
+            //
+            this->label19->AutoSize = true;
+            this->label19->Location = System::Drawing::Point(57, 29);
+            this->label19->Name = L"label19";
+            this->label19->Size = System::Drawing::Size(18, 14);
+            this->label19->TabIndex = 122;
+            this->label19->Text = L"左";
+            //
+            // label4
+            //
+            this->label4->AutoSize = true;
+            this->label4->Location = System::Drawing::Point(163, 4);
+            this->label4->Name = L"label4";
+            this->label4->Size = System::Drawing::Size(18, 14);
+            this->label4->TabIndex = 121;
+            this->label4->Text = L"下";
+            //
+            // fcgLBVppAfsUp
+            //
+            this->fcgLBVppAfsUp->AutoSize = true;
+            this->fcgLBVppAfsUp->Location = System::Drawing::Point(57, 4);
+            this->fcgLBVppAfsUp->Name = L"fcgLBVppAfsUp";
+            this->fcgLBVppAfsUp->Size = System::Drawing::Size(18, 14);
+            this->fcgLBVppAfsUp->TabIndex = 120;
+            this->fcgLBVppAfsUp->Text = L"上";
+            //
+            // fcgNUVppAfsRight
+            //
+            this->fcgNUVppAfsRight->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 8, 0, 0, 0 });
+            this->fcgNUVppAfsRight->Location = System::Drawing::Point(181, 27);
+            this->fcgNUVppAfsRight->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 8192, 0, 0, 0 });
+            this->fcgNUVppAfsRight->Name = L"fcgNUVppAfsRight";
+            this->fcgNUVppAfsRight->Size = System::Drawing::Size(60, 21);
+            this->fcgNUVppAfsRight->TabIndex = 119;
+            this->fcgNUVppAfsRight->Tag = L"reCmd";
+            this->fcgNUVppAfsRight->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            //
+            // fcgNUVppAfsLeft
+            //
+            this->fcgNUVppAfsLeft->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 8, 0, 0, 0 });
+            this->fcgNUVppAfsLeft->Location = System::Drawing::Point(77, 27);
+            this->fcgNUVppAfsLeft->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 8192, 0, 0, 0 });
+            this->fcgNUVppAfsLeft->Name = L"fcgNUVppAfsLeft";
+            this->fcgNUVppAfsLeft->Size = System::Drawing::Size(60, 21);
+            this->fcgNUVppAfsLeft->TabIndex = 118;
+            this->fcgNUVppAfsLeft->Tag = L"reCmd";
+            this->fcgNUVppAfsLeft->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            //
+            // fcgNUVppAfsBottom
+            //
+            this->fcgNUVppAfsBottom->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 8, 0, 0, 0 });
+            this->fcgNUVppAfsBottom->Location = System::Drawing::Point(181, 2);
+            this->fcgNUVppAfsBottom->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 4096, 0, 0, 0 });
+            this->fcgNUVppAfsBottom->Name = L"fcgNUVppAfsBottom";
+            this->fcgNUVppAfsBottom->Size = System::Drawing::Size(60, 21);
+            this->fcgNUVppAfsBottom->TabIndex = 117;
+            this->fcgNUVppAfsBottom->Tag = L"reCmd";
+            this->fcgNUVppAfsBottom->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            //
+            // fcgNUVppAfsUp
+            //
+            this->fcgNUVppAfsUp->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 8, 0, 0, 0 });
+            this->fcgNUVppAfsUp->Location = System::Drawing::Point(77, 2);
+            this->fcgNUVppAfsUp->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 4096, 0, 0, 0 });
+            this->fcgNUVppAfsUp->Name = L"fcgNUVppAfsUp";
+            this->fcgNUVppAfsUp->Size = System::Drawing::Size(60, 21);
+            this->fcgNUVppAfsUp->TabIndex = 116;
+            this->fcgNUVppAfsUp->Tag = L"reCmd";
+            this->fcgNUVppAfsUp->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            //
+            // fcgTBVppAfsMethodSwitch
+            //
+            this->fcgTBVppAfsMethodSwitch->AutoSize = false;
+            this->fcgTBVppAfsMethodSwitch->Location = System::Drawing::Point(60, 54);
+            this->fcgTBVppAfsMethodSwitch->Maximum = 256;
+            this->fcgTBVppAfsMethodSwitch->Name = L"fcgTBVppAfsMethodSwitch";
+            this->fcgTBVppAfsMethodSwitch->Size = System::Drawing::Size(115, 18);
+            this->fcgTBVppAfsMethodSwitch->TabIndex = 115;
+            this->fcgTBVppAfsMethodSwitch->TickStyle = System::Windows::Forms::TickStyle::None;
+            this->fcgTBVppAfsMethodSwitch->Scroll += gcnew System::EventHandler(this, &frmConfig::fcgTBVppAfsScroll);
+            //
+            // fcgCBVppAfs24fps
+            //
+            this->fcgCBVppAfs24fps->AutoSize = true;
+            this->fcgCBVppAfs24fps->Location = System::Drawing::Point(149, 231);
+            this->fcgCBVppAfs24fps->Name = L"fcgCBVppAfs24fps";
+            this->fcgCBVppAfs24fps->Size = System::Drawing::Size(67, 18);
+            this->fcgCBVppAfs24fps->TabIndex = 114;
+            this->fcgCBVppAfs24fps->Tag = L"reCmd";
+            this->fcgCBVppAfs24fps->Text = L"24fps化";
+            this->fcgCBVppAfs24fps->UseVisualStyleBackColor = true;
+            //
+            // fcgCBVppAfsTune
+            //
+            this->fcgCBVppAfsTune->AutoSize = true;
+            this->fcgCBVppAfsTune->Location = System::Drawing::Point(149, 273);
+            this->fcgCBVppAfsTune->Name = L"fcgCBVppAfsTune";
+            this->fcgCBVppAfsTune->Size = System::Drawing::Size(73, 18);
+            this->fcgCBVppAfsTune->TabIndex = 113;
+            this->fcgCBVppAfsTune->Tag = L"reCmd";
+            this->fcgCBVppAfsTune->Text = L"調整モード";
+            this->fcgCBVppAfsTune->UseVisualStyleBackColor = true;
+            //
+            // fcgCBVppAfsSmooth
+            //
+            this->fcgCBVppAfsSmooth->AutoSize = true;
+            this->fcgCBVppAfsSmooth->Location = System::Drawing::Point(11, 273);
+            this->fcgCBVppAfsSmooth->Name = L"fcgCBVppAfsSmooth";
+            this->fcgCBVppAfsSmooth->Size = System::Drawing::Size(77, 18);
+            this->fcgCBVppAfsSmooth->TabIndex = 112;
+            this->fcgCBVppAfsSmooth->Tag = L"reCmd";
+            this->fcgCBVppAfsSmooth->Text = L"スムージング";
+            this->fcgCBVppAfsSmooth->UseVisualStyleBackColor = true;
+            //
+            // fcgCBVppAfsDrop
+            //
+            this->fcgCBVppAfsDrop->AutoSize = true;
+            this->fcgCBVppAfsDrop->Location = System::Drawing::Point(11, 252);
+            this->fcgCBVppAfsDrop->Name = L"fcgCBVppAfsDrop";
+            this->fcgCBVppAfsDrop->Size = System::Drawing::Size(56, 18);
+            this->fcgCBVppAfsDrop->TabIndex = 111;
+            this->fcgCBVppAfsDrop->Tag = L"reCmd";
+            this->fcgCBVppAfsDrop->Text = L"間引き";
+            this->fcgCBVppAfsDrop->UseVisualStyleBackColor = true;
+            //
+            // fcgCBVppAfsShift
+            //
+            this->fcgCBVppAfsShift->AutoSize = true;
+            this->fcgCBVppAfsShift->Location = System::Drawing::Point(11, 231);
+            this->fcgCBVppAfsShift->Name = L"fcgCBVppAfsShift";
+            this->fcgCBVppAfsShift->Size = System::Drawing::Size(89, 18);
+            this->fcgCBVppAfsShift->TabIndex = 110;
+            this->fcgCBVppAfsShift->Tag = L"reCmd";
+            this->fcgCBVppAfsShift->Text = L"フィールドシフト";
+            this->fcgCBVppAfsShift->UseVisualStyleBackColor = true;
+            //
+            // fcgLBVppAfsAnalyze
+            //
+            this->fcgLBVppAfsAnalyze->AutoSize = true;
+            this->fcgLBVppAfsAnalyze->Location = System::Drawing::Point(9, 207);
+            this->fcgLBVppAfsAnalyze->Name = L"fcgLBVppAfsAnalyze";
+            this->fcgLBVppAfsAnalyze->Size = System::Drawing::Size(41, 14);
+            this->fcgLBVppAfsAnalyze->TabIndex = 109;
+            this->fcgLBVppAfsAnalyze->Text = L"解除Lv";
+            //
+            // fcgNUVppAfsThreCMotion
+            //
+            this->fcgNUVppAfsThreCMotion->Location = System::Drawing::Point(181, 179);
+            this->fcgNUVppAfsThreCMotion->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1024, 0, 0, 0 });
+            this->fcgNUVppAfsThreCMotion->Name = L"fcgNUVppAfsThreCMotion";
+            this->fcgNUVppAfsThreCMotion->Size = System::Drawing::Size(60, 21);
+            this->fcgNUVppAfsThreCMotion->TabIndex = 108;
+            this->fcgNUVppAfsThreCMotion->Tag = L"reCmd";
+            this->fcgNUVppAfsThreCMotion->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            this->fcgNUVppAfsThreCMotion->ValueChanged += gcnew System::EventHandler(this, &frmConfig::fcgNUVppAfsValueChanged);
+            //
+            // fcgNUVppAfsThreShift
+            //
+            this->fcgNUVppAfsThreShift->Location = System::Drawing::Point(181, 104);
+            this->fcgNUVppAfsThreShift->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1024, 0, 0, 0 });
+            this->fcgNUVppAfsThreShift->Name = L"fcgNUVppAfsThreShift";
+            this->fcgNUVppAfsThreShift->Size = System::Drawing::Size(60, 21);
+            this->fcgNUVppAfsThreShift->TabIndex = 107;
+            this->fcgNUVppAfsThreShift->Tag = L"reCmd";
+            this->fcgNUVppAfsThreShift->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            this->fcgNUVppAfsThreShift->ValueChanged += gcnew System::EventHandler(this, &frmConfig::fcgNUVppAfsValueChanged);
+            //
+            // fcgNUVppAfsThreDeint
+            //
+            this->fcgNUVppAfsThreDeint->Location = System::Drawing::Point(181, 129);
+            this->fcgNUVppAfsThreDeint->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1024, 0, 0, 0 });
+            this->fcgNUVppAfsThreDeint->Name = L"fcgNUVppAfsThreDeint";
+            this->fcgNUVppAfsThreDeint->Size = System::Drawing::Size(60, 21);
+            this->fcgNUVppAfsThreDeint->TabIndex = 106;
+            this->fcgNUVppAfsThreDeint->Tag = L"reCmd";
+            this->fcgNUVppAfsThreDeint->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            this->fcgNUVppAfsThreDeint->ValueChanged += gcnew System::EventHandler(this, &frmConfig::fcgNUVppAfsValueChanged);
+            //
+            // fcgNUVppAfsThreYMotion
+            //
+            this->fcgNUVppAfsThreYMotion->Location = System::Drawing::Point(181, 154);
+            this->fcgNUVppAfsThreYMotion->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1024, 0, 0, 0 });
+            this->fcgNUVppAfsThreYMotion->Name = L"fcgNUVppAfsThreYMotion";
+            this->fcgNUVppAfsThreYMotion->Size = System::Drawing::Size(60, 21);
+            this->fcgNUVppAfsThreYMotion->TabIndex = 105;
+            this->fcgNUVppAfsThreYMotion->Tag = L"reCmd";
+            this->fcgNUVppAfsThreYMotion->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            this->fcgNUVppAfsThreYMotion->ValueChanged += gcnew System::EventHandler(this, &frmConfig::fcgNUVppAfsValueChanged);
+            //
+            // fcgLBVppAfsMethodSwitch
+            //
+            this->fcgLBVppAfsMethodSwitch->AutoSize = true;
+            this->fcgLBVppAfsMethodSwitch->Location = System::Drawing::Point(9, 54);
+            this->fcgLBVppAfsMethodSwitch->Name = L"fcgLBVppAfsMethodSwitch";
+            this->fcgLBVppAfsMethodSwitch->Size = System::Drawing::Size(40, 14);
+            this->fcgLBVppAfsMethodSwitch->TabIndex = 104;
+            this->fcgLBVppAfsMethodSwitch->Text = L"切替点";
+            //
+            // fcgCXVppAfsAnalyze
+            //
+            this->fcgCXVppAfsAnalyze->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXVppAfsAnalyze->FormattingEnabled = true;
+            this->fcgCXVppAfsAnalyze->Location = System::Drawing::Point(60, 204);
+            this->fcgCXVppAfsAnalyze->Name = L"fcgCXVppAfsAnalyze";
+            this->fcgCXVppAfsAnalyze->Size = System::Drawing::Size(181, 22);
+            this->fcgCXVppAfsAnalyze->TabIndex = 103;
+            this->fcgCXVppAfsAnalyze->Tag = L"reCmd";
+            //
+            // fcgNUVppAfsCoeffShift
+            //
+            this->fcgNUVppAfsCoeffShift->Location = System::Drawing::Point(181, 79);
+            this->fcgNUVppAfsCoeffShift->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 256, 0, 0, 0 });
+            this->fcgNUVppAfsCoeffShift->Name = L"fcgNUVppAfsCoeffShift";
+            this->fcgNUVppAfsCoeffShift->Size = System::Drawing::Size(60, 21);
+            this->fcgNUVppAfsCoeffShift->TabIndex = 102;
+            this->fcgNUVppAfsCoeffShift->Tag = L"reCmd";
+            this->fcgNUVppAfsCoeffShift->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            this->fcgNUVppAfsCoeffShift->ValueChanged += gcnew System::EventHandler(this, &frmConfig::fcgNUVppAfsValueChanged);
+            //
+            // fcgNUVppAfsMethodSwitch
+            //
+            this->fcgNUVppAfsMethodSwitch->Location = System::Drawing::Point(181, 54);
+            this->fcgNUVppAfsMethodSwitch->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 256, 0, 0, 0 });
+            this->fcgNUVppAfsMethodSwitch->Name = L"fcgNUVppAfsMethodSwitch";
+            this->fcgNUVppAfsMethodSwitch->Size = System::Drawing::Size(60, 21);
+            this->fcgNUVppAfsMethodSwitch->TabIndex = 101;
+            this->fcgNUVppAfsMethodSwitch->Tag = L"reCmd";
+            this->fcgNUVppAfsMethodSwitch->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            this->fcgNUVppAfsMethodSwitch->ValueChanged += gcnew System::EventHandler(this, &frmConfig::fcgNUVppAfsValueChanged);
+            //
             // fcgCBTimerPeriodTuning
-            // 
+            //
             this->fcgCBTimerPeriodTuning->AutoSize = true;
-            this->fcgCBTimerPeriodTuning->Location = System::Drawing::Point(301, 39);
+            this->fcgCBTimerPeriodTuning->Location = System::Drawing::Point(49, 197);
             this->fcgCBTimerPeriodTuning->Name = L"fcgCBTimerPeriodTuning";
             this->fcgCBTimerPeriodTuning->Size = System::Drawing::Size(92, 18);
             this->fcgCBTimerPeriodTuning->TabIndex = 136;
             this->fcgCBTimerPeriodTuning->Tag = L"chValue";
             this->fcgCBTimerPeriodTuning->Text = L"高精度タイマー";
             this->fcgCBTimerPeriodTuning->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgCBResize
-            // 
+            //
             this->fcgCBResize->AutoSize = true;
-            this->fcgCBResize->Location = System::Drawing::Point(24, 126);
+            this->fcgCBResize->Location = System::Drawing::Point(16, 5);
             this->fcgCBResize->Name = L"fcgCBResize";
             this->fcgCBResize->Size = System::Drawing::Size(58, 18);
             this->fcgCBResize->TabIndex = 75;
             this->fcgCBResize->Tag = L"reCmd";
             this->fcgCBResize->Text = L"リサイズ";
             this->fcgCBResize->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcggroupboxResize
-            // 
+            //
+            this->fcggroupboxResize->Controls->Add(this->fcgCXVppResizeAlg);
             this->fcggroupboxResize->Controls->Add(this->fcgLBResize);
             this->fcggroupboxResize->Controls->Add(this->fcgNUResizeH);
             this->fcggroupboxResize->Controls->Add(this->fcgNUResizeW);
-            this->fcggroupboxResize->Location = System::Drawing::Point(12, 127);
+            this->fcggroupboxResize->Location = System::Drawing::Point(4, 6);
             this->fcggroupboxResize->Name = L"fcggroupboxResize";
-            this->fcggroupboxResize->Size = System::Drawing::Size(200, 54);
+            this->fcggroupboxResize->Size = System::Drawing::Size(333, 54);
             this->fcggroupboxResize->TabIndex = 74;
             this->fcggroupboxResize->TabStop = false;
-            // 
+            //
+            // fcgCXVppResizeAlg
+            //
+            this->fcgCXVppResizeAlg->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXVppResizeAlg->FormattingEnabled = true;
+            this->fcgCXVppResizeAlg->Location = System::Drawing::Point(183, 22);
+            this->fcgCXVppResizeAlg->Name = L"fcgCXVppResizeAlg";
+            this->fcgCXVppResizeAlg->Size = System::Drawing::Size(144, 22);
+            this->fcgCXVppResizeAlg->TabIndex = 175;
+            this->fcgCXVppResizeAlg->Tag = L"reCmd";
+            //
             // fcgLBResize
-            // 
+            //
             this->fcgLBResize->AutoSize = true;
-            this->fcgLBResize->Location = System::Drawing::Point(97, 25);
+            this->fcgLBResize->Location = System::Drawing::Point(85, 25);
             this->fcgLBResize->Name = L"fcgLBResize";
             this->fcgLBResize->Size = System::Drawing::Size(13, 14);
             this->fcgLBResize->TabIndex = 174;
             this->fcgLBResize->Text = L"x";
-            // 
+            //
             // fcgNUResizeH
-            // 
+            //
             this->fcgNUResizeH->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 16, 0, 0, 0 });
-            this->fcgNUResizeH->Location = System::Drawing::Point(116, 23);
+            this->fcgNUResizeH->Location = System::Drawing::Point(104, 23);
             this->fcgNUResizeH->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 2160, 0, 0, 0 });
             this->fcgNUResizeH->Name = L"fcgNUResizeH";
             this->fcgNUResizeH->Size = System::Drawing::Size(70, 21);
             this->fcgNUResizeH->TabIndex = 173;
             this->fcgNUResizeH->Tag = L"reCmd";
             this->fcgNUResizeH->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgNUResizeW
-            // 
+            //
             this->fcgNUResizeW->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 16, 0, 0, 0 });
-            this->fcgNUResizeW->Location = System::Drawing::Point(18, 23);
+            this->fcgNUResizeW->Location = System::Drawing::Point(10, 23);
             this->fcgNUResizeW->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 4320, 0, 0, 0 });
             this->fcgNUResizeW->Name = L"fcgNUResizeW";
             this->fcgNUResizeW->Size = System::Drawing::Size(70, 21);
             this->fcgNUResizeW->TabIndex = 172;
             this->fcgNUResizeW->Tag = L"reCmd";
             this->fcgNUResizeW->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgCBAuoTcfileout
-            // 
+            //
             this->fcgCBAuoTcfileout->AutoSize = true;
-            this->fcgCBAuoTcfileout->Location = System::Drawing::Point(301, 67);
+            this->fcgCBAuoTcfileout->Location = System::Drawing::Point(49, 225);
             this->fcgCBAuoTcfileout->Name = L"fcgCBAuoTcfileout";
             this->fcgCBAuoTcfileout->Size = System::Drawing::Size(98, 18);
             this->fcgCBAuoTcfileout->TabIndex = 73;
             this->fcgCBAuoTcfileout->Tag = L"chValue";
             this->fcgCBAuoTcfileout->Text = L"タイムコード出力";
             this->fcgCBAuoTcfileout->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgLBTempDir
-            // 
+            //
             this->fcgLBTempDir->AutoSize = true;
-            this->fcgLBTempDir->Location = System::Drawing::Point(15, 9);
+            this->fcgLBTempDir->Location = System::Drawing::Point(13, 95);
             this->fcgLBTempDir->Name = L"fcgLBTempDir";
             this->fcgLBTempDir->Size = System::Drawing::Size(60, 14);
             this->fcgLBTempDir->TabIndex = 67;
             this->fcgLBTempDir->Text = L"一時フォルダ";
-            // 
+            //
             // fcgBTCustomTempDir
-            // 
-            this->fcgBTCustomTempDir->Location = System::Drawing::Point(215, 62);
+            //
+            this->fcgBTCustomTempDir->Location = System::Drawing::Point(213, 148);
             this->fcgBTCustomTempDir->Name = L"fcgBTCustomTempDir";
             this->fcgBTCustomTempDir->Size = System::Drawing::Size(29, 23);
             this->fcgBTCustomTempDir->TabIndex = 64;
             this->fcgBTCustomTempDir->Text = L"...";
             this->fcgBTCustomTempDir->UseVisualStyleBackColor = true;
             this->fcgBTCustomTempDir->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTCustomTempDir_Click);
-            // 
+            //
             // fcgTXCustomTempDir
-            // 
-            this->fcgTXCustomTempDir->Location = System::Drawing::Point(30, 63);
+            //
+            this->fcgTXCustomTempDir->Location = System::Drawing::Point(28, 149);
             this->fcgTXCustomTempDir->Name = L"fcgTXCustomTempDir";
             this->fcgTXCustomTempDir->Size = System::Drawing::Size(182, 21);
             this->fcgTXCustomTempDir->TabIndex = 63;
             this->fcgTXCustomTempDir->Tag = L"";
             this->fcgTXCustomTempDir->TextChanged += gcnew System::EventHandler(this, &frmConfig::fcgTXCustomTempDir_TextChanged);
-            // 
+            //
             // fcgCXTempDir
-            // 
+            //
             this->fcgCXTempDir->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXTempDir->FormattingEnabled = true;
-            this->fcgCXTempDir->Location = System::Drawing::Point(18, 35);
+            this->fcgCXTempDir->Location = System::Drawing::Point(16, 121);
             this->fcgCXTempDir->Name = L"fcgCXTempDir";
             this->fcgCXTempDir->Size = System::Drawing::Size(209, 22);
             this->fcgCXTempDir->TabIndex = 62;
             this->fcgCXTempDir->Tag = L"chValue";
-            // 
+            //
             // fcgCSExeFiles
-            // 
-            this->fcgCSExeFiles->Items->AddRange(gcnew cli::array< System::Windows::Forms::ToolStripItem^  >(1) { this->fcgTSExeFileshelp });
+            //
+            this->fcgCSExeFiles->Items->AddRange(gcnew cli::array< System::Windows::Forms::ToolStripItem ^  >(1) { this->fcgTSExeFileshelp });
             this->fcgCSExeFiles->Name = L"fcgCSx264";
             this->fcgCSExeFiles->Size = System::Drawing::Size(131, 26);
-            // 
+            //
             // fcgTSExeFileshelp
-            // 
+            //
             this->fcgTSExeFileshelp->Name = L"fcgTSExeFileshelp";
             this->fcgTSExeFileshelp->Size = System::Drawing::Size(130, 22);
             this->fcgTSExeFileshelp->Text = L"helpを表示";
             this->fcgTSExeFileshelp->Click += gcnew System::EventHandler(this, &frmConfig::fcgTSExeFileshelp_Click);
-            // 
+            //
             // fcgLBguiExBlog
-            // 
+            //
             this->fcgLBguiExBlog->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((System::Windows::Forms::AnchorStyles::Bottom | System::Windows::Forms::AnchorStyles::Left));
             this->fcgLBguiExBlog->AutoSize = true;
             this->fcgLBguiExBlog->Font = (gcnew System::Drawing::Font(L"Meiryo UI", 8.25F, System::Drawing::FontStyle::Italic, System::Drawing::GraphicsUnit::Point,
@@ -3017,9 +3655,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgLBguiExBlog->Text = L"VCEEncについて";
             this->fcgLBguiExBlog->VisitedLinkColor = System::Drawing::Color::Gray;
             this->fcgLBguiExBlog->LinkClicked += gcnew System::Windows::Forms::LinkLabelLinkClickedEventHandler(this, &frmConfig::fcgLBguiExBlog_LinkClicked);
-            // 
+            //
             // fcgtabControlAudio
-            // 
+            //
             this->fcgtabControlAudio->Controls->Add(this->fcgtabPageAudioMain);
             this->fcgtabControlAudio->Controls->Add(this->fcgtabPageAudioOther);
             this->fcgtabControlAudio->Location = System::Drawing::Point(622, 31);
@@ -3027,9 +3665,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgtabControlAudio->SelectedIndex = 0;
             this->fcgtabControlAudio->Size = System::Drawing::Size(380, 302);
             this->fcgtabControlAudio->TabIndex = 51;
-            // 
+            //
             // fcgtabPageAudioMain
-            // 
+            //
             this->fcgtabPageAudioMain->Controls->Add(this->fcgCXAudioDelayCut);
             this->fcgtabPageAudioMain->Controls->Add(this->fcgLBAudioDelayCut);
             this->fcgtabPageAudioMain->Controls->Add(this->fcgLBAudioEncTiming);
@@ -3058,9 +3696,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgtabPageAudioMain->TabIndex = 0;
             this->fcgtabPageAudioMain->Text = L"音声";
             this->fcgtabPageAudioMain->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgCXAudioDelayCut
-            // 
+            //
             this->fcgCXAudioDelayCut->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXAudioDelayCut->FormattingEnabled = true;
             this->fcgCXAudioDelayCut->Location = System::Drawing::Point(289, 131);
@@ -3068,27 +3706,27 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXAudioDelayCut->Size = System::Drawing::Size(70, 23);
             this->fcgCXAudioDelayCut->TabIndex = 55;
             this->fcgCXAudioDelayCut->Tag = L"chValue";
-            // 
+            //
             // fcgLBAudioDelayCut
-            // 
+            //
             this->fcgLBAudioDelayCut->AutoSize = true;
             this->fcgLBAudioDelayCut->Location = System::Drawing::Point(222, 134);
             this->fcgLBAudioDelayCut->Name = L"fcgLBAudioDelayCut";
             this->fcgLBAudioDelayCut->Size = System::Drawing::Size(66, 15);
             this->fcgLBAudioDelayCut->TabIndex = 56;
             this->fcgLBAudioDelayCut->Text = L"ディレイカット";
-            // 
+            //
             // fcgLBAudioEncTiming
-            // 
+            //
             this->fcgLBAudioEncTiming->AutoSize = true;
             this->fcgLBAudioEncTiming->Location = System::Drawing::Point(242, 56);
             this->fcgLBAudioEncTiming->Name = L"fcgLBAudioEncTiming";
             this->fcgLBAudioEncTiming->Size = System::Drawing::Size(43, 15);
             this->fcgLBAudioEncTiming->TabIndex = 47;
             this->fcgLBAudioEncTiming->Text = L"処理順";
-            // 
+            //
             // fcgCXAudioEncTiming
-            // 
+            //
             this->fcgCXAudioEncTiming->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXAudioEncTiming->FormattingEnabled = true;
             this->fcgCXAudioEncTiming->Location = System::Drawing::Point(288, 53);
@@ -3096,18 +3734,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXAudioEncTiming->Size = System::Drawing::Size(75, 23);
             this->fcgCXAudioEncTiming->TabIndex = 46;
             this->fcgCXAudioEncTiming->Tag = L"chValue";
-            // 
+            //
             // fcgLBAudioTemp
-            // 
+            //
             this->fcgLBAudioTemp->AutoSize = true;
             this->fcgLBAudioTemp->Location = System::Drawing::Point(14, 212);
             this->fcgLBAudioTemp->Name = L"fcgLBAudioTemp";
             this->fcgLBAudioTemp->Size = System::Drawing::Size(125, 15);
             this->fcgLBAudioTemp->TabIndex = 45;
             this->fcgLBAudioTemp->Text = L"音声一時ファイル出力先";
-            // 
+            //
             // fcgCXAudioTempDir
-            // 
+            //
             this->fcgCXAudioTempDir->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXAudioTempDir->FormattingEnabled = true;
             this->fcgCXAudioTempDir->Location = System::Drawing::Point(142, 209);
@@ -3115,16 +3753,16 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXAudioTempDir->Size = System::Drawing::Size(150, 23);
             this->fcgCXAudioTempDir->TabIndex = 39;
             this->fcgCXAudioTempDir->Tag = L"chValue";
-            // 
+            //
             // fcgTXCustomAudioTempDir
-            // 
+            //
             this->fcgTXCustomAudioTempDir->Location = System::Drawing::Point(71, 236);
             this->fcgTXCustomAudioTempDir->Name = L"fcgTXCustomAudioTempDir";
             this->fcgTXCustomAudioTempDir->Size = System::Drawing::Size(245, 23);
             this->fcgTXCustomAudioTempDir->TabIndex = 41;
-            // 
+            //
             // fcgBTCustomAudioTempDir
-            // 
+            //
             this->fcgBTCustomAudioTempDir->Location = System::Drawing::Point(322, 234);
             this->fcgBTCustomAudioTempDir->Name = L"fcgBTCustomAudioTempDir";
             this->fcgBTCustomAudioTempDir->Size = System::Drawing::Size(29, 23);
@@ -3132,9 +3770,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTCustomAudioTempDir->Text = L"...";
             this->fcgBTCustomAudioTempDir->UseVisualStyleBackColor = true;
             this->fcgBTCustomAudioTempDir->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTCustomAudioTempDir_Click);
-            // 
+            //
             // fcgCBAudioUsePipe
-            // 
+            //
             this->fcgCBAudioUsePipe->AutoSize = true;
             this->fcgCBAudioUsePipe->Location = System::Drawing::Point(132, 133);
             this->fcgCBAudioUsePipe->Name = L"fcgCBAudioUsePipe";
@@ -3143,27 +3781,27 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBAudioUsePipe->Tag = L"chValue";
             this->fcgCBAudioUsePipe->Text = L"パイプ処理";
             this->fcgCBAudioUsePipe->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgLBAudioBitrate
-            // 
+            //
             this->fcgLBAudioBitrate->AutoSize = true;
             this->fcgLBAudioBitrate->Location = System::Drawing::Point(285, 162);
             this->fcgLBAudioBitrate->Name = L"fcgLBAudioBitrate";
             this->fcgLBAudioBitrate->Size = System::Drawing::Size(34, 15);
             this->fcgLBAudioBitrate->TabIndex = 44;
             this->fcgLBAudioBitrate->Text = L"kbps";
-            // 
+            //
             // fcgNUAudioBitrate
-            // 
+            //
             this->fcgNUAudioBitrate->Location = System::Drawing::Point(214, 158);
             this->fcgNUAudioBitrate->Name = L"fcgNUAudioBitrate";
             this->fcgNUAudioBitrate->Size = System::Drawing::Size(65, 23);
             this->fcgNUAudioBitrate->TabIndex = 36;
             this->fcgNUAudioBitrate->Tag = L"chValue";
             this->fcgNUAudioBitrate->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
+            //
             // fcgCBAudio2pass
-            // 
+            //
             this->fcgCBAudio2pass->AutoSize = true;
             this->fcgCBAudio2pass->Location = System::Drawing::Point(61, 133);
             this->fcgCBAudio2pass->Name = L"fcgCBAudio2pass";
@@ -3172,9 +3810,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBAudio2pass->Tag = L"chValue";
             this->fcgCBAudio2pass->Text = L"2pass";
             this->fcgCBAudio2pass->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgCXAudioEncMode
-            // 
+            //
             this->fcgCXAudioEncMode->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXAudioEncMode->FormattingEnabled = true;
             this->fcgCXAudioEncMode->Location = System::Drawing::Point(17, 157);
@@ -3183,18 +3821,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXAudioEncMode->TabIndex = 35;
             this->fcgCXAudioEncMode->Tag = L"chValue";
             this->fcgCXAudioEncMode->SelectedIndexChanged += gcnew System::EventHandler(this, &frmConfig::fcgCXAudioEncMode_SelectedIndexChanged);
-            // 
+            //
             // fcgLBAudioEncMode
-            // 
+            //
             this->fcgLBAudioEncMode->AutoSize = true;
             this->fcgLBAudioEncMode->Location = System::Drawing::Point(6, 137);
             this->fcgLBAudioEncMode->Name = L"fcgLBAudioEncMode";
             this->fcgLBAudioEncMode->Size = System::Drawing::Size(34, 15);
             this->fcgLBAudioEncMode->TabIndex = 43;
             this->fcgLBAudioEncMode->Text = L"モード";
-            // 
+            //
             // fcgBTAudioEncoderPath
-            // 
+            //
             this->fcgBTAudioEncoderPath->Location = System::Drawing::Point(326, 90);
             this->fcgBTAudioEncoderPath->Name = L"fcgBTAudioEncoderPath";
             this->fcgBTAudioEncoderPath->Size = System::Drawing::Size(30, 23);
@@ -3202,9 +3840,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTAudioEncoderPath->Text = L"...";
             this->fcgBTAudioEncoderPath->UseVisualStyleBackColor = true;
             this->fcgBTAudioEncoderPath->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTAudioEncoderPath_Click);
-            // 
+            //
             // fcgTXAudioEncoderPath
-            // 
+            //
             this->fcgTXAudioEncoderPath->AllowDrop = true;
             this->fcgTXAudioEncoderPath->Location = System::Drawing::Point(17, 92);
             this->fcgTXAudioEncoderPath->Name = L"fcgTXAudioEncoderPath";
@@ -3213,18 +3851,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgTXAudioEncoderPath->TextChanged += gcnew System::EventHandler(this, &frmConfig::fcgTXAudioEncoderPath_TextChanged);
             this->fcgTXAudioEncoderPath->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_DragDrop);
             this->fcgTXAudioEncoderPath->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_Enter);
-            // 
+            //
             // fcgLBAudioEncoderPath
-            // 
+            //
             this->fcgLBAudioEncoderPath->AutoSize = true;
             this->fcgLBAudioEncoderPath->Location = System::Drawing::Point(14, 75);
             this->fcgLBAudioEncoderPath->Name = L"fcgLBAudioEncoderPath";
             this->fcgLBAudioEncoderPath->Size = System::Drawing::Size(53, 15);
             this->fcgLBAudioEncoderPath->TabIndex = 40;
             this->fcgLBAudioEncoderPath->Text = L"～の指定";
-            // 
+            //
             // fcgCBAudioOnly
-            // 
+            //
             this->fcgCBAudioOnly->AutoSize = true;
             this->fcgCBAudioOnly->ForeColor = System::Drawing::SystemColors::ControlDarkDark;
             this->fcgCBAudioOnly->Location = System::Drawing::Point(254, 6);
@@ -3234,9 +3872,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBAudioOnly->Tag = L"chValue";
             this->fcgCBAudioOnly->Text = L"音声のみ出力";
             this->fcgCBAudioOnly->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgCBFAWCheck
-            // 
+            //
             this->fcgCBFAWCheck->AutoSize = true;
             this->fcgCBFAWCheck->Location = System::Drawing::Point(254, 29);
             this->fcgCBFAWCheck->Name = L"fcgCBFAWCheck";
@@ -3245,9 +3883,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBFAWCheck->Tag = L"chValue";
             this->fcgCBFAWCheck->Text = L"FAWCheck";
             this->fcgCBFAWCheck->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgCXAudioEncoder
-            // 
+            //
             this->fcgCXAudioEncoder->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXAudioEncoder->FormattingEnabled = true;
             this->fcgCXAudioEncoder->Location = System::Drawing::Point(35, 34);
@@ -3256,18 +3894,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXAudioEncoder->TabIndex = 30;
             this->fcgCXAudioEncoder->Tag = L"chValue";
             this->fcgCXAudioEncoder->SelectedIndexChanged += gcnew System::EventHandler(this, &frmConfig::fcgCXAudioEncoder_SelectedIndexChanged);
-            // 
+            //
             // fcgLBAudioEncoder
-            // 
+            //
             this->fcgLBAudioEncoder->AutoSize = true;
             this->fcgLBAudioEncoder->Location = System::Drawing::Point(7, 14);
             this->fcgLBAudioEncoder->Name = L"fcgLBAudioEncoder";
             this->fcgLBAudioEncoder->Size = System::Drawing::Size(52, 15);
             this->fcgLBAudioEncoder->TabIndex = 29;
             this->fcgLBAudioEncoder->Text = L"エンコーダ";
-            // 
+            //
             // fcgtabPageAudioOther
-            // 
+            //
             this->fcgtabPageAudioOther->Controls->Add(this->panel2);
             this->fcgtabPageAudioOther->Controls->Add(this->fcgLBBatAfterAudioString);
             this->fcgtabPageAudioOther->Controls->Add(this->fcgLBBatBeforeAudioString);
@@ -3289,17 +3927,17 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgtabPageAudioOther->TabIndex = 1;
             this->fcgtabPageAudioOther->Text = L"その他";
             this->fcgtabPageAudioOther->UseVisualStyleBackColor = true;
-            // 
+            //
             // panel2
-            // 
+            //
             this->panel2->BorderStyle = System::Windows::Forms::BorderStyle::FixedSingle;
             this->panel2->Location = System::Drawing::Point(15, 135);
             this->panel2->Name = L"panel2";
             this->panel2->Size = System::Drawing::Size(342, 1);
             this->panel2->TabIndex = 73;
-            // 
+            //
             // fcgLBBatAfterAudioString
-            // 
+            //
             this->fcgLBBatAfterAudioString->AutoSize = true;
             this->fcgLBBatAfterAudioString->Font = (gcnew System::Drawing::Font(L"Meiryo UI", 9, static_cast<System::Drawing::FontStyle>((System::Drawing::FontStyle::Italic | System::Drawing::FontStyle::Underline)),
                 System::Drawing::GraphicsUnit::Point, static_cast<System::Byte>(128)));
@@ -3310,9 +3948,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgLBBatAfterAudioString->TabIndex = 72;
             this->fcgLBBatAfterAudioString->Text = L" 後& ";
             this->fcgLBBatAfterAudioString->TextAlign = System::Drawing::ContentAlignment::TopCenter;
-            // 
+            //
             // fcgLBBatBeforeAudioString
-            // 
+            //
             this->fcgLBBatBeforeAudioString->AutoSize = true;
             this->fcgLBBatBeforeAudioString->Font = (gcnew System::Drawing::Font(L"Meiryo UI", 9, static_cast<System::Drawing::FontStyle>((System::Drawing::FontStyle::Italic | System::Drawing::FontStyle::Underline)),
                 System::Drawing::GraphicsUnit::Point, static_cast<System::Byte>(128)));
@@ -3323,9 +3961,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgLBBatBeforeAudioString->TabIndex = 64;
             this->fcgLBBatBeforeAudioString->Text = L" 前& ";
             this->fcgLBBatBeforeAudioString->TextAlign = System::Drawing::ContentAlignment::TopCenter;
-            // 
+            //
             // fcgBTBatAfterAudioPath
-            // 
+            //
             this->fcgBTBatAfterAudioPath->Location = System::Drawing::Point(327, 240);
             this->fcgBTBatAfterAudioPath->Name = L"fcgBTBatAfterAudioPath";
             this->fcgBTBatAfterAudioPath->Size = System::Drawing::Size(30, 23);
@@ -3334,27 +3972,27 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTBatAfterAudioPath->Text = L"...";
             this->fcgBTBatAfterAudioPath->UseVisualStyleBackColor = true;
             this->fcgBTBatAfterAudioPath->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTBatAfterAudioPath_Click);
-            // 
+            //
             // fcgTXBatAfterAudioPath
-            // 
+            //
             this->fcgTXBatAfterAudioPath->AllowDrop = true;
             this->fcgTXBatAfterAudioPath->Location = System::Drawing::Point(123, 241);
             this->fcgTXBatAfterAudioPath->Name = L"fcgTXBatAfterAudioPath";
             this->fcgTXBatAfterAudioPath->Size = System::Drawing::Size(202, 23);
             this->fcgTXBatAfterAudioPath->TabIndex = 70;
             this->fcgTXBatAfterAudioPath->Tag = L"chValue";
-            // 
+            //
             // fcgLBBatAfterAudioPath
-            // 
+            //
             this->fcgLBBatAfterAudioPath->AutoSize = true;
             this->fcgLBBatAfterAudioPath->Location = System::Drawing::Point(37, 245);
             this->fcgLBBatAfterAudioPath->Name = L"fcgLBBatAfterAudioPath";
             this->fcgLBBatAfterAudioPath->Size = System::Drawing::Size(67, 15);
             this->fcgLBBatAfterAudioPath->TabIndex = 69;
             this->fcgLBBatAfterAudioPath->Text = L"バッチファイル";
-            // 
+            //
             // fcgCBRunBatAfterAudio
-            // 
+            //
             this->fcgCBRunBatAfterAudio->AutoSize = true;
             this->fcgCBRunBatAfterAudio->Location = System::Drawing::Point(15, 216);
             this->fcgCBRunBatAfterAudio->Name = L"fcgCBRunBatAfterAudio";
@@ -3363,17 +4001,17 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBRunBatAfterAudio->Tag = L"chValue";
             this->fcgCBRunBatAfterAudio->Text = L"音声エンコード終了後、バッチ処理を行う";
             this->fcgCBRunBatAfterAudio->UseVisualStyleBackColor = true;
-            // 
+            //
             // panel1
-            // 
+            //
             this->panel1->BorderStyle = System::Windows::Forms::BorderStyle::FixedSingle;
             this->panel1->Location = System::Drawing::Point(15, 205);
             this->panel1->Name = L"panel1";
             this->panel1->Size = System::Drawing::Size(342, 1);
             this->panel1->TabIndex = 67;
-            // 
+            //
             // fcgBTBatBeforeAudioPath
-            // 
+            //
             this->fcgBTBatBeforeAudioPath->Location = System::Drawing::Point(327, 173);
             this->fcgBTBatBeforeAudioPath->Name = L"fcgBTBatBeforeAudioPath";
             this->fcgBTBatBeforeAudioPath->Size = System::Drawing::Size(30, 23);
@@ -3382,27 +4020,27 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgBTBatBeforeAudioPath->Text = L"...";
             this->fcgBTBatBeforeAudioPath->UseVisualStyleBackColor = true;
             this->fcgBTBatBeforeAudioPath->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTBatBeforeAudioPath_Click);
-            // 
+            //
             // fcgTXBatBeforeAudioPath
-            // 
+            //
             this->fcgTXBatBeforeAudioPath->AllowDrop = true;
             this->fcgTXBatBeforeAudioPath->Location = System::Drawing::Point(123, 173);
             this->fcgTXBatBeforeAudioPath->Name = L"fcgTXBatBeforeAudioPath";
             this->fcgTXBatBeforeAudioPath->Size = System::Drawing::Size(202, 23);
             this->fcgTXBatBeforeAudioPath->TabIndex = 65;
             this->fcgTXBatBeforeAudioPath->Tag = L"chValue";
-            // 
+            //
             // fcgLBBatBeforeAudioPath
-            // 
+            //
             this->fcgLBBatBeforeAudioPath->AutoSize = true;
             this->fcgLBBatBeforeAudioPath->Location = System::Drawing::Point(37, 176);
             this->fcgLBBatBeforeAudioPath->Name = L"fcgLBBatBeforeAudioPath";
             this->fcgLBBatBeforeAudioPath->Size = System::Drawing::Size(67, 15);
             this->fcgLBBatBeforeAudioPath->TabIndex = 63;
             this->fcgLBBatBeforeAudioPath->Text = L"バッチファイル";
-            // 
+            //
             // fcgCBRunBatBeforeAudio
-            // 
+            //
             this->fcgCBRunBatBeforeAudio->AutoSize = true;
             this->fcgCBRunBatBeforeAudio->Location = System::Drawing::Point(15, 148);
             this->fcgCBRunBatBeforeAudio->Name = L"fcgCBRunBatBeforeAudio";
@@ -3411,9 +4049,9 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCBRunBatBeforeAudio->Tag = L"chValue";
             this->fcgCBRunBatBeforeAudio->Text = L"音声エンコード開始前、バッチ処理を行う";
             this->fcgCBRunBatBeforeAudio->UseVisualStyleBackColor = true;
-            // 
+            //
             // fcgCXAudioPriority
-            // 
+            //
             this->fcgCXAudioPriority->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXAudioPriority->FormattingEnabled = true;
             this->fcgCXAudioPriority->Location = System::Drawing::Point(168, 19);
@@ -3421,139 +4059,18 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgCXAudioPriority->Size = System::Drawing::Size(136, 23);
             this->fcgCXAudioPriority->TabIndex = 13;
             this->fcgCXAudioPriority->Tag = L"chValue";
-            // 
+            //
             // fcgLBAudioPriority
-            // 
+            //
             this->fcgLBAudioPriority->AutoSize = true;
             this->fcgLBAudioPriority->Location = System::Drawing::Point(41, 22);
             this->fcgLBAudioPriority->Name = L"fcgLBAudioPriority";
             this->fcgLBAudioPriority->Size = System::Drawing::Size(67, 15);
             this->fcgLBAudioPriority->TabIndex = 12;
             this->fcgLBAudioPriority->Text = L"音声優先度";
-            // 
-            // fcgLBQPMin
-            // 
-            this->fcgLBQPMin->AutoSize = true;
-            this->fcgLBQPMin->Location = System::Drawing::Point(97, 369);
-            this->fcgLBQPMin->Name = L"fcgLBQPMin";
-            this->fcgLBQPMin->Size = System::Drawing::Size(29, 14);
-            this->fcgLBQPMin->TabIndex = 180;
-            this->fcgLBQPMin->Text = L"下限";
-            // 
-            // fcggroupBoxColor
-            // 
-            this->fcggroupBoxColor->Controls->Add(this->fcgCBFullrange);
-            this->fcggroupBoxColor->Controls->Add(this->fcgLBFullrange);
-            this->fcggroupBoxColor->Controls->Add(this->fcgCXTransfer);
-            this->fcggroupBoxColor->Controls->Add(this->fcgCXColorPrim);
-            this->fcggroupBoxColor->Controls->Add(this->fcgCXColorMatrix);
-            this->fcggroupBoxColor->Controls->Add(this->fcgLBTransfer);
-            this->fcggroupBoxColor->Controls->Add(this->fcgLBColorPrim);
-            this->fcggroupBoxColor->Controls->Add(this->fcgLBColorMatrix);
-            this->fcggroupBoxColor->Location = System::Drawing::Point(354, 355);
-            this->fcggroupBoxColor->Name = L"fcggroupBoxColor";
-            this->fcggroupBoxColor->Size = System::Drawing::Size(241, 121);
-            this->fcggroupBoxColor->TabIndex = 182;
-            this->fcggroupBoxColor->TabStop = false;
-            this->fcggroupBoxColor->Text = L"色設定";
-            // 
-            // fcgCXTransfer
-            // 
-            this->fcgCXTransfer->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXTransfer->FormattingEnabled = true;
-            this->fcgCXTransfer->Location = System::Drawing::Point(105, 72);
-            this->fcgCXTransfer->Name = L"fcgCXTransfer";
-            this->fcgCXTransfer->Size = System::Drawing::Size(121, 22);
-            this->fcgCXTransfer->TabIndex = 2;
-            this->fcgCXTransfer->Tag = L"reCmd";
-            // 
-            // fcgCXColorPrim
-            // 
-            this->fcgCXColorPrim->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXColorPrim->FormattingEnabled = true;
-            this->fcgCXColorPrim->Location = System::Drawing::Point(105, 44);
-            this->fcgCXColorPrim->Name = L"fcgCXColorPrim";
-            this->fcgCXColorPrim->Size = System::Drawing::Size(121, 22);
-            this->fcgCXColorPrim->TabIndex = 1;
-            this->fcgCXColorPrim->Tag = L"reCmd";
-            // 
-            // fcgCXColorMatrix
-            // 
-            this->fcgCXColorMatrix->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXColorMatrix->FormattingEnabled = true;
-            this->fcgCXColorMatrix->Location = System::Drawing::Point(105, 16);
-            this->fcgCXColorMatrix->Name = L"fcgCXColorMatrix";
-            this->fcgCXColorMatrix->Size = System::Drawing::Size(121, 22);
-            this->fcgCXColorMatrix->TabIndex = 0;
-            this->fcgCXColorMatrix->Tag = L"reCmd";
-            // 
-            // fcgLBTransfer
-            // 
-            this->fcgLBTransfer->AutoSize = true;
-            this->fcgLBTransfer->Location = System::Drawing::Point(18, 75);
-            this->fcgLBTransfer->Name = L"fcgLBTransfer";
-            this->fcgLBTransfer->Size = System::Drawing::Size(49, 14);
-            this->fcgLBTransfer->TabIndex = 2;
-            this->fcgLBTransfer->Text = L"transfer";
-            // 
-            // fcgLBColorPrim
-            // 
-            this->fcgLBColorPrim->AutoSize = true;
-            this->fcgLBColorPrim->Location = System::Drawing::Point(18, 47);
-            this->fcgLBColorPrim->Name = L"fcgLBColorPrim";
-            this->fcgLBColorPrim->Size = System::Drawing::Size(61, 14);
-            this->fcgLBColorPrim->TabIndex = 1;
-            this->fcgLBColorPrim->Text = L"colorprim";
-            // 
-            // fcgLBColorMatrix
-            // 
-            this->fcgLBColorMatrix->AutoSize = true;
-            this->fcgLBColorMatrix->Location = System::Drawing::Point(18, 19);
-            this->fcgLBColorMatrix->Name = L"fcgLBColorMatrix";
-            this->fcgLBColorMatrix->Size = System::Drawing::Size(70, 14);
-            this->fcgLBColorMatrix->TabIndex = 0;
-            this->fcgLBColorMatrix->Text = L"colormatrix";
-            // 
-            // fcgCBFullrange
-            // 
-            this->fcgCBFullrange->AutoSize = true;
-            this->fcgCBFullrange->Location = System::Drawing::Point(106, 101);
-            this->fcgCBFullrange->Name = L"fcgCBFullrange";
-            this->fcgCBFullrange->Size = System::Drawing::Size(15, 14);
-            this->fcgCBFullrange->TabIndex = 176;
-            this->fcgCBFullrange->Tag = L"reCmd";
-            this->fcgCBFullrange->UseVisualStyleBackColor = true;
-            // 
-            // fcgLBFullrange
-            // 
-            this->fcgLBFullrange->AutoSize = true;
-            this->fcgLBFullrange->Location = System::Drawing::Point(18, 100);
-            this->fcgLBFullrange->Name = L"fcgLBFullrange";
-            this->fcgLBFullrange->Size = System::Drawing::Size(55, 14);
-            this->fcgLBFullrange->TabIndex = 175;
-            this->fcgLBFullrange->Text = L"fullrange";
-            // 
-            // fcgCXVideoFormat
-            // 
-            this->fcgCXVideoFormat->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXVideoFormat->FormattingEnabled = true;
-            this->fcgCXVideoFormat->Location = System::Drawing::Point(458, 330);
-            this->fcgCXVideoFormat->Name = L"fcgCXVideoFormat";
-            this->fcgCXVideoFormat->Size = System::Drawing::Size(121, 22);
-            this->fcgCXVideoFormat->TabIndex = 183;
-            this->fcgCXVideoFormat->Tag = L"reCmd";
-            // 
-            // fcgLBVideoFormat
-            // 
-            this->fcgLBVideoFormat->AutoSize = true;
-            this->fcgLBVideoFormat->Location = System::Drawing::Point(360, 333);
-            this->fcgLBVideoFormat->Name = L"fcgLBVideoFormat";
-            this->fcgLBVideoFormat->Size = System::Drawing::Size(73, 14);
-            this->fcgLBVideoFormat->TabIndex = 184;
-            this->fcgLBVideoFormat->Text = L"videoformat";
-            // 
+            //
             // frmConfig
-            // 
+            //
             this->AutoScaleDimensions = System::Drawing::SizeF(96, 96);
             this->AutoScaleMode = System::Windows::Forms::AutoScaleMode::Dpi;
             this->ClientSize = System::Drawing::Size(1008, 601);
@@ -3592,51 +4109,71 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             this->fcgtabControlVCE->ResumeLayout(false);
             this->tabPageVideoEnc->ResumeLayout(false);
             this->tabPageVideoEnc->PerformLayout();
+            this->fcggroupBoxColor->ResumeLayout(false);
+            this->fcggroupBoxColor->PerformLayout();
             this->fcgPNHEVCLevelProfile->ResumeLayout(false);
             this->fcgPNHEVCLevelProfile->PerformLayout();
             this->fcgPNH264Features->ResumeLayout(false);
             this->fcgPNH264Features->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNURefFrames))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVBVBufSize))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMax))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMin))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgpictureBoxVCEEnabled))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgpictureBoxVCEDisabled))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUSlices))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNURefFrames))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVBVBufSize))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPMax))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPMin))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgpictureBoxVCEEnabled))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgpictureBoxVCEDisabled))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUSlices))->EndInit();
             this->fcgGroupBoxAspectRatio->ResumeLayout(false);
             this->fcgGroupBoxAspectRatio->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioY))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioX))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUGopLength))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUAspectRatioY))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUAspectRatioX))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUGopLength))->EndInit();
             this->fcgPNBitrate->ResumeLayout(false);
             this->fcgPNBitrate->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBitrate))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUMaxkbps))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBitrate))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUMaxkbps))->EndInit();
             this->fcgPNQP->ResumeLayout(false);
             this->fcgPNQP->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPI))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPP))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPB))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPI))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPP))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPB))->EndInit();
             this->fcgPNBframes->ResumeLayout(false);
             this->fcgPNBframes->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBframes))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBDeltaQP))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBRefDeltaQP))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBframes))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBDeltaQP))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBRefDeltaQP))->EndInit();
             this->tabPageExOpt->ResumeLayout(false);
             this->tabPageExOpt->PerformLayout();
+            this->fcggroupBoxVppDeinterlace->ResumeLayout(false);
+            this->fcggroupBoxVppDeinterlace->PerformLayout();
+            this->fcgPNVppAfs->ResumeLayout(false);
+            this->fcgPNVppAfs->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreCMotion))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreYMotion))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreDeint))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreShift))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsCoeffShift))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsRight))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsLeft))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsBottom))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsUp))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsMethodSwitch))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreCMotion))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreShift))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreDeint))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreYMotion))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsCoeffShift))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsMethodSwitch))->EndInit();
             this->fcggroupboxResize->ResumeLayout(false);
             this->fcggroupboxResize->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUResizeH))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUResizeW))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUResizeH))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUResizeW))->EndInit();
             this->fcgCSExeFiles->ResumeLayout(false);
             this->fcgtabControlAudio->ResumeLayout(false);
             this->fcgtabPageAudioMain->ResumeLayout(false);
             this->fcgtabPageAudioMain->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrate))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUAudioBitrate))->EndInit();
             this->fcgtabPageAudioOther->ResumeLayout(false);
             this->fcgtabPageAudioOther->PerformLayout();
-            this->fcggroupBoxColor->ResumeLayout(false);
-            this->fcggroupBoxColor->PerformLayout();
             this->ResumeLayout(false);
             this->PerformLayout();
 
@@ -3831,7 +4368,7 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
                 ofd.InitialDirectory = Path::GetFullPath(Path::GetDirectoryName(TX->Text));
             else
                 ofd.InitialDirectory = String(sys_dat->aviutl_dir).ToString();
-            bool ret = (ofd.ShowDialog() == Windows::Forms::DialogResult::OK);
+            bool ret = (ofd.ShowDialog() == System::Windows::Forms::DialogResult::OK);
             if (ret) {
                 if (sys_dat->exstg->s_local.get_relative_path)
                     ofd.FileName = GetRelativePath(ofd.FileName, CurrentDir);
@@ -3876,7 +4413,7 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             FolderBrowserDialog^ fbd = fcgfolderBrowserTemp;
             if (Directory::Exists(TX->Text))
                 fbd->SelectedPath = TX->Text;
-            if (fbd->ShowDialog() == Windows::Forms::DialogResult::OK) {
+            if (fbd->ShowDialog() == System::Windows::Forms::DialogResult::OK) {
                 if (sys_dat->exstg->s_local.get_relative_path)
                     fbd->SelectedPath = GetRelativePath(fbd->SelectedPath);
                 TX->Text = fbd->SelectedPath;
@@ -3927,7 +4464,7 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             }
             ofd->Multiselect = false;
             ofd->Filter = fileTypeName + L"(*" + ext + L")|*" + ext;
-            bool ret = (ofd->ShowDialog() == Windows::Forms::DialogResult::OK);
+            bool ret = (ofd->ShowDialog() == System::Windows::Forms::DialogResult::OK);
             if (ret) {
                 if (sys_dat->exstg->s_local.get_relative_path)
                     ofd->FileName = GetRelativePath(ofd->FileName, CurrentDir);
@@ -4133,6 +4670,46 @@ private: System::Windows::Forms::Label^  fcgLBVideoFormat;
             } catch (...) {
                 //いちいちメッセージとか出さない
             };
+        }
+    private:
+        System::Void fcgTBVppAfsScroll(System::Object ^sender, System::EventArgs ^e) {
+            System::Windows::Forms::TrackBar ^senderTB = dynamic_cast<System::Windows::Forms::TrackBar ^>(sender);
+            if (senderTB == nullptr) return;
+
+            array<TrackBarNU> ^targetList = {
+                { fcgTBVppAfsMethodSwitch, fcgNUVppAfsMethodSwitch },
+                { fcgTBVppAfsCoeffShift,   fcgNUVppAfsCoeffShift },
+                { fcgTBVppAfsThreShift,    fcgNUVppAfsThreShift },
+                { fcgTBVppAfsThreDeint,    fcgNUVppAfsThreDeint },
+                { fcgTBVppAfsThreYMotion,  fcgNUVppAfsThreYMotion },
+                { fcgTBVppAfsThreCMotion,  fcgNUVppAfsThreCMotion }
+            };
+            for (int i = 0; i < targetList->Length; i++) {
+                if (NULL == String::Compare(senderTB->Name, targetList[i].TB->Name)) {
+                    SetNUValue(targetList[i].NU, senderTB->Value);
+                    return;
+                }
+            }
+        }
+    private:
+        System::Void fcgNUVppAfsValueChanged(System::Object ^sender, System::EventArgs ^e) {
+            System::Windows::Forms::NumericUpDown ^senderNU = dynamic_cast<System::Windows::Forms::NumericUpDown ^>(sender);
+            if (senderNU == nullptr) return;
+
+            array<TrackBarNU> ^targetList = {
+                { fcgTBVppAfsMethodSwitch, fcgNUVppAfsMethodSwitch },
+                { fcgTBVppAfsCoeffShift,   fcgNUVppAfsCoeffShift },
+                { fcgTBVppAfsThreShift,    fcgNUVppAfsThreShift },
+                { fcgTBVppAfsThreDeint,    fcgNUVppAfsThreDeint },
+                { fcgTBVppAfsThreYMotion,  fcgNUVppAfsThreYMotion },
+                { fcgTBVppAfsThreCMotion,  fcgNUVppAfsThreCMotion }
+            };
+            for (int i = 0; i < targetList->Length; i++) {
+                if (NULL == String::Compare(senderNU->Name, targetList[i].NU->Name)) {
+                    targetList[i].TB->Value = (int)senderNU->Value;
+                    return;
+                }
+            }
         }
 
 };

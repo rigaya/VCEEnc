@@ -37,7 +37,7 @@ using namespace System::Collections::Generic;
 
 namespace VCEEnc {
 
-    ref class LocalSettings 
+    ref class LocalSettings
     {
     public:
         String^ vidEncName;
@@ -78,6 +78,11 @@ namespace VCEEnc {
         String^ Name;
         String^ Path;
         const char* args;
+    };
+
+    value struct TrackBarNU {
+        TrackBar ^TB;
+        NumericUpDown ^NU;
     };
 
     value struct VidEncInfo {
@@ -130,6 +135,28 @@ const CX_DESC list_log_level_jp[] ={
     { "デバッグ用出力も表示 ", RGY_LOG_DEBUG },
     { NULL, NULL }
 };
+
+static const wchar_t *const list_vpp_deinterlacer[] = {
+    L"なし",
+    L"自動フィールドシフト",
+    NULL
+};
+
+static const wchar_t *const list_vpp_afs_analyze[] = {
+    L"0 - 解除なし",
+    L"1 - フィールド三重化",
+    L"2 - 縞検出二重化",
+    L"3 - 動き検出二重化",
+    L"4 - 動き検出補間",
+    NULL
+};
+
+static int get_cx_index(const wchar_t *const *list, const wchar_t *wchr) {
+    for (int i = 0; list[i]; i++)
+        if (0 == wcscmp(list[i], wchr))
+            return i;
+    return 0;
+}
 
 //メモ表示用 RGB
 const int StgNotesColor[][3] = {

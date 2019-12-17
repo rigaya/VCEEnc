@@ -639,6 +639,10 @@ System::Void frmConfig::InitComboBox() {
     setComboBox(fcgCXMP4BoxTempDir, list_mp4boxtempdir);
     setComboBox(fcgCXTempDir,       list_tempdir);
 
+    setComboBox(fcgCXVppResizeAlg,   list_vpp_resize);
+    setComboBox(fcgCXVppDeinterlace, list_vpp_deinterlacer);
+    setComboBox(fcgCXVppAfsAnalyze,  list_vpp_afs_analyze);
+
     setComboBox(fcgCXAudioEncTiming, audio_enc_timing_desc);
     setComboBox(fcgCXAudioDelayCut,  AUDIO_DELAY_CUT_MODE);
 
@@ -886,6 +890,33 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
 
     SetCXIndex(fcgCXMotionEst,          get_cx_index(list_mv_presicion, vce.nMotionEst));
 
+    SetCXIndex(fcgCXVppResizeAlg, get_cx_index(list_vpp_resize, vce.vpp.resize));
+
+        int deinterlacer_idx = 0;
+        if (vce.vpp.afs.enable) {
+            deinterlacer_idx = get_cx_index(list_vpp_deinterlacer, L"自動フィールドシフト");
+        }// else if (vce.vpp.nnedi.enable) {
+        //    deinterlacer_idx = get_cx_index(list_vpp_deinterlacer, L"nnedi");
+        //}
+        SetCXIndex(fcgCXVppDeinterlace,          deinterlacer_idx);
+
+        SetNUValue(fcgNUVppAfsUp,                vce.vpp.afs.clip.top);
+        SetNUValue(fcgNUVppAfsBottom,            vce.vpp.afs.clip.bottom);
+        SetNUValue(fcgNUVppAfsLeft,              vce.vpp.afs.clip.left);
+        SetNUValue(fcgNUVppAfsRight,             vce.vpp.afs.clip.right);
+        SetNUValue(fcgNUVppAfsMethodSwitch,      vce.vpp.afs.method_switch);
+        SetNUValue(fcgNUVppAfsCoeffShift,        vce.vpp.afs.coeff_shift);
+        SetNUValue(fcgNUVppAfsThreShift,         vce.vpp.afs.thre_shift);
+        SetNUValue(fcgNUVppAfsThreDeint,         vce.vpp.afs.thre_deint);
+        SetNUValue(fcgNUVppAfsThreYMotion,       vce.vpp.afs.thre_Ymotion);
+        SetNUValue(fcgNUVppAfsThreCMotion,       vce.vpp.afs.thre_Cmotion);
+        SetCXIndex(fcgCXVppAfsAnalyze,           vce.vpp.afs.analyze);
+        fcgCBVppAfsShift->Checked              = vce.vpp.afs.shift != 0;
+        fcgCBVppAfsDrop->Checked               = vce.vpp.afs.drop != 0;
+        fcgCBVppAfsSmooth->Checked             = vce.vpp.afs.smooth != 0;
+        fcgCBVppAfs24fps->Checked              = vce.vpp.afs.force24 != 0;
+        fcgCBVppAfsTune->Checked               = vce.vpp.afs.tune != 0;
+
         //SetCXIndex(fcgCXX264Priority,        cnf->vid.priority);
         SetCXIndex(fcgCXTempDir,             cnf->oth.temp_dir);
         fcgCBAFS->Checked                  = cnf->vid.afs != 0;
@@ -979,6 +1010,27 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.nMotionEst                              = list_mv_presicion[fcgCXMotionEst->SelectedIndex].value;
 
     vce.bTimerPeriodTuning                      = fcgCBTimerPeriodTuning->Checked;
+
+    vce.vpp.resize                 = (RGY_VPP_RESIZE_ALGO)list_vpp_resize[fcgCXVppResizeAlg->SelectedIndex].value;
+
+    vce.vpp.afs.enable             = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"自動フィールドシフト"));
+    vce.vpp.afs.timecode           = false;
+    vce.vpp.afs.clip.top           = (int)fcgNUVppAfsUp->Value;
+    vce.vpp.afs.clip.bottom        = (int)fcgNUVppAfsBottom->Value;
+    vce.vpp.afs.clip.left          = (int)fcgNUVppAfsLeft->Value;
+    vce.vpp.afs.clip.right         = (int)fcgNUVppAfsRight->Value;
+    vce.vpp.afs.method_switch      = (int)fcgNUVppAfsMethodSwitch->Value;
+    vce.vpp.afs.coeff_shift        = (int)fcgNUVppAfsCoeffShift->Value;
+    vce.vpp.afs.thre_shift         = (int)fcgNUVppAfsThreShift->Value;
+    vce.vpp.afs.thre_deint         = (int)fcgNUVppAfsThreDeint->Value;
+    vce.vpp.afs.thre_Ymotion       = (int)fcgNUVppAfsThreYMotion->Value;
+    vce.vpp.afs.thre_Cmotion       = (int)fcgNUVppAfsThreCMotion->Value;
+    vce.vpp.afs.analyze            = fcgCXVppAfsAnalyze->SelectedIndex;
+    vce.vpp.afs.shift              = fcgCBVppAfsShift->Checked;
+    vce.vpp.afs.drop               = fcgCBVppAfsDrop->Checked;
+    vce.vpp.afs.smooth             = fcgCBVppAfsSmooth->Checked;
+    vce.vpp.afs.force24            = fcgCBVppAfs24fps->Checked;
+    vce.vpp.afs.tune               = fcgCBVppAfsTune->Checked;
 
     cnf->vid.afs                    = fcgCBAFS->Checked;
     cnf->vid.auo_tcfile_out         = fcgCBAuoTcfileout->Checked;
