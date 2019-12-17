@@ -24,6 +24,7 @@ Hardware which supports VCE
 |:---|:---|
 | VCEEnc 3.00 or later | AMD driver 17.1.1 (16.50.2611) or later |
 | VCEEnc 5.00 or later | AMD driver 19.7.1 or later |
+| VCEEnc 5.01 or later | AMD driver 19.12.1 or later |
 
 ## Usage and options of VCEEncC
 [Option list and details of VCEEncC](./VCEEncC_Options.en.md)
