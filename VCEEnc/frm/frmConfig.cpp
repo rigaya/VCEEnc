@@ -993,7 +993,7 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.nDeltaQPBFrame                          = (int)fcgNUBDeltaQP->Value;
     vce.nDeltaQPBFrameRef                       = (int)fcgNUBRefDeltaQP->Value;
 
-    vce.input.picstruct                         = RGY_PICSTRUCT_FRAME; // (RGY_PICSTRUCT)list_interlaced[fcgCXInterlaced->SelectedIndex].value;
+    vce.input.picstruct                         = (RGY_PICSTRUCT)list_interlaced[fcgCXInterlaced->SelectedIndex].value;
     vce.nSlices                                 = (int)fcgNUSlices->Value;
     vce.nRefFrames                              = (int)fcgNURefFrames->Value;
 
