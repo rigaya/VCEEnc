@@ -551,7 +551,7 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
         inputParams->codec,
         formatOut,
         m_params,
-        inputParams->input.picstruct,
+        m_picStruct,
         inputParams->vui
     );
 
@@ -1206,7 +1206,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             bool bBPictureSupported = false;
             encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_BFRAMES, &bBPictureSupported);
             if (prm->nBframes > 0 && !bBPictureSupported) {
-                PrintMes(RGY_LOG_WARN, _T("Bframes is not supported with HEVC encoding, disabled.\n"));
+                PrintMes(RGY_LOG_WARN, _T("Bframes is not supported on this device, disabled.\n"));
                 prm->nBframes = 0;
                 prm->bBPyramid = 0;
                 prm->nDeltaQPBFrame = 0;
@@ -1404,7 +1404,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     if (prm->codec == RGY_CODEC_H264) {
         m_params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), (prm->preAnalysis) ? AMF_VIDEO_ENCODER_PREENCODE_ENABLED : AMF_VIDEO_ENCODER_PREENCODE_DISABLED);
 
-        m_params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)((prm->input.picstruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
+        m_params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)((m_picStruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
 
         m_params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN, (amf_int64)prm->nBframes);
         if (prm->nBframes > 0) {
@@ -1426,7 +1426,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         //m_params.SetParam(AMF_VIDEO_ENCODER_FORCE_PICTURE_TYPE,             (amf_int64)AMF_VIDEO_ENCODER_PICTURE_TYPE_NONE);
         m_params.SetParam(AMF_VIDEO_ENCODER_INSERT_SPS, false);
         m_params.SetParam(AMF_VIDEO_ENCODER_INSERT_PPS, false);
-        //m_params.SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE,                (amf_int64)prm->nPicStruct);
+        //m_params.SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE,                (amf_int64)((m_picStruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE);
         //m_params.SetParam(AMF_VIDEO_ENCODER_MARK_CURRENT_WITH_LTR_INDEX,    false);
         //m_params.SetParam(AMF_VIDEO_ENCODER_FORCE_LTR_REFERENCE_BITFIELD,   (amf_int64)0);
 
