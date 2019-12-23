@@ -2290,8 +2290,9 @@ tstring VCECore::GetEncoderParam() {
     mes += strsprintf(_T("%s\n"), get_encoder_version());
     mes += strsprintf(_T("OS Version     %s %s (%d)\n"), osversionstr.c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"), osversioninfo.dwBuildNumber);
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
-    mes += strsprintf(_T("GPU:           %s, AMF %d.%d.%d\n"), gpu_info.c_str(),
-        (int)AMF_GET_MAJOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_MINOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_SUBMINOR_VERSION(m_AMFRuntimeVersion));
+    mes += strsprintf(_T("GPU:           %s, AMF Runtime %d.%d.%d / SDK %d.%d.%d\n"), gpu_info.c_str(),
+        (int)AMF_GET_MAJOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_MINOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_SUBMINOR_VERSION(m_AMFRuntimeVersion),
+        AMF_VERSION_MAJOR, AMF_VERSION_MINOR, AMF_VERSION_RELEASE);
 
     auto inputInfo = m_pFileReader->GetInputFrameInfo();
     mes += strsprintf(_T("Input Info:    %s\n"), m_pFileReader->GetInputMessage());
