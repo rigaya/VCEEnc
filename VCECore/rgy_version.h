@@ -50,6 +50,7 @@ const char *get_encoder_version();
 #define ENCODER_NVENC  0
 #define ENCODER_VCEENC 1
 
+#define ENABLE_PERF_COUNTER 1
 #define ENABLE_AVCODEC_OUT_THREAD 1
 #define ENABLE_AVCODEC_AUDPROCESS_THREAD 1
 #define ENABLE_CPP_REGEX 1
