@@ -11,12 +11,12 @@ VCEEncC.exe [Options] -i <filename> -o <filename>
 ```
 
 ### もっと実用的なコマンド
-#### cuvidデコードを使用する例
+#### hwデコードを使用する例
 ```Batchfile
 VCEEncC --avhw -i "<mp4(H.264/AVC) file>" -o "<outfilename.264>"
 ```
 
-#### cuvidデコードを使用する例 (インタレ保持)
+#### hwデコードを使用する例 (インタレ保持)
 ```Batchfile
 VCEEncC --avhw --interlace tff -i "<mp4(H.264/AVC) file>" -o "<outfilename.264>"
 ```

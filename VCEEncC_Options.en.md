@@ -13,12 +13,12 @@ VCEEncC.exe [Options] -i <filename> -o <filename>
 ```
 
 ### More practical commands
-#### example of using hw (cuvid) decoder
+#### example of using hw decoder
 ```Batchfile
 VCEEncC --avhw -i "<mp4(H.264/AVC) file>" -o "<outfilename.264>"
 ```
 
-#### example of using hw (cuvid) decoder (interlaced)
+#### example of using hw decoder (interlaced)
 ```Batchfile
 VCEEncC --avhw --interlace tff -i "<mp4(H.264/AVC) file>" -o "<outfilename.264>"
 ```
