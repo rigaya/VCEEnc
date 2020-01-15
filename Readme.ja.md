@@ -12,8 +12,8 @@ VCEEncC.exe … 単体で実行できるコマンドライン版です。
 [rigayaの日記兼メモ帳＞＞](http://rigaya34589.blog135.fc2.com/blog-category-12.html)
 
 ## 基本動作環境
-Windows 7, 8.1, 10 (x86/x64)  
-Aviutl 0.99g4 以降 (VCEEnc.auo)  
+Windows 10 (x86/x64)  
+Aviutl 1.00 以降 (VCEEnc.auo)  
 VCEが載ったハードウェア  
   AMD製 GPU Radeon HD 7xxx以降  
   AMD製 APU Trinity世代(第2世代)以降  
