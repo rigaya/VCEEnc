@@ -45,6 +45,7 @@
 #include "rgy_device.h"
 #include "vce_param.h"
 #include "vce_filter.h"
+#include "vce_filter_ssim.h"
 
 #pragma warning(pop)
 
@@ -133,6 +134,7 @@ protected:
     virtual RGY_ERR initConverter(VCEParam *prm);
     virtual RGY_ERR InitChapters(VCEParam *prm);
     virtual RGY_ERR initEncoder(VCEParam *prm);
+    virtual RGY_ERR initSSIMCalc(VCEParam *prm);
     virtual tstring getGPUInfo();
 
     virtual RGY_ERR run_decode();
@@ -179,6 +181,7 @@ protected:
 
     vector<unique_ptr<RGYFilter>> m_vpFilters;
     shared_ptr<RGYFilterParam>    m_pLastFilterParam;
+    unique_ptr<RGYFilterSsim>     m_ssim;
 
     RGYRunState m_state;
 

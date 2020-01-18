@@ -646,10 +646,13 @@ RGY_ERR RGYCLBufMap::unmap(cl_command_queue queue) {
     return unmap(queue, {});
 }
 RGY_ERR RGYCLBufMap::unmap(cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events) {
+    if (m_hostPtr) return RGY_ERR_NONE;
     m_queue = queue;
     const std::vector<cl_event> v_wait_list = toVec(wait_events);
     const cl_event *wait_list = (v_wait_list.size() > 0) ? v_wait_list.data() : nullptr;
-    return err_cl_to_rgy(clEnqueueUnmapMemObject(m_queue, m_mem, m_hostPtr, (int)wait_events.size(), wait_list, m_eventMap.reset_ptr()));
+    auto err = err_cl_to_rgy(clEnqueueUnmapMemObject(m_queue, m_mem, m_hostPtr, (int)wait_events.size(), wait_list, m_eventMap.reset_ptr()));
+    m_hostPtr = nullptr;
+    return err;
 }
 
 RGY_ERR RGYCLBuf::queueMapBuffer(cl_command_queue queue, cl_map_flags map_flags, const std::vector<RGYOpenCLEvent> &wait_events) {
@@ -683,6 +686,10 @@ RGY_ERR RGYOpenCLQueue::finish() const {
         return RGY_ERR_NULL_PTR;
     }
     return err_cl_to_rgy(clFinish(m_queue.get()));
+}
+
+void RGYOpenCLQueue::clear() {
+    m_queue.reset();
 }
 RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *dst, const FrameInfo *src) {
     return copyPlane(dst, src, nullptr);

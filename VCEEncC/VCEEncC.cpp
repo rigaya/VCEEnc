@@ -256,6 +256,10 @@ static tstring help() {
     str += _T("\n");
     str += gen_cmd_help_common();
     str += _T("\n");
+    str += strsprintf(_T("\n")
+        _T("   --ssim                       calc ssim\n")
+        _T("   --psnr                       calc psnr\n")
+        _T("\n"));
     str += PrintListOptions(_T("--vpp-resize <string>"), list_vpp_resize, 0);
     str += _T("\n");
     str += gen_cmd_help_ctrl();

@@ -71,7 +71,16 @@ RGY_ERR RGYFilter::AllocFrameBuf(const FrameInfo &frame, int frames) {
 }
 
 RGY_ERR RGYFilter::filter(FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum) {
+    return filter(pInputFrame, ppOutputFrames, pOutputFrameNum, m_cl->queue());
+}
+RGY_ERR RGYFilter::filter(FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum, RGYOpenCLQueue& queue) {
+    return filter(pInputFrame, ppOutputFrames, pOutputFrameNum, queue, nullptr);
+}
+RGY_ERR RGYFilter::filter(FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum, RGYOpenCLQueue& queue, RGYOpenCLEvent *event) {
+    return filter(pInputFrame, ppOutputFrames, pOutputFrameNum, queue, {}, event);
 
+}
+RGY_ERR RGYFilter::filter(FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum, RGYOpenCLQueue& queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     if (pInputFrame == nullptr) {
         *pOutputFrameNum = 0;
         ppOutputFrames[0] = nullptr;
@@ -83,7 +92,7 @@ RGY_ERR RGYFilter::filter(FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, in
         ppOutputFrames[0] = pInputFrame;
         *pOutputFrameNum = 1;
     }
-    const auto ret = run_filter(pInputFrame, ppOutputFrames, pOutputFrameNum);
+    const auto ret = run_filter(pInputFrame, ppOutputFrames, pOutputFrameNum, queue, wait_events, event);
     const int nOutFrame = *pOutputFrameNum;
     if (!m_param->bOutOverwrite && nOutFrame > 0) {
         if (m_pathThrough & FILTER_PATHTHROUGH_TIMESTAMP) {
@@ -92,12 +101,12 @@ RGY_ERR RGYFilter::filter(FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, in
                 return RGY_ERR_INVALID_CALL;
             } else {
                 ppOutputFrames[0]->timestamp = pInputFrame->timestamp;
-                ppOutputFrames[0]->duration  = pInputFrame->duration;
+                ppOutputFrames[0]->duration = pInputFrame->duration;
                 ppOutputFrames[0]->inputFrameId = pInputFrame->inputFrameId;
             }
         }
         for (int i = 0; i < nOutFrame; i++) {
-            if (m_pathThrough & FILTER_PATHTHROUGH_FLAGS)     ppOutputFrames[i]->flags     = pInputFrame->flags;
+            if (m_pathThrough & FILTER_PATHTHROUGH_FLAGS)     ppOutputFrames[i]->flags = pInputFrame->flags;
             if (m_pathThrough & FILTER_PATHTHROUGH_PICSTRUCT) ppOutputFrames[i]->picstruct = pInputFrame->picstruct;
         }
     }

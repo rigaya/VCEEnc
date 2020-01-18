@@ -183,6 +183,9 @@
     <ClCompile Include="rgy_perf_counter.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="vce_filter_ssim.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu_info.h">
@@ -338,6 +341,9 @@
     <ClInclude Include="rgy_perf_counter.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="vce_filter_ssim.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="ram_speed_x64.asm">
@@ -370,6 +376,9 @@
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="vce_filter_afs_synthesize.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="vce_filter_ssim.cl">
       <Filter>ソース ファイル</Filter>
     </None>
   </ItemGroup>

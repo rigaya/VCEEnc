@@ -139,6 +139,7 @@ VCECore::VCECore() :
     m_pContext(),
     m_vpFilters(),
     m_pLastFilterParam(),
+    m_ssim(),
     m_state(RGY_STATE_STOPPED),
     m_pTrimParam(nullptr),
     m_pDecoder(),
@@ -162,6 +163,8 @@ void VCECore::Terminate() {
     }
     m_state = RGY_STATE_STOPPED;
     PrintMes(RGY_LOG_DEBUG, _T("Pipeline Stopped.\n"));
+
+    m_ssim.reset();
 
     m_pTrimParam = nullptr;
 
@@ -1522,6 +1525,41 @@ RGY_ERR VCECore::initContext(int log_level) {
     return RGY_ERR_NONE;
 }
 
+RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
+    if (prm->ssim || prm->psnr) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
+        unique_ptr<RGYFilterSsim> filterSsim(new RGYFilterSsim(m_cl));
+        shared_ptr<RGYFilterParamSsim> param(new RGYFilterParamSsim());
+        param->input = videooutputinfo(
+            prm->codec,
+            formatOut,
+            m_params,
+            m_picStruct,
+            prm->vui
+        );
+        param->factory = m_pFactory;
+        param->trace = m_pTrace;
+        param->context = m_pContext;
+        param->input.srcWidth = m_encWidth;
+        param->input.srcHeight = m_encHeight;
+        param->frameIn = m_pLastFilterParam->frameOut;
+        param->frameOut = param->frameIn;
+        param->frameOut.csp = param->input.csp;
+        param->frameIn.mem_type = RGY_MEM_TYPE_GPU;
+        param->frameOut.mem_type = RGY_MEM_TYPE_GPU;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        param->psnr = prm->psnr;
+        param->ssim = prm->ssim;
+        auto sts = filterSsim->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        m_ssim = std::move(filterSsim);
+    }
+    return RGY_ERR_NONE;
+}
+
 RGY_ERR VCECore::init(VCEParam *prm) {
     RGY_ERR ret = initLog(prm);
     if (ret != RGY_ERR_NONE) {
@@ -1590,6 +1628,10 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     }
 
     if (RGY_ERR_NONE != (ret = initOutput(prm))) {
+        return ret;
+    }
+
+    if (RGY_ERR_NONE != (ret = initSSIMCalc(prm))) {
         return ret;
     }
 
@@ -1695,6 +1737,12 @@ RGY_ERR VCECore::run_output() {
                     output.setFrametype(RGY_FRAMETYPE_IDR); break;
                 }
 
+            }
+            if (m_ssim) {
+                if (!m_ssim->decodeStarted()) {
+                    m_ssim->initDecode(&output);
+                }
+                m_ssim->addBitstream(&output);
             }
             auto err = m_pFileWriter->WriteNextFrame(&output);
             if (err != RGY_ERR_NONE) {
@@ -1883,7 +1931,8 @@ RGY_ERR VCECore::run() {
                 && m_vpFilters.size() == 1
                 && lastFilter->GetFilterParam()->frameOut.csp == inframeInfo.csp
                 && m_encWidth == inframeInfo.width
-                && m_encHeight == inframeInfo.height) {
+                && m_encHeight == inframeInfo.height
+                && !m_ssim) {
                 skipFilters = true;
             }
             const auto& inAmf = inframe->amf();
@@ -1990,6 +2039,10 @@ RGY_ERR VCECore::run() {
                 if (sts_filter != RGY_ERR_NONE) {
                     PrintMes(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), lastFilter->name().c_str());
                     return sts_filter;
+                }
+                if (m_ssim) {
+                    int dummy = 0;
+                    m_ssim->filter(&encSurfaceInfo, nullptr, &dummy);
                 }
                 auto err = m_cl->queue().finish();
                 if (err != RGY_ERR_NONE) {
@@ -2208,6 +2261,10 @@ RGY_ERR VCECore::run() {
     if (m_thOutput.joinable()) {
         m_thOutput.join();
     }
+    if (m_ssim) {
+        PrintMes(RGY_LOG_DEBUG, _T("Flushing ssim/psnr calc.\n"));
+        m_ssim->addBitstream(nullptr);
+    }
     for (const auto &writer : m_pFileWriterListAudio) {
         auto pAVCodecWriter = std::dynamic_pointer_cast<RGYOutputAvcodec>(writer);
         if (pAVCodecWriter != nullptr) {
@@ -2218,6 +2275,9 @@ RGY_ERR VCECore::run() {
     m_pFileWriter->Close();
     m_pFileReader->Close();
     m_pStatus->WriteResults();
+    if (m_ssim) {
+        m_ssim->showResult();
+    }
     return RGY_ERR_NONE;
 }
 
@@ -2302,6 +2362,9 @@ tstring VCECore::GetEncoderParam() {
     tstring vppFilterMes;
     for (const auto &filter : m_vpFilters) {
         vppFilterMes += strsprintf(_T("%s%s\n"), (vppFilterMes.length()) ? _T("               ") : _T("Vpp Filters    "), filter->GetInputMessage().c_str());
+    }
+    if (m_ssim) {
+        vppFilterMes += _T("               ") + m_ssim->GetInputMessage() + _T("\n");
     }
     mes += vppFilterMes;
     mes += strsprintf(_T("Output:        %s  %s @ Level %s%s\n"),

@@ -539,6 +539,7 @@ public:
     }
     RGY_ERR flush() const;
     RGY_ERR finish() const;
+    void clear();
 protected:
     RGYOpenCLQueue(const RGYOpenCLQueue &) = delete;
     void operator =(const RGYOpenCLQueue &) = delete;
