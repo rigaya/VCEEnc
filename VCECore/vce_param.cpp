@@ -303,7 +303,6 @@ VCEParam::VCEParam() :
     nRefFrames(VCE_DEFAULT_REF_FRAMES),
     nLTRFrames(0),
     bFiller(false),
-    vui(),
     bVBAQ(false),
     preAnalysis(false),
     vpp() {
@@ -313,6 +312,7 @@ VCEParam::VCEParam() :
     codecParam[RGY_CODEC_HEVC].nProfile = AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN;
     codecParam[RGY_CODEC_HEVC].nTier    = AMF_VIDEO_ENCODER_HEVC_TIER_MAIN;
     par[0] = par[1] = 0;
+    input.vui = VideoVUIInfo();
 }
 
 VCEParam::~VCEParam() {

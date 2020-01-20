@@ -165,6 +165,7 @@ protected:
     int                m_encHeight;
     rgy_rational<int>  m_sar;
     RGY_PICSTRUCT      m_picStruct;
+    VideoVUIInfo       m_encVUI;
 
     DeviceDX9 m_dx9;
     DeviceDX11 m_dx11;

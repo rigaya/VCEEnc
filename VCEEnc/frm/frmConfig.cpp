@@ -881,11 +881,11 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     fcgCBSkipFrame->Checked           = vce.bEnableSkipFrame;
     fcgCBTimerPeriodTuning->Checked   = vce.bTimerPeriodTuning;
     fcgCBVBAQ->Checked                = vce.bVBAQ;
-    fcgCBFullrange->Checked           = vce.vui.fullrange != 0;
-    SetCXIndex(fcgCXColorMatrix,        get_cx_index(list_colormatrix, vce.vui.matrix));
-    SetCXIndex(fcgCXTransfer,           get_cx_index(list_transfer, vce.vui.transfer));
-    SetCXIndex(fcgCXColorPrim,          get_cx_index(list_colorprim, vce.vui.colorprim));
-    SetCXIndex(fcgCXVideoFormat,        get_cx_index(list_videoformat, vce.vui.format));
+    fcgCBFullrange->Checked           = vce.common.out_vui.fullrange != 0;
+    SetCXIndex(fcgCXColorMatrix,        get_cx_index(list_colormatrix, vce.common.out_vui.matrix));
+    SetCXIndex(fcgCXTransfer,           get_cx_index(list_transfer, vce.common.out_vui.transfer));
+    SetCXIndex(fcgCXColorPrim,          get_cx_index(list_colorprim, vce.common.out_vui.colorprim));
+    SetCXIndex(fcgCXVideoFormat,        get_cx_index(list_videoformat, vce.common.out_vui.format));
     fcgCBPreAnalysis->Checked         = vce.preAnalysis;
 
     SetCXIndex(fcgCXMotionEst,          get_cx_index(list_mv_presicion, vce.nMotionEst));
@@ -1000,11 +1000,12 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.bDeblockFilter                          = fcgCBDeblock->Checked;
     vce.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;
     vce.bVBAQ                                   = fcgCBVBAQ->Checked;
-    vce.vui.fullrange                           = fcgCBFullrange->Checked;
-    vce.vui.matrix                              = (CspMatrix)list_colormatrix[fcgCXColorMatrix->SelectedIndex].value;
-    vce.vui.transfer                            = (CspTransfer)list_transfer[fcgCXTransfer->SelectedIndex].value;
-    vce.vui.colorprim                           = (CspColorprim)list_colorprim[fcgCXColorPrim->SelectedIndex].value;
-    vce.vui.format                              = list_videoformat[fcgCXVideoFormat->SelectedIndex].value;
+    vce.common.out_vui.fullrange                = fcgCBFullrange->Checked ? 1 : 0;
+    vce.common.out_vui.matrix                   = (CspMatrix)list_colormatrix[fcgCXColorMatrix->SelectedIndex].value;
+    vce.common.out_vui.transfer                 = (CspTransfer)list_transfer[fcgCXTransfer->SelectedIndex].value;
+    vce.common.out_vui.colorprim                = (CspColorprim)list_colorprim[fcgCXColorPrim->SelectedIndex].value;
+    vce.common.out_vui.format                   = list_videoformat[fcgCXVideoFormat->SelectedIndex].value;
+    vce.common.out_vui.descriptpresent          = 1;
     vce.preAnalysis                             = fcgCBPreAnalysis->Checked;
 
     vce.nMotionEst                              = list_mv_presicion[fcgCXMotionEst->SelectedIndex].value;

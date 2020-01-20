@@ -403,8 +403,6 @@ struct VCEParam {
     int nLTRFrames;
     bool bFiller;
 
-    VideoVUIInfo vui;
-
     bool        bVBAQ;
     bool        preAnalysis;
 

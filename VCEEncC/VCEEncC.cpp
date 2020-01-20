@@ -75,32 +75,6 @@ public:
     vector<vector<int>> m_nCombinationList;
 };
 
-//適当に改行しながら表示する
-static tstring PrintListOptions(const TCHAR *option_name, const CX_DESC *list, int default_index) {
-    const TCHAR *indent_space = _T("                                ");
-    const int indent_len = (int)_tcslen(indent_space);
-    const int max_len = 77;
-    tstring str = strsprintf(_T("   %s "), option_name);
-    while ((int)str.length() < indent_len)
-        str += _T(" ");
-    int line_len = (int)str.length();
-    for (int i = 0; list[i].desc; i++) {
-        if (line_len + _tcslen(list[i].desc) + _tcslen(_T(", ")) >= max_len) {
-            str += strsprintf(_T("\n%s"), indent_space);
-            line_len = indent_len;
-        } else {
-            if (i) {
-                str += strsprintf(_T(", "));
-                line_len += 2;
-            }
-        }
-        str += strsprintf(_T("%s"), list[i].desc);
-        line_len += (int)_tcslen(list[i].desc);
-    }
-    str += strsprintf(_T("\n%s default: %s\n"), indent_space, list[default_index].desc);
-    return str;
-}
-
 typedef struct ListData {
     const TCHAR *name;
     const CX_DESC *list;
@@ -241,7 +215,6 @@ static tstring help() {
     str += strsprintf(_T("\n")
         _T("   --sar <int>:<int>            set Sample Aspect Ratio\n")
         _T("   --dar <int>:<int>            set Display Aspect Ratio\n")
-        _T("   --fullrange                  set yuv is fullrange (H.264 only)\n")
         _T("\n")
         _T("   --crop <int>,<int>,<int>,<int>\n")
         _T("                                set crop pixels of left, up, right, bottom.\n")
@@ -249,14 +222,10 @@ static tstring help() {
         _T("   --enforce-hrd                enforce hrd compatibility of bitstream\n")
         _T("   --filler                     use filler data\n")
     );
-    str += PrintListOptions(_T("--videoformat <string>"), list_videoformat, 0);
-    str += PrintListOptions(_T("--colormatrix <string>"), list_colormatrix, 0);
-    str += PrintListOptions(_T("--colorprim <string>"), list_colorprim, 0);
-    str += PrintListOptions(_T("--transfer <string>"), list_transfer, 0);
     str += _T("\n");
     str += gen_cmd_help_common();
     str += _T("\n");
-    str += PrintListOptions(_T("--vpp-resize <string>"), list_vpp_resize, 0);
+    str += print_list_options(_T("--vpp-resize <string>"), list_vpp_resize, 0);
     str += _T("\n");
     str += gen_cmd_help_ctrl();
     return str;

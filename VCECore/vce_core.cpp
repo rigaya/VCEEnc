@@ -128,6 +128,7 @@ VCECore::VCECore() :
     m_encHeight(0),
     m_sar(),
     m_picStruct(RGY_PICSTRUCT_UNKNOWN),
+    m_encVUI(),
     m_dll(),
     m_dx9(),
     m_dx11(),
@@ -534,12 +535,6 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
 #endif
         prm->bVBAQ = 0;
     }
-#ifndef VCE_AUO
-    if (prm->vui.fullrange && prm->codec != RGY_CODEC_H264) {
-        PrintMes(RGY_LOG_WARN, _T("fullrange flag is only supported with H.264 encoding, disabled.\n"));
-        prm->vui.fullrange = FALSE;
-    }
-#endif
     if (prm->nBframes > 0 && prm->codec == RGY_CODEC_HEVC) {
         PrintMes(RGY_LOG_WARN, _T("Bframes is not supported with HEVC encoding, disabled.\n"));
         prm->nBframes = 0;
@@ -562,7 +557,7 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
         formatOut,
         m_params,
         m_picStruct,
-        inputParams->vui
+        m_encVUI
     );
 
 
@@ -1375,6 +1370,17 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     adjust_sar(&par.first, &par.second, m_encWidth, m_encHeight);
     m_sar = rgy_rational<int>(par.first, par.second);
 
+    m_encVUI = prm->common.out_vui;
+    apply_auto_color_characteristic(m_encVUI.colorprim, list_colorprim,   m_encHeight, prm->input.vui.colorprim);
+    apply_auto_color_characteristic(m_encVUI.transfer,  list_transfer,    m_encHeight, prm->input.vui.transfer);
+    apply_auto_color_characteristic(m_encVUI.matrix,    list_colormatrix, m_encHeight, prm->input.vui.matrix);
+    apply_auto_color_characteristic(m_encVUI.fullrange, list_colorrange,  m_encHeight, prm->input.vui.fullrange);
+    apply_auto_color_characteristic(m_encVUI.chromaloc, list_chromaloc,   m_encHeight, prm->input.vui.chromaloc);
+    m_encVUI.descriptpresent =
+            get_cx_value(list_colormatrix, _T("undef")) != (int)m_encVUI.matrix
+        || get_cx_value(list_colorprim, _T("undef")) != (int)m_encVUI.colorprim
+        || get_cx_value(list_transfer, _T("undef")) != (int)m_encVUI.transfer;
+
     m_params.SetParam(VCE_PARAM_KEY_INPUT_WIDTH, prm->input.srcWidth);
     m_params.SetParam(VCE_PARAM_KEY_INPUT_HEIGHT, prm->input.srcHeight);
     m_params.SetParam(VCE_PARAM_KEY_OUTPUT_WIDTH, m_encWidth);
@@ -1443,7 +1449,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         //m_params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE, AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE_ENUM);
         //m_params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_MARKED_LTR_INDEX, (amf_int64)-1);
         //m_params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_REFERENCED_LTR_INDEX_BITFIELD, (amf_int64)0);
-        if (prm->vui.fullrange) {
+        if (m_encVUI.fullrange) {
             m_params.SetParam(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR, true);
         }
     } else if (prm->codec == RGY_CODEC_HEVC) {
