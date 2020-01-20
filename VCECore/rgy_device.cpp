@@ -35,6 +35,8 @@
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "d3d11.lib")
 
+#define LOG_IF_EXIST(...)  { if (m_log) { m_log->write(__VA_ARGS__); } }
+
 #define CHECK_HRESULT_ERROR_RETURN(hr, mes) { \
     if (hr != S_OK) { \
         m_log->write(RGY_LOG_ERROR, _T("%s: %x\n"), mes, hr); \
@@ -169,6 +171,7 @@ RGY_ERR DeviceDX9::Init(bool dx9ex, int adapterID, bool bFullScreen, int width, 
     return RGY_ERR_NONE;
 }
 RGY_ERR DeviceDX9::Terminate() {
+    LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closing DX9 device...\n"));
     m_pD3DDevice.Release();
     m_pD3D.Release();
     return RGY_ERR_NONE;
@@ -336,6 +339,7 @@ RGY_ERR DeviceDX11::Init(int adapterID, bool onlyWithOutputs, shared_ptr<RGYLog>
 }
 
 RGY_ERR DeviceDX11::Terminate() {
+    LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closing DX11 device...\n"));
     m_pD3DDevice.Release();
     return RGY_ERR_NONE;
 }

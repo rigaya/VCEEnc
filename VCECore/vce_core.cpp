@@ -166,23 +166,31 @@ void VCECore::Terminate() {
     m_pTrimParam = nullptr;
 
     if (m_pEncoder != nullptr) {
+        PrintMes(RGY_LOG_DEBUG, _T("Closing Encoder...\n"));
         m_pEncoder->Terminate();
         m_pEncoder = nullptr;
+        PrintMes(RGY_LOG_DEBUG, _T("Closed Encoder.\n"));
     }
 
     if (m_pConverter != nullptr) {
+        PrintMes(RGY_LOG_DEBUG, _T("Closing Converter...\n"));
         m_pConverter->Terminate();
         m_pConverter = nullptr;
+        PrintMes(RGY_LOG_DEBUG, _T("Closed Converter.\n"));
     }
 
     if (m_pDecoder != nullptr) {
+        PrintMes(RGY_LOG_DEBUG, _T("Closing Decoder...\n"));
         m_pDecoder->Terminate();
         m_pDecoder = nullptr;
+        PrintMes(RGY_LOG_DEBUG, _T("Closed Decoder.\n"));
     }
 
     if (m_pContext != nullptr) {
+        PrintMes(RGY_LOG_DEBUG, _T("Closing AMF Context...\n"));
         m_pContext->Terminate();
         m_pContext = nullptr;
+        PrintMes(RGY_LOG_DEBUG, _T("Closed AMF Context.\n"));
     }
     m_vpFilters.clear();
     m_pLastFilterParam.reset();
@@ -200,6 +208,8 @@ void VCECore::Terminate() {
     m_pPerfMonitor.reset();
     m_pStatus.reset();
     m_tracer.reset();
+
+    PrintMes(RGY_LOG_DEBUG, _T("Closing logger...\n"));
     m_pLog.reset();
     m_encCodec = RGY_CODEC_UNKNOWN;
     m_pAbortByUser = nullptr;

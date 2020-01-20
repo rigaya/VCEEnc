@@ -38,6 +38,8 @@
 
 #if ENABLE_OPENCL
 
+#define LOG_IF_EXIST(...)  { if (m_pLog) { m_pLog->write(__VA_ARGS__); } }
+
 HMODULE RGYOpenCL::openCLHandle = nullptr;
 
 //OpenCLのドライバは場合によってはクラッシュする可能性がある
@@ -488,11 +490,12 @@ RGYOpenCLContext::RGYOpenCLContext(shared_ptr<RGYOpenCLPlatform> platform, share
 }
 
 RGYOpenCLContext::~RGYOpenCLContext() {
-    m_copyI2B.reset();
-    m_copyB2I.reset();
-    m_queue.clear();
-    m_context.reset();
-    m_platform.reset();
+    LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closing CL Context...\n"));
+    m_copyI2B.reset();  LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closed CL copyI2B program.\n"));
+    m_copyB2I.reset();  LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closed CL copyB2I program.\n"));
+    m_queue.clear();    LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closed CL Queue.\n"));
+    m_context.reset();  LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closed CL Context.\n"));
+    m_platform.reset(); LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closed CL Platform.\n"));
     m_pLog.reset();
 }
 
@@ -600,8 +603,10 @@ RGYOpenCLProgram::RGYOpenCLProgram(cl_program program, shared_ptr<RGYLog> pLog) 
 
 RGYOpenCLProgram::~RGYOpenCLProgram() {
     if (m_program) {
+        LOG_IF_EXIST(RGY_LOG_DEBUG, _T("clReleaseProgram...\n"));
         clReleaseProgram(m_program);
         m_program = nullptr;
+        LOG_IF_EXIST(RGY_LOG_DEBUG, _T("clReleaseProgram: fin.\n"));
     }
 };
 
@@ -1015,11 +1020,19 @@ std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const FrameInfo&
 }
 
 RGYOpenCL::RGYOpenCL() : m_pLog(std::make_shared<RGYLog>(nullptr, RGY_LOG_ERROR)) {
-    initOpenCLGlobal();
+    if (initOpenCLGlobal()) {
+        LOG_IF_EXIST(RGY_LOG_ERROR, _T("Failed to load OpenCL.\n"));
+    } else {
+        LOG_IF_EXIST(RGY_LOG_DEBUG, _T("loaded OpenCL.\n"));
+    }
 }
 
 RGYOpenCL::RGYOpenCL(shared_ptr<RGYLog> pLog) : m_pLog(pLog) {
-    initOpenCLGlobal();
+    if (initOpenCLGlobal()) {
+        LOG_IF_EXIST(RGY_LOG_ERROR, _T("Failed to load OpenCL.\n"));
+    } else {
+        LOG_IF_EXIST(RGY_LOG_DEBUG, _T("loaded OpenCL.\n"));
+    }
 }
 
 RGYOpenCL::~RGYOpenCL() {
@@ -1072,6 +1085,7 @@ std::vector<shared_ptr<RGYOpenCLPlatform>> RGYOpenCL::getPlatforms(const char *v
             }
         }
     }
+    m_pLog->write(RGY_LOG_DEBUG, _T("Created OpenCL platform list: %d\n"), (int)platform_list.size());
     return platform_list;
 }
 
