@@ -630,10 +630,10 @@ System::Void frmConfig::InitComboBox() {
     setComboBox(fcgCXInterlaced,    list_interlaced);
     setComboBox(fcgCXAspectRatio,   list_aspect_ratio);
     setComboBox(fcgCXMotionEst,     list_mv_presicion);
-    setComboBox(fcgCXColorMatrix,   list_colormatrix);
-    setComboBox(fcgCXColorPrim,     list_colorprim);
-    setComboBox(fcgCXTransfer,      list_transfer);
-    setComboBox(fcgCXVideoFormat,   list_videoformat);
+    setComboBox(fcgCXColorMatrix,   list_colormatrix, "auto");
+    setComboBox(fcgCXColorPrim,     list_colorprim, "auto");
+    setComboBox(fcgCXTransfer,      list_transfer, "auto");
+    setComboBox(fcgCXVideoFormat,   list_videoformat, "auto");
 
     setComboBox(fcgCXAudioTempDir,  list_audtempdir);
     setComboBox(fcgCXMP4BoxTempDir, list_mp4boxtempdir);
