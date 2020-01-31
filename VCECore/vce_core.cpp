@@ -1291,6 +1291,14 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         }
     }
 
+    if (prm->codec == RGY_CODEC_HEVC && prm->codecParam[prm->codec].nTier == AMF_VIDEO_ENCODER_HEVC_TIER_HIGH) {
+        if (prm->codecParam[prm->codec].nLevel != 0
+            && !is_avail_hevc_high_tier(prm->codecParam[prm->codec].nLevel)) {
+            PrintMes(RGY_LOG_WARN, _T("HEVC Level %s does not support High tier, switching to Main tier.\n"), get_cx_desc(get_level_list(prm->codec), prm->codecParam[prm->codec].nLevel));
+            prm->codecParam[prm->codec].nTier = AMF_VIDEO_ENCODER_HEVC_TIER_MAIN;
+        }
+    }
+
     m_params.SetParamType(VCE_PARAM_KEY_INPUT,         AMF_PARAM_COMMON, L"Input file name");
     m_params.SetParamType(VCE_PARAM_KEY_INPUT_WIDTH,   AMF_PARAM_COMMON, L"Input Frame width (integer, default = 0)");
     m_params.SetParamType(VCE_PARAM_KEY_INPUT_HEIGHT,  AMF_PARAM_COMMON, L"Input Frame height (integer, default = 0)");
