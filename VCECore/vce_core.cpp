@@ -112,6 +112,8 @@ VCECore::VCECore() :
     m_keyFile(),
     m_Chapters(),
 #endif
+    m_hdr10plus(),
+    m_hdrsei(),
     m_trimParam(),
     m_pFileReader(),
     m_AudioReaders(),
@@ -552,6 +554,11 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
 }
 
 RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
+    m_hdrsei = createHEVCHDRSei(inputParams->common.maxCll, inputParams->common.masterDisplay, m_pFileReader.get());
+    if (!m_hdrsei) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to parse HEVC HDR10 metadata.\n"));
+        return RGY_ERR_INVALID_PARAM;
+    }
     const auto outputVideoInfo = videooutputinfo(
         inputParams->codec,
         formatOut,
@@ -573,7 +580,7 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
 
     auto err = initWriters(m_pFileWriter, m_pFileWriterListAudio, m_pFileReader, m_AudioReaders,
         &inputParams->common, &inputParams->input, &inputParams->ctrl, outputVideoInfo,
-        m_trimParam, m_outputTimebase, m_Chapters, subburnTrackId, false, false, m_pStatus, m_pPerfMonitor, m_pLog);
+        m_trimParam, m_outputTimebase, m_Chapters, m_hdrsei.get(), subburnTrackId, false, false, m_pStatus, m_pPerfMonitor, m_pLog);
     if (err != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("failed to initialize file reader(s).\n"));
         return err;
@@ -2398,6 +2405,29 @@ tstring VCECore::GetEncoderParam() {
     mes += strsprintf(_T("Motion Est:    %s\n"), get_cx_desc(list_mv_presicion, nMotionEst));
     mes += strsprintf(_T("Slices:        %d\n"), GetPropertyInt(AMF_PARAM_SLICES_PER_FRAME(m_encCodec)));
     mes += strsprintf(_T("GOP Len:       %d frames\n"), GetPropertyInt(AMF_PARAM_GOP_SIZE(m_encCodec)));
+    { const auto &vui_str = m_encVUI.print_all();
+    if (vui_str.length() > 0) {
+        mes += strsprintf(_T("VUI:              %s\n"), vui_str.c_str());
+    }
+    }
+    if (m_hdrsei) {
+        const auto masterdisplay = m_hdrsei->print_masterdisplay();
+        const auto maxcll = m_hdrsei->print_maxcll();
+        if (masterdisplay.length() > 0) {
+            const tstring tstr = char_to_tstring(masterdisplay);
+            const auto splitpos = tstr.find(_T("WP("));
+            if (splitpos == std::string::npos) {
+                mes += strsprintf(_T("MasteringDisp: %s\n"), tstr.c_str());
+            } else {
+                mes += strsprintf(_T("MasteringDisp: %s\n")
+                    _T("               %s\n"),
+                    tstr.substr(0, splitpos - 1).c_str(), tstr.substr(splitpos).c_str());
+            }
+        }
+        if (maxcll.length() > 0) {
+            mes += strsprintf(_T("MaxCLL/MaxFALL:%s\n"), char_to_tstring(maxcll).c_str());
+        }
+    }
     tstring others;
     if (GetPropertyBool(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(m_encCodec))) {
         others += _T("skip_frame ");
