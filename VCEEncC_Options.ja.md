@@ -177,7 +177,7 @@ avformat + sw decoderを使用して読み込む。
 ffmpegの対応するほとんどのコーデックを読み込み可能。
 
 ### --avhw
-avformat + cuvid decoderを使用して読み込む。
+avformat + hw decoderを使用して読み込む。
 デコードからエンコードまでを一貫してGPUで行うため高速。
 
 | コーデック | 対応状況 |

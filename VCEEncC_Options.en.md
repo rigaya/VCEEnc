@@ -163,7 +163,7 @@ Read VapourSynth script file using vpy reader.
 Read input file using avformat + ffmpeg's sw decoder.
 
 ### --avhw
-Read using avformat + cuvid hw decoder. Using this mode will provide maximum performance,
+Read using avformat + hw hw decoder. Using this mode will provide maximum performance,
 since entire transcode process will be run on the GPU.
 
 **Codecs supported by avhw reader**  
