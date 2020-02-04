@@ -263,6 +263,7 @@ RGY_ERR RGYFilterSsim::init_cl_resources() {
         AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
         return RGY_ERR_INVALID_PARAM;
     }
+    amf::AMFContext::AMFOpenCLLocker locker(m_context);
     m_queueCrop = m_cl->createQueue(m_cl->queue().devid());
     if (prm->ssim) {
         for (auto& q : m_queueCalcSsim) {
@@ -380,6 +381,7 @@ RGY_ERR RGYFilterSsim::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOu
     UNREFERENCED_PARAMETER(pOutputFrameNum);
     RGY_ERR sts = RGY_ERR_NONE;
 
+    std::lock_guard<std::mutex> lock(m_mtx); //ロックを忘れないこと
     if (m_unused.size() == 0) {
         //待機中のフレームバッファがなければ新たに作成する
         m_unused.push_back(m_cl->createFrameBuffer((m_cropOrg) ? m_cropOrg->GetFilterParam()->frameOut : *pInputFrame));
@@ -403,7 +405,6 @@ RGY_ERR RGYFilterSsim::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOu
     }
 
     //フレームをm_unusedからm_inputに移す
-    std::lock_guard< std::mutex> lock(m_mtx); //ロックを忘れないこと
     m_input.push_back(std::move(copyFrame));
     m_unused.pop_front();
     return sts;
@@ -413,6 +414,10 @@ void RGYFilterSsim::showResult() {
     auto prm = std::dynamic_pointer_cast<RGYFilterParamSsim>(m_param);
     if (!prm) {
         return;
+    }
+    if (m_thread.joinable()) {
+        AddMessage(RGY_LOG_DEBUG, _T("Waiting for ssim/psnr calculation thread to finish.\n"));
+        m_thread.join();
     }
     if (prm->ssim) {
         auto str = strsprintf(_T("\nSSIM YUV:"));
@@ -469,7 +474,7 @@ RGY_ERR RGYFilterSsim::compare_frames(bool flush) {
                 surf = amf::AMFSurfacePtr(data);
                 break;
             }
-            if (ar != AMF_OK) break;
+            if (ar != AMF_OK || m_abort) break;
             //if ((std::chrono::system_clock::now() - timeS) > std::chrono::seconds(10)) {
             //    PrintMes(RGY_LOG_ERROR, _T("10 sec has passed after getting last frame from decoder.\n"));
             //    PrintMes(RGY_LOG_ERROR, _T("Decoder seems to have crushed.\n"));
@@ -478,7 +483,7 @@ RGY_ERR RGYFilterSsim::compare_frames(bool flush) {
             //}
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
-        if (ar == AMF_EOF) {
+        if (ar == AMF_EOF || m_abort) {
             break;
         } else if (ar != AMF_OK) {
             res = err_to_rgy(ar);
@@ -507,33 +512,35 @@ RGY_ERR RGYFilterSsim::compare_frames(bool flush) {
             AddMessage(RGY_LOG_ERROR, _T("m_cropDec not set.\n"));
             return RGY_ERR_UNKNOWN;
         }
-        if (!m_decFrameCopy) {
-            m_decFrameCopy = m_cl->createFrameBuffer(m_cropDec->GetFilterParam()->frameOut);
-        }
-        int cropFilterOutputNum = 0;
-        FrameInfo *outInfo[1] = { &m_decFrameCopy->frame };
-        auto sts_filter = m_cropDec->filter(&decFrame->info(), (FrameInfo **)&outInfo, &cropFilterOutputNum, m_queueCrop, &m_cropEvent);
-        if (outInfo[0] == nullptr || cropFilterOutputNum != 1) {
-            AddMessage(RGY_LOG_ERROR, _T("Unknown behavior \"%s\".\n"), m_cropDec->name().c_str());
-            return sts_filter;
-        }
-        if (sts_filter != RGY_ERR_NONE || cropFilterOutputNum != 1) {
-            AddMessage(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), m_cropDec->name().c_str());
-            return sts_filter;
-        }
+        {
+            amf::AMFContext::AMFOpenCLLocker locker(m_context);
+            if (!m_decFrameCopy) {
+                m_decFrameCopy = m_cl->createFrameBuffer(m_cropDec->GetFilterParam()->frameOut);
+            }
+            int cropFilterOutputNum = 0;
+            FrameInfo *outInfo[1] = { &m_decFrameCopy->frame };
+            auto sts_filter = m_cropDec->filter(&decFrame->info(), (FrameInfo **)&outInfo, &cropFilterOutputNum, m_queueCrop, &m_cropEvent);
+            if (outInfo[0] == nullptr || cropFilterOutputNum != 1) {
+                AddMessage(RGY_LOG_ERROR, _T("Unknown behavior \"%s\".\n"), m_cropDec->name().c_str());
+                return sts_filter;
+            }
+            if (sts_filter != RGY_ERR_NONE || cropFilterOutputNum != 1) {
+                AddMessage(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), m_cropDec->name().c_str());
+                return sts_filter;
+            }
 
-        //比較用のキューの先頭に積まれているものから順次比較していく
-        auto &originalFrame = m_input.front();
-        sts_filter = calc_ssim_psnr(&originalFrame->frame, &m_decFrameCopy->frame);
-        if (sts_filter != RGY_ERR_NONE) {
-            return sts_filter;
+            //比較用のキューの先頭に積まれているものから順次比較していく
+            std::lock_guard<std::mutex> lock(m_mtx); //ロックを忘れないこと
+            auto &originalFrame = m_input.front();
+            sts_filter = calc_ssim_psnr(&originalFrame->frame, &m_decFrameCopy->frame);
+            if (sts_filter != RGY_ERR_NONE) {
+                return sts_filter;
+            }
+            //フレームをm_inputからm_unusedに移す
+            m_unused.push_back(std::move(originalFrame));
+            m_input.pop_front();
+            m_frames++;
         }
-
-        //フレームをm_inputからm_unusedに移す
-        std::lock_guard<std::mutex> lock(m_mtx); //ロックを忘れないこと
-        m_unused.push_back(std::move(originalFrame));
-        m_input.pop_front();
-        m_frames++;
     }
     return res;
 }
@@ -661,6 +668,7 @@ RGY_ERR RGYFilterSsim::calc_ssim_psnr(const FrameInfo *p0, const FrameInfo *p1) 
     if (prm->ssim) {
         double ssimv = 0.0;
         for (int i = 0; i < RGY_CSP_PLANES[p0->csp]; i++) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_context);
             m_tmpSsim[i]->mapEvent().wait();
 
             const int count = (int)m_tmpSsim[i]->size() / sizeof(float);
@@ -683,6 +691,7 @@ RGY_ERR RGYFilterSsim::calc_ssim_psnr(const FrameInfo *p0, const FrameInfo *p1) 
     if (prm->psnr) {
         double psnrv = 0.0;
         for (int i = 0; i < RGY_CSP_PLANES[p0->csp]; i++) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_context);
             m_tmpPsnr[i]->mapEvent().wait();
 
             const int count = (int)m_tmpPsnr[i]->size() / sizeof(int);
