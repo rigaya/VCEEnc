@@ -928,6 +928,8 @@ private: System::Windows::Forms::ComboBox ^fcgCXVppAfsAnalyze;
 private: System::Windows::Forms::NumericUpDown ^fcgNUVppAfsCoeffShift;
 private: System::Windows::Forms::NumericUpDown ^fcgNUVppAfsMethodSwitch;
 private: System::Windows::Forms::ComboBox ^fcgCXVppResizeAlg;
+private: System::Windows::Forms::CheckBox ^fcgCBPSNR;
+private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
 
 
 
@@ -1296,6 +1298,8 @@ private: System::Windows::Forms::ComboBox ^fcgCXVppResizeAlg;
             this->fcgCBRunBatBeforeAudio = (gcnew System::Windows::Forms::CheckBox());
             this->fcgCXAudioPriority = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBAudioPriority = (gcnew System::Windows::Forms::Label());
+            this->fcgCBSSIM = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgCBPSNR = (gcnew System::Windows::Forms::CheckBox());
             this->fcgtoolStripSettings->SuspendLayout();
             this->fcgtabControlMux->SuspendLayout();
             this->fcgtabPageMP4->SuspendLayout();
@@ -3072,6 +3076,8 @@ private: System::Windows::Forms::ComboBox ^fcgCXVppResizeAlg;
             // 
             // tabPageExOpt
             // 
+            this->tabPageExOpt->Controls->Add(this->fcgCBPSNR);
+            this->tabPageExOpt->Controls->Add(this->fcgCBSSIM);
             this->tabPageExOpt->Controls->Add(this->fcggroupBoxVppDeinterlace);
             this->tabPageExOpt->Controls->Add(this->fcgCBTimerPeriodTuning);
             this->tabPageExOpt->Controls->Add(this->fcgCBResize);
@@ -4066,6 +4072,28 @@ private: System::Windows::Forms::ComboBox ^fcgCXVppResizeAlg;
             this->fcgLBAudioPriority->Size = System::Drawing::Size(67, 15);
             this->fcgLBAudioPriority->TabIndex = 12;
             this->fcgLBAudioPriority->Text = L"音声優先度";
+            // 
+            // fcgCBSSIM
+            // 
+            this->fcgCBSSIM->AutoSize = true;
+            this->fcgCBSSIM->Location = System::Drawing::Point(49, 252);
+            this->fcgCBSSIM->Name = L"fcgCBSSIM";
+            this->fcgCBSSIM->Size = System::Drawing::Size(50, 18);
+            this->fcgCBSSIM->TabIndex = 138;
+            this->fcgCBSSIM->Tag = L"reCmd";
+            this->fcgCBSSIM->Text = L"ssim";
+            this->fcgCBSSIM->UseVisualStyleBackColor = true;
+            // 
+            // fcgCBPSNR
+            // 
+            this->fcgCBPSNR->AutoSize = true;
+            this->fcgCBPSNR->Location = System::Drawing::Point(49, 278);
+            this->fcgCBPSNR->Name = L"fcgCBPSNR";
+            this->fcgCBPSNR->Size = System::Drawing::Size(50, 18);
+            this->fcgCBPSNR->TabIndex = 139;
+            this->fcgCBPSNR->Tag = L"reCmd";
+            this->fcgCBPSNR->Text = L"psnr";
+            this->fcgCBPSNR->UseVisualStyleBackColor = true;
             // 
             // frmConfig
             // 

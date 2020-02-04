@@ -917,6 +917,9 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
         fcgCBVppAfs24fps->Checked              = vce.vpp.afs.force24 != 0;
         fcgCBVppAfsTune->Checked               = vce.vpp.afs.tune != 0;
 
+        fcgCBSSIM->Checked                     = vce.ssim;
+        fcgCBPSNR->Checked                     = vce.psnr;
+
         //SetCXIndex(fcgCXX264Priority,        cnf->vid.priority);
         SetCXIndex(fcgCXTempDir,             cnf->oth.temp_dir);
         fcgCBAFS->Checked                  = cnf->vid.afs != 0;
@@ -1032,6 +1035,9 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.vpp.afs.smooth             = fcgCBVppAfsSmooth->Checked;
     vce.vpp.afs.force24            = fcgCBVppAfs24fps->Checked;
     vce.vpp.afs.tune               = fcgCBVppAfsTune->Checked;
+
+    vce.ssim                       = fcgCBSSIM->Checked;
+    vce.psnr                       = fcgCBPSNR->Checked;
 
     cnf->vid.afs                    = fcgCBAFS->Checked;
     cnf->vid.auo_tcfile_out         = fcgCBAuoTcfileout->Checked;
