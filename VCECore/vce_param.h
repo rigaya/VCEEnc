@@ -406,6 +406,9 @@ struct VCEParam {
     bool        bVBAQ;
     bool        preAnalysis;
 
+    bool        ssim;
+    bool        psnr;
+
     VCEVppParam vpp;
 
     VCEParam();

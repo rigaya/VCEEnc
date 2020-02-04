@@ -279,6 +279,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="vce_filter_ssim.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="vce_util.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -336,6 +342,7 @@
     <ClInclude Include="rgy_input.h" />
     <ClInclude Include="vce_filter.h" />
     <ClInclude Include="vce_filter_afs.h" />
+    <ClInclude Include="vce_filter_ssim.h" />
     <ClInclude Include="vce_util.h" />
     <ClInclude Include="vce_param.h" />
     <ClInclude Include="rgy_version.h" />
@@ -447,6 +454,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
+    <None Include="vce_filter_ssim.cl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{06E67B5B-0DA2-4503-A1CA-D75F94BD977A}</ProjectGuid>

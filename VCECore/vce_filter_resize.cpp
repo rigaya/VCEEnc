@@ -35,7 +35,7 @@
 #include "vce_param.h"
 
 
-RGY_ERR RGYFilterResize::resizePlane(FrameInfo *pOutputPlane, const FrameInfo *pInputPlane, int queue_id) {
+RGY_ERR RGYFilterResize::resizePlane(FrameInfo *pOutputPlane, const FrameInfo *pInputPlane, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     const float ratioX = pInputPlane->width / (float)(pOutputPlane->width);
     const float ratioY = pInputPlane->height / (float)(pOutputPlane->height);
     const float ratioDistX = (pInputPlane->width <= pOutputPlane->width) ? 1.0f : pOutputPlane->width / (float)(pInputPlane->width);
@@ -54,7 +54,7 @@ RGY_ERR RGYFilterResize::resizePlane(FrameInfo *pOutputPlane, const FrameInfo *p
         switch (pResizeParam->interp) {
         case RGY_VPP_RESIZE_BILINEAR:
             kernel_name = "kernel_resize_texture_bilinear";
-            err = m_resize->kernel(kernel_name).config(m_cl->queue(queue_id).get(), local, global).launch(
+            err = m_resize->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
                 (cl_mem)pOutputPlane->ptr[0], pOutputPlane->pitch[0], pOutputPlane->width, pOutputPlane->height,
                 (cl_mem)pInputPlane->ptr[0],
                 ratioX, ratioY
@@ -64,7 +64,7 @@ RGY_ERR RGYFilterResize::resizePlane(FrameInfo *pOutputPlane, const FrameInfo *p
         case RGY_VPP_RESIZE_LANCZOS3:
         case RGY_VPP_RESIZE_LANCZOS4:
             kernel_name = "kernel_resize_lanczos";
-            err = m_resize->kernel(kernel_name).config(m_cl->queue(queue_id).get(), local, global).launch(
+            err = m_resize->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
                 (cl_mem)pOutputPlane->ptr[0], pOutputPlane->pitch[0], pOutputPlane->width, pOutputPlane->height,
                 (cl_mem)pInputPlane->ptr[0],
                 ratioX, ratioY, ratioDistX, ratioDistY);
@@ -75,7 +75,7 @@ RGY_ERR RGYFilterResize::resizePlane(FrameInfo *pOutputPlane, const FrameInfo *p
         case RGY_VPP_RESIZE_AUTO:
         default:
             kernel_name = "kernel_resize_spline";
-            err = m_resize->kernel(kernel_name).config(m_cl->queue(queue_id).get(), local, global).launch(
+            err = m_resize->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
                 (cl_mem)pOutputPlane->ptr[0], pOutputPlane->pitch[0], pOutputPlane->width, pOutputPlane->height,
                 (cl_mem)pInputPlane->ptr[0],
                 ratioX, ratioY, ratioDistX, ratioDistY,
@@ -91,12 +91,14 @@ RGY_ERR RGYFilterResize::resizePlane(FrameInfo *pOutputPlane, const FrameInfo *p
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYFilterResize::resizeFrame(FrameInfo *pOutputFrame, const FrameInfo *pInputFrame, int queue_id) {
+RGY_ERR RGYFilterResize::resizeFrame(FrameInfo *pOutputFrame, const FrameInfo *pInputFrame, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     m_srcImage = m_cl->createImageFromFrameBuffer(*pInputFrame, true, CL_MEM_READ_ONLY);
     for (int i = 0; i < RGY_CSP_PLANES[pOutputFrame->csp]; i++) {
         auto planeDst = getPlane(pOutputFrame, (RGY_PLANE)i);
         auto planeSrc = getPlane(&m_srcImage->frame, (RGY_PLANE)i);
-        auto err = resizePlane(&planeDst, &planeSrc, queue_id);
+        const std::vector<RGYOpenCLEvent> &plane_wait_event = (i == 0) ? wait_events : std::vector<RGYOpenCLEvent>();
+        RGYOpenCLEvent *plane_event = (i == RGY_CSP_PLANES[pOutputFrame->csp] - 1) ? event : nullptr;
+        auto err = resizePlane(&planeDst, &planeSrc, queue, plane_wait_event, plane_event);
         if (err != RGY_ERR_NONE) {
             m_pLog->write(RGY_LOG_ERROR, _T("Failed to resize frame(%d) %s: %s\n"), i, cl_errmes(err));
             return err_cl_to_rgy(err);
@@ -213,7 +215,7 @@ RGY_ERR RGYFilterResize::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     return sts;
 }
 
-RGY_ERR RGYFilterResize::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum) {
+RGY_ERR RGYFilterResize::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     RGY_ERR sts = RGY_ERR_NONE;
     if (pInputFrame->ptr[0] == nullptr) {
         return sts;
@@ -246,7 +248,7 @@ RGY_ERR RGYFilterResize::run_filter(const FrameInfo *pInputFrame, FrameInfo **pp
         return RGY_ERR_INVALID_PARAM;
     }
 
-    sts = resizeFrame(ppOutputFrames[0], pInputFrame, 0);
+    sts = resizeFrame(ppOutputFrames[0], pInputFrame, queue, wait_events, event);
     if (sts != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("error at resizeFrame (%s): %s.\n"),
             RGY_CSP_NAMES[pInputFrame->csp], get_err_mes(sts));

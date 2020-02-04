@@ -305,6 +305,8 @@ VCEParam::VCEParam() :
     bFiller(false),
     bVBAQ(false),
     preAnalysis(false),
+    ssim(false),
+    psnr(false),
     vpp() {
     codecParam[RGY_CODEC_H264].nLevel   = 0;
     codecParam[RGY_CODEC_H264].nProfile = list_avc_profile[2].value;

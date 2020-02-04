@@ -457,6 +457,22 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->bEnforceHRD = TRUE;
         return 0;
     }
+    if (IS_OPTION("ssim")) {
+        pParams->ssim = true;
+        return 0;
+    }
+    if (IS_OPTION("no-ssim")) {
+        pParams->ssim = false;
+        return 0;
+    }
+    if (IS_OPTION("psnr")) {
+        pParams->psnr = true;
+        return 0;
+    }
+    if (IS_OPTION("no-psnr")) {
+        pParams->psnr = false;
+        return 0;
+    }
     if (0 == _tcscmp(option_name, _T("vpp-resize"))) {
         i++;
         int value;
@@ -982,6 +998,8 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
         OPT_LST_H264(_T("--profile"), _T(""), nProfile, list_avc_profile);
     }
     OPT_BOOL(_T("--pre-analysis"), _T("--no-pre-analysis"), preAnalysis);
+    OPT_BOOL(_T("--ssim"), _T("--no-ssim"), ssim);
+    OPT_BOOL(_T("--psnr"), _T("--no-psnr"), psnr);
 
     cmd << gen_cmd(&pParams->common, &encPrmDefault.common, save_disabled_prm);
 

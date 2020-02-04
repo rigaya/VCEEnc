@@ -31,7 +31,7 @@
 #include <cstdint>
 #include "vce_filter.h"
 
-RGY_ERR RGYFilterCspCrop::convertCspFromNV12(FrameInfo *pOutputFrame, const FrameInfo *pInputFrame) {
+RGY_ERR RGYFilterCspCrop::convertCspFromNV12(FrameInfo *pOutputFrame, const FrameInfo *pInputFrame, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     auto pCropParam = std::dynamic_pointer_cast<RGYFilterParamCrop>(m_param);
     if (!pCropParam) {
         AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
@@ -39,7 +39,7 @@ RGY_ERR RGYFilterCspCrop::convertCspFromNV12(FrameInfo *pOutputFrame, const Fram
     }
     static const auto supportedCspNV12 = make_array<RGY_CSP>(RGY_CSP_NV12, RGY_CSP_P010);
     if (std::find(supportedCspNV12.begin(), supportedCspNV12.end(), pCropParam->frameOut.csp) != supportedCspNV12.end()) {
-        auto err = m_cl->copyFrame(pOutputFrame, pInputFrame, &pCropParam->crop);
+        auto err = m_cl->copyFrame(pOutputFrame, pInputFrame, &pCropParam->crop, queue.get(), wait_events, event);
         if (err != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("error at copyFrame (convertCspFromNV12(%s -> %s)): %s.\n"),
                 RGY_CSP_NAMES[pInputFrame->csp], RGY_CSP_NAMES[pOutputFrame->csp], get_err_mes(err));
@@ -63,7 +63,7 @@ RGY_ERR RGYFilterCspCrop::convertCspFromNV12(FrameInfo *pOutputFrame, const Fram
     { //Y
         auto planeDst = getPlane(pOutputFrame, RGY_PLANE_Y);
         auto planeSrc = getPlane(pInputFrame, RGY_PLANE_Y);
-        auto err = m_cl->copyPlane(&planeDst, &planeSrc, &pCropParam->crop);
+        auto err = m_cl->copyPlane(&planeDst, &planeSrc, &pCropParam->crop, queue.get(), wait_events);
         if (err != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("error at copyPlane (convertCspFromNV12(%s -> %s)): %s.\n"),
                 RGY_CSP_NAMES[pInputFrame->csp], RGY_CSP_NAMES[pOutputFrame->csp], get_err_mes(err));
@@ -81,7 +81,7 @@ RGY_ERR RGYFilterCspCrop::convertCspFromNV12(FrameInfo *pOutputFrame, const Fram
         //clGetImageInfo((cl_mem)planeSrc.ptr[0], CL_IMAGE_FORMAT, sizeof(val), &val, nullptr);
         RGYWorkSize local(32, 8);
         RGYWorkSize global(planeDstU.width, planeDstU.height);
-        auto err = m_crop->kernel("kernel_crop_nv12_yv12").config(m_cl->queue().get(), local, global).launch(
+        auto err = m_crop->kernel("kernel_crop_nv12_yv12").config(queue.get(), local, global, event).launch(
             (cl_mem)planeDstU.ptr[0], (cl_mem)planeDstV.ptr[0], planeDstU.pitch[0], (cl_mem)planeSrc.ptr[0], planeSrc.pitch[0], planeDstU.width, planeDstU.height,
             pCropParam->crop.e.left, pCropParam->crop.e.up);
         if (err != RGY_ERR_NONE) {
@@ -96,7 +96,7 @@ RGY_ERR RGYFilterCspCrop::convertCspFromNV12(FrameInfo *pOutputFrame, const Fram
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYFilterCspCrop::convertCspFromYV12(FrameInfo *pOutputFrame, const FrameInfo *pInputFrame) {
+RGY_ERR RGYFilterCspCrop::convertCspFromYV12(FrameInfo *pOutputFrame, const FrameInfo *pInputFrame, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     auto pCropParam = std::dynamic_pointer_cast<RGYFilterParamCrop>(m_param);
     if (!pCropParam) {
         AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
@@ -104,7 +104,7 @@ RGY_ERR RGYFilterCspCrop::convertCspFromYV12(FrameInfo *pOutputFrame, const Fram
     }
     static const auto supportedCspYV12 = make_array<RGY_CSP>(RGY_CSP_YV12, RGY_CSP_YV12_09, RGY_CSP_YV12_10, RGY_CSP_YV12_12, RGY_CSP_YV12_14, RGY_CSP_YV12_16);
     if (std::find(supportedCspYV12.begin(), supportedCspYV12.end(), pCropParam->frameOut.csp) != supportedCspYV12.end()) {
-        auto err = m_cl->copyFrame(pOutputFrame, pInputFrame, &pCropParam->crop);
+        auto err = m_cl->copyFrame(pOutputFrame, pInputFrame, &pCropParam->crop, queue.get(), wait_events, event);
         if (err != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("error at copyFrame (convertCspFromNV12(%s -> %s)): %s.\n"),
                 RGY_CSP_NAMES[pInputFrame->csp], RGY_CSP_NAMES[pOutputFrame->csp], get_err_mes(err));
@@ -128,7 +128,7 @@ RGY_ERR RGYFilterCspCrop::convertCspFromYV12(FrameInfo *pOutputFrame, const Fram
     { //Y
         auto planeDst = getPlane(pOutputFrame, RGY_PLANE_Y);
         auto planeSrc = getPlane(pInputFrame, RGY_PLANE_Y);
-        auto err = m_cl->copyPlane(&planeDst, &planeSrc, &pCropParam->crop);
+        auto err = m_cl->copyPlane(&planeDst, &planeSrc, &pCropParam->crop, queue.get(), wait_events);
         if (err != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("error at copyPlane (convertCspFromYV12(%s -> %s)): %s.\n"),
                 RGY_CSP_NAMES[pInputFrame->csp], RGY_CSP_NAMES[pOutputFrame->csp], get_err_mes(err));
@@ -145,7 +145,7 @@ RGY_ERR RGYFilterCspCrop::convertCspFromYV12(FrameInfo *pOutputFrame, const Fram
         //clGetImageInfo((cl_mem)planeDstC.ptr[0], CL_IMAGE_FORMAT, sizeof(val), &val, nullptr);
         RGYWorkSize local(32, 8);
         RGYWorkSize global(planeSrcU.width, planeSrcU.height);
-        auto err = m_crop->kernel("kernel_crop_yv12_nv12").config(m_cl->queue().get(), local, global).launch(
+        auto err = m_crop->kernel("kernel_crop_yv12_nv12").config(queue.get(), local, global, event).launch(
             (cl_mem)planeDstC.ptr[0], planeDstC.pitch[0], (cl_mem)planeSrcU.ptr[0], (cl_mem)planeSrcV.ptr[0], planeSrcU.pitch[0], planeSrcU.width, planeSrcU.height,
             pCropParam->crop.e.left, pCropParam->crop.e.up);
         if (err != RGY_ERR_NONE) {
@@ -226,7 +226,7 @@ RGY_ERR RGYFilterCspCrop::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGY
     return sts;
 }
 
-RGY_ERR RGYFilterCspCrop::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum) {
+RGY_ERR RGYFilterCspCrop::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     RGY_ERR sts = RGY_ERR_NONE;
 
     if (pInputFrame->ptr[0] == nullptr) {
@@ -247,7 +247,7 @@ RGY_ERR RGYFilterCspCrop::run_filter(const FrameInfo *pInputFrame, FrameInfo **p
     ppOutputFrames[0]->picstruct = pInputFrame->picstruct;
     if (m_param->frameOut.csp == m_param->frameIn.csp) {
         //cropがなければ、一度に転送可能
-        auto err = m_cl->copyFrame(ppOutputFrames[0], pInputFrame, &pCropParam->crop);
+        auto err = m_cl->copyFrame(ppOutputFrames[0], pInputFrame, &pCropParam->crop, queue.get(), wait_events, event);
         if (err != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("Failed to copy frame: %s.\n"), get_err_mes(err));
             return RGY_ERR_INVALID_PARAM;
@@ -265,16 +265,16 @@ RGY_ERR RGYFilterCspCrop::run_filter(const FrameInfo *pInputFrame, FrameInfo **p
         static const auto supportedCspRGB    = make_array<RGY_CSP>(RGY_CSP_RGB24, RGY_CSP_RGB32, RGY_CSP_RGB);
 #endif
         if (std::find(supportedCspNV12.begin(), supportedCspNV12.end(), pCropParam->frameIn.csp) != supportedCspNV12.end()) {
-            sts = convertCspFromNV12(ppOutputFrames[0], pInputFrame);
+            sts = convertCspFromNV12(ppOutputFrames[0], pInputFrame, queue, wait_events, event);
         } else if (std::find(supportedCspYV12.begin(), supportedCspYV12.end(), pCropParam->frameIn.csp) != supportedCspYV12.end()) {
-            sts = convertCspFromYV12(ppOutputFrames[0], pInputFrame);
+            sts = convertCspFromYV12(ppOutputFrames[0], pInputFrame, queue, wait_events, event);
 #if 0
         } else if (std::find(supportedCspNV16.begin(), supportedCspNV16.end(), pCropParam->frameIn.csp) != supportedCspNV16.end()) {
-            sts = convertCspFromNV16(ppOutputFrames[0], pInputFrame);
+            sts = convertCspFromNV16(ppOutputFrames[0], pInputFrame, queue, wait_events, event);
         } else if (std::find(supportedCspYUV444.begin(), supportedCspYUV444.end(), pCropParam->frameIn.csp) != supportedCspYUV444.end()) {
-            sts = convertCspFromYUV444(ppOutputFrames[0], pInputFrame);
+            sts = convertCspFromYUV444(ppOutputFrames[0], pInputFrame, queue, wait_events, event);
         } else if (std::find(supportedCspRGB.begin(), supportedCspRGB.end(), pCropParam->frameIn.csp) != supportedCspRGB.end()) {
-            sts = convertCspFromRGB(ppOutputFrames[0], pInputFrame);
+            sts = convertCspFromRGB(ppOutputFrames[0], pInputFrame, queue, wait_events, event);
 #endif
         } else {
             AddMessage(RGY_LOG_ERROR, _T("converting csp from %s is not supported.\n"), RGY_CSP_NAMES[pCropParam->frameIn.csp]);

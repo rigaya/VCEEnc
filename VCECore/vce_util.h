@@ -100,7 +100,7 @@ public:
         dataPicstruct = picstruct;
     }
 
-    int64_t duration() {
+    int64_t duration() const {
         return dataDuration;
     }
 
@@ -108,7 +108,7 @@ public:
         dataDuration = duration;
     }
 
-    int frameIdx() {
+    int frameIdx() const {
         return dataFrameIdx;
     }
 
