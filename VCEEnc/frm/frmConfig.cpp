@@ -881,7 +881,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     fcgCBSkipFrame->Checked           = vce.bEnableSkipFrame;
     fcgCBTimerPeriodTuning->Checked   = vce.bTimerPeriodTuning;
     fcgCBVBAQ->Checked                = vce.bVBAQ;
-    fcgCBFullrange->Checked           = vce.common.out_vui.fullrange != 0;
+    fcgCBFullrange->Checked           = vce.common.out_vui.colorrange == RGY_COLORRANGE_FULL;
     SetCXIndex(fcgCXColorMatrix,        get_cx_index(list_colormatrix, vce.common.out_vui.matrix));
     SetCXIndex(fcgCXTransfer,           get_cx_index(list_transfer, vce.common.out_vui.transfer));
     SetCXIndex(fcgCXColorPrim,          get_cx_index(list_colorprim, vce.common.out_vui.colorprim));
@@ -1000,7 +1000,7 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.bDeblockFilter                          = fcgCBDeblock->Checked;
     vce.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;
     vce.bVBAQ                                   = fcgCBVBAQ->Checked;
-    vce.common.out_vui.fullrange                = fcgCBFullrange->Checked ? 1 : 0;
+    vce.common.out_vui.colorrange               = fcgCBFullrange->Checked ? RGY_COLORRANGE_FULL : RGY_COLORRANGE_UNSPECIFIED;
     vce.common.out_vui.matrix                   = (CspMatrix)list_colormatrix[fcgCXColorMatrix->SelectedIndex].value;
     vce.common.out_vui.transfer                 = (CspTransfer)list_transfer[fcgCXTransfer->SelectedIndex].value;
     vce.common.out_vui.colorprim                = (CspColorprim)list_colorprim[fcgCXColorPrim->SelectedIndex].value;

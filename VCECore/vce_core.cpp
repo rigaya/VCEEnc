@@ -1386,13 +1386,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_sar = rgy_rational<int>(par.first, par.second);
 
     m_encVUI = prm->common.out_vui;
-    apply_auto_color_characteristic(m_encVUI.colorprim, list_colorprim,   m_encHeight, prm->input.vui.colorprim);
-    apply_auto_color_characteristic(m_encVUI.transfer,  list_transfer,    m_encHeight, prm->input.vui.transfer);
-    apply_auto_color_characteristic(m_encVUI.matrix,    list_colormatrix, m_encHeight, prm->input.vui.matrix);
-    apply_auto_color_characteristic(m_encVUI.fullrange, list_colorrange,  m_encHeight, prm->input.vui.fullrange);
-    apply_auto_color_characteristic(m_encVUI.chromaloc, list_chromaloc,   m_encHeight, prm->input.vui.chromaloc);
+    m_encVUI.apply_auto(prm->input.vui, m_encHeight);
     m_encVUI.descriptpresent =
-            get_cx_value(list_colormatrix, _T("undef")) != (int)m_encVUI.matrix
+           get_cx_value(list_colormatrix, _T("undef")) != (int)m_encVUI.matrix
         || get_cx_value(list_colorprim, _T("undef")) != (int)m_encVUI.colorprim
         || get_cx_value(list_transfer, _T("undef")) != (int)m_encVUI.transfer;
 
@@ -1464,7 +1460,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         //m_params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE, AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE_ENUM);
         //m_params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_MARKED_LTR_INDEX, (amf_int64)-1);
         //m_params.SetParam(AMF_VIDEO_ENCODER_OUTPUT_REFERENCED_LTR_INDEX_BITFIELD, (amf_int64)0);
-        if (m_encVUI.fullrange) {
+        if (m_encVUI.colorrange == RGY_COLORRANGE_FULL) {
             m_params.SetParam(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR, true);
         }
     } else if (prm->codec == RGY_CODEC_HEVC) {
