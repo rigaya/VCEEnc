@@ -313,7 +313,7 @@ RGY_ERR VCECore::initPerfMonitor(VCEParam *prm) {
     if (bLogOutput) {
         perfMonLog = prm->common.outputFilename + _T("_perf.csv");
     }
-    CPerfMonitorPrm perfMonitorPrm = { 0 };
+    CPerfMonitorPrm perfMonitorPrm;
 #if ENABLE_NVML
     perfMonitorPrm.pciBusId = selectedGpu->pciBusId.c_str();
 #endif

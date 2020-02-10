@@ -519,7 +519,8 @@ RGY_ERR RGYFilterSsim::compare_frames(bool flush) {
             }
             int cropFilterOutputNum = 0;
             FrameInfo *outInfo[1] = { &m_decFrameCopy->frame };
-            auto sts_filter = m_cropDec->filter(&decFrame->info(), (FrameInfo **)&outInfo, &cropFilterOutputNum, m_queueCrop, &m_cropEvent);
+            FrameInfo decFrameInfo = decFrame->info();
+            auto sts_filter = m_cropDec->filter(&decFrameInfo, (FrameInfo **)&outInfo, &cropFilterOutputNum, m_queueCrop, &m_cropEvent);
             if (outInfo[0] == nullptr || cropFilterOutputNum != 1) {
                 AddMessage(RGY_LOG_ERROR, _T("Unknown behavior \"%s\".\n"), m_cropDec->name().c_str());
                 return sts_filter;
@@ -571,7 +572,7 @@ RGY_ERR RGYFilterSsim::calc_ssim_plane(const FrameInfo *p0, const FrameInfo *p1,
     RGYWorkSize global(divCeil(p0->width, 4), divCeil(p0->height, 4));
     RGYWorkSize groups = global.groups(local);
 
-    const int grid_count = groups(0) * groups(1);
+    const auto grid_count = groups(0) * groups(1);
     if (!tmp || tmp->size() < grid_count * sizeof(float)) {
         tmp = m_cl->createBuffer(grid_count * sizeof(float));
     }
@@ -610,7 +611,7 @@ RGY_ERR RGYFilterSsim::calc_psnr_plane(const FrameInfo *p0, const FrameInfo *p1,
     RGYWorkSize local(SSIM_BLOCK_X, SSIM_BLOCK_Y);
     RGYWorkSize global(divCeil(p0->width, 4), p0->height);
     RGYWorkSize groups = global.groups(local);
-    const int grid_count = groups(0) * groups(1);
+    const auto grid_count = groups(0) * groups(1);
     if (!tmp || tmp->size() < grid_count * sizeof(float)) {
         tmp = m_cl->createBuffer(grid_count * sizeof(float));
     }
