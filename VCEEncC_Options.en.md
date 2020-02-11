@@ -258,13 +258,6 @@ It could be used to maintain certain degree of image quality in any part of the 
 ### --gop-len &lt;int&gt;
 Set maximum GOP length. When lookahead is off, this value will always be used. (Not variable, fixed GOP)
 
-### --pre-analysis &lt;string&gt;
-Enable pre analysis to improve quality.
-```
-h264:  none (default), full (best), half, quarter (fast)
-hevc:  none (default), auto\
-```
-
 ### -b, --bframes &lt;int&gt;
 Set the number of consecutive B frames.
 
@@ -391,6 +384,12 @@ Encode as full range YUV.
 Set chroma location flag of the output bitstream from values 0 ... 5.  
 "auto" will copy from input file (available when using [avhw](#--avhw)/[avsw](#--avsw) reader)
 default: 0 = unspecified
+
+### --ssim
+Calculate ssim of the encoded video.
+
+### --psnr
+Calculate psnr of the encoded video.
 
 
 ## IO / Audio / Subtitle Options

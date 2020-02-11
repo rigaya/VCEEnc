@@ -261,13 +261,6 @@ VBVバッファサイズ(kbps単位)。
 ### --gop-len &lt;int&gt;
 最大GOP長。lookaheadオフでは、この値が常に使用される。(可変ではない)
 
-### --pre-analysis &lt;string&gt;
-事前解析により、エンコード品質の改善を図る。
-```
-h264:  none (default), full (best), half, quarter (fast)
-hevc:  none (default), auto\
-```
-
 ### -b, --bframes &lt;int&gt;
 連続Bフレーム数。
 
@@ -393,6 +386,12 @@ DAR比 (画面アスペクト比) の指定。
 ### --chromaloc &lt;int&gt; or "auto"
 出力データのchroma location flagを 0 ～ 5 の範囲で指定する。  
 デフォルト = 0 (unspecified)
+
+### --ssim
+エンコード結果のSSIMを計算。
+
+### --psnr
+エンコード結果のPSNRを計算。
 
 
 ## 入出力 / 音声 / 字幕などのオプション
