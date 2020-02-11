@@ -193,7 +193,7 @@ protected:
     amf::AMFComponentPtr m_pEncoder;
     amf::AMFComponentPtr m_pConverter;
     std::thread m_thDecoder;
-    std::thread m_thOutput;
+    std::future<RGY_ERR> m_thOutput;
 
     AMFParams m_params;
 

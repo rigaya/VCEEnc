@@ -1746,7 +1746,7 @@ RGY_ERR VCECore::run_decode() {
 }
 
 RGY_ERR VCECore::run_output() {
-    m_thOutput = std::thread([this]() {
+    m_thOutput = std::async(std::launch::async, [this]() {
         const auto VCE_TIMEBASE = rgy_rational<int>(1, AMF_SECOND);
         while (m_state == RGY_STATE_RUNNING) {
             amf::AMFDataPtr data;
@@ -2135,6 +2135,10 @@ RGY_ERR VCECore::run() {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
             } else if (ar == AMF_REPEAT) {
                 pSurface = nullptr;
+            } else if (m_thOutput.wait_for(std::chrono::microseconds(0)) != std::future_status::timeout) {
+                PrintMes(RGY_LOG_ERROR, _T("Error during output.\n"));
+                m_state = RGY_STATE_ERROR;
+                break;
             } else {
                 break;
             }
@@ -2188,6 +2192,11 @@ RGY_ERR VCECore::run() {
                 m_state = RGY_STATE_ERROR;
                 break;
             }
+            if (m_thOutput.wait_for(std::chrono::microseconds(0)) != std::future_status::timeout) {
+                PrintMes(RGY_LOG_ERROR, _T("Error during output.\n"));
+                m_state = RGY_STATE_ERROR;
+                break;
+            }
         } else {
             amf::AMFSurfacePtr surf;
             auto ar = AMF_REPEAT;
@@ -2213,6 +2222,11 @@ RGY_ERR VCECore::run() {
                     break;
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                if (m_thOutput.wait_for(std::chrono::microseconds(0)) != std::future_status::timeout) {
+                    PrintMes(RGY_LOG_ERROR, _T("Error during output.\n"));
+                    m_state = RGY_STATE_ERROR;
+                    break;
+                }
                 if ((res = run_send_streams(nInputFrame)) != RGY_ERR_NONE) {
                     m_state = RGY_STATE_ERROR;
                     break;
@@ -2302,8 +2316,10 @@ RGY_ERR VCECore::run() {
         return err_to_rgy(ar);
     }
     PrintMes(RGY_LOG_DEBUG, _T("Flushed Encoder\n"));
-    if (m_thOutput.joinable()) {
-        m_thOutput.join();
+    if (m_thOutput.valid()) {
+        PrintMes(RGY_LOG_DEBUG, _T("Waiting for ouput thread to be finieshed...\n"));
+        m_thOutput.get();
+        PrintMes(RGY_LOG_DEBUG, _T("Closed output thread.\n"));
     }
     if (m_ssim) {
         PrintMes(RGY_LOG_DEBUG, _T("Flushing ssim/psnr calc.\n"));
