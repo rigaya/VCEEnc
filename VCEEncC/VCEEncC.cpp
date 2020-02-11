@@ -193,18 +193,19 @@ static tstring help() {
         _T("                                 - full-pel (fast)\n")
         _T("                                 - half-pel\n")
         _T("                                 - q-pel (best) = default\n")
-        _T("   --gop-len <int>            set length of gop (default: auto)\n"),
+        _T("   --gop-len <int>              set length of gop (default: auto)\n"),
         _T("   --vbaq                       enable VBAQ\n")
-        _T("   --sc <string>             sensitivity of scenechange detection\n")
+        _T("   --pa                         enable Pre Analysis\n")
+        _T("   --pa-sc <string>             sensitivity of scenechange detection\n")
         _T("                                 - none, low, medium(default), high\n")
-        _T("   --ss <string>             sensitivity of static scene detection\n")
+        _T("   --pa-ss <string>             sensitivity of static scene detection\n")
         _T("                                 - none, low, medium(default), high\n")
-        _T("   --activity <string>       block activity calcualtion mode\n")
+        _T("   --pa-activity-type <string>  block activity calcualtion mode\n")
         _T("                                 - y (default, yuv)\n")
-        _T("   --caq-strength <string>   Content Adaptive Quantization (CAQ) strength\n")
+        _T("   --pa-caq-strength <string>   Content Adaptive Quantization (CAQ) strength\n")
         _T("                                 - low, medium(default), high\n")
-        _T("   --initqpsc <int>          initial qp after scene change\n")
-        _T("   --fskip-maxqp <int>       threshold to insert skip frame on static scene\n"),
+        _T("   --pa-initqpsc <int>          initial qp after scene change\n")
+        _T("   --pa-fskip-maxqp <int>       threshold to insert skip frame on static scene\n"),
         VCE_DEFAULT_QPI, VCE_DEFAULT_QPP, VCE_DEFAULT_QPB, VCE_DEFAULT_BFRAMES,
         VCE_DEFAULT_REF_FRAMES, VCE_DEFAULT_LTR_FRAMES,
         VCE_DEFAULT_MAX_BITRATE, VCE_DEFAULT_VBV_BUFSIZE, VCE_DEFAULT_SLICES

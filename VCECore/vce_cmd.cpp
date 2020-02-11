@@ -407,14 +407,6 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->bVBAQ = true;
         return 0;
     }
-    if (IS_OPTION("no-pre-analysis")) {
-        pParams->pa.enable = false;
-        return 0;
-    }
-    if (IS_OPTION("pre-analysis")) {
-        pParams->pa.enable = true;
-        return 0;
-    }
     if (IS_OPTION("gop-len")) {
         i++;
         int value = 0;
@@ -473,7 +465,17 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->psnr = false;
         return 0;
     }
-    if (IS_OPTION("sc")) {
+    if (IS_OPTION("no-pa")
+        || IS_OPTION("no-pre-analysis")) {
+        pParams->pa.enable = false;
+        return 0;
+    }
+    if (IS_OPTION("pa")
+        || IS_OPTION("pre-analysis")) {
+        pParams->pa.enable = true;
+        return 0;
+    }
+    if (IS_OPTION("pa-sc")) {
         i++;
         int value;
         if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pa_sc_sensitivity, strInput[i]))) {
@@ -488,7 +490,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
-    if (IS_OPTION("ss")) {
+    if (IS_OPTION("pa-ss")) {
         i++;
         int value;
         if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pa_ss_sensitivity, strInput[i]))) {
@@ -503,7 +505,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
-    if (IS_OPTION("activity-type")) {
+    if (IS_OPTION("pa-activity-type")) {
         i++;
         int value;
         if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pa_activity, strInput[i]))) {
@@ -513,7 +515,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->pa.activityType = (AMF_PA_ACTIVITY_TYPE_ENUM)value;
         return 0;
     }
-    if (IS_OPTION("caq-strength")) {
+    if (IS_OPTION("pa-caq-strength")) {
         i++;
         int value;
         if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pa_caq_strength, strInput[i]))) {
@@ -523,7 +525,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->pa.CAQStrength = (AMF_PA_CAQ_STRENGTH_ENUM)value;
         return 0;
     }
-    if (IS_OPTION("initqpsc")) {
+    if (IS_OPTION("pa-initqpsc")) {
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
@@ -536,7 +538,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->pa.initQPSC = value;
         return 0;
     }
-    if (IS_OPTION("fskip-maxqp")) {
+    if (IS_OPTION("pa-fskip-maxqp")) {
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
@@ -1076,21 +1078,21 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_BOOL(_T("--ssim"), _T("--no-ssim"), ssim);
     OPT_BOOL(_T("--psnr"), _T("--no-psnr"), psnr);
 
-    OPT_BOOL(_T("--pre-analysis"), _T("--no-pre-analysis"), pa.enable);
+    OPT_BOOL(_T("--pa"), _T("--no-pa"), pa.enable);
     if (pParams->pa.sc) {
-        OPT_LST(_T("sc"), pa.scSensitivity, list_pa_sc_sensitivity);
+        OPT_LST(_T("pa-sc"), pa.scSensitivity, list_pa_sc_sensitivity);
     } else {
-        cmd << _T("--sc ") << get_chr_from_value(list_pa_sc_sensitivity, AMF_PA_SCENE_CHANGE_DETECTION_NONE);
+        cmd << _T("--pa-sc ") << get_chr_from_value(list_pa_sc_sensitivity, AMF_PA_SCENE_CHANGE_DETECTION_NONE);
     }
     if (pParams->pa.ss) {
-        OPT_LST(_T("ss"), pa.ssSensitivity, list_pa_ss_sensitivity);
+        OPT_LST(_T("pa-ss"), pa.ssSensitivity, list_pa_ss_sensitivity);
     } else {
-        cmd << _T("--ss ") << get_chr_from_value(list_pa_ss_sensitivity, AMF_PA_STATIC_SCENE_DETECTION_NONE);
+        cmd << _T("--pa-ss ") << get_chr_from_value(list_pa_ss_sensitivity, AMF_PA_STATIC_SCENE_DETECTION_NONE);
     }
-    OPT_LST(_T("activity-type"), pa.activityType, list_pa_activity);
-    OPT_LST(_T("caq-strength"), pa.CAQStrength, list_pa_caq_strength);
-    OPT_NUM(_T("initqpsc"), pa.initQPSC);
-    OPT_NUM(_T("fskip-maxqp"), pa.maxQPBeforeForceSkip);
+    OPT_LST(_T("pa-activity-type"), pa.activityType, list_pa_activity);
+    OPT_LST(_T("pa-caq-strength"), pa.CAQStrength, list_pa_caq_strength);
+    OPT_NUM(_T("pa-initqpsc"), pa.initQPSC);
+    OPT_NUM(_T("pa-fskip-maxqp"), pa.maxQPBeforeForceSkip);
 
     cmd << gen_cmd(&pParams->common, &encPrmDefault.common, save_disabled_prm);
 

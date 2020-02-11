@@ -299,26 +299,30 @@ Motion vector accuracy / default: auto
 - half-pel ... 1/2 pixel precision
 - full-pel ... 1 pixel accuracy (low accuracy)
 
-### --sc &lt;string&gt;
+### --pa
+Enable pre analysis to enahance quality, supports VBR mode only. (default: off)  
+Can be adjusted by "--pa-xxx" options below.
+
+### --pa-sc &lt;string&gt;
 Sensitivity of scenechange detection. (default: medium)
  none, low, medium, high
 
-### --ss &lt;string&gt;
+### --pa-ss &lt;string&gt;
 Sensitivity of static scene detection. (default: high)
  none, low, medium, high
 
-### --activity &lt;string&gt;
+### --pa-activity-type &lt;string&gt;
 Block activity calcualtion mode. (default: y)
  y, yuv
 
-### --caq-strength &lt;string&gt;
+### --pa-caq-strength &lt;string&gt;
 Content Adaptive Quantization (CAQ) strength. (default: medium)
  low, medium, high
 
-### --initqpsc &lt;int&gt;
+### --pa-initqpsc &lt;int&gt;
 Initial qp after scene change. (default: -1 ( = auto))
 
-### --fskip-maxqp &lt;int&gt;
+### --pa-fskip-maxqp &lt;int&gt;
 Threshold to insert skip frame on static scene. (default: 35)
 
 ### --slices &lt;int&gt;
