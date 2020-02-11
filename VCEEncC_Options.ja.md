@@ -302,6 +302,28 @@ HRD互換の出力を行う。
 - half-pel ... 1/2画素精度
 - full-pel ... 1 画素精度 (低精度)
 
+### --sc &lt;string&gt;
+シーンチェンジ検出の感度。 (デフォルト: medium)
+ none, low, medium, high
+
+### --ss &lt;string&gt;
+静止したシーンの検出感度。 (デフォルト: high)
+ none, low, medium, high
+
+### --activity &lt;string&gt;
+ブロックの動きの検出モード。 (デフォルト: y)
+ y, yuv
+
+### --caq-strength &lt;string&gt;
+Content Adaptive Quantization (CAQ) の強さ。 (デフォルト: medium)
+ low, medium, high
+
+### --initqpsc &lt;int&gt;
+シーンチェンジ検出検出後に適用する初期QP。 (デフォルト: -1 ( = 自動))
+
+### --fskip-maxqp &lt;int&gt;
+静止したシーンでスキップフレームを挿入するQPの閾値。 (デフォルト: 35)
+
 ### --slices &lt;int&gt;
 スライス数。指定なし、あるいは0で自動。
 

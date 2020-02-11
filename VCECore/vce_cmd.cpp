@@ -473,6 +473,82 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->psnr = false;
         return 0;
     }
+    if (IS_OPTION("sc")) {
+        i++;
+        int value;
+        if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pa_sc_sensitivity, strInput[i]))) {
+            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            return 1;
+        }
+        if (value == AMF_PA_STATIC_SCENE_DETECTION_NONE) {
+            pParams->pa.sc = false;
+        } else {
+            pParams->pa.sc = true;
+            pParams->pa.scSensitivity = (AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_ENUM)value;
+        }
+        return 0;
+    }
+    if (IS_OPTION("ss")) {
+        i++;
+        int value;
+        if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pa_ss_sensitivity, strInput[i]))) {
+            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            return 1;
+        }
+        if (value == AMF_PA_STATIC_SCENE_DETECTION_NONE) {
+            pParams->pa.ss = false;
+        } else {
+            pParams->pa.ss = true;
+            pParams->pa.ssSensitivity = (AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY_ENUM)value;
+        }
+        return 0;
+    }
+    if (IS_OPTION("activity-type")) {
+        i++;
+        int value;
+        if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pa_activity, strInput[i]))) {
+            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            return 1;
+        }
+        pParams->pa.activityType = (AMF_PA_ACTIVITY_TYPE_ENUM)value;
+        return 0;
+    }
+    if (IS_OPTION("cap-strength")) {
+        i++;
+        int value;
+        if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pa_caq_strength, strInput[i]))) {
+            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            return 1;
+        }
+        pParams->pa.CAQStrength = (AMF_PA_CAQ_STRENGTH_ENUM)value;
+        return 0;
+    }
+    if (IS_OPTION("initqpsc")) {
+        i++;
+        int value = 0;
+        if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
+            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            return -1;
+        } else if (value < 0) {
+            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
+            return -1;
+        }
+        pParams->pa.initQPSC = value;
+        return 0;
+    }
+    if (IS_OPTION("fskip-maxqp")) {
+        i++;
+        int value = 0;
+        if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
+            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            return -1;
+        } else if (value < 0) {
+            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
+            return -1;
+        }
+        pParams->pa.maxQPBeforeForceSkip = value;
+        return 0;
+    }
     if (0 == _tcscmp(option_name, _T("vpp-resize"))) {
         i++;
         int value;
@@ -1000,6 +1076,20 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_BOOL(_T("--pre-analysis"), _T("--no-pre-analysis"), preAnalysis);
     OPT_BOOL(_T("--ssim"), _T("--no-ssim"), ssim);
     OPT_BOOL(_T("--psnr"), _T("--no-psnr"), psnr);
+    if (pParams->pa.sc) {
+        OPT_LST(_T("sc"), pa.scSensitivity, list_pa_sc_sensitivity);
+    } else {
+        cmd << _T("--sc ") << get_chr_from_value(list_pa_sc_sensitivity, AMF_PA_SCENE_CHANGE_DETECTION_NONE);
+    }
+    if (pParams->pa.ss) {
+        OPT_LST(_T("ss"), pa.ssSensitivity, list_pa_ss_sensitivity);
+    } else {
+        cmd << _T("--ss ") << get_chr_from_value(list_pa_ss_sensitivity, AMF_PA_STATIC_SCENE_DETECTION_NONE);
+    }
+    OPT_LST(_T("activity-type"), pa.activityType, list_pa_activity);
+    OPT_LST(_T("caq-strength"), pa.CAQStrength, list_pa_caq_strength);
+    OPT_NUM(_T("initqpsc"), pa.initQPSC);
+    OPT_NUM(_T("fskip-maxqp"), pa.maxQPBeforeForceSkip);
 
     cmd << gen_cmd(&pParams->common, &encPrmDefault.common, save_disabled_prm);
 
