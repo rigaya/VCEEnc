@@ -886,7 +886,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetCXIndex(fcgCXTransfer,           get_cx_index(list_transfer, vce.common.out_vui.transfer));
     SetCXIndex(fcgCXColorPrim,          get_cx_index(list_colorprim, vce.common.out_vui.colorprim));
     SetCXIndex(fcgCXVideoFormat,        get_cx_index(list_videoformat, vce.common.out_vui.format));
-    fcgCBPreAnalysis->Checked         = vce.preAnalysis;
+    fcgCBPreAnalysis->Checked         = vce.pa.enable;
 
     SetCXIndex(fcgCXMotionEst,          get_cx_index(list_mv_presicion, vce.nMotionEst));
 
@@ -1009,7 +1009,7 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.common.out_vui.colorprim                = (CspColorprim)list_colorprim[fcgCXColorPrim->SelectedIndex].value;
     vce.common.out_vui.format                   = list_videoformat[fcgCXVideoFormat->SelectedIndex].value;
     vce.common.out_vui.descriptpresent          = 1;
-    vce.preAnalysis                             = fcgCBPreAnalysis->Checked;
+    vce.pa.enable                               = fcgCBPreAnalysis->Checked;
 
     vce.nMotionEst                              = list_mv_presicion[fcgCXMotionEst->SelectedIndex].value;
 

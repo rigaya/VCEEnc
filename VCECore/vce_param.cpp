@@ -319,7 +319,6 @@ VCEParam::VCEParam() :
     bFiller(false),
     pa(),
     bVBAQ(false),
-    preAnalysis(false),
     ssim(false),
     psnr(false),
     vpp() {
