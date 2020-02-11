@@ -392,6 +392,7 @@ struct VCEVppParam {
 static const int AMF_PA_INITQPSC_AUTO = -1;
 
 struct VCEParamPA {
+    bool enable;
     bool sc;
     AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_ENUM scSensitivity;
     bool ss;
@@ -452,7 +453,6 @@ struct VCEParam {
     VCEParamPA pa;
 
     bool        bVBAQ;
-    bool        preAnalysis;
 
     bool        ssim;
     bool        psnr;
@@ -503,7 +503,7 @@ AMF_PARAM(SLICES_PER_FRAME);
 AMF_PARAM(RATE_CONTROL_METHOD);
 AMF_PARAM(VBV_BUFFER_SIZE);
 AMF_PARAM(INITIAL_VBV_BUFFER_FULLNESS);
-//AMF_PARAM(RATE_CONTROL_PREANALYSIS_ENABLE);
+AMF_PARAM(PRE_ANALYSIS_ENABLE);
 AMF_PARAM(ENABLE_VBAQ);
 AMF_PARAM(ENFORCE_HRD);
 AMF_PARAM(FILLER_DATA_ENABLE);

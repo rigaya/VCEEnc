@@ -1429,14 +1429,22 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_SLICES_PER_FRAME(prm->codec),               (amf_int64)prm->nSlices);
     m_params.SetParam(AMF_PARAM_GOP_SIZE(prm->codec),                       (amf_int64)nGOPLen);
 
-    m_params.SetParam(AMF_PA_SCENE_CHANGE_DETECTION_ENABLE, prm->pa.sc);
-    if (prm->pa.sc) m_params.SetParam(AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY, (amf_int64)prm->pa.scSensitivity);
-    m_params.SetParam(AMF_PA_STATIC_SCENE_DETECTION_ENABLE, prm->pa.ss);
-    if (prm->pa.ss)  m_params.SetParam(AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY, (amf_int64)prm->pa.scSensitivity);
-    m_params.SetParam(AMF_PA_ACTIVITY_TYPE, (amf_int64)prm->pa.activityType);
-    if (prm->pa.initQPSC > AMF_PA_INITQPSC_AUTO) m_params.SetParam(AMF_PA_INITIAL_QP_AFTER_SCENE_CHANGE, (amf_int64)prm->pa.initQPSC); //設定しなければ自動
-    m_params.SetParam(AMF_PA_MAX_QP_BEFORE_FORCE_SKIP, (amf_int64)prm->pa.maxQPBeforeForceSkip);
-    m_params.SetParam(AMF_PA_CAQ_STRENGTH, (amf_int64)prm->pa.CAQStrength);
+    if (prm->pa.enable && prm->rateControl != get_cx_value(get_rc_method(prm->codec), _T("VBR"))) {
+        PrintMes(RGY_LOG_WARN, _T("Pre analysis is currently supported only with VBR mode.\n"));
+        PrintMes(RGY_LOG_WARN, _T("Currenlty %s mode is selected, so pre analysis will be disabled.\n"), get_cx_desc(get_rc_method(prm->codec), prm->rateControl));
+        prm->pa.enable = false;
+    }
+    m_params.SetParam(AMF_PARAM_PRE_ANALYSIS_ENABLE(prm->codec), prm->pa.enable);
+    if (prm->pa.enable) {
+        m_params.SetParam(AMF_PA_SCENE_CHANGE_DETECTION_ENABLE, prm->pa.sc);
+        if (prm->pa.sc) m_params.SetParam(AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY, (amf_int64)prm->pa.scSensitivity);
+        m_params.SetParam(AMF_PA_STATIC_SCENE_DETECTION_ENABLE, prm->pa.ss);
+        if (prm->pa.ss)  m_params.SetParam(AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY, (amf_int64)prm->pa.ssSensitivity);
+        m_params.SetParam(AMF_PA_ACTIVITY_TYPE, (amf_int64)prm->pa.activityType);
+        if (prm->pa.initQPSC > AMF_PA_INITQPSC_AUTO) m_params.SetParam(AMF_PA_INITIAL_QP_AFTER_SCENE_CHANGE, (amf_int64)prm->pa.initQPSC); //設定しなければ自動
+        m_params.SetParam(AMF_PA_MAX_QP_BEFORE_FORCE_SKIP, (amf_int64)prm->pa.maxQPBeforeForceSkip);
+        m_params.SetParam(AMF_PA_CAQ_STRENGTH, (amf_int64)prm->pa.CAQStrength);
+    }
 
     //m_params.SetParam(AMF_PARAM_END_OF_SEQUENCE(prm->codec),                false);
     m_params.SetParam(AMF_PARAM_INSERT_AUD(prm->codec),                     false);
@@ -2468,16 +2476,22 @@ tstring VCECore::GetEncoderParam() {
     } else {
         mes += strsprintf(_T("Bframes:       0 frames\n"));
     }
-    mes += strsprintf(_T("PA:            "));
-    if (GetPropertyBool(AMF_PA_SCENE_CHANGE_DETECTION_ENABLE)) {
-        mes += _T("sc(") + getPropertyDesc(AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY, list_pa_sc_sensitivity) + _T(") ");
+    const bool pa_enable = GetPropertyBool(AMF_PARAM_PRE_ANALYSIS_ENABLE(m_encCodec));
+    mes += strsprintf(_T("Pre Analysis:  "));
+    if (pa_enable) {
+        tstring pa_str;
+        if (GetPropertyBool(AMF_PA_SCENE_CHANGE_DETECTION_ENABLE)) {
+            pa_str += _T("sc ") + getPropertyDesc(AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY, list_pa_sc_sensitivity) + _T(", ");
+        }
+        if (GetPropertyBool(AMF_PA_STATIC_SCENE_DETECTION_ENABLE)) {
+            pa_str += _T("ss ") + getPropertyDesc(AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY, list_pa_ss_sensitivity) + _T(", ");
+        }
+        pa_str += _T("activity ") + getPropertyDesc(AMF_PA_ACTIVITY_TYPE, list_pa_activity) + _T(", ");
+        pa_str += _T("caq ") + getPropertyDesc(AMF_PA_CAQ_STRENGTH, list_pa_caq_strength) + _T(", ");
+        mes += pa_str.substr(0, pa_str.length()-2) + _T("\n");
+    } else {
+        mes += _T("off\n");
     }
-    if (GetPropertyBool(AMF_PA_STATIC_SCENE_DETECTION_ENABLE)) {
-        mes += _T("ss(") + getPropertyDesc(AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY, list_pa_ss_sensitivity) + _T(") ");
-    }
-    mes += _T("activity(") + getPropertyDesc(AMF_PA_ACTIVITY_TYPE, list_pa_activity) + _T(") ");
-    mes += _T("caq(") + getPropertyDesc(AMF_PA_CAQ_STRENGTH, list_pa_caq_strength) + _T(") ");
-    mes += _T("\n");
     mes += strsprintf(_T("Ref frames:    %d frames\n"), GetPropertyInt(AMF_PARAM_MAX_NUM_REFRAMES(m_encCodec)));
     mes += strsprintf(_T("LTR frames:    %d frames\n"), GetPropertyInt(AMF_PARAM_MAX_LTR_FRAMES(m_encCodec)));
     mes += strsprintf(_T("Motion Est:    %s\n"), get_cx_desc(list_mv_presicion, nMotionEst));

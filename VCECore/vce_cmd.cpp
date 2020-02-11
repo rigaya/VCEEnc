@@ -408,11 +408,11 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         return 0;
     }
     if (IS_OPTION("no-pre-analysis")) {
-        pParams->preAnalysis = false;
+        pParams->pa.enable = false;
         return 0;
     }
     if (IS_OPTION("pre-analysis")) {
-        pParams->preAnalysis = true;
+        pParams->pa.enable = true;
         return 0;
     }
     if (IS_OPTION("gop-len")) {
@@ -1073,9 +1073,10 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
         OPT_LST_H264(_T("--level"), _T(""), nLevel, list_avc_level);
         OPT_LST_H264(_T("--profile"), _T(""), nProfile, list_avc_profile);
     }
-    OPT_BOOL(_T("--pre-analysis"), _T("--no-pre-analysis"), preAnalysis);
     OPT_BOOL(_T("--ssim"), _T("--no-ssim"), ssim);
     OPT_BOOL(_T("--psnr"), _T("--no-psnr"), psnr);
+
+    OPT_BOOL(_T("--pre-analysis"), _T("--no-pre-analysis"), pa.enable);
     if (pParams->pa.sc) {
         OPT_LST(_T("sc"), pa.scSensitivity, list_pa_sc_sensitivity);
     } else {

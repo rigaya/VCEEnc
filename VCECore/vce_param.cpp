@@ -266,6 +266,7 @@ VCEVppParam::VCEVppParam() :
 }
 
 VCEParamPA::VCEParamPA() :
+    enable(false),
     sc(true),
     scSensitivity(AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_MEDIUM),
     ss(true),
