@@ -513,7 +513,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->pa.activityType = (AMF_PA_ACTIVITY_TYPE_ENUM)value;
         return 0;
     }
-    if (IS_OPTION("cap-strength")) {
+    if (IS_OPTION("caq-strength")) {
         i++;
         int value;
         if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pa_caq_strength, strInput[i]))) {
