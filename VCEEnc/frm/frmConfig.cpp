@@ -842,9 +842,8 @@ System::Void frmConfig::InitForm() {
 System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     this->SuspendLayout();
 
-    ParseCmdError err;
     VCEParam vce;
-    parse_cmd(&vce, cnf->vce.cmd, err);
+    parse_cmd(&vce, cnf->vce.cmd);
 
     SetCXIndex(fcgCXCodec,             get_cx_index(list_codec, vce.codec));
     SetCXIndex(fcgCXEncMode,           get_cx_index(list_vce_h264_rc_method, vce.rateControl));

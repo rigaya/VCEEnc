@@ -26,11 +26,12 @@
 //
 // ------------------------------------------------------------------------------------------
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
 #include <set>
 #include <sstream>
 #include <iomanip>
+#include <numeric>
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <Windows.h>
 #include <shellapi.h>
 #include "rgy_version.h"
@@ -53,6 +54,177 @@ tstring GetVCEEncVersion() {
     version += strsprintf(_T(", avhw [%s]"), getHWDecSupportedCodecList().c_str());
 #endif //#if ENABLE_AVSW_READER
     return version;
+}
+
+typedef struct ListData {
+    const TCHAR *name;
+    const CX_DESC *list;
+    int default_index;
+} ListData;
+
+static tstring PrintMultipleListOptions(const TCHAR *option_name, const TCHAR *option_desc, const vector<ListData>& listDatas) {
+    tstring str;
+    const TCHAR *indent_space = _T("                                ");
+    const int indent_len = (int)_tcslen(indent_space);
+    const int max_len = 79;
+    str += strsprintf(_T("   %s "), option_name);
+    while ((int)str.length() < indent_len) {
+        str += _T(" ");
+    }
+    str += strsprintf(_T("%s\n"), option_desc);
+    const auto data_name_max_len = indent_len + 4 + std::accumulate(listDatas.begin(), listDatas.end(), 0,
+        [](const int max_len, const ListData data) { return (std::max)(max_len, (int)_tcslen(data.name)); });
+
+    for (const auto& data : listDatas) {
+        tstring line = strsprintf(_T("%s- %s: "), indent_space, data.name);
+        while ((int)line.length() < data_name_max_len) {
+            line += strsprintf(_T(" "));
+        }
+        for (int i = 0; data.list[i].desc; i++) {
+            if (i > 0 && data.list[i].value == data.list[i - 1].value) {
+                continue; //連続で同じ値を示す文字列があるときは、先頭のみ表示する
+            }
+            const int desc_len = (int)(_tcslen(data.list[i].desc) + _tcslen(_T(", ")) + ((i == data.default_index) ? _tcslen(_T("(default)")) : 0));
+            if (line.length() + desc_len >= max_len) {
+                str += line + _T("\n");
+                line = indent_space;
+                while ((int)line.length() < data_name_max_len) {
+                    line += strsprintf(_T(" "));
+                }
+            } else {
+                if (i) {
+                    line += strsprintf(_T(", "));
+                }
+            }
+            line += strsprintf(_T("%s%s"), data.list[i].desc, (i == data.default_index) ? _T("(default)") : _T(""));
+        }
+        str += line + _T("\n");
+    }
+    return str;
+}
+
+tstring encoder_help() {
+    tstring str;
+    str += _T("Usage: VCEEncC [Options] -i <filename> -o <filename>\n");
+    str += strsprintf(_T("\n")
+#if ENABLE_AVSW_READER
+        _T("When video codec could be decoded by VCE, any format or protocol supported\n")
+        _T("by ffmpeg library could be used as a input.\n")
+#endif
+        _T("%s input can be %s%s%sraw YUV or YUV4MPEG2(y4m) format.\n")
+        _T("when raw, fps, input-res are also necessary.\n")
+        _T("\n")
+        _T("output format will be automatically set by the output extension.\n")
+        _T("when output filename is set to \"-\", ES output is thrown to stdout.\n")
+        _T("\n")
+        _T("Example:\n")
+        _T("  VCEEncC -i \"<infilename>\" -o \"<outfilename>\"\n")
+        _T("  avs2pipemod -y4mp \"<avsfile>\" | VCEEncC --y4m -i - -o \"<outfilename>\"\n")
+        ,
+        (ENABLE_AVSW_READER) ? _T("Also, ") : _T(""),
+        (ENABLE_AVI_READER)         ? _T("avi, ") : _T(""),
+        (ENABLE_AVISYNTH_READER)    ? _T("avs, ") : _T(""),
+        (ENABLE_VAPOURSYNTH_READER) ? _T("vpy, ") : _T(""));
+    str += strsprintf(_T("\n")
+        _T("Information Options: \n")
+        _T("-h,-? --help                    show help\n")
+        _T("-v,--version                    show version info\n")
+        _T("\n")
+        _T("   --check-hw [<int>]           check for vce support for default device.\n")
+        _T("                                 as an option, you can specify device id to check.\n")
+        _T("   --check-features [<int>]     check features of vce support for default device.\n")
+        _T("                                 as an option, you can specify device id to check.\n")
+#if ENABLE_AVSW_READER
+        _T("   --check-avversion            show dll version\n")
+        _T("   --check-codecs               show codecs available\n")
+        _T("   --check-encoders             show audio encoders available\n")
+        _T("   --check-decoders             show audio decoders available\n")
+        _T("   --check-profiles <string>    show profile names available for specified codec\n")
+        _T("   --check-formats              show in/out formats available\n")
+        _T("   --check-protocols            show in/out protocols available\n")
+        _T("   --check-filters              show filters available\n")
+#endif
+        _T("\n"));
+    str += strsprintf(_T("\n")
+        _T("Basic Encoding Options: \n")
+        _T("-d,--device <int>               set device id to use, default = 0\n"));
+    str += gen_cmd_help_input();
+    str += strsprintf(_T("\n")
+        _T("-c,--codec <string>             set encode codec\n")
+        _T("                                 - h264(default), hevc\n")
+        _T("-u,--quality <string>           set quality preset\n")
+        _T("                                 balanced(default), fast, slow\n")
+        _T("   --cqp <int> or               encode in Constant QP, default %d:%d:%d\n")
+        _T("         <int>:<int>:<int>      set qp value for i:p:b frame\n")
+        _T("   --cbr <int>                  set bitrate in CBR mode (kbps)\n")
+        _T("   --vbr <int>                  set bitrate in VBR mode (kbps)\n")
+        _T("   --qp-max <int>               set max qp\n")
+        _T("   --qp-min <int>               set min qp\n")
+        _T("-b,--bframes <int>              set consecutive b frames (default: %d)\n")
+        _T("   --(no-)b-pyramid             enable b-pyramid feature\n")
+        _T("   --b-deltaqp <int>            set qp offset for non-ref b frames\n")
+        _T("   --bref-deltaqp <int>         set qp offset for ref b frames\n")
+        _T("   --ref <int>                  set num of reference frames (default: %d)\n")
+        _T("   --ltr <int>                  set num of long term reference frames (default: %d)\n")
+        _T("   --max-bitrate <int>          set max bitrate (kbps) (default: %d)\n")
+        _T("   --vbv-bufsize <int>          set vbv buffer size (kbps) (default: %d)\n")
+        _T("   --slices <int>               set num of slices per frame (default: %d)\n")
+        _T("   --(no-)skip-frame            enable skip frame feature\n")
+        _T("   --motion-est                 set motion estimation precision\n")
+        _T("                                 - full-pel (fast)\n")
+        _T("                                 - half-pel\n")
+        _T("                                 - q-pel (best) = default\n")
+        _T("   --gop-len <int>              set length of gop (default: auto)\n"),
+        _T("   --vbaq                       enable VBAQ\n")
+        _T("   --pa                         enable Pre Analysis\n")
+        _T("   --pa-sc <string>             sensitivity of scenechange detection\n")
+        _T("                                 - none, low, medium(default), high\n")
+        _T("   --pa-ss <string>             sensitivity of static scene detection\n")
+        _T("                                 - none, low, medium(default), high\n")
+        _T("   --pa-activity-type <string>  block activity calcualtion mode\n")
+        _T("                                 - y (default, yuv)\n")
+        _T("   --pa-caq-strength <string>   Content Adaptive Quantization (CAQ) strength\n")
+        _T("                                 - low, medium(default), high\n")
+        _T("   --pa-initqpsc <int>          initial qp after scene change\n")
+        _T("   --pa-fskip-maxqp <int>       threshold to insert skip frame on static scene\n"),
+        VCE_DEFAULT_QPI, VCE_DEFAULT_QPP, VCE_DEFAULT_QPB, VCE_DEFAULT_BFRAMES,
+        VCE_DEFAULT_REF_FRAMES, VCE_DEFAULT_LTR_FRAMES,
+        VCE_DEFAULT_MAX_BITRATE, VCE_DEFAULT_VBV_BUFSIZE, VCE_DEFAULT_SLICES
+    );
+
+    str += PrintMultipleListOptions(_T("--level <string>"), _T("set codec level"),
+        { { _T("H.264"), list_avc_level,   0 },
+          { _T("HEVC"),  list_hevc_level,  0 },
+        });
+    str += PrintMultipleListOptions(_T("--profile <string>"), _T("set codec profile"),
+        { { _T("H.264"), list_avc_profile,   0 },
+          { _T("HEVC"),  list_hevc_profile,  0 },
+        });
+    str += PrintMultipleListOptions(_T("--tier <string>"), _T("set codec tier"),
+        { { _T("HEVC"),  list_hevc_tier, 0 },
+        });
+
+    str += strsprintf(_T("\n")
+        _T("   --sar <int>:<int>            set Sample Aspect Ratio\n")
+        _T("   --dar <int>:<int>            set Display Aspect Ratio\n")
+        _T("\n")
+        _T("   --crop <int>,<int>,<int>,<int>\n")
+        _T("                                set crop pixels of left, up, right, bottom.\n")
+        _T("\n")
+        _T("   --enforce-hrd                enforce hrd compatibility of bitstream\n")
+        _T("   --filler                     use filler data\n")
+    );
+    str += _T("\n");
+    str += gen_cmd_help_common();
+    str += _T("\n");
+    str += strsprintf(_T("\n")
+        _T("   --ssim                       calc ssim\n")
+        _T("   --psnr                       calc psnr\n")
+        _T("\n"));
+    str += print_list_options(_T("--vpp-resize <string>"), list_vpp_resize, 0);
+    str += _T("\n");
+    str += gen_cmd_help_ctrl();
+    return str;
 }
 
 const TCHAR *cmd_short_opt_to_long(TCHAR short_opt) {
@@ -110,14 +282,14 @@ struct sArgsData {
 };
 #endif
 
-int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, int nArgNum, VCEParam *pParams, sArgsData *argData, ParseCmdError& err) {
+int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, int nArgNum, VCEParam *pParams, sArgsData *argData) {
 
     if (IS_OPTION("device")) {
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         }
         pParams->deviceID = value;
         return 0;
@@ -142,8 +314,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED;
         if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_vce_quality_preset, strInput[i]))) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], list_vce_quality_preset);
+            return 1;
         }
         pParams->qualityPreset = value;
         return 0;
@@ -152,8 +324,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = 0;
         if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_codec_all, strInput[i]))) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], list_codec_all);
+            return 1;
         }
         pParams->codec = (RGY_CODEC)value;
         return 0;
@@ -163,8 +335,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             i++;
             argData->cachedlevel = strInput[i];
         } else {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         }
         return 0;
     }
@@ -173,8 +345,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             i++;
             argData->cachedprofile = strInput[i];
         } else {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         }
         return 0;
     }
@@ -183,8 +355,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             i++;
             argData->cachedtier = strInput[i];
         } else {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         }
         return 0;
     }
@@ -197,8 +369,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             && 2 != _stscanf_s(strInput[i], _T("%d:%d"), &value[0], &value[1])) {
             pParams->par[0] = 0;
             pParams->par[1] = 0;
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         }
         if (IS_OPTION("dar")) {
             value[0] = -value[0];
@@ -210,36 +382,30 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
     }
     if (IS_OPTION("cqp")) {
         i++;
-        int a = 0, b = 0, c = 0;
-        if (   3 != _stscanf_s(strInput[i], _T("%d:%d:%d"), &a, &b, &c)
-            && 3 != _stscanf_s(strInput[i], _T("%d/%d/%d"), &a, &b, &c)
-            && 3 != _stscanf_s(strInput[i], _T("%d,%d,%d"), &a, &b, &c)) {
-            if (1 != _stscanf_s(strInput[i], _T("%d"), &a)) {
-                CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                return -1;
-            }
-            b = a;
-            c = a;
+        int qp[3];
+        if (parse_qp(qp, strInput[i])) {
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         }
-        if (a < 0 || b < 0 || c < 0) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+        if (qp[0] < 0 || qp[1] < 0 || qp[2] < 0) {
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("qp should be positive value."));
+            return 1;
         }
         pParams->rateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP;
-        pParams->nQPI = a;
-        pParams->nQPP = b;
-        pParams->nQPB = c;
+        pParams->nQPI = qp[0];
+        pParams->nQPP = qp[1];
+        pParams->nQPB = qp[2];
         return 0;
     }
     if (IS_OPTION("vbr")) {
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         } else if (value < 0) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("bitrate should be positive value."));
+            return 1;
         }
         pParams->rateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR;
         pParams->nBitrate = value;
@@ -249,11 +415,11 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         } else if (value < 0) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("bitrate should be positive value."));
+            return 1;
         }
         pParams->rateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR;
         pParams->nBitrate = value;
@@ -263,11 +429,11 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         } else if (value < 0) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("qp-max should be positive value."));
+            return 1;
         }
         pParams->nQPMax = value;
         return 0;
@@ -276,11 +442,11 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         } else if (value < 0) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("qp-min should be positive value."));
+            return 1;
         }
         pParams->nQPMin = value;
         return 0;
@@ -289,11 +455,11 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         } else if (value < 0) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("bframes should be positive value."));
+            return 1;
         }
         pParams->nBframes = value;
         return 0;
@@ -310,8 +476,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         }
         pParams->nDeltaQPBFrame = value;
         return 0;
@@ -320,8 +486,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         }
         pParams->nDeltaQPBFrameRef = value;
         return 0;
@@ -330,8 +496,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         }
         pParams->nRefFrames = value;
         return 0;
@@ -340,8 +506,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         }
         pParams->nLTRFrames = value;
         return 0;
@@ -350,11 +516,11 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         } else if (value < 0) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("max-bitrate should be positive value."));
+            return 1;
         }
         pParams->nMaxBitrate = value;
         return 0;
@@ -363,11 +529,11 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         } else if (value < 0) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("vbv-bufsize should be positive value."));
+            return 1;
         }
         pParams->nVBVBufferSize = value;
         return 0;
@@ -376,11 +542,11 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         } else if (value < 0) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("slices should be positive value."));
+            return 1;
         }
         pParams->nSlices = value;
         return 0;
@@ -397,8 +563,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = VCE_MOTION_EST_QUATER | VCE_MOTION_EST_HALF;
         if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_mv_presicion, strInput[i]))) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], list_mv_presicion);
+            return 1;
         }
         pParams->nMotionEst = value;
         return 0;
@@ -413,11 +579,11 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         if (_tcscmp(strInput[i], _T("auto")) == 0) {
             value = 0;
         } else if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         } else if (value < 0) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("gop-len should be positive value."));
+            return 1;
         }
         pParams->nGOPLen = value;
         return 0;
@@ -436,8 +602,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         if (get_list_value(list_interlaced, strInput[i], &value)) {
             pParams->input.picstruct = (RGY_PICSTRUCT)value;
         } else {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], list_interlaced);
+            return 1;
         }
         return 0;
     }
@@ -479,7 +645,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value;
         if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pa_sc_sensitivity, strInput[i]))) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            print_cmd_error_invalid_value(option_name, strInput[i], list_pa_sc_sensitivity);
             return 1;
         }
         if (value == AMF_PA_STATIC_SCENE_DETECTION_NONE) {
@@ -494,7 +660,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value;
         if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pa_ss_sensitivity, strInput[i]))) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            print_cmd_error_invalid_value(option_name, strInput[i], list_pa_ss_sensitivity);
             return 1;
         }
         if (value == AMF_PA_STATIC_SCENE_DETECTION_NONE) {
@@ -509,7 +675,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value;
         if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pa_activity, strInput[i]))) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            print_cmd_error_invalid_value(option_name, strInput[i], list_pa_activity);
             return 1;
         }
         pParams->pa.activityType = (AMF_PA_ACTIVITY_TYPE_ENUM)value;
@@ -519,7 +685,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value;
         if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_pa_caq_strength, strInput[i]))) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            print_cmd_error_invalid_value(option_name, strInput[i], list_pa_caq_strength);
             return 1;
         }
         pParams->pa.CAQStrength = (AMF_PA_CAQ_STRENGTH_ENUM)value;
@@ -529,11 +695,11 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         } else if (value < 0) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("pa-initqpsc should be positive value."));
+            return 1;
         }
         pParams->pa.initQPSC = value;
         return 0;
@@ -542,11 +708,11 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value = 0;
         if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
         } else if (value < 0) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Invalid value"), option_name, strInput[i]);
-            return -1;
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("pa-fskip-maxqp should be positive value."));
+            return 1;
         }
         pParams->pa.maxQPBeforeForceSkip = value;
         return 0;
@@ -555,7 +721,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         i++;
         int value;
         if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_vpp_resize, strInput[i]))) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
+            print_cmd_error_invalid_value(option_name, strInput[i], list_vpp_resize);
             return 1;
         }
         pParams->vpp.resize = (RGY_VPP_RESIZE_ALGO)value;
@@ -582,6 +748,12 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             }
         }
         param_list.push_back(tstring(qstr, pstr - qstr));
+
+        const auto paramList = std::vector<std::string>{
+            "top", "bottom", "left", "right",
+            "method_switch", "coeff_shift", "thre_shift", "thre_deint", "thre_motion_y", "thre_motion_c",
+            "level", "shift", "drop", "smooth", "24fps", "tune", /*"rff",*/ "timecode", "log", "ini", "preset" };
+
         for (const auto &param : param_list) {
             auto pos = param.find_first_of(_T("="));
             if (pos != std::string::npos) {
@@ -589,9 +761,9 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                 auto param_val = param.substr(pos+1);
                 param_arg = tolowercase(param_arg);
                 if (param_arg == _T("ini")) {
-                    if (pParams->vpp.afs.read_afs_inifile(param_val.c_str())) {
-                        CMD_PARSE_SET_ERR(strInput[0], _T("ini file does not exist."), option_name, strInput[i]);
-                        return -1;
+                    if (pParams->vpp.afs.read_afs_inifile(trim(param_val, _T("\"")).c_str())) {
+                        print_cmd_error_invalid_value(option_name, strInput[i], _T("ini file does not exist."));
+                        return 1;
                     }
                 }
                 if (param_arg == _T("preset")) {
@@ -600,12 +772,12 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                         if (get_list_value(list_afs_preset, param_val.c_str(), &value)) {
                             pParams->vpp.afs.set_preset(value);
                         } else {
-                            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                            return -1;
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_afs_preset);
+                            return 1;
                         }
                     } catch (...) {
-                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                        return -1;
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
                     }
                     continue;
                 }
@@ -623,8 +795,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     } else if (param_val == _T("false")) {
                         pParams->vpp.afs.enable = false;
                     } else {
-                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                        return -1;
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
                     }
                     continue;
                 }
@@ -632,8 +804,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     try {
                         pParams->vpp.afs.clip.top = std::stoi(param_val);
                     } catch (...) {
-                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                        return -1;
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
                     }
                     continue;
                 }
@@ -641,8 +813,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     try {
                         pParams->vpp.afs.clip.bottom = std::stoi(param_val);
                     } catch (...) {
-                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                        return -1;
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
                     }
                     continue;
                 }
@@ -650,8 +822,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     try {
                         pParams->vpp.afs.clip.left = std::stoi(param_val);
                     } catch (...) {
-                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                        return -1;
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
                     }
                     continue;
                 }
@@ -659,8 +831,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     try {
                         pParams->vpp.afs.clip.right = std::stoi(param_val);
                     } catch (...) {
-                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                        return -1;
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
                     }
                     continue;
                 }
@@ -668,8 +840,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     try {
                         pParams->vpp.afs.method_switch = std::stoi(param_val);
                     } catch (...) {
-                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                        return -1;
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
                     }
                     continue;
                 }
@@ -677,8 +849,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     try {
                         pParams->vpp.afs.coeff_shift = std::stoi(param_val);
                     } catch (...) {
-                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                        return -1;
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
                     }
                     continue;
                 }
@@ -686,8 +858,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     try {
                         pParams->vpp.afs.thre_shift = std::stoi(param_val);
                     } catch (...) {
-                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                        return -1;
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
                     }
                     continue;
                 }
@@ -695,8 +867,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     try {
                         pParams->vpp.afs.thre_deint = std::stoi(param_val);
                     } catch (...) {
-                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                        return -1;
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
                     }
                     continue;
                 }
@@ -704,8 +876,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     try {
                         pParams->vpp.afs.thre_Ymotion = std::stoi(param_val);
                     } catch (...) {
-                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                        return -1;
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
                     }
                     continue;
                 }
@@ -713,8 +885,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     try {
                         pParams->vpp.afs.thre_Cmotion = std::stoi(param_val);
                     } catch (...) {
-                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                        return -1;
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
                     }
                     continue;
                 }
@@ -722,43 +894,91 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     try {
                         pParams->vpp.afs.analyze = std::stoi(param_val);
                     } catch (...) {
-                        CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                        return -1;
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
                     }
                     continue;
                 }
                 if (param_arg == _T("shift")) {
-                    pParams->vpp.afs.shift = (param_val == _T("true")) || (param_val == _T("on"));
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.afs.shift = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
                     continue;
                 }
                 if (param_arg == _T("drop")) {
-                    pParams->vpp.afs.drop = (param_val == _T("true")) || (param_val == _T("on"));
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.afs.drop = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
                     continue;
                 }
                 if (param_arg == _T("smooth")) {
-                    pParams->vpp.afs.smooth = (param_val == _T("true")) || (param_val == _T("on"));
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.afs.smooth = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
                     continue;
                 }
                 if (param_arg == _T("24fps")) {
-                    pParams->vpp.afs.force24 = (param_val == _T("true")) || (param_val == _T("on"));
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.afs.force24 = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
                     continue;
                 }
                 if (param_arg == _T("tune")) {
-                    pParams->vpp.afs.tune = (param_val == _T("true")) || (param_val == _T("on"));
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.afs.tune = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
                     continue;
                 }
 #if 0
                 if (param_arg == _T("rff")) {
-                    pParams->vpp.afs.rff = (param_val == _T("true")) || (param_val == _T("on"));
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.afs.rff = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
                     continue;
                 }
 #endif
                 if (param_arg == _T("timecode")) {
-                    pParams->vpp.afs.timecode = (param_val == _T("true")) || (param_val == _T("on"));
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.afs.timecode = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
                     continue;
                 }
                 if (param_arg == _T("log")) {
-                    pParams->vpp.afs.log = (param_val == _T("true")) || (param_val == _T("on"));
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.afs.log = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
                     continue;
                 }
                 if (param_arg == _T("ini")) {
@@ -767,8 +987,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                 if (param_arg == _T("preset")) {
                     continue;
                 }
-                CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                return -1;
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
             } else {
                 if (param == _T("shift")) {
                     pParams->vpp.afs.shift = true;
@@ -790,35 +1010,33 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     pParams->vpp.afs.tune = true;
                     continue;
                 }
-                CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), option_name, strInput[i]);
-                return -1;
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
             }
         }
         return 0;
     }
 
-    auto ret = parse_one_input_option(option_name, strInput, i, nArgNum, &pParams->input, argData, err);
+    auto ret = parse_one_input_option(option_name, strInput, i, nArgNum, &pParams->input, argData);
     if (ret >= 0) return ret;
 
-    ret = parse_one_common_option(option_name, strInput, i, nArgNum, &pParams->common, argData, err);
+    ret = parse_one_common_option(option_name, strInput, i, nArgNum, &pParams->common, argData);
     if (ret >= 0) return ret;
 
-    ret = parse_one_ctrl_option(option_name, strInput, i, nArgNum, &pParams->ctrl, argData, err);
+    ret = parse_one_ctrl_option(option_name, strInput, i, nArgNum, &pParams->ctrl, argData);
     if (ret >= 0) return ret;
 
-    tstring mes = _T("Unknown option: --");
-    mes += option_name;
-    CMD_PARSE_SET_ERR(strInput[0], (TCHAR *)mes.c_str(), NULL, strInput[i]);
-    return -1;
+    print_cmd_error_unknown_opt(strInput[i]);
+    return 1;
 }
 #undef IS_OPTION
 
-int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, ParseCmdError& err, bool ignore_parse_err) {
+int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignore_parse_err) {
     sArgsData argsData;
 
     for (int i = 1; i < nArgNum; i++) {
         if (strInput[i] == nullptr) {
-            return -1;
+            return 1;
         }
         const TCHAR *option_name = nullptr;
         if (strInput[i][0] == _T('-')) {
@@ -826,22 +1044,22 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, ParseCmdEr
                 option_name = &strInput[i][2];
             } else if (strInput[i][2] == _T('\0')) {
                 if (nullptr == (option_name = cmd_short_opt_to_long(strInput[i][1]))) {
-                    CMD_PARSE_SET_ERR(strInput[0], strsprintf(_T("Unknown options: \"%s\""), strInput[i]).c_str(), nullptr, nullptr);
-                    return -1;
+                    print_cmd_error_invalid_value(tstring(), tstring(), strsprintf(_T("Unknown option: \"%s\""), strInput[i]));
+                    return 1;
                 }
             } else {
                 if (ignore_parse_err) continue;
-                CMD_PARSE_SET_ERR(strInput[0], strsprintf(_T("Invalid options: \"%s\""), strInput[i]).c_str(), nullptr, nullptr);
-                return -1;
+                print_cmd_error_invalid_value(tstring(), tstring(), strsprintf(_T("Invalid option: \"%s\""), strInput[i]));
+                return 1;
             }
         }
 
-        if (nullptr == option_name) {
+        if (option_name == nullptr) {
             if (ignore_parse_err) continue;
-            CMD_PARSE_SET_ERR(strInput[0], strsprintf(_T("Unknown option: \"%s\""), strInput[i]).c_str(), nullptr, nullptr);
-            return -1;
+            print_cmd_error_unknown_opt(strInput[i]);
+            return 1;
         }
-        auto sts = parse_one_option(option_name, strInput, i, nArgNum, pParams, &argsData, err);
+        auto sts = parse_one_option(option_name, strInput, i, nArgNum, pParams, &argsData);
         if (!ignore_parse_err && sts != 0) {
             return sts;
         }
@@ -876,28 +1094,36 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, ParseCmdEr
             }
         }
         if (!bParsed) {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), _T("level"), argsData.cachedlevel.c_str());
-            return -1;
+            print_cmd_error_invalid_value(_T("level"), argsData.cachedlevel.c_str(), std::vector<std::pair<RGY_CODEC, const CX_DESC *>>{
+                { RGY_CODEC_H264, list_avc_level },
+                { RGY_CODEC_HEVC, list_hevc_level }
+            });
+            return 1;
         }
     }
     if (argsData.cachedprofile.length() > 0) {
         const auto desc = get_profile_list(pParams->codec);
         int value = 0;
         if (desc != nullptr && PARSE_ERROR_FLAG != (value = get_value_from_chr(desc, argsData.cachedprofile.c_str()))) {
-            pParams->codecParam[pParams->codec].nProfile = (int16_t)value;
+            pParams->codecParam[pParams->codec].nProfile = value;
         } else {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), _T("profile"), argsData.cachedprofile.c_str());
-            return -1;
+            print_cmd_error_invalid_value(_T("profile"), argsData.cachedprofile.c_str(), std::vector<std::pair<RGY_CODEC, const CX_DESC *>>{
+                { RGY_CODEC_H264, list_avc_profile },
+                { RGY_CODEC_HEVC, list_hevc_profile }
+            });
+            return 1;
         }
     }
     if (argsData.cachedtier.length() > 0) {
         const auto desc = get_tier_list(pParams->codec);
         int value = 0;
         if (desc != nullptr && PARSE_ERROR_FLAG != (value = get_value_from_chr(desc, argsData.cachedtier.c_str()))) {
-            pParams->codecParam[pParams->codec].nTier = (int16_t)value;
+            pParams->codecParam[pParams->codec].nTier = value;
         } else {
-            CMD_PARSE_SET_ERR(strInput[0], _T("Unknown value"), _T("tier"), argsData.cachedtier.c_str());
-            return -1;
+            print_cmd_error_invalid_value(_T("tier"), argsData.cachedtier.c_str(), std::vector<std::pair<RGY_CODEC, const CX_DESC *>>{
+                { RGY_CODEC_HEVC, list_hevc_tier }
+            });
+            return 1;
         }
     }
     if (pParams->codec == RGY_CODEC_HEVC) {
@@ -919,7 +1145,7 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, ParseCmdEr
     return 0;
 }
 
-int parse_cmd(VCEParam *pParams, const char *cmda, ParseCmdError& err, bool ignore_parse_err) {
+int parse_cmd(VCEParam *pParams, const char *cmda, bool ignore_parse_err) {
     if (cmda == nullptr) {
         return 0;
     }
@@ -941,7 +1167,7 @@ int parse_cmd(VCEParam *pParams, const char *cmda, ParseCmdError& err, bool igno
     }
     argv_tchar.push_back(_T(""));
     const TCHAR **strInput = (const TCHAR **)argv_tchar.data();
-    int ret = parse_cmd(pParams, argc, strInput, err, ignore_parse_err);
+    int ret = parse_cmd(pParams, argc, strInput, ignore_parse_err);
     return ret;
 }
 

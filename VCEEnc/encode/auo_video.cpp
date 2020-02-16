@@ -86,9 +86,8 @@ int get_aviutl_color_format(int use_highbit, RGY_CSP csp) {
 }
 
 void get_csp_and_bitdepth(bool& use_highbit, RGY_CSP& csp, const CONF_GUIEX *conf) {
-    ParseCmdError err;
     VCEParam enc_prm;
-    parse_cmd(&enc_prm, conf->vce.cmd, err);
+    parse_cmd(&enc_prm, conf->vce.cmd);
     //use_highbit = enc_prm.codec == NV_ENC_HEVC && enc_prm.encConfig.encodeCodecConfig.hevcConfig.pixelBitDepthMinus8 > 0;
     //if (use_highbit) {
     //    csp = (enc_prm.yuv444) ? RGY_CSP_YUV444_16 : RGY_CSP_P010;
@@ -344,9 +343,8 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
     if (pe->video_out_type == VIDEO_OUTPUT_DISABLED)
         return AUO_RESULT_SUCCESS;
 
-    ParseCmdError err;
     VCEParam enc_prm;
-    parse_cmd(&enc_prm, conf->vce.cmd, err);
+    parse_cmd(&enc_prm, conf->vce.cmd);
     enc_prm.common.disableMp4Opt = pe->muxer_to_be_used != MUXER_DISABLED;
     enc_prm.common.AVSyncMode = conf->vid.afs ? RGY_AVSYNC_VFR : RGY_AVSYNC_ASSUME_CFR;
     if (conf->vid.resize_enable) {
@@ -416,7 +414,7 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
         ret |= AUO_RESULT_ERROR; error_video_create_param_mem();
     } else if ((rp_ret = RunProcess(exe_args, exe_dir, &pi_enc, &pipes, GetPriorityClass(pe->h_p_aviutl), TRUE, FALSE)) != RP_SUCCESS) {
         ret |= AUO_RESULT_ERROR; error_run_process("VCEEncC", rp_ret);
-    
+
     } else {
         //全て正常
         int i = 0;

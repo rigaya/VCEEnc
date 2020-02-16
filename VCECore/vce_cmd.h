@@ -35,10 +35,11 @@
 #include "rgy_cmd.h"
 
 tstring GetVCEEncVersion();
+tstring encoder_help();
 const TCHAR *cmd_short_opt_to_long(TCHAR short_opt);
 
-int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, ParseCmdError& err, bool ignore_parse_err = false);
-int parse_cmd(VCEParam *pParams, const char *cmda, ParseCmdError& err, bool ignore_parse_err = false);
+int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignore_parse_err = false);
+int parse_cmd(VCEParam *pParams, const char *cmda, bool ignore_parse_err = false);
 
 tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm);
 
