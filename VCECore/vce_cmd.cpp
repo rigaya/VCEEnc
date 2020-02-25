@@ -383,12 +383,9 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
     if (IS_OPTION("cqp")) {
         i++;
         int qp[3];
-        if (parse_qp(qp, strInput[i])) {
+        int ret = parse_qp(qp, strInput[i]);
+        if (ret == 0) {
             print_cmd_error_invalid_value(option_name, strInput[i]);
-            return 1;
-        }
-        if (qp[0] < 0 || qp[1] < 0 || qp[2] < 0) {
-            print_cmd_error_invalid_value(option_name, strInput[i], _T("qp should be positive value."));
             return 1;
         }
         pParams->rateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP;
