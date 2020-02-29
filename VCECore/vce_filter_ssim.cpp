@@ -519,7 +519,7 @@ RGY_ERR RGYFilterSsim::compare_frames(bool flush) {
             }
             int cropFilterOutputNum = 0;
             FrameInfo *outInfo[1] = { &m_decFrameCopy->frame };
-            FrameInfo decFrameInfo = decFrame->info();
+            FrameInfo decFrameInfo = decFrame->getInfo();
             auto sts_filter = m_cropDec->filter(&decFrameInfo, (FrameInfo **)&outInfo, &cropFilterOutputNum, m_queueCrop, &m_cropEvent);
             if (outInfo[0] == nullptr || cropFilterOutputNum != 1) {
                 AddMessage(RGY_LOG_ERROR, _T("Unknown behavior \"%s\".\n"), m_cropDec->name().c_str());

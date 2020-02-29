@@ -314,7 +314,7 @@ public:
     FrameInfo frame;
     cl_mem_flags flags;
     RGYCLFrame()
-        : frame({ 0 }), flags(0) {
+        : frame(), flags(0) {
     };
     RGYCLFrame(const FrameInfo &info_, cl_mem_flags flags_ = CL_MEM_READ_WRITE)
         : frame(info_), flags(flags_) {

@@ -29,6 +29,8 @@
 #define _CONVERT_CSP_H_
 
 #include <cstdint>
+#include <vector>
+#include <memory>
 #include "rgy_tchar.h"
 
 enum RGY_PLANE {
@@ -389,6 +391,8 @@ enum RGY_MEM_TYPE {
     RGY_MEM_TYPE_GPU_IMAGE
 };
 
+class RGYFrameData;
+
 struct FrameInfo {
     uint8_t *ptr[RGY_MAX_PLANES];
     RGY_CSP csp;
@@ -399,12 +403,25 @@ struct FrameInfo {
     RGY_PICSTRUCT picstruct;
     RGY_FRAME_FLAGS flags;
     int inputFrameId;
-};
+    std::vector<std::shared_ptr<RGYFrameData>> dataList;
 
-static FrameInfo initFrameInfo() {
-    FrameInfo info = { 0 };
-    return info;
-}
+    FrameInfo() :
+        ptr(),
+        csp(RGY_CSP_NA),
+        width(0),
+        height(0),
+        pitch(),
+        timestamp(0),
+        duration(0),
+        mem_type(RGY_MEM_TYPE_CPU),
+        picstruct(RGY_PICSTRUCT_UNKNOWN),
+        flags(RGY_FRAME_FLAG_NONE),
+        inputFrameId(-1),
+        dataList() {
+        memset(ptr, 0, sizeof(ptr));
+        memset(pitch, 0, sizeof(pitch));
+    };
+};
 
 static FrameInfo getPlane(const FrameInfo *frameInfo, RGY_PLANE plane) {
     FrameInfo planeInfo = *frameInfo;

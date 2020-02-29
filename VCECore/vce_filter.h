@@ -41,7 +41,7 @@ public:
     rgy_rational<int> baseFps;
     bool bOutOverwrite;
 
-    RGYFilterParam() : frameIn({ 0 }), frameOut({ 0 }), baseFps(), bOutOverwrite(false) {};
+    RGYFilterParam() : frameIn(), frameOut(), baseFps(), bOutOverwrite(false) {};
     virtual ~RGYFilterParam() {};
     virtual tstring print() const { return _T(""); };
 };

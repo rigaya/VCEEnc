@@ -323,9 +323,10 @@ private:
     const wchar_t *PROP_FLAGS = L"RGYFrameFlags";
     amf::AMFSurfacePtr amfptr;
     unique_ptr<RGYCLFrame> clbuf;
+    std::vector<std::shared_ptr<RGYFrameData>> dummy;
 public:
     RGYFrame() : amfptr(), clbuf() {};
-    RGYFrame(const amf::AMFSurfacePtr &pSurface) : amfptr(std::move(pSurface)), clbuf() {
+    RGYFrame(const amf::AMFSurfacePtr &pSurface) : amfptr(std::move(pSurface)), clbuf(), dummy() {
     }
     RGYFrame(unique_ptr<RGYCLFrame> clframe) : amfptr(), clbuf(std::move(clframe)) {
     }
@@ -402,42 +403,42 @@ private:
         return clbuf->frame;
     }
 public:
-    FrameInfo info() const {
+    FrameInfo getInfo() const {
         if (amfptr) {
             return infoAMF();
         } else if (clbuf) {
             return infoCL();
         } else {
-            return initFrameInfo();
+            return FrameInfo();
         }
     }
     void ptrArray(void *array[3], bool bRGB) {
-        auto frame = info();
+        auto frame = getInfo();
         UNREFERENCED_PARAMETER(bRGB);
         array[0] = (void *)frame.ptr[0];
         array[1] = (void *)frame.ptr[1];
         array[2] = (void *)frame.ptr[2];
     }
     uint8_t *ptrY() const {
-        return info().ptr[0];
+        return getInfo().ptr[0];
     }
     uint8_t *ptrUV() const {
-        return info().ptr[1];
+        return getInfo().ptr[1];
     }
     uint8_t *ptrU() const {
-        return info().ptr[1];
+        return getInfo().ptr[1];
     }
     uint8_t *ptrV() const {
-        return info().ptr[2];
+        return getInfo().ptr[2];
     }
     uint8_t *ptrRGB() const {
-        return info().ptr[0];
+        return getInfo().ptr[0];
     }
     uint32_t pitch(int index = 0) const {
-        return info().pitch[index];
+        return getInfo().pitch[index];
     }
     uint64_t timestamp() const {
-        return info().timestamp;
+        return getInfo().timestamp;
     }
     void setTimestamp(uint64_t timestamp) {
         if (amfptr) {
@@ -447,7 +448,7 @@ public:
         }
     }
     int64_t duration() const {
-        return info().duration;
+        return getInfo().duration;
     }
     void setDuration(uint64_t duration) {
         if (amfptr) {
@@ -457,7 +458,7 @@ public:
         }
     }
     RGY_PICSTRUCT picstruct() const {
-        return info().picstruct;
+        return getInfo().picstruct;
     }
     void setPicstruct(RGY_PICSTRUCT picstruct) {
         if (amfptr) {
@@ -467,7 +468,7 @@ public:
         }
     }
     int inputFrameId() const {
-        return info().inputFrameId;
+        return getInfo().inputFrameId;
     }
     void setInputFrameId(int id) {
         if (amfptr) {
@@ -478,7 +479,7 @@ public:
         }
     }
     RGY_FRAME_FLAGS flags() const {
-        return info().flags;
+        return getInfo().flags;
     }
     void setFlags(RGY_FRAME_FLAGS flags) {
         if (amfptr) {
@@ -488,6 +489,20 @@ public:
             clbuf->frame.flags = flags;
         }
     }
+    const std::vector<std::shared_ptr<RGYFrameData>>& dataList() const {
+        if (clbuf) {
+            return clbuf->frame.dataList;
+        } else {
+            return dummy;
+        }
+    };
+    std::vector<std::shared_ptr<RGYFrameData>>& dataList() {
+        if (clbuf) {
+            return clbuf->frame.dataList;
+        } else {
+            return dummy;
+        }
+    };
 };
 #else
 typedef void RGYFrame;

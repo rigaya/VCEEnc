@@ -360,7 +360,7 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
     const bool vpp_rff = false; // inputParam->vpp.rff;
     auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input,
         m_pStatus, &inputParam->common, &inputParam->ctrl, HWDecCodecCsp, subburnTrackId,
-        inputParam->vpp.afs.enable, vpp_rff, m_pPerfMonitor.get(), m_pLog);
+        inputParam->vpp.afs.enable, vpp_rff, nullptr, m_pPerfMonitor.get(), m_pLog);
     if (err != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("failed to initialize file reader(s).\n"));
         return err;
@@ -873,7 +873,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     const bool cropRequired = cropEnabled(inputParam->input.crop)
         && m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN;
 
-    FrameInfo inputFrame = { 0 };
+    FrameInfo inputFrame;
     inputFrame.width = inputParam->input.srcWidth;
     inputFrame.height = inputParam->input.srcHeight;
     inputFrame.csp = inputParam->input.csp;
@@ -1967,10 +1967,10 @@ RGY_ERR VCECore::run() {
 
         bool skipFilters = false;
         if (bDrain) {
-            filterframes.push_back(std::make_pair(initFrameInfo(), 0u));
+            filterframes.push_back(std::make_pair(FrameInfo(), 0u));
         } else {
             auto &lastFilter = m_vpFilters[m_vpFilters.size()-1];
-            const auto inframeInfo = inframe->info();
+            const auto inframeInfo = inframe->getInfo();
             if (typeid(*lastFilter.get()) == typeid(RGYFilterCspCrop)
                 && m_vpFilters.size() == 1
                 && lastFilter->GetFilterParam()->frameOut.csp == inframeInfo.csp
@@ -2007,7 +2007,7 @@ RGY_ERR VCECore::run() {
                     return err_to_rgy(ar);
                 }
             }
-            filterframes.push_back(std::make_pair(inframe->info(), 0u));
+            filterframes.push_back(std::make_pair(inframe->getInfo(), 0u));
         }
 
         while (filterframes.size() > 0 || bDrain) {
@@ -2075,7 +2075,7 @@ RGY_ERR VCECore::run() {
                 }
                 //エンコードバッファのポインタを渡す
                 int nOutFrames = 0;
-                auto encSurfaceInfo = encSurface->info();
+                auto encSurfaceInfo = encSurface->getInfo();
                 FrameInfo *outInfo[1];
                 outInfo[0] = &encSurfaceInfo;
                 auto sts_filter = lastFilter->filter(&filterframes.front().first, (FrameInfo **)&outInfo, &nOutFrames);
