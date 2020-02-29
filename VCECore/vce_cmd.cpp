@@ -390,8 +390,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         pParams->rateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP;
         pParams->nQPI = qp[0];
-        pParams->nQPP = qp[1];
-        pParams->nQPB = qp[2];
+        pParams->nQPP = (ret > 1) ? qp[1] : qp[ret - 1];
+        pParams->nQPB = (ret > 2) ? qp[2] : qp[ret - 1];
         return 0;
     }
     if (IS_OPTION("vbr")) {
