@@ -1358,7 +1358,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         } else if (prm->codec == RGY_CODEC_HEVC) {
             const bool high_tier = prm->codecParam[prm->codec].nTier == AMF_VIDEO_ENCODER_HEVC_TIER_HIGH;
             if (level == 0) {
-                level = calc_hevc_auto_level(m_encWidth, m_encHeight, //m_stEncConfig.encodeCodecConfig.hevcConfig.maxNumRefFramesInDPB,
+                level = calc_hevc_auto_level(m_encWidth, m_encHeight, prm->nRefFrames,
                     m_encFps.n(), m_encFps.d(), high_tier, max_bitrate_kbps);
             }
             max_bitrate_kbps = get_hevc_max_bitrate(level, high_tier);
