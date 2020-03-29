@@ -808,25 +808,25 @@ private: System::Windows::Forms::TabControl^  fcgtabControlAudio;
 private: System::Windows::Forms::TabPage^  fcgtabPageAudioMain;
 
 
-private: System::Windows::Forms::Label^  fcgLBAudioEncTiming;
-private: System::Windows::Forms::ComboBox^  fcgCXAudioEncTiming;
-private: System::Windows::Forms::Label^  fcgLBAudioTemp;
-private: System::Windows::Forms::ComboBox^  fcgCXAudioTempDir;
-private: System::Windows::Forms::TextBox^  fcgTXCustomAudioTempDir;
-private: System::Windows::Forms::Button^  fcgBTCustomAudioTempDir;
-private: System::Windows::Forms::CheckBox^  fcgCBAudioUsePipe;
-private: System::Windows::Forms::Label^  fcgLBAudioBitrate;
-private: System::Windows::Forms::NumericUpDown^  fcgNUAudioBitrate;
-private: System::Windows::Forms::CheckBox^  fcgCBAudio2pass;
-private: System::Windows::Forms::ComboBox^  fcgCXAudioEncMode;
-private: System::Windows::Forms::Label^  fcgLBAudioEncMode;
-private: System::Windows::Forms::Button^  fcgBTAudioEncoderPath;
-private: System::Windows::Forms::TextBox^  fcgTXAudioEncoderPath;
-private: System::Windows::Forms::Label^  fcgLBAudioEncoderPath;
-private: System::Windows::Forms::CheckBox^  fcgCBAudioOnly;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 private: System::Windows::Forms::CheckBox^  fcgCBFAWCheck;
-private: System::Windows::Forms::ComboBox^  fcgCXAudioEncoder;
-private: System::Windows::Forms::Label^  fcgLBAudioEncoder;
+
+
 private: System::Windows::Forms::TabPage^  fcgtabPageAudioOther;
 
 private: System::Windows::Forms::Panel^  panel2;
@@ -843,8 +843,8 @@ private: System::Windows::Forms::Label^  fcgLBBatBeforeAudioPath;
 private: System::Windows::Forms::CheckBox^  fcgCBRunBatBeforeAudio;
 private: System::Windows::Forms::ComboBox^  fcgCXAudioPriority;
 private: System::Windows::Forms::Label^  fcgLBAudioPriority;
-private: System::Windows::Forms::ComboBox^  fcgCXAudioDelayCut;
-private: System::Windows::Forms::Label^  fcgLBAudioDelayCut;
+
+
 private: System::Windows::Forms::Label^  fcgLBVBAQ;
 private: System::Windows::Forms::CheckBox^  fcgCBVBAQ;
 
@@ -930,6 +930,36 @@ private: System::Windows::Forms::NumericUpDown ^fcgNUVppAfsMethodSwitch;
 private: System::Windows::Forms::ComboBox ^fcgCXVppResizeAlg;
 private: System::Windows::Forms::CheckBox ^fcgCBPSNR;
 private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
+private: System::Windows::Forms::Panel ^fcgPNAudioExt;
+private: System::Windows::Forms::ComboBox ^fcgCXAudioDelayCut;
+private: System::Windows::Forms::Label ^fcgLBAudioDelayCut;
+private: System::Windows::Forms::Label ^fcgCBAudioEncTiming;
+private: System::Windows::Forms::ComboBox ^fcgCXAudioEncTiming;
+private: System::Windows::Forms::ComboBox ^fcgCXAudioTempDir;
+private: System::Windows::Forms::TextBox ^fcgTXCustomAudioTempDir;
+private: System::Windows::Forms::Button ^fcgBTCustomAudioTempDir;
+private: System::Windows::Forms::CheckBox ^fcgCBAudioUsePipe;
+private: System::Windows::Forms::NumericUpDown ^fcgNUAudioBitrate;
+private: System::Windows::Forms::CheckBox ^fcgCBAudio2pass;
+private: System::Windows::Forms::ComboBox ^fcgCXAudioEncMode;
+private: System::Windows::Forms::Label ^fcgLBAudioEncMode;
+private: System::Windows::Forms::Button ^fcgBTAudioEncoderPath;
+private: System::Windows::Forms::TextBox ^fcgTXAudioEncoderPath;
+private: System::Windows::Forms::Label ^fcgLBAudioEncoderPath;
+private: System::Windows::Forms::CheckBox ^fcgCBAudioOnly;
+private: System::Windows::Forms::ComboBox ^fcgCXAudioEncoder;
+private: System::Windows::Forms::Label ^fcgLBAudioTemp;
+private: System::Windows::Forms::Label ^fcgLBAudioBitrate;
+private: System::Windows::Forms::Panel ^fcgPNAudioInternal;
+private: System::Windows::Forms::Label ^fcgLBAudioBitrateInternal;
+private: System::Windows::Forms::NumericUpDown ^fcgNUAudioBitrateInternal;
+private: System::Windows::Forms::ComboBox ^fcgCXAudioEncModeInternal;
+private: System::Windows::Forms::Label ^label1;
+private: System::Windows::Forms::ComboBox ^fcgCXAudioEncoderInternal;
+private: System::Windows::Forms::CheckBox ^fcgCBAudioUseExt;
+private: System::Windows::Forms::TabPage ^fcgtabPageInternal;
+private: System::Windows::Forms::ComboBox ^fcgCXInternalCmdEx;
+private: System::Windows::Forms::Label ^fcgLBInternalCmdEx;
 
 
 
@@ -1045,7 +1075,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
         void InitializeComponent(void)
         {
             this->components = (gcnew System::ComponentModel::Container());
-            System::ComponentModel::ComponentResourceManager^ resources = (gcnew System::ComponentModel::ComponentResourceManager(frmConfig::typeid));
+            System::ComponentModel::ComponentResourceManager ^resources = (gcnew System::ComponentModel::ComponentResourceManager(frmConfig::typeid));
             this->fcgtoolStripSettings = (gcnew System::Windows::Forms::ToolStrip());
             this->fcgTSBSave = (gcnew System::Windows::Forms::ToolStripButton());
             this->fcgTSBSaveNew = (gcnew System::Windows::Forms::ToolStripButton());
@@ -1108,6 +1138,9 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgLBBatAfterPath = (gcnew System::Windows::Forms::Label());
             this->fcgCBWaitForBatAfter = (gcnew System::Windows::Forms::CheckBox());
             this->fcgCBRunBatAfter = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgtabPageInternal = (gcnew System::Windows::Forms::TabPage());
+            this->fcgCXInternalCmdEx = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgLBInternalCmdEx = (gcnew System::Windows::Forms::Label());
             this->fcgTXCmd = (gcnew System::Windows::Forms::TextBox());
             this->fcgBTCancel = (gcnew System::Windows::Forms::Button());
             this->fcgBTOK = (gcnew System::Windows::Forms::Button());
@@ -1119,6 +1152,13 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgTTEx = (gcnew System::Windows::Forms::ToolTip(this->components));
             this->fcgtabControlVCE = (gcnew System::Windows::Forms::TabControl());
             this->tabPageVideoEnc = (gcnew System::Windows::Forms::TabPage());
+            this->fcgPNQP = (gcnew System::Windows::Forms::Panel());
+            this->fcgLBQPI = (gcnew System::Windows::Forms::Label());
+            this->fcgNUQPI = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUQPP = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUQPB = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgLBQPP = (gcnew System::Windows::Forms::Label());
+            this->fcgLBQPB = (gcnew System::Windows::Forms::Label());
             this->fcgCXVideoFormat = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBVideoFormat = (gcnew System::Windows::Forms::Label());
             this->fcggroupBoxColor = (gcnew System::Windows::Forms::GroupBox());
@@ -1132,17 +1172,9 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgLBColorMatrix = (gcnew System::Windows::Forms::Label());
             this->fcgLBQPMin = (gcnew System::Windows::Forms::Label());
             this->fcgCBPreAnalysis = (gcnew System::Windows::Forms::CheckBox());
-            this->fcgPNHEVCLevelProfile = (gcnew System::Windows::Forms::Panel());
-            this->fcgCXHEVCLevel = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgCXHEVCProfile = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgLBHEVCLevel = (gcnew System::Windows::Forms::Label());
-            this->fcgLBHEVCProfile = (gcnew System::Windows::Forms::Label());
             this->fcgBTVideoEncoderPath = (gcnew System::Windows::Forms::Button());
             this->fcgTXVideoEncoderPath = (gcnew System::Windows::Forms::TextBox());
             this->fcgLBVideoEncoderPath = (gcnew System::Windows::Forms::Label());
-            this->fcgPNH264Features = (gcnew System::Windows::Forms::Panel());
-            this->fcgLBVBAQ = (gcnew System::Windows::Forms::Label());
-            this->fcgCBVBAQ = (gcnew System::Windows::Forms::CheckBox());
             this->fcgNURefFrames = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgLBRefFrames = (gcnew System::Windows::Forms::Label());
             this->fcgLBCodec = (gcnew System::Windows::Forms::Label());
@@ -1191,13 +1223,6 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgNUMaxkbps = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgLBMaxkbps = (gcnew System::Windows::Forms::Label());
             this->fcgLBMaxBitrate2 = (gcnew System::Windows::Forms::Label());
-            this->fcgPNQP = (gcnew System::Windows::Forms::Panel());
-            this->fcgLBQPI = (gcnew System::Windows::Forms::Label());
-            this->fcgNUQPI = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgNUQPP = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgNUQPB = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgLBQPP = (gcnew System::Windows::Forms::Label());
-            this->fcgLBQPB = (gcnew System::Windows::Forms::Label());
             this->fcgPNBframes = (gcnew System::Windows::Forms::Panel());
             this->fcgLBBframes = (gcnew System::Windows::Forms::Label());
             this->fcgNUBframes = (gcnew System::Windows::Forms::NumericUpDown());
@@ -1207,6 +1232,14 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgNUBDeltaQP = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgLBBRefDeltaQP = (gcnew System::Windows::Forms::Label());
             this->fcgNUBRefDeltaQP = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgPNHEVCLevelProfile = (gcnew System::Windows::Forms::Panel());
+            this->fcgCXHEVCLevel = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgCXHEVCProfile = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgLBHEVCLevel = (gcnew System::Windows::Forms::Label());
+            this->fcgLBHEVCProfile = (gcnew System::Windows::Forms::Label());
+            this->fcgPNH264Features = (gcnew System::Windows::Forms::Panel());
+            this->fcgLBVBAQ = (gcnew System::Windows::Forms::Label());
+            this->fcgCBVBAQ = (gcnew System::Windows::Forms::CheckBox());
             this->tabPageExOpt = (gcnew System::Windows::Forms::TabPage());
             this->fcgCBPSNR = (gcnew System::Windows::Forms::CheckBox());
             this->fcgCBSSIM = (gcnew System::Windows::Forms::CheckBox());
@@ -1264,16 +1297,15 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgLBguiExBlog = (gcnew System::Windows::Forms::LinkLabel());
             this->fcgtabControlAudio = (gcnew System::Windows::Forms::TabControl());
             this->fcgtabPageAudioMain = (gcnew System::Windows::Forms::TabPage());
+            this->fcgPNAudioExt = (gcnew System::Windows::Forms::Panel());
             this->fcgCXAudioDelayCut = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBAudioDelayCut = (gcnew System::Windows::Forms::Label());
-            this->fcgLBAudioEncTiming = (gcnew System::Windows::Forms::Label());
+            this->fcgCBAudioEncTiming = (gcnew System::Windows::Forms::Label());
             this->fcgCXAudioEncTiming = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgLBAudioTemp = (gcnew System::Windows::Forms::Label());
             this->fcgCXAudioTempDir = (gcnew System::Windows::Forms::ComboBox());
             this->fcgTXCustomAudioTempDir = (gcnew System::Windows::Forms::TextBox());
             this->fcgBTCustomAudioTempDir = (gcnew System::Windows::Forms::Button());
             this->fcgCBAudioUsePipe = (gcnew System::Windows::Forms::CheckBox());
-            this->fcgLBAudioBitrate = (gcnew System::Windows::Forms::Label());
             this->fcgNUAudioBitrate = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgCBAudio2pass = (gcnew System::Windows::Forms::CheckBox());
             this->fcgCXAudioEncMode = (gcnew System::Windows::Forms::ComboBox());
@@ -1282,9 +1314,17 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgTXAudioEncoderPath = (gcnew System::Windows::Forms::TextBox());
             this->fcgLBAudioEncoderPath = (gcnew System::Windows::Forms::Label());
             this->fcgCBAudioOnly = (gcnew System::Windows::Forms::CheckBox());
-            this->fcgCBFAWCheck = (gcnew System::Windows::Forms::CheckBox());
             this->fcgCXAudioEncoder = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgLBAudioEncoder = (gcnew System::Windows::Forms::Label());
+            this->fcgLBAudioTemp = (gcnew System::Windows::Forms::Label());
+            this->fcgLBAudioBitrate = (gcnew System::Windows::Forms::Label());
+            this->fcgPNAudioInternal = (gcnew System::Windows::Forms::Panel());
+            this->fcgLBAudioBitrateInternal = (gcnew System::Windows::Forms::Label());
+            this->fcgNUAudioBitrateInternal = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgCXAudioEncModeInternal = (gcnew System::Windows::Forms::ComboBox());
+            this->label1 = (gcnew System::Windows::Forms::Label());
+            this->fcgCXAudioEncoderInternal = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgCBAudioUseExt = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgCBFAWCheck = (gcnew System::Windows::Forms::CheckBox());
             this->fcgtabPageAudioOther = (gcnew System::Windows::Forms::TabPage());
             this->panel2 = (gcnew System::Windows::Forms::Panel());
             this->fcgLBBatAfterAudioString = (gcnew System::Windows::Forms::Label());
@@ -1307,65 +1347,69 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgtabPageMPG->SuspendLayout();
             this->fcgtabPageMux->SuspendLayout();
             this->fcgtabPageBat->SuspendLayout();
+            this->fcgtabPageInternal->SuspendLayout();
             this->fcgtabControlVCE->SuspendLayout();
             this->tabPageVideoEnc->SuspendLayout();
+            this->fcgPNQP->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPI))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPP))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPB))->BeginInit();
             this->fcggroupBoxColor->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNURefFrames))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVBVBufSize))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPMax))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPMin))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgpictureBoxVCEEnabled))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgpictureBoxVCEDisabled))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUSlices))->BeginInit();
+            this->fcgGroupBoxAspectRatio->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUAspectRatioY))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUAspectRatioX))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUGopLength))->BeginInit();
+            this->fcgPNBitrate->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBitrate))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUMaxkbps))->BeginInit();
+            this->fcgPNBframes->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBframes))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBDeltaQP))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBRefDeltaQP))->BeginInit();
             this->fcgPNHEVCLevelProfile->SuspendLayout();
             this->fcgPNH264Features->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNURefFrames))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVBVBufSize))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMax))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMin))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgpictureBoxVCEEnabled))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgpictureBoxVCEDisabled))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUSlices))->BeginInit();
-            this->fcgGroupBoxAspectRatio->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioY))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioX))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUGopLength))->BeginInit();
-            this->fcgPNBitrate->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBitrate))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUMaxkbps))->BeginInit();
-            this->fcgPNQP->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPI))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPP))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPB))->BeginInit();
-            this->fcgPNBframes->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBframes))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBDeltaQP))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBRefDeltaQP))->BeginInit();
             this->tabPageExOpt->SuspendLayout();
             this->fcggroupBoxVppDeinterlace->SuspendLayout();
             this->fcgPNVppAfs->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgTBVppAfsThreCMotion))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgTBVppAfsThreYMotion))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgTBVppAfsThreDeint))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgTBVppAfsThreShift))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgTBVppAfsCoeffShift))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsRight))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsLeft))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsBottom))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsUp))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgTBVppAfsMethodSwitch))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsThreCMotion))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsThreShift))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsThreDeint))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsThreYMotion))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsCoeffShift))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsMethodSwitch))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreCMotion))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreYMotion))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreDeint))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreShift))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsCoeffShift))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsRight))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsLeft))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsBottom))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsUp))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsMethodSwitch))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreCMotion))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreShift))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreDeint))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreYMotion))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsCoeffShift))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsMethodSwitch))->BeginInit();
             this->fcggroupboxResize->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUResizeH))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUResizeW))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUResizeH))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUResizeW))->BeginInit();
             this->fcgCSExeFiles->SuspendLayout();
             this->fcgtabControlAudio->SuspendLayout();
             this->fcgtabPageAudioMain->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrate))->BeginInit();
+            this->fcgPNAudioExt->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUAudioBitrate))->BeginInit();
+            this->fcgPNAudioInternal->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUAudioBitrateInternal))->BeginInit();
             this->fcgtabPageAudioOther->SuspendLayout();
             this->SuspendLayout();
             // 
             // fcgtoolStripSettings
             // 
-            this->fcgtoolStripSettings->Items->AddRange(gcnew cli::array< System::Windows::Forms::ToolStripItem^  >(10) {
+            this->fcgtoolStripSettings->Items->AddRange(gcnew cli::array< System::Windows::Forms::ToolStripItem ^  >(10) {
                 this->fcgTSBSave,
                     this->fcgTSBSaveNew, this->fcgTSBDelete, this->fcgtoolStripSeparator1, this->fcgTSSettings, this->fcgTSBBitrateCalc, this->toolStripSeparator2,
                     this->fcgTSBOtherSettings, this->fcgTSLSettingsNotes, this->fcgTSTSettingsNotes
@@ -1378,7 +1422,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             // 
             // fcgTSBSave
             // 
-            this->fcgTSBSave->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgTSBSave.Image")));
+            this->fcgTSBSave->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgTSBSave.Image")));
             this->fcgTSBSave->ImageTransparentColor = System::Drawing::Color::Magenta;
             this->fcgTSBSave->Name = L"fcgTSBSave";
             this->fcgTSBSave->Size = System::Drawing::Size(84, 22);
@@ -1387,7 +1431,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             // 
             // fcgTSBSaveNew
             // 
-            this->fcgTSBSaveNew->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgTSBSaveNew.Image")));
+            this->fcgTSBSaveNew->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgTSBSaveNew.Image")));
             this->fcgTSBSaveNew->ImageTransparentColor = System::Drawing::Color::Black;
             this->fcgTSBSaveNew->Name = L"fcgTSBSaveNew";
             this->fcgTSBSaveNew->Size = System::Drawing::Size(75, 22);
@@ -1396,7 +1440,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             // 
             // fcgTSBDelete
             // 
-            this->fcgTSBDelete->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgTSBDelete.Image")));
+            this->fcgTSBDelete->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgTSBDelete.Image")));
             this->fcgTSBDelete->ImageTransparentColor = System::Drawing::Color::Magenta;
             this->fcgTSBDelete->Name = L"fcgTSBDelete";
             this->fcgTSBDelete->Size = System::Drawing::Size(51, 22);
@@ -1410,7 +1454,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             // 
             // fcgTSSettings
             // 
-            this->fcgTSSettings->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgTSSettings.Image")));
+            this->fcgTSSettings->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgTSSettings.Image")));
             this->fcgTSSettings->ImageTransparentColor = System::Drawing::Color::Magenta;
             this->fcgTSSettings->Name = L"fcgTSSettings";
             this->fcgTSSettings->Size = System::Drawing::Size(79, 22);
@@ -1423,7 +1467,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgTSBBitrateCalc->Alignment = System::Windows::Forms::ToolStripItemAlignment::Right;
             this->fcgTSBBitrateCalc->CheckOnClick = true;
             this->fcgTSBBitrateCalc->DisplayStyle = System::Windows::Forms::ToolStripItemDisplayStyle::Text;
-            this->fcgTSBBitrateCalc->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgTSBBitrateCalc.Image")));
+            this->fcgTSBBitrateCalc->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgTSBBitrateCalc.Image")));
             this->fcgTSBBitrateCalc->ImageTransparentColor = System::Drawing::Color::Magenta;
             this->fcgTSBBitrateCalc->Name = L"fcgTSBBitrateCalc";
             this->fcgTSBBitrateCalc->Size = System::Drawing::Size(96, 22);
@@ -1440,7 +1484,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             // 
             this->fcgTSBOtherSettings->Alignment = System::Windows::Forms::ToolStripItemAlignment::Right;
             this->fcgTSBOtherSettings->DisplayStyle = System::Windows::Forms::ToolStripItemDisplayStyle::Text;
-            this->fcgTSBOtherSettings->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgTSBOtherSettings.Image")));
+            this->fcgTSBOtherSettings->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgTSBOtherSettings.Image")));
             this->fcgTSBOtherSettings->ImageTransparentColor = System::Drawing::Color::Magenta;
             this->fcgTSBOtherSettings->Name = L"fcgTSBOtherSettings";
             this->fcgTSBOtherSettings->Size = System::Drawing::Size(76, 22);
@@ -1480,6 +1524,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgtabControlMux->Controls->Add(this->fcgtabPageMPG);
             this->fcgtabControlMux->Controls->Add(this->fcgtabPageMux);
             this->fcgtabControlMux->Controls->Add(this->fcgtabPageBat);
+            this->fcgtabControlMux->Controls->Add(this->fcgtabPageInternal);
             this->fcgtabControlMux->Font = (gcnew System::Drawing::Font(L"Meiryo UI", 8.25F, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
                 static_cast<System::Byte>(128)));
             this->fcgtabControlMux->Location = System::Drawing::Point(622, 339);
@@ -2043,6 +2088,36 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgCBRunBatAfter->Text = L"エンコード終了後、バッチ処理を行う";
             this->fcgCBRunBatAfter->UseVisualStyleBackColor = true;
             // 
+            // fcgtabPageInternal
+            // 
+            this->fcgtabPageInternal->Controls->Add(this->fcgCXInternalCmdEx);
+            this->fcgtabPageInternal->Controls->Add(this->fcgLBInternalCmdEx);
+            this->fcgtabPageInternal->Location = System::Drawing::Point(4, 23);
+            this->fcgtabPageInternal->Name = L"fcgtabPageInternal";
+            this->fcgtabPageInternal->Size = System::Drawing::Size(376, 174);
+            this->fcgtabPageInternal->TabIndex = 5;
+            this->fcgtabPageInternal->Text = L"mux";
+            this->fcgtabPageInternal->UseVisualStyleBackColor = true;
+            // 
+            // fcgCXInternalCmdEx
+            // 
+            this->fcgCXInternalCmdEx->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXInternalCmdEx->FormattingEnabled = true;
+            this->fcgCXInternalCmdEx->Location = System::Drawing::Point(83, 16);
+            this->fcgCXInternalCmdEx->Name = L"fcgCXInternalCmdEx";
+            this->fcgCXInternalCmdEx->Size = System::Drawing::Size(157, 22);
+            this->fcgCXInternalCmdEx->TabIndex = 4;
+            this->fcgCXInternalCmdEx->Tag = L"chValue";
+            // 
+            // fcgLBInternalCmdEx
+            // 
+            this->fcgLBInternalCmdEx->AutoSize = true;
+            this->fcgLBInternalCmdEx->Location = System::Drawing::Point(9, 19);
+            this->fcgLBInternalCmdEx->Name = L"fcgLBInternalCmdEx";
+            this->fcgLBInternalCmdEx->Size = System::Drawing::Size(68, 14);
+            this->fcgLBInternalCmdEx->TabIndex = 5;
+            this->fcgLBInternalCmdEx->Text = L"拡張オプション";
+            // 
             // fcgTXCmd
             // 
             this->fcgTXCmd->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Left)
@@ -2202,6 +2277,76 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->tabPageVideoEnc->Text = L"動画エンコード";
             this->tabPageVideoEnc->UseVisualStyleBackColor = true;
             // 
+            // fcgPNQP
+            // 
+            this->fcgPNQP->Controls->Add(this->fcgLBQPI);
+            this->fcgPNQP->Controls->Add(this->fcgNUQPI);
+            this->fcgPNQP->Controls->Add(this->fcgNUQPP);
+            this->fcgPNQP->Controls->Add(this->fcgNUQPB);
+            this->fcgPNQP->Controls->Add(this->fcgLBQPP);
+            this->fcgPNQP->Controls->Add(this->fcgLBQPB);
+            this->fcgPNQP->Location = System::Drawing::Point(8, 199);
+            this->fcgPNQP->Name = L"fcgPNQP";
+            this->fcgPNQP->Size = System::Drawing::Size(289, 79);
+            this->fcgPNQP->TabIndex = 20;
+            // 
+            // fcgLBQPI
+            // 
+            this->fcgLBQPI->AutoSize = true;
+            this->fcgLBQPI->Location = System::Drawing::Point(10, 4);
+            this->fcgLBQPI->Name = L"fcgLBQPI";
+            this->fcgLBQPI->Size = System::Drawing::Size(66, 14);
+            this->fcgLBQPI->TabIndex = 21;
+            this->fcgLBQPI->Text = L"QP I frame";
+            // 
+            // fcgNUQPI
+            // 
+            this->fcgNUQPI->Location = System::Drawing::Point(124, 2);
+            this->fcgNUQPI->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
+            this->fcgNUQPI->Name = L"fcgNUQPI";
+            this->fcgNUQPI->Size = System::Drawing::Size(77, 21);
+            this->fcgNUQPI->TabIndex = 22;
+            this->fcgNUQPI->Tag = L"reCmd";
+            this->fcgNUQPI->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            // 
+            // fcgNUQPP
+            // 
+            this->fcgNUQPP->Location = System::Drawing::Point(124, 29);
+            this->fcgNUQPP->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
+            this->fcgNUQPP->Name = L"fcgNUQPP";
+            this->fcgNUQPP->Size = System::Drawing::Size(77, 21);
+            this->fcgNUQPP->TabIndex = 24;
+            this->fcgNUQPP->Tag = L"reCmd";
+            this->fcgNUQPP->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            // 
+            // fcgNUQPB
+            // 
+            this->fcgNUQPB->Location = System::Drawing::Point(124, 55);
+            this->fcgNUQPB->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
+            this->fcgNUQPB->Name = L"fcgNUQPB";
+            this->fcgNUQPB->Size = System::Drawing::Size(77, 21);
+            this->fcgNUQPB->TabIndex = 26;
+            this->fcgNUQPB->Tag = L"reCmd";
+            this->fcgNUQPB->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            // 
+            // fcgLBQPP
+            // 
+            this->fcgLBQPP->AutoSize = true;
+            this->fcgLBQPP->Location = System::Drawing::Point(10, 31);
+            this->fcgLBQPP->Name = L"fcgLBQPP";
+            this->fcgLBQPP->Size = System::Drawing::Size(69, 14);
+            this->fcgLBQPP->TabIndex = 23;
+            this->fcgLBQPP->Text = L"QP P frame";
+            // 
+            // fcgLBQPB
+            // 
+            this->fcgLBQPB->AutoSize = true;
+            this->fcgLBQPB->Location = System::Drawing::Point(10, 57);
+            this->fcgLBQPB->Name = L"fcgLBQPB";
+            this->fcgLBQPB->Size = System::Drawing::Size(74, 14);
+            this->fcgLBQPB->TabIndex = 25;
+            this->fcgLBQPB->Text = L"QP B frames";
+            // 
             // fcgCXVideoFormat
             // 
             this->fcgCXVideoFormat->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
@@ -2333,55 +2478,6 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgCBPreAnalysis->Tag = L"reCmd";
             this->fcgCBPreAnalysis->UseVisualStyleBackColor = true;
             // 
-            // fcgPNHEVCLevelProfile
-            // 
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCLevel);
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCProfile);
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCLevel);
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCProfile);
-            this->fcgPNHEVCLevelProfile->Location = System::Drawing::Point(346, 135);
-            this->fcgPNHEVCLevelProfile->Name = L"fcgPNHEVCLevelProfile";
-            this->fcgPNHEVCLevelProfile->Size = System::Drawing::Size(255, 63);
-            this->fcgPNHEVCLevelProfile->TabIndex = 110;
-            // 
-            // fcgCXHEVCLevel
-            // 
-            this->fcgCXHEVCLevel->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXHEVCLevel->FormattingEnabled = true;
-            this->fcgCXHEVCLevel->Location = System::Drawing::Point(112, 36);
-            this->fcgCXHEVCLevel->Name = L"fcgCXHEVCLevel";
-            this->fcgCXHEVCLevel->Size = System::Drawing::Size(121, 22);
-            this->fcgCXHEVCLevel->TabIndex = 104;
-            this->fcgCXHEVCLevel->Tag = L"reCmd";
-            // 
-            // fcgCXHEVCProfile
-            // 
-            this->fcgCXHEVCProfile->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXHEVCProfile->FormattingEnabled = true;
-            this->fcgCXHEVCProfile->Location = System::Drawing::Point(112, 4);
-            this->fcgCXHEVCProfile->Name = L"fcgCXHEVCProfile";
-            this->fcgCXHEVCProfile->Size = System::Drawing::Size(121, 22);
-            this->fcgCXHEVCProfile->TabIndex = 102;
-            this->fcgCXHEVCProfile->Tag = L"reCmd";
-            // 
-            // fcgLBHEVCLevel
-            // 
-            this->fcgLBHEVCLevel->AutoSize = true;
-            this->fcgLBHEVCLevel->Location = System::Drawing::Point(13, 39);
-            this->fcgLBHEVCLevel->Name = L"fcgLBHEVCLevel";
-            this->fcgLBHEVCLevel->Size = System::Drawing::Size(33, 14);
-            this->fcgLBHEVCLevel->TabIndex = 103;
-            this->fcgLBHEVCLevel->Text = L"レベル";
-            // 
-            // fcgLBHEVCProfile
-            // 
-            this->fcgLBHEVCProfile->AutoSize = true;
-            this->fcgLBHEVCProfile->Location = System::Drawing::Point(13, 7);
-            this->fcgLBHEVCProfile->Name = L"fcgLBHEVCProfile";
-            this->fcgLBHEVCProfile->Size = System::Drawing::Size(53, 14);
-            this->fcgLBHEVCProfile->TabIndex = 101;
-            this->fcgLBHEVCProfile->Text = L"プロファイル";
-            // 
             // fcgBTVideoEncoderPath
             // 
             this->fcgBTVideoEncoderPath->Location = System::Drawing::Point(274, 78);
@@ -2411,34 +2507,6 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgLBVideoEncoderPath->Size = System::Drawing::Size(49, 14);
             this->fcgLBVideoEncoderPath->TabIndex = 0;
             this->fcgLBVideoEncoderPath->Text = L"～の指定";
-            // 
-            // fcgPNH264Features
-            // 
-            this->fcgPNH264Features->Controls->Add(this->fcgLBVBAQ);
-            this->fcgPNH264Features->Controls->Add(this->fcgCBVBAQ);
-            this->fcgPNH264Features->Location = System::Drawing::Point(344, 297);
-            this->fcgPNH264Features->Name = L"fcgPNH264Features";
-            this->fcgPNH264Features->Size = System::Drawing::Size(258, 26);
-            this->fcgPNH264Features->TabIndex = 130;
-            // 
-            // fcgLBVBAQ
-            // 
-            this->fcgLBVBAQ->AutoSize = true;
-            this->fcgLBVBAQ->Location = System::Drawing::Point(16, 6);
-            this->fcgLBVBAQ->Name = L"fcgLBVBAQ";
-            this->fcgLBVBAQ->Size = System::Drawing::Size(37, 14);
-            this->fcgLBVBAQ->TabIndex = 131;
-            this->fcgLBVBAQ->Text = L"VBAQ";
-            // 
-            // fcgCBVBAQ
-            // 
-            this->fcgCBVBAQ->AutoSize = true;
-            this->fcgCBVBAQ->Location = System::Drawing::Point(115, 7);
-            this->fcgCBVBAQ->Name = L"fcgCBVBAQ";
-            this->fcgCBVBAQ->Size = System::Drawing::Size(15, 14);
-            this->fcgCBVBAQ->TabIndex = 132;
-            this->fcgCBVBAQ->Tag = L"reCmd";
-            this->fcgCBVBAQ->UseVisualStyleBackColor = true;
             // 
             // fcgNURefFrames
             // 
@@ -2473,7 +2541,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             // 
             this->fcgCXCodec->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXCodec->FormattingEnabled = true;
-            this->fcgCXCodec->Items->AddRange(gcnew cli::array< System::Object^  >(3) { L"高品質", L"標準", L"高速" });
+            this->fcgCXCodec->Items->AddRange(gcnew cli::array< System::Object ^  >(3) { L"高品質", L"標準", L"高速" });
             this->fcgCXCodec->Location = System::Drawing::Point(81, 114);
             this->fcgCXCodec->Name = L"fcgCXCodec";
             this->fcgCXCodec->Size = System::Drawing::Size(160, 22);
@@ -2599,7 +2667,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             // 
             this->fcgCXQualityPreset->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXQualityPreset->FormattingEnabled = true;
-            this->fcgCXQualityPreset->Items->AddRange(gcnew cli::array< System::Object^  >(3) { L"高品質", L"標準", L"高速" });
+            this->fcgCXQualityPreset->Items->AddRange(gcnew cli::array< System::Object ^  >(3) { L"高品質", L"標準", L"高速" });
             this->fcgCXQualityPreset->Location = System::Drawing::Point(81, 170);
             this->fcgCXQualityPreset->Name = L"fcgCXQualityPreset";
             this->fcgCXQualityPreset->Size = System::Drawing::Size(160, 22);
@@ -2636,7 +2704,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             // 
             // fcgpictureBoxVCEEnabled
             // 
-            this->fcgpictureBoxVCEEnabled->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgpictureBoxVCEEnabled.Image")));
+            this->fcgpictureBoxVCEEnabled->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgpictureBoxVCEEnabled.Image")));
             this->fcgpictureBoxVCEEnabled->Location = System::Drawing::Point(16, 5);
             this->fcgpictureBoxVCEEnabled->Name = L"fcgpictureBoxVCEEnabled";
             this->fcgpictureBoxVCEEnabled->Size = System::Drawing::Size(153, 53);
@@ -2646,7 +2714,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             // 
             // fcgpictureBoxVCEDisabled
             // 
-            this->fcgpictureBoxVCEDisabled->Image = (cli::safe_cast<System::Drawing::Image^>(resources->GetObject(L"fcgpictureBoxVCEDisabled.Image")));
+            this->fcgpictureBoxVCEDisabled->Image = (cli::safe_cast<System::Drawing::Image ^>(resources->GetObject(L"fcgpictureBoxVCEDisabled.Image")));
             this->fcgpictureBoxVCEDisabled->Location = System::Drawing::Point(16, 5);
             this->fcgpictureBoxVCEDisabled->Name = L"fcgpictureBoxVCEDisabled";
             this->fcgpictureBoxVCEDisabled->Size = System::Drawing::Size(153, 53);
@@ -2834,7 +2902,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             // 
             this->fcgCXEncMode->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXEncMode->FormattingEnabled = true;
-            this->fcgCXEncMode->Items->AddRange(gcnew cli::array< System::Object^  >(3) { L"高品質", L"標準", L"高速" });
+            this->fcgCXEncMode->Items->AddRange(gcnew cli::array< System::Object ^  >(3) { L"高品質", L"標準", L"高速" });
             this->fcgCXEncMode->Location = System::Drawing::Point(81, 142);
             this->fcgCXEncMode->Name = L"fcgCXEncMode";
             this->fcgCXEncMode->Size = System::Drawing::Size(160, 22);
@@ -2910,76 +2978,6 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgLBMaxBitrate2->Size = System::Drawing::Size(32, 14);
             this->fcgLBMaxBitrate2->TabIndex = 16;
             this->fcgLBMaxBitrate2->Text = L"kbps";
-            // 
-            // fcgPNQP
-            // 
-            this->fcgPNQP->Controls->Add(this->fcgLBQPI);
-            this->fcgPNQP->Controls->Add(this->fcgNUQPI);
-            this->fcgPNQP->Controls->Add(this->fcgNUQPP);
-            this->fcgPNQP->Controls->Add(this->fcgNUQPB);
-            this->fcgPNQP->Controls->Add(this->fcgLBQPP);
-            this->fcgPNQP->Controls->Add(this->fcgLBQPB);
-            this->fcgPNQP->Location = System::Drawing::Point(8, 199);
-            this->fcgPNQP->Name = L"fcgPNQP";
-            this->fcgPNQP->Size = System::Drawing::Size(289, 79);
-            this->fcgPNQP->TabIndex = 20;
-            // 
-            // fcgLBQPI
-            // 
-            this->fcgLBQPI->AutoSize = true;
-            this->fcgLBQPI->Location = System::Drawing::Point(10, 4);
-            this->fcgLBQPI->Name = L"fcgLBQPI";
-            this->fcgLBQPI->Size = System::Drawing::Size(66, 14);
-            this->fcgLBQPI->TabIndex = 21;
-            this->fcgLBQPI->Text = L"QP I frame";
-            // 
-            // fcgNUQPI
-            // 
-            this->fcgNUQPI->Location = System::Drawing::Point(124, 2);
-            this->fcgNUQPI->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
-            this->fcgNUQPI->Name = L"fcgNUQPI";
-            this->fcgNUQPI->Size = System::Drawing::Size(77, 21);
-            this->fcgNUQPI->TabIndex = 22;
-            this->fcgNUQPI->Tag = L"reCmd";
-            this->fcgNUQPI->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
-            // fcgNUQPP
-            // 
-            this->fcgNUQPP->Location = System::Drawing::Point(124, 29);
-            this->fcgNUQPP->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
-            this->fcgNUQPP->Name = L"fcgNUQPP";
-            this->fcgNUQPP->Size = System::Drawing::Size(77, 21);
-            this->fcgNUQPP->TabIndex = 24;
-            this->fcgNUQPP->Tag = L"reCmd";
-            this->fcgNUQPP->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
-            // fcgNUQPB
-            // 
-            this->fcgNUQPB->Location = System::Drawing::Point(124, 55);
-            this->fcgNUQPB->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 51, 0, 0, 0 });
-            this->fcgNUQPB->Name = L"fcgNUQPB";
-            this->fcgNUQPB->Size = System::Drawing::Size(77, 21);
-            this->fcgNUQPB->TabIndex = 26;
-            this->fcgNUQPB->Tag = L"reCmd";
-            this->fcgNUQPB->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
-            // fcgLBQPP
-            // 
-            this->fcgLBQPP->AutoSize = true;
-            this->fcgLBQPP->Location = System::Drawing::Point(10, 31);
-            this->fcgLBQPP->Name = L"fcgLBQPP";
-            this->fcgLBQPP->Size = System::Drawing::Size(69, 14);
-            this->fcgLBQPP->TabIndex = 23;
-            this->fcgLBQPP->Text = L"QP P frame";
-            // 
-            // fcgLBQPB
-            // 
-            this->fcgLBQPB->AutoSize = true;
-            this->fcgLBQPB->Location = System::Drawing::Point(10, 57);
-            this->fcgLBQPB->Name = L"fcgLBQPB";
-            this->fcgLBQPB->Size = System::Drawing::Size(74, 14);
-            this->fcgLBQPB->TabIndex = 25;
-            this->fcgLBQPB->Text = L"QP B frames";
             // 
             // fcgPNBframes
             // 
@@ -3073,6 +3071,83 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgNUBRefDeltaQP->TabIndex = 58;
             this->fcgNUBRefDeltaQP->Tag = L"reCmd";
             this->fcgNUBRefDeltaQP->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            // 
+            // fcgPNHEVCLevelProfile
+            // 
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCLevel);
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCProfile);
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCLevel);
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCProfile);
+            this->fcgPNHEVCLevelProfile->Location = System::Drawing::Point(346, 135);
+            this->fcgPNHEVCLevelProfile->Name = L"fcgPNHEVCLevelProfile";
+            this->fcgPNHEVCLevelProfile->Size = System::Drawing::Size(255, 63);
+            this->fcgPNHEVCLevelProfile->TabIndex = 110;
+            // 
+            // fcgCXHEVCLevel
+            // 
+            this->fcgCXHEVCLevel->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXHEVCLevel->FormattingEnabled = true;
+            this->fcgCXHEVCLevel->Location = System::Drawing::Point(112, 36);
+            this->fcgCXHEVCLevel->Name = L"fcgCXHEVCLevel";
+            this->fcgCXHEVCLevel->Size = System::Drawing::Size(121, 22);
+            this->fcgCXHEVCLevel->TabIndex = 104;
+            this->fcgCXHEVCLevel->Tag = L"reCmd";
+            // 
+            // fcgCXHEVCProfile
+            // 
+            this->fcgCXHEVCProfile->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXHEVCProfile->FormattingEnabled = true;
+            this->fcgCXHEVCProfile->Location = System::Drawing::Point(112, 4);
+            this->fcgCXHEVCProfile->Name = L"fcgCXHEVCProfile";
+            this->fcgCXHEVCProfile->Size = System::Drawing::Size(121, 22);
+            this->fcgCXHEVCProfile->TabIndex = 102;
+            this->fcgCXHEVCProfile->Tag = L"reCmd";
+            // 
+            // fcgLBHEVCLevel
+            // 
+            this->fcgLBHEVCLevel->AutoSize = true;
+            this->fcgLBHEVCLevel->Location = System::Drawing::Point(13, 39);
+            this->fcgLBHEVCLevel->Name = L"fcgLBHEVCLevel";
+            this->fcgLBHEVCLevel->Size = System::Drawing::Size(33, 14);
+            this->fcgLBHEVCLevel->TabIndex = 103;
+            this->fcgLBHEVCLevel->Text = L"レベル";
+            // 
+            // fcgLBHEVCProfile
+            // 
+            this->fcgLBHEVCProfile->AutoSize = true;
+            this->fcgLBHEVCProfile->Location = System::Drawing::Point(13, 7);
+            this->fcgLBHEVCProfile->Name = L"fcgLBHEVCProfile";
+            this->fcgLBHEVCProfile->Size = System::Drawing::Size(53, 14);
+            this->fcgLBHEVCProfile->TabIndex = 101;
+            this->fcgLBHEVCProfile->Text = L"プロファイル";
+            // 
+            // fcgPNH264Features
+            // 
+            this->fcgPNH264Features->Controls->Add(this->fcgLBVBAQ);
+            this->fcgPNH264Features->Controls->Add(this->fcgCBVBAQ);
+            this->fcgPNH264Features->Location = System::Drawing::Point(344, 297);
+            this->fcgPNH264Features->Name = L"fcgPNH264Features";
+            this->fcgPNH264Features->Size = System::Drawing::Size(258, 26);
+            this->fcgPNH264Features->TabIndex = 130;
+            // 
+            // fcgLBVBAQ
+            // 
+            this->fcgLBVBAQ->AutoSize = true;
+            this->fcgLBVBAQ->Location = System::Drawing::Point(16, 6);
+            this->fcgLBVBAQ->Name = L"fcgLBVBAQ";
+            this->fcgLBVBAQ->Size = System::Drawing::Size(37, 14);
+            this->fcgLBVBAQ->TabIndex = 131;
+            this->fcgLBVBAQ->Text = L"VBAQ";
+            // 
+            // fcgCBVBAQ
+            // 
+            this->fcgCBVBAQ->AutoSize = true;
+            this->fcgCBVBAQ->Location = System::Drawing::Point(115, 7);
+            this->fcgCBVBAQ->Name = L"fcgCBVBAQ";
+            this->fcgCBVBAQ->Size = System::Drawing::Size(15, 14);
+            this->fcgCBVBAQ->TabIndex = 132;
+            this->fcgCBVBAQ->Tag = L"reCmd";
+            this->fcgCBVBAQ->UseVisualStyleBackColor = true;
             // 
             // tabPageExOpt
             // 
@@ -3655,7 +3730,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             // 
             // fcgCSExeFiles
             // 
-            this->fcgCSExeFiles->Items->AddRange(gcnew cli::array< System::Windows::Forms::ToolStripItem^  >(1) { this->fcgTSExeFileshelp });
+            this->fcgCSExeFiles->Items->AddRange(gcnew cli::array< System::Windows::Forms::ToolStripItem ^  >(1) { this->fcgTSExeFileshelp });
             this->fcgCSExeFiles->Name = L"fcgCSx264";
             this->fcgCSExeFiles->Size = System::Drawing::Size(131, 26);
             // 
@@ -3694,27 +3769,10 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             // 
             // fcgtabPageAudioMain
             // 
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgCXAudioDelayCut);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgLBAudioDelayCut);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgLBAudioEncTiming);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgCXAudioEncTiming);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgLBAudioTemp);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgCXAudioTempDir);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgTXCustomAudioTempDir);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgBTCustomAudioTempDir);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgCBAudioUsePipe);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgLBAudioBitrate);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgNUAudioBitrate);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgCBAudio2pass);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgCXAudioEncMode);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgLBAudioEncMode);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgBTAudioEncoderPath);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgTXAudioEncoderPath);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgLBAudioEncoderPath);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgCBAudioOnly);
+            this->fcgtabPageAudioMain->Controls->Add(this->fcgPNAudioInternal);
+            this->fcgtabPageAudioMain->Controls->Add(this->fcgCBAudioUseExt);
             this->fcgtabPageAudioMain->Controls->Add(this->fcgCBFAWCheck);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgCXAudioEncoder);
-            this->fcgtabPageAudioMain->Controls->Add(this->fcgLBAudioEncoder);
+            this->fcgtabPageAudioMain->Controls->Add(this->fcgPNAudioExt);
             this->fcgtabPageAudioMain->Location = System::Drawing::Point(4, 24);
             this->fcgtabPageAudioMain->Name = L"fcgtabPageAudioMain";
             this->fcgtabPageAudioMain->Padding = System::Windows::Forms::Padding(3);
@@ -3723,76 +3781,93 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgtabPageAudioMain->Text = L"音声";
             this->fcgtabPageAudioMain->UseVisualStyleBackColor = true;
             // 
+            // fcgPNAudioExt
+            // 
+            this->fcgPNAudioExt->Controls->Add(this->fcgCXAudioDelayCut);
+            this->fcgPNAudioExt->Controls->Add(this->fcgLBAudioDelayCut);
+            this->fcgPNAudioExt->Controls->Add(this->fcgCBAudioEncTiming);
+            this->fcgPNAudioExt->Controls->Add(this->fcgCXAudioEncTiming);
+            this->fcgPNAudioExt->Controls->Add(this->fcgCXAudioTempDir);
+            this->fcgPNAudioExt->Controls->Add(this->fcgTXCustomAudioTempDir);
+            this->fcgPNAudioExt->Controls->Add(this->fcgBTCustomAudioTempDir);
+            this->fcgPNAudioExt->Controls->Add(this->fcgCBAudioUsePipe);
+            this->fcgPNAudioExt->Controls->Add(this->fcgNUAudioBitrate);
+            this->fcgPNAudioExt->Controls->Add(this->fcgCBAudio2pass);
+            this->fcgPNAudioExt->Controls->Add(this->fcgCXAudioEncMode);
+            this->fcgPNAudioExt->Controls->Add(this->fcgLBAudioEncMode);
+            this->fcgPNAudioExt->Controls->Add(this->fcgBTAudioEncoderPath);
+            this->fcgPNAudioExt->Controls->Add(this->fcgTXAudioEncoderPath);
+            this->fcgPNAudioExt->Controls->Add(this->fcgLBAudioEncoderPath);
+            this->fcgPNAudioExt->Controls->Add(this->fcgCBAudioOnly);
+            this->fcgPNAudioExt->Controls->Add(this->fcgCXAudioEncoder);
+            this->fcgPNAudioExt->Controls->Add(this->fcgLBAudioTemp);
+            this->fcgPNAudioExt->Controls->Add(this->fcgLBAudioBitrate);
+            this->fcgPNAudioExt->Location = System::Drawing::Point(0, 28);
+            this->fcgPNAudioExt->Name = L"fcgPNAudioExt";
+            this->fcgPNAudioExt->Size = System::Drawing::Size(374, 246);
+            this->fcgPNAudioExt->TabIndex = 82;
+            // 
             // fcgCXAudioDelayCut
             // 
             this->fcgCXAudioDelayCut->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXAudioDelayCut->FormattingEnabled = true;
-            this->fcgCXAudioDelayCut->Location = System::Drawing::Point(289, 131);
+            this->fcgCXAudioDelayCut->Location = System::Drawing::Point(292, 107);
             this->fcgCXAudioDelayCut->Name = L"fcgCXAudioDelayCut";
             this->fcgCXAudioDelayCut->Size = System::Drawing::Size(70, 23);
-            this->fcgCXAudioDelayCut->TabIndex = 55;
+            this->fcgCXAudioDelayCut->TabIndex = 65;
             this->fcgCXAudioDelayCut->Tag = L"chValue";
             // 
             // fcgLBAudioDelayCut
             // 
             this->fcgLBAudioDelayCut->AutoSize = true;
-            this->fcgLBAudioDelayCut->Location = System::Drawing::Point(222, 134);
+            this->fcgLBAudioDelayCut->Location = System::Drawing::Point(225, 110);
             this->fcgLBAudioDelayCut->Name = L"fcgLBAudioDelayCut";
             this->fcgLBAudioDelayCut->Size = System::Drawing::Size(66, 15);
-            this->fcgLBAudioDelayCut->TabIndex = 56;
+            this->fcgLBAudioDelayCut->TabIndex = 75;
             this->fcgLBAudioDelayCut->Text = L"ディレイカット";
             // 
-            // fcgLBAudioEncTiming
+            // fcgCBAudioEncTiming
             // 
-            this->fcgLBAudioEncTiming->AutoSize = true;
-            this->fcgLBAudioEncTiming->Location = System::Drawing::Point(242, 56);
-            this->fcgLBAudioEncTiming->Name = L"fcgLBAudioEncTiming";
-            this->fcgLBAudioEncTiming->Size = System::Drawing::Size(43, 15);
-            this->fcgLBAudioEncTiming->TabIndex = 47;
-            this->fcgLBAudioEncTiming->Text = L"処理順";
+            this->fcgCBAudioEncTiming->AutoSize = true;
+            this->fcgCBAudioEncTiming->Location = System::Drawing::Point(243, 28);
+            this->fcgCBAudioEncTiming->Name = L"fcgCBAudioEncTiming";
+            this->fcgCBAudioEncTiming->Size = System::Drawing::Size(43, 15);
+            this->fcgCBAudioEncTiming->TabIndex = 74;
+            this->fcgCBAudioEncTiming->Text = L"処理順";
             // 
             // fcgCXAudioEncTiming
             // 
             this->fcgCXAudioEncTiming->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXAudioEncTiming->FormattingEnabled = true;
-            this->fcgCXAudioEncTiming->Location = System::Drawing::Point(288, 53);
+            this->fcgCXAudioEncTiming->Location = System::Drawing::Point(287, 25);
             this->fcgCXAudioEncTiming->Name = L"fcgCXAudioEncTiming";
-            this->fcgCXAudioEncTiming->Size = System::Drawing::Size(75, 23);
-            this->fcgCXAudioEncTiming->TabIndex = 46;
+            this->fcgCXAudioEncTiming->Size = System::Drawing::Size(68, 23);
+            this->fcgCXAudioEncTiming->TabIndex = 73;
             this->fcgCXAudioEncTiming->Tag = L"chValue";
-            // 
-            // fcgLBAudioTemp
-            // 
-            this->fcgLBAudioTemp->AutoSize = true;
-            this->fcgLBAudioTemp->Location = System::Drawing::Point(14, 212);
-            this->fcgLBAudioTemp->Name = L"fcgLBAudioTemp";
-            this->fcgLBAudioTemp->Size = System::Drawing::Size(125, 15);
-            this->fcgLBAudioTemp->TabIndex = 45;
-            this->fcgLBAudioTemp->Text = L"音声一時ファイル出力先";
             // 
             // fcgCXAudioTempDir
             // 
             this->fcgCXAudioTempDir->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXAudioTempDir->FormattingEnabled = true;
-            this->fcgCXAudioTempDir->Location = System::Drawing::Point(142, 209);
+            this->fcgCXAudioTempDir->Location = System::Drawing::Point(136, 182);
             this->fcgCXAudioTempDir->Name = L"fcgCXAudioTempDir";
             this->fcgCXAudioTempDir->Size = System::Drawing::Size(150, 23);
-            this->fcgCXAudioTempDir->TabIndex = 39;
+            this->fcgCXAudioTempDir->TabIndex = 67;
             this->fcgCXAudioTempDir->Tag = L"chValue";
             // 
             // fcgTXCustomAudioTempDir
             // 
-            this->fcgTXCustomAudioTempDir->Location = System::Drawing::Point(71, 236);
+            this->fcgTXCustomAudioTempDir->Location = System::Drawing::Point(65, 210);
             this->fcgTXCustomAudioTempDir->Name = L"fcgTXCustomAudioTempDir";
             this->fcgTXCustomAudioTempDir->Size = System::Drawing::Size(245, 23);
-            this->fcgTXCustomAudioTempDir->TabIndex = 41;
+            this->fcgTXCustomAudioTempDir->TabIndex = 68;
             // 
             // fcgBTCustomAudioTempDir
             // 
-            this->fcgBTCustomAudioTempDir->Location = System::Drawing::Point(322, 234);
+            this->fcgBTCustomAudioTempDir->Location = System::Drawing::Point(317, 208);
             this->fcgBTCustomAudioTempDir->Name = L"fcgBTCustomAudioTempDir";
             this->fcgBTCustomAudioTempDir->Size = System::Drawing::Size(29, 23);
-            this->fcgBTCustomAudioTempDir->TabIndex = 42;
+            this->fcgBTCustomAudioTempDir->TabIndex = 70;
             this->fcgBTCustomAudioTempDir->Text = L"...";
             this->fcgBTCustomAudioTempDir->UseVisualStyleBackColor = true;
             this->fcgBTCustomAudioTempDir->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTCustomAudioTempDir_Click);
@@ -3800,69 +3875,62 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             // fcgCBAudioUsePipe
             // 
             this->fcgCBAudioUsePipe->AutoSize = true;
-            this->fcgCBAudioUsePipe->Location = System::Drawing::Point(132, 133);
+            this->fcgCBAudioUsePipe->Location = System::Drawing::Point(131, 108);
             this->fcgCBAudioUsePipe->Name = L"fcgCBAudioUsePipe";
             this->fcgCBAudioUsePipe->Size = System::Drawing::Size(78, 19);
-            this->fcgCBAudioUsePipe->TabIndex = 38;
+            this->fcgCBAudioUsePipe->TabIndex = 64;
             this->fcgCBAudioUsePipe->Tag = L"chValue";
             this->fcgCBAudioUsePipe->Text = L"パイプ処理";
             this->fcgCBAudioUsePipe->UseVisualStyleBackColor = true;
             // 
-            // fcgLBAudioBitrate
-            // 
-            this->fcgLBAudioBitrate->AutoSize = true;
-            this->fcgLBAudioBitrate->Location = System::Drawing::Point(285, 162);
-            this->fcgLBAudioBitrate->Name = L"fcgLBAudioBitrate";
-            this->fcgLBAudioBitrate->Size = System::Drawing::Size(34, 15);
-            this->fcgLBAudioBitrate->TabIndex = 44;
-            this->fcgLBAudioBitrate->Text = L"kbps";
-            // 
             // fcgNUAudioBitrate
             // 
-            this->fcgNUAudioBitrate->Location = System::Drawing::Point(214, 158);
+            this->fcgNUAudioBitrate->Location = System::Drawing::Point(213, 131);
+            this->fcgNUAudioBitrate->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1536, 0, 0, 0 });
             this->fcgNUAudioBitrate->Name = L"fcgNUAudioBitrate";
             this->fcgNUAudioBitrate->Size = System::Drawing::Size(65, 23);
-            this->fcgNUAudioBitrate->TabIndex = 36;
+            this->fcgNUAudioBitrate->TabIndex = 62;
             this->fcgNUAudioBitrate->Tag = L"chValue";
             this->fcgNUAudioBitrate->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
             // 
             // fcgCBAudio2pass
             // 
             this->fcgCBAudio2pass->AutoSize = true;
-            this->fcgCBAudio2pass->Location = System::Drawing::Point(61, 133);
+            this->fcgCBAudio2pass->Location = System::Drawing::Point(60, 108);
             this->fcgCBAudio2pass->Name = L"fcgCBAudio2pass";
             this->fcgCBAudio2pass->Size = System::Drawing::Size(59, 19);
-            this->fcgCBAudio2pass->TabIndex = 37;
+            this->fcgCBAudio2pass->TabIndex = 63;
             this->fcgCBAudio2pass->Tag = L"chValue";
             this->fcgCBAudio2pass->Text = L"2pass";
             this->fcgCBAudio2pass->UseVisualStyleBackColor = true;
+            this->fcgCBAudio2pass->CheckedChanged += gcnew System::EventHandler(this, &frmConfig::fcgCBAudio2pass_CheckedChanged);
             // 
             // fcgCXAudioEncMode
             // 
             this->fcgCXAudioEncMode->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXAudioEncMode->FormattingEnabled = true;
-            this->fcgCXAudioEncMode->Location = System::Drawing::Point(17, 157);
+            this->fcgCXAudioEncMode->Location = System::Drawing::Point(17, 130);
             this->fcgCXAudioEncMode->Name = L"fcgCXAudioEncMode";
             this->fcgCXAudioEncMode->Size = System::Drawing::Size(189, 23);
-            this->fcgCXAudioEncMode->TabIndex = 35;
+            this->fcgCXAudioEncMode->TabIndex = 61;
             this->fcgCXAudioEncMode->Tag = L"chValue";
             this->fcgCXAudioEncMode->SelectedIndexChanged += gcnew System::EventHandler(this, &frmConfig::fcgCXAudioEncMode_SelectedIndexChanged);
             // 
             // fcgLBAudioEncMode
             // 
             this->fcgLBAudioEncMode->AutoSize = true;
-            this->fcgLBAudioEncMode->Location = System::Drawing::Point(6, 137);
+            this->fcgLBAudioEncMode->Location = System::Drawing::Point(5, 110);
             this->fcgLBAudioEncMode->Name = L"fcgLBAudioEncMode";
             this->fcgLBAudioEncMode->Size = System::Drawing::Size(34, 15);
-            this->fcgLBAudioEncMode->TabIndex = 43;
+            this->fcgLBAudioEncMode->TabIndex = 69;
             this->fcgLBAudioEncMode->Text = L"モード";
             // 
             // fcgBTAudioEncoderPath
             // 
-            this->fcgBTAudioEncoderPath->Location = System::Drawing::Point(326, 90);
+            this->fcgBTAudioEncoderPath->Location = System::Drawing::Point(325, 64);
             this->fcgBTAudioEncoderPath->Name = L"fcgBTAudioEncoderPath";
             this->fcgBTAudioEncoderPath->Size = System::Drawing::Size(30, 23);
-            this->fcgBTAudioEncoderPath->TabIndex = 34;
+            this->fcgBTAudioEncoderPath->TabIndex = 60;
             this->fcgBTAudioEncoderPath->Text = L"...";
             this->fcgBTAudioEncoderPath->UseVisualStyleBackColor = true;
             this->fcgBTAudioEncoderPath->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTAudioEncoderPath_Click);
@@ -3870,65 +3938,146 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             // fcgTXAudioEncoderPath
             // 
             this->fcgTXAudioEncoderPath->AllowDrop = true;
-            this->fcgTXAudioEncoderPath->Location = System::Drawing::Point(17, 92);
+            this->fcgTXAudioEncoderPath->Location = System::Drawing::Point(17, 66);
             this->fcgTXAudioEncoderPath->Name = L"fcgTXAudioEncoderPath";
             this->fcgTXAudioEncoderPath->Size = System::Drawing::Size(303, 23);
-            this->fcgTXAudioEncoderPath->TabIndex = 33;
+            this->fcgTXAudioEncoderPath->TabIndex = 59;
             this->fcgTXAudioEncoderPath->TextChanged += gcnew System::EventHandler(this, &frmConfig::fcgTXAudioEncoderPath_TextChanged);
-            this->fcgTXAudioEncoderPath->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_DragDrop);
-            this->fcgTXAudioEncoderPath->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_Enter);
             // 
             // fcgLBAudioEncoderPath
             // 
             this->fcgLBAudioEncoderPath->AutoSize = true;
-            this->fcgLBAudioEncoderPath->Location = System::Drawing::Point(14, 75);
+            this->fcgLBAudioEncoderPath->Location = System::Drawing::Point(13, 49);
             this->fcgLBAudioEncoderPath->Name = L"fcgLBAudioEncoderPath";
             this->fcgLBAudioEncoderPath->Size = System::Drawing::Size(53, 15);
-            this->fcgLBAudioEncoderPath->TabIndex = 40;
+            this->fcgLBAudioEncoderPath->TabIndex = 66;
             this->fcgLBAudioEncoderPath->Text = L"～の指定";
             // 
             // fcgCBAudioOnly
             // 
             this->fcgCBAudioOnly->AutoSize = true;
             this->fcgCBAudioOnly->ForeColor = System::Drawing::SystemColors::ControlDarkDark;
-            this->fcgCBAudioOnly->Location = System::Drawing::Point(254, 6);
+            this->fcgCBAudioOnly->Location = System::Drawing::Point(254, 3);
             this->fcgCBAudioOnly->Name = L"fcgCBAudioOnly";
             this->fcgCBAudioOnly->Size = System::Drawing::Size(95, 19);
-            this->fcgCBAudioOnly->TabIndex = 31;
+            this->fcgCBAudioOnly->TabIndex = 57;
             this->fcgCBAudioOnly->Tag = L"chValue";
             this->fcgCBAudioOnly->Text = L"音声のみ出力";
             this->fcgCBAudioOnly->UseVisualStyleBackColor = true;
             // 
+            // fcgCXAudioEncoder
+            // 
+            this->fcgCXAudioEncoder->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXAudioEncoder->FormattingEnabled = true;
+            this->fcgCXAudioEncoder->Location = System::Drawing::Point(18, 8);
+            this->fcgCXAudioEncoder->Name = L"fcgCXAudioEncoder";
+            this->fcgCXAudioEncoder->Size = System::Drawing::Size(172, 23);
+            this->fcgCXAudioEncoder->TabIndex = 55;
+            this->fcgCXAudioEncoder->Tag = L"chValue";
+            this->fcgCXAudioEncoder->SelectedIndexChanged += gcnew System::EventHandler(this, &frmConfig::fcgCXAudioEncoder_SelectedIndexChanged);
+            // 
+            // fcgLBAudioTemp
+            // 
+            this->fcgLBAudioTemp->AutoSize = true;
+            this->fcgLBAudioTemp->Location = System::Drawing::Point(8, 185);
+            this->fcgLBAudioTemp->Name = L"fcgLBAudioTemp";
+            this->fcgLBAudioTemp->Size = System::Drawing::Size(125, 15);
+            this->fcgLBAudioTemp->TabIndex = 72;
+            this->fcgLBAudioTemp->Text = L"音声一時ファイル出力先";
+            // 
+            // fcgLBAudioBitrate
+            // 
+            this->fcgLBAudioBitrate->AutoSize = true;
+            this->fcgLBAudioBitrate->Location = System::Drawing::Point(285, 135);
+            this->fcgLBAudioBitrate->Name = L"fcgLBAudioBitrate";
+            this->fcgLBAudioBitrate->Size = System::Drawing::Size(34, 15);
+            this->fcgLBAudioBitrate->TabIndex = 71;
+            this->fcgLBAudioBitrate->Text = L"kbps";
+            // 
+            // fcgPNAudioInternal
+            // 
+            this->fcgPNAudioInternal->Controls->Add(this->fcgLBAudioBitrateInternal);
+            this->fcgPNAudioInternal->Controls->Add(this->fcgNUAudioBitrateInternal);
+            this->fcgPNAudioInternal->Controls->Add(this->fcgCXAudioEncModeInternal);
+            this->fcgPNAudioInternal->Controls->Add(this->label1);
+            this->fcgPNAudioInternal->Controls->Add(this->fcgCXAudioEncoderInternal);
+            this->fcgPNAudioInternal->Location = System::Drawing::Point(0, 28);
+            this->fcgPNAudioInternal->Name = L"fcgPNAudioInternal";
+            this->fcgPNAudioInternal->Size = System::Drawing::Size(374, 246);
+            this->fcgPNAudioInternal->TabIndex = 81;
+            // 
+            // fcgLBAudioBitrateInternal
+            // 
+            this->fcgLBAudioBitrateInternal->AutoSize = true;
+            this->fcgLBAudioBitrateInternal->Location = System::Drawing::Point(285, 69);
+            this->fcgLBAudioBitrateInternal->Name = L"fcgLBAudioBitrateInternal";
+            this->fcgLBAudioBitrateInternal->Size = System::Drawing::Size(34, 15);
+            this->fcgLBAudioBitrateInternal->TabIndex = 76;
+            this->fcgLBAudioBitrateInternal->Text = L"kbps";
+            // 
+            // fcgNUAudioBitrateInternal
+            // 
+            this->fcgNUAudioBitrateInternal->Location = System::Drawing::Point(214, 67);
+            this->fcgNUAudioBitrateInternal->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1536, 0, 0, 0 });
+            this->fcgNUAudioBitrateInternal->Name = L"fcgNUAudioBitrateInternal";
+            this->fcgNUAudioBitrateInternal->Size = System::Drawing::Size(65, 23);
+            this->fcgNUAudioBitrateInternal->TabIndex = 74;
+            this->fcgNUAudioBitrateInternal->Tag = L"chValue";
+            this->fcgNUAudioBitrateInternal->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            // 
+            // fcgCXAudioEncModeInternal
+            // 
+            this->fcgCXAudioEncModeInternal->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXAudioEncModeInternal->FormattingEnabled = true;
+            this->fcgCXAudioEncModeInternal->Location = System::Drawing::Point(18, 66);
+            this->fcgCXAudioEncModeInternal->Name = L"fcgCXAudioEncModeInternal";
+            this->fcgCXAudioEncModeInternal->Size = System::Drawing::Size(189, 23);
+            this->fcgCXAudioEncModeInternal->TabIndex = 73;
+            this->fcgCXAudioEncModeInternal->Tag = L"chValue";
+            this->fcgCXAudioEncModeInternal->SelectedIndexChanged += gcnew System::EventHandler(this, &frmConfig::fcgCXAudioEncModeInternal_SelectedIndexChanged);
+            // 
+            // label1
+            // 
+            this->label1->AutoSize = true;
+            this->label1->Location = System::Drawing::Point(9, 41);
+            this->label1->Name = L"label1";
+            this->label1->Size = System::Drawing::Size(34, 15);
+            this->label1->TabIndex = 75;
+            this->label1->Text = L"モード";
+            // 
+            // fcgCXAudioEncoderInternal
+            // 
+            this->fcgCXAudioEncoderInternal->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXAudioEncoderInternal->FormattingEnabled = true;
+            this->fcgCXAudioEncoderInternal->Location = System::Drawing::Point(18, 8);
+            this->fcgCXAudioEncoderInternal->Name = L"fcgCXAudioEncoderInternal";
+            this->fcgCXAudioEncoderInternal->Size = System::Drawing::Size(172, 23);
+            this->fcgCXAudioEncoderInternal->TabIndex = 70;
+            this->fcgCXAudioEncoderInternal->Tag = L"chValue";
+            this->fcgCXAudioEncoderInternal->SelectedIndexChanged += gcnew System::EventHandler(this, &frmConfig::fcgCXAudioEncoderInternal_SelectedIndexChanged);
+            // 
+            // fcgCBAudioUseExt
+            // 
+            this->fcgCBAudioUseExt->AutoSize = true;
+            this->fcgCBAudioUseExt->Location = System::Drawing::Point(10, 5);
+            this->fcgCBAudioUseExt->Name = L"fcgCBAudioUseExt";
+            this->fcgCBAudioUseExt->Size = System::Drawing::Size(147, 19);
+            this->fcgCBAudioUseExt->TabIndex = 79;
+            this->fcgCBAudioUseExt->Tag = L"chValue";
+            this->fcgCBAudioUseExt->Text = L"外部エンコーダを使用する";
+            this->fcgCBAudioUseExt->UseVisualStyleBackColor = true;
+            this->fcgCBAudioUseExt->CheckedChanged += gcnew System::EventHandler(this, &frmConfig::fcgCBAudioUseExt_CheckedChanged);
+            // 
             // fcgCBFAWCheck
             // 
             this->fcgCBFAWCheck->AutoSize = true;
-            this->fcgCBFAWCheck->Location = System::Drawing::Point(254, 29);
+            this->fcgCBFAWCheck->Location = System::Drawing::Point(254, 5);
             this->fcgCBFAWCheck->Name = L"fcgCBFAWCheck";
             this->fcgCBFAWCheck->Size = System::Drawing::Size(87, 19);
             this->fcgCBFAWCheck->TabIndex = 32;
             this->fcgCBFAWCheck->Tag = L"chValue";
             this->fcgCBFAWCheck->Text = L"FAWCheck";
             this->fcgCBFAWCheck->UseVisualStyleBackColor = true;
-            // 
-            // fcgCXAudioEncoder
-            // 
-            this->fcgCXAudioEncoder->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXAudioEncoder->FormattingEnabled = true;
-            this->fcgCXAudioEncoder->Location = System::Drawing::Point(35, 34);
-            this->fcgCXAudioEncoder->Name = L"fcgCXAudioEncoder";
-            this->fcgCXAudioEncoder->Size = System::Drawing::Size(172, 23);
-            this->fcgCXAudioEncoder->TabIndex = 30;
-            this->fcgCXAudioEncoder->Tag = L"chValue";
-            this->fcgCXAudioEncoder->SelectedIndexChanged += gcnew System::EventHandler(this, &frmConfig::fcgCXAudioEncoder_SelectedIndexChanged);
-            // 
-            // fcgLBAudioEncoder
-            // 
-            this->fcgLBAudioEncoder->AutoSize = true;
-            this->fcgLBAudioEncoder->Location = System::Drawing::Point(7, 14);
-            this->fcgLBAudioEncoder->Name = L"fcgLBAudioEncoder";
-            this->fcgLBAudioEncoder->Size = System::Drawing::Size(52, 15);
-            this->fcgLBAudioEncoder->TabIndex = 29;
-            this->fcgLBAudioEncoder->Text = L"エンコーダ";
             // 
             // fcgtabPageAudioOther
             // 
@@ -4132,72 +4281,79 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             this->fcgtabPageMux->PerformLayout();
             this->fcgtabPageBat->ResumeLayout(false);
             this->fcgtabPageBat->PerformLayout();
+            this->fcgtabPageInternal->ResumeLayout(false);
+            this->fcgtabPageInternal->PerformLayout();
             this->fcgtabControlVCE->ResumeLayout(false);
             this->tabPageVideoEnc->ResumeLayout(false);
             this->tabPageVideoEnc->PerformLayout();
+            this->fcgPNQP->ResumeLayout(false);
+            this->fcgPNQP->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPI))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPP))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPB))->EndInit();
             this->fcggroupBoxColor->ResumeLayout(false);
             this->fcggroupBoxColor->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNURefFrames))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVBVBufSize))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPMax))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUQPMin))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgpictureBoxVCEEnabled))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgpictureBoxVCEDisabled))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUSlices))->EndInit();
+            this->fcgGroupBoxAspectRatio->ResumeLayout(false);
+            this->fcgGroupBoxAspectRatio->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUAspectRatioY))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUAspectRatioX))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUGopLength))->EndInit();
+            this->fcgPNBitrate->ResumeLayout(false);
+            this->fcgPNBitrate->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBitrate))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUMaxkbps))->EndInit();
+            this->fcgPNBframes->ResumeLayout(false);
+            this->fcgPNBframes->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBframes))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBDeltaQP))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUBRefDeltaQP))->EndInit();
             this->fcgPNHEVCLevelProfile->ResumeLayout(false);
             this->fcgPNHEVCLevelProfile->PerformLayout();
             this->fcgPNH264Features->ResumeLayout(false);
             this->fcgPNH264Features->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNURefFrames))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVBVBufSize))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMax))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPMin))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgpictureBoxVCEEnabled))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgpictureBoxVCEDisabled))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUSlices))->EndInit();
-            this->fcgGroupBoxAspectRatio->ResumeLayout(false);
-            this->fcgGroupBoxAspectRatio->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioY))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAspectRatioX))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUGopLength))->EndInit();
-            this->fcgPNBitrate->ResumeLayout(false);
-            this->fcgPNBitrate->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBitrate))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUMaxkbps))->EndInit();
-            this->fcgPNQP->ResumeLayout(false);
-            this->fcgPNQP->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPI))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPP))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPB))->EndInit();
-            this->fcgPNBframes->ResumeLayout(false);
-            this->fcgPNBframes->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBframes))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBDeltaQP))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBRefDeltaQP))->EndInit();
             this->tabPageExOpt->ResumeLayout(false);
             this->tabPageExOpt->PerformLayout();
             this->fcggroupBoxVppDeinterlace->ResumeLayout(false);
             this->fcggroupBoxVppDeinterlace->PerformLayout();
             this->fcgPNVppAfs->ResumeLayout(false);
             this->fcgPNVppAfs->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgTBVppAfsThreCMotion))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgTBVppAfsThreYMotion))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgTBVppAfsThreDeint))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgTBVppAfsThreShift))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgTBVppAfsCoeffShift))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsRight))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsLeft))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsBottom))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsUp))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgTBVppAfsMethodSwitch))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsThreCMotion))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsThreShift))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsThreDeint))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsThreYMotion))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsCoeffShift))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppAfsMethodSwitch))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreCMotion))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreYMotion))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreDeint))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsThreShift))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsCoeffShift))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsRight))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsLeft))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsBottom))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsUp))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgTBVppAfsMethodSwitch))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreCMotion))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreShift))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreDeint))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsThreYMotion))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsCoeffShift))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUVppAfsMethodSwitch))->EndInit();
             this->fcggroupboxResize->ResumeLayout(false);
             this->fcggroupboxResize->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUResizeH))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUResizeW))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUResizeH))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUResizeW))->EndInit();
             this->fcgCSExeFiles->ResumeLayout(false);
             this->fcgtabControlAudio->ResumeLayout(false);
             this->fcgtabPageAudioMain->ResumeLayout(false);
             this->fcgtabPageAudioMain->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrate))->EndInit();
+            this->fcgPNAudioExt->ResumeLayout(false);
+            this->fcgPNAudioExt->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUAudioBitrate))->EndInit();
+            this->fcgPNAudioInternal->ResumeLayout(false);
+            this->fcgPNAudioInternal->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize ^>(this->fcgNUAudioBitrateInternal))->EndInit();
             this->fcgtabPageAudioOther->ResumeLayout(false);
             this->fcgtabPageAudioOther->PerformLayout();
             this->ResumeLayout(false);
@@ -4225,8 +4381,11 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
         System::Int32 GetCurrentAudioDefaultBitrate();
         delegate System::Void qualityTimerChangeDelegate();
         System::Void InitComboBox();
-        System::Void setAudioDisplay();
-        System::Void AudioEncodeModeChanged();
+        bool AudioIntEncoderEnabled(const AUDIO_SETTINGS *astg, bool isAuoLinkMode);
+        System::Void setAudioExtDisplay();
+        System::Void AudioExtEncodeModeChanged();
+        System::Void setAudioIntDisplay();
+        System::Void AudioIntEncodeModeChanged();
         System::Void InitStgFileList();
         System::Void RebuildStgFileDropDown(String^ stgDir);
         System::Void RebuildStgFileDropDown(ToolStripDropDownItem^ TS, String^ dir);
@@ -4272,6 +4431,9 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
         System::Void fcgCBAudio2pass_CheckedChanged(System::Object^  sender, System::EventArgs^  e);
         System::Void fcgCXAudioEncoder_SelectedIndexChanged(System::Object^  sender, System::EventArgs^  e);
         System::Void fcgCXAudioEncMode_SelectedIndexChanged(System::Object^  sender, System::EventArgs^  e);
+        System::Void fcgCXAudioEncoderInternal_SelectedIndexChanged(System::Object ^sender, System::EventArgs ^e);
+        System::Void fcgCXAudioEncModeInternal_SelectedIndexChanged(System::Object ^sender, System::EventArgs ^e);
+        System::Void fcgCBAudioUseExt_CheckedChanged(System::Object ^sender, System::EventArgs ^e);
         System::Void AdjustLocation();
         System::Void ActivateToolTip(bool Enable);
         System::Void SetStgEscKey(bool Enable);
@@ -4380,6 +4542,17 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             //fcgCXAudioEncoder->Items->AddRange(reinterpret_cast<array<String^>^>(LocalStg.audEncName->ToArray(String::typeid)));
             fcgCXAudioEncoder->Items->AddRange(LocalStg.audEncName->ToArray());
             fcgCXAudioEncoder->EndUpdate();
+
+            fcgCXAudioEncoderInternal->BeginUpdate();
+            fcgCXAudioEncoderInternal->Items->Clear();
+            for (int i = 0; i < sys_dat->exstg->s_aud_int_count; i++) {
+                if (AudioIntEncoderEnabled(&sys_dat->exstg->s_aud_int[i], false)) {
+                    fcgCXAudioEncoderInternal->Items->Add(String(sys_dat->exstg->s_aud_int[i].dispname).ToString());
+                } else {
+                    fcgCXAudioEncoderInternal->Items->Add(String(L"-----").ToString());
+                }
+            }
+            fcgCXAudioEncoderInternal->EndUpdate();
         }
     private:
         System::Void TX_LimitbyBytes(System::Object^  sender, System::ComponentModel::CancelEventArgs^ e) {
@@ -4689,7 +4862,7 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
             //Name, args, Path の順番
             array<ExeControls>^ ControlList = {
                 { fcgBTVideoEncoderPath->Name,   fcgTXVideoEncoderPath->Text,   sys_dat->exstg->s_vid.help_cmd },
-                { fcgBTAudioEncoderPath->Name,   fcgTXAudioEncoderPath->Text,   sys_dat->exstg->s_aud[fcgCXAudioEncoder->SelectedIndex].cmd_help },
+                { fcgBTAudioEncoderPath->Name,   fcgTXAudioEncoderPath->Text,   sys_dat->exstg->s_aud_ext[fcgCXAudioEncoder->SelectedIndex].cmd_help },
                 { fcgBTMP4MuxerPath->Name,       fcgTXMP4MuxerPath->Text,       sys_dat->exstg->s_mux[MUXER_MP4].help_cmd },
                 { fcgBTTC2MP4Path->Name,         fcgTXTC2MP4Path->Text,         sys_dat->exstg->s_mux[MUXER_TC2MP4].help_cmd },
                 { fcgBTMP4RawPath->Name,         fcgTXMP4RawPath->Text,         sys_dat->exstg->s_mux[MUXER_MP4_RAW].help_cmd },
@@ -4753,6 +4926,5 @@ private: System::Windows::Forms::CheckBox ^fcgCBSSIM;
                 }
             }
         }
-
 };
 }

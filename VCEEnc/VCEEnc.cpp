@@ -54,7 +54,7 @@
 //        出力プラグイン内部変数
 //---------------------------------------------------------------------
 
-static CONF_GUIEX g_conf;
+static CONF_GUIEX g_conf = { 0 };
 static SYSTEM_DATA g_sys_dat = { 0 };
 static char g_auo_filefilter[1024] = { 0 };
 
@@ -79,8 +79,7 @@ OUTPUT_PLUGIN_TABLE output_plugin_table = {
 //---------------------------------------------------------------------
 //        出力プラグイン構造体のポインタを渡す関数
 //---------------------------------------------------------------------
-EXTERN_C OUTPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetOutputPluginTable( void )
-{
+EXTERN_C OUTPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetOutputPluginTable( void ) {
     init_SYSTEM_DATA(&g_sys_dat);
     make_file_filter(NULL, 0, g_sys_dat.exstg->s_local.default_output_ext);
     overwrite_aviutl_ini_file_filter(g_sys_dat.exstg->s_local.default_output_ext);
@@ -144,19 +143,16 @@ EXTERN_C OUTPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetOutputPluginTa
     //                        //    戻り値    : データへのポインタ
     //                        //              画像データポインタの内容は次に外部関数を使うかメインに処理を戻すまで有効
 
-BOOL func_init()
-{
+BOOL func_init() {
     return TRUE;
 }
 
-BOOL func_exit()
-{
+BOOL func_exit() {
     delete_SYSTEM_DATA(&g_sys_dat);
     return TRUE;
 }
 
-BOOL func_output( OUTPUT_INFO *oip )
-{
+BOOL func_output( OUTPUT_INFO *oip ) {
     AUO_RESULT ret = AUO_RESULT_SUCCESS;
     static const encode_task task[3][2] = { { video_output, audio_output }, { audio_output, video_output }, { audio_output_parallel, video_output }  };
     PRM_ENC pe = { 0 };
@@ -180,8 +176,9 @@ BOOL func_output( OUTPUT_INFO *oip )
 
         ret |= run_bat_file(&conf_out, oip, &pe, &g_sys_dat, RUN_BAT_BEFORE_PROCESS);
 
+        const auto audio_encode_timing = (conf_out.aud.use_internal) ? 2 : conf_out.aud.ext.audio_encode_timing;
         for (int i = 0; !ret && i < 2; i++)
-            ret |= task[conf_out.aud.audio_encode_timing][i](&conf_out, oip, &pe, &g_sys_dat);
+            ret |= task[audio_encode_timing][i](&conf_out, oip, &pe, &g_sys_dat);
 
         if (!ret)
             ret |= mux(&conf_out, oip, &pe, &g_sys_dat);
@@ -205,6 +202,7 @@ BOOL func_output( OUTPUT_INFO *oip )
     if (!(ret & (AUO_RESULT_ERROR | AUO_RESULT_ABORT)))
         ret |= run_bat_file(&conf_out, oip, &pe, &g_sys_dat, RUN_BAT_AFTER_PROCESS);
 
+    log_process_events();
     return (ret & AUO_RESULT_ERROR) ? FALSE : TRUE;
 }
 
@@ -215,27 +213,27 @@ BOOL func_output( OUTPUT_INFO *oip )
 //C4100 : 引数は関数の本体部で 1 度も参照されません。
 #pragma warning( push )
 #pragma warning( disable: 4100 )
-BOOL func_config(HWND hwnd, HINSTANCE dll_hinst)
-{
+BOOL func_config(HWND hwnd, HINSTANCE dll_hinst) {
     init_SYSTEM_DATA(&g_sys_dat);
+    overwrite_aviutl_ini_name();
     if (g_sys_dat.exstg->get_init_success())
         ShowfrmConfig(&g_conf, &g_sys_dat);
     return TRUE;
 }
 #pragma warning( pop )
 
-int func_config_get( void *data, int size )
-{
-    if (data && size == sizeof(CONF_GUIEX))
+int func_config_get( void *data, int size ) {
+    if (data && size == sizeof(CONF_GUIEX)) {
         memcpy(data, &g_conf, sizeof(g_conf));
+    }
     return sizeof(g_conf);
 }
 
-int func_config_set( void *data,int size )
-{
+int func_config_set( void *data,int size ) {
     init_SYSTEM_DATA(&g_sys_dat);
-    if (!g_sys_dat.exstg->get_init_success(TRUE))
+    if (!g_sys_dat.exstg->get_init_success(TRUE)) {
         return NULL;
+    }
     init_CONF_GUIEX(&g_conf, FALSE);
     return (guiEx_config::adjust_conf_size(&g_conf, data, size)) ? size : NULL;
 }
@@ -265,9 +263,11 @@ void delete_SYSTEM_DATA(SYSTEM_DATA *_sys_dat) {
 #pragma warning( disable: 4100 )
 void init_CONF_GUIEX(CONF_GUIEX *conf, BOOL use_10bit) {
     ZeroMemory(conf, sizeof(CONF_GUIEX));
-    conf->aud.encoder = g_sys_dat.exstg->s_local.default_audio_encoder;
-    conf->vid.resize_width = 1920;
-    conf->vid.resize_height = 1080;
+    guiEx_config::write_conf_header(conf);
+    conf->vid.resize_width = 1280;
+    conf->vid.resize_height = 720;
+    conf->aud.ext.encoder = g_sys_dat.exstg->s_local.default_audio_encoder_ext;
+    conf->aud.in.encoder  = g_sys_dat.exstg->s_local.default_audio_encoder_in;
     conf->size_all = CONF_INITIALIZED;
 }
 #pragma warning( pop )
@@ -292,6 +292,15 @@ void write_log_auo_enc_time(const char *mes, DWORD time) {
         (time % (60*60*1000)) / (60*1000),
         (time % (60*1000)) / 1000,
         ((time % 1000)) / 100);
+}
+
+void overwrite_aviutl_ini_name() {
+    char ini_file[1024];
+    get_aviutl_dir(ini_file, _countof(ini_file));
+    PathAddBackSlashLong(ini_file);
+    strcat_s(ini_file, _countof(ini_file), "aviutl.ini");
+    WritePrivateProfileString(AUO_NAME, "name", NULL, ini_file);
+    WritePrivateProfileString(AUO_NAME, "name", AUO_FULL_NAME, ini_file);
 }
 
 void overwrite_aviutl_ini_file_filter(int idx) {

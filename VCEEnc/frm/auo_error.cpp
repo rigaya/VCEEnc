@@ -181,7 +181,7 @@ void error_malloc_8bit() {
 }
 
 void error_afs_interlace_stg() {
-    write_log_line(LOG_ERROR, 
+    write_log_line(LOG_ERROR,
         "auo [error]: 自動フィールドシフトとインターレース設定が両方オンになっており、設定が矛盾しています。\n"
         "             設定を見なおしてください。");
 }
@@ -209,7 +209,7 @@ void error_no_wavefile() {
 }
 
 void warning_audio_length() {
-    write_log_line(LOG_WARNING, 
+    write_log_line(LOG_WARNING,
         "auo [warning]: 音声の長さが動画の長さと大きく異なるようです。\n"
         "               これが意図したものでない場合、音声が正常に出力されていないかもしれません。\n"
         "               この問題は圧縮音声をソースとしていると発生することがあります。\n"
@@ -241,12 +241,12 @@ void warning_failed_mux_tmp_drive_space() {
     write_log_auo_line(LOG_WARNING, "指定されたmux用一時フォルダのあるドライブの空き容量取得に失敗しました。mux用一時フォルダ指定を解除しました。");
 }
 
-void error_failed_muxer_drive_space() {
-    write_log_auo_line(LOG_ERROR, "muxerのあるドライブの空き容量取得に失敗しました。muxを行えません。");
+void warning_failed_muxer_drive_space() {
+    write_log_auo_line(LOG_WARNING, "muxerのあるドライブの空き容量取得に失敗しました。容量不足によりmuxが失敗する可能性があります。");
 }
 
-void error_failed_out_drive_space() {
-    write_log_auo_line(LOG_ERROR, "出力先のあるドライブの空き容量取得に失敗しました。muxを行えません。");
+void warning_failed_out_drive_space() {
+    write_log_auo_line(LOG_WARNING, "出力先のあるドライブの空き容量取得に失敗しました。容量不足によりmuxが失敗する可能性があります。");
 }
 
 void warning_failed_get_aud_size() {
