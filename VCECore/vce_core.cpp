@@ -44,6 +44,7 @@
 #include "rgy_input_avs.h"
 #include "rgy_input_raw.h"
 #include "rgy_input_vpy.h"
+#include "rgy_input_sm.h"
 #include "rgy_input_avcodec.h"
 #include "rgy_output.h"
 #include "rgy_output_avcodec.h"
@@ -1850,11 +1851,14 @@ RGY_ERR VCECore::run() {
     }
 
     auto run_send_streams = [this, &pWriterForAudioStreams](int inputFrames) {
-        vector<AVPacket> packetList = m_pFileReader->GetStreamDataPackets(inputFrames);
+        RGYInputSM *pReaderSM = dynamic_cast<RGYInputSM *>(m_pFileReader.get());
+        const int droppedInAviutl = (pReaderSM != nullptr) ? pReaderSM->droppedFrames() : 0;
+
+        vector<AVPacket> packetList = m_pFileReader->GetStreamDataPackets(inputFrames + droppedInAviutl);
 
         //音声ファイルリーダーからのトラックを結合する
         for (const auto &reader : m_AudioReaders) {
-            vector_cat(packetList, reader->GetStreamDataPackets(inputFrames));
+            vector_cat(packetList, reader->GetStreamDataPackets(inputFrames + droppedInAviutl));
         }
         //パケットを各Writerに分配する
         for (uint32_t i = 0; i < packetList.size(); i++) {

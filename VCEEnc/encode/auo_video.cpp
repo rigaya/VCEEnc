@@ -322,6 +322,7 @@ static std::unique_ptr<RGYSharedMemWin> video_create_param_mem(const OUTPUT_INFO
             prmsm->heBufFilled[i] = (uint32_t)heBufFilled[i];
             prmsm->duration[i] = 0;
             prmsm->timestamp[i] = 0;
+            prmsm->dropped[i] = 0;
         }
     }
     return std::move(PrmSm);
@@ -441,6 +442,7 @@ static int send_frame(
     if (next_jitter) {
         prmsm->timestamp[sendFrame & 1] += next_jitter[-1];
     }
+    prmsm->dropped[sendFrame & 1] = pe->drop_count;
     return AUO_RESULT_SUCCESS;
 }
 
