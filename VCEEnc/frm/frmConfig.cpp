@@ -930,6 +930,7 @@ System::Void frmConfig::InitForm() {
     //フォームの変更可不可を更新
     fcgChangeMuxerVisible(nullptr, nullptr);
     fcgChangeEnabled(nullptr, nullptr);
+    fcgCBAudioUseExt_CheckedChanged(nullptr, nullptr);
     EnableSettingsNoteChange(false);
 #ifdef HIDE_MPEG2
     tabPageMpgMux = fcgtabControlMux->TabPages[2];
