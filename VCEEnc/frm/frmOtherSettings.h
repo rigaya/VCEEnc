@@ -591,9 +591,9 @@ namespace VCEEnc {
             fosCBRunBatMinimized->Checked        = fos_ex_stg->s_local.run_bat_minimized != 0;
             fosCXLogLevel->SelectedIndex            = get_cx_index(list_log_level_jp, fos_ex_stg->s_log.log_level);
             if (fos_ex_stg->s_local.default_audenc_use_in) {
-                fosCXDefaultAudioEncoder->SelectedIndex = clamp(fos_ex_stg->s_local.default_audio_encoder_in, 0, fos_ex_stg->s_aud_int_count);
+                fosCXDefaultAudioEncoder->SelectedIndex = clamp(fos_ex_stg->s_local.default_audio_encoder_in, 0, fos_ex_stg->s_aud_int_count-1);
             } else {
-                fosCXDefaultAudioEncoder->SelectedIndex = clamp(fos_ex_stg->s_local.default_audio_encoder_ext, 0, fos_ex_stg->s_aud_ext_count) + fos_ex_stg->s_aud_int_count;
+                fosCXDefaultAudioEncoder->SelectedIndex = clamp(fos_ex_stg->s_local.default_audio_encoder_ext, 0, fos_ex_stg->s_aud_ext_count-1) + fos_ex_stg->s_aud_int_count;
             }
             if (str_has_char(fos_ex_stg->s_local.conf_font.name))
                 SetFontFamilyToForm(this, gcnew FontFamily(String(fos_ex_stg->s_local.conf_font.name).ToString()), this->Font->FontFamily);
