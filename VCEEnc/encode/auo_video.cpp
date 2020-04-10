@@ -349,7 +349,7 @@ static int video_create_event(HANDLE heBufEmpty[2], HANDLE heBufFilled[2]) {
 static int send_frame(
     std::unique_ptr<RGYSharedMemWin>& inputbuf, void *const frame,
     const int i, const int sendFrame, const BOOL copy_frame, int *const next_jitter,
-    const OUTPUT_INFO *oip,
+    const OUTPUT_INFO *oip, const PRM_ENC *pe,
     const RGY_CSP input_csp,
     const VCEParam& enc_prm,
     RGYInputSMSharedData* const prmsm,
@@ -670,7 +670,7 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
 
             if (!drop) {
                 ret |= send_frame(inputbuf[sendFrames&1], frame, i, sendFrames, copy_frame, (jitter) ? next_jitter : nullptr,
-                    oip, input_csp, enc_prm, prmsm, convert.get(), tempBufForNonModWidth, tempBufForNonModWidthPitch);
+                    oip, pe, input_csp, enc_prm, prmsm, convert.get(), tempBufForNonModWidth, tempBufForNonModWidthPitch);
                 if (ret != AUO_RESULT_SUCCESS)
                     break;
 
