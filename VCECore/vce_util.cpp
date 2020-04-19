@@ -33,6 +33,7 @@
 #include "VideoDecoderUVD.h"
 #include "Trace.h"
 #include "Surface.h"
+#include "rgy_frame.h"
 
 static const auto RGY_CODEC_TO_VCE = make_array<std::pair<RGY_CODEC, const wchar_t *>>(
     std::make_pair(RGY_CODEC_UNKNOWN, nullptr),
@@ -207,6 +208,30 @@ const TCHAR *AMFRetString(AMF_RESULT ret) {
         return _T("Unknown");
     }
 #undef AMFRESULT_TO_STR
+}
+
+void RGYBitstream::addFrameData(RGYFrameData *frameData) {
+    if (frameData != nullptr) {
+        frameDataNum++;
+        frameDataList = (RGYFrameData **)realloc(frameDataList, frameDataNum * sizeof(frameDataList[0]));
+        frameDataList[frameDataNum - 1] = frameData;
+    }
+}
+
+void RGYBitstream::clearFrameDataList() {
+    frameDataNum = 0;
+    if (frameDataList) {
+        for (int i = 0; i < frameDataNum; i++) {
+            if (frameDataList[i]) {
+                delete frameDataList[i];
+            }
+        }
+        free(frameDataList);
+        frameDataList = nullptr;
+    }
+}
+std::vector<RGYFrameData *> RGYBitstream::getFrameDataList() {
+    return make_vector(frameDataList, frameDataNum);
 }
 
 __declspec(noinline)

@@ -40,6 +40,8 @@
 #include "convert_csp.h"
 #include "rgy_opencl.h"
 
+class RGYFrameData;
+
 bool check_if_vce_available(int deviceId, int logLevel);
 tstring check_vce_features(const std::vector<RGY_CODEC>& codecs, int deviceId, int logLevel);
 
@@ -66,6 +68,8 @@ private:
     RGY_PICSTRUCT dataPicstruct;
     int dataFrameIdx;
     int64_t dataDuration;
+    RGYFrameData **frameDataList;
+    int frameDataNum;
 
 public:
     uint8_t *bufptr() const {
@@ -303,6 +307,9 @@ public:
     RGY_ERR append(RGYBitstream *pBitstream) {
         return append(pBitstream->data(), pBitstream->size());
     }
+    void addFrameData(RGYFrameData *frameData);
+    void clearFrameDataList();
+    std::vector<RGYFrameData *> getFrameDataList();
 };
 
 static inline RGYBitstream RGYBitstreamInit() {
