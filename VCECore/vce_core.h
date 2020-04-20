@@ -159,6 +159,7 @@ protected:
     shared_ptr<EncodeStatus> m_pStatus;
     shared_ptr<CPerfMonitor> m_pPerfMonitor;
 
+    int                m_pipelineDepth;
     int                m_nProcSpeedLimit;       //処理速度制限 (0で制限なし)
     RGYAVSync          m_nAVSyncMode;           //映像音声同期設定
     rgy_rational<int>  m_inputFps;              //入力フレームレート

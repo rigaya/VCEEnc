@@ -122,6 +122,7 @@ VCECore::VCECore() :
     m_pFileWriterListAudio(),
     m_pStatus(),
     m_pPerfMonitor(),
+    m_pipelineDepth(2),
     m_nProcSpeedLimit(0),
     m_nAVSyncMode(RGY_AVSYNC_ASSUME_CFR),
     m_inputFps(),
@@ -1423,6 +1424,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_RATE_CONTROL_METHOD(prm->codec),             (amf_int64)prm->rateControl);
     m_params.SetParam(AMF_PARAM_VBV_BUFFER_SIZE(prm->codec),                 (amf_int64)prm->nVBVBufferSize * 1000);
     m_params.SetParam(AMF_PARAM_INITIAL_VBV_BUFFER_FULLNESS(prm->codec),     (amf_int64)prm->nInitialVBVPercent);
+    m_params.SetParam(AMF_PARAM_LOWLATENCY_MODE(prm->codec), prm->ctrl.lowLatency);
 
     m_params.SetParam(AMF_PARAM_ENFORCE_HRD(prm->codec),        prm->bEnforceHRD != 0);
     m_params.SetParam(AMF_PARAM_FILLER_DATA_ENABLE(prm->codec), prm->bFiller != 0);
@@ -1630,6 +1632,14 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         timeBeginPeriod(1);
         PrintMes(RGY_LOG_DEBUG, _T("timeBeginPeriod(1)\n"));
     }
+    if (prm->ctrl.lowLatency) {
+        m_pipelineDepth = 1;
+        prm->nBframes = 0;
+        if (prm->rateControl == get_cx_value(get_rc_method(prm->codec), _T("VBR"))) {
+            prm->rateControl = get_cx_value(get_rc_method(prm->codec), _T("VBR_LAT"));
+        }
+        PrintMes(RGY_LOG_DEBUG, _T("lowlatency mode.\n"));
+    }
 
     if (!m_pStatus) {
         m_pStatus = std::make_shared<EncodeStatus>();
@@ -1803,7 +1813,6 @@ RGY_ERR VCECore::run_output() {
 RGY_ERR VCECore::run() {
     m_pStatus->SetStart();
     m_state = RGY_STATE_RUNNING;
-    const int pipelineDepth = 1;
     const auto VCE_TIMEBASE = rgy_rational<int>(1, AMF_SECOND);
     const bool vpp_rff = false;
     const bool vpp_afs_rff_aware = false;
@@ -2288,7 +2297,7 @@ RGY_ERR VCECore::run() {
             if (!bDrain) {
                 dqInFrames.pop_front();
             }
-            while (dqEncFrames.size() >= pipelineDepth) {
+            while (dqEncFrames.size() >= m_pipelineDepth) {
                 auto &encframe = dqEncFrames.front();
                 if ((err = send_encoder(encframe)) != RGY_ERR_NONE) {
                     res = err;
@@ -2572,6 +2581,9 @@ tstring VCECore::GetEncoderParam() {
                 others += _T("sps pps vps ");
             }
         }
+    }
+    if (GetPropertyBool(AMF_PARAM_LOWLATENCY_MODE(m_encCodec))) {
+        others += _T("lowlatency ");
     }
     if (GetPropertyBool(AMF_PARAM_ENFORCE_HRD(m_encCodec))) {
         others += _T("hrd ");
