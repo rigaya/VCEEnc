@@ -1281,10 +1281,10 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_BOOL(_T("--skip-frame"), _T("--no-skip-frame"), bEnableSkipFrame);
     OPT_BOOL(_T("--vbaq"), _T(""), bVBAQ);
     OPT_LST(_T("--motion-est"), nMotionEst, list_mv_presicion);
-    if (pParams->input.sar[0] > 0 && pParams->input.sar[1] > 0) {
-        cmd << _T(" --sar ") << pParams->input.sar[0] << _T(":") << pParams->input.sar[1];
-    } else if (pParams->input.sar[0] < 0 && pParams->input.sar[1] < 0) {
-        cmd << _T(" --dar ") << -1 * pParams->input.sar[0] << _T(":") << -1 * pParams->input.sar[1];
+    if (pParams->par[0] > 0 && pParams->par[1] > 0) {
+        cmd << _T(" --sar ") << pParams->par[0] << _T(":") << pParams->par[1];
+    } else if (pParams->par[0] < 0 && pParams->par[1] < 0) {
+        cmd << _T(" --dar ") << -1 * pParams->par[0] << _T(":") << -1 * pParams->par[1];
     }
     OPT_BOOL(_T("--filler"), _T(""), bFiller);
     OPT_BOOL(_T("--enforce-hrd"), _T(""), bEnforceHRD);
