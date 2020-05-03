@@ -55,6 +55,7 @@ const char *get_encoder_version();
 #define ENABLE_AVCODEC_AUDPROCESS_THREAD 1
 #define ENABLE_CPP_REGEX 1
 #define ENABLE_DTL 1
+#define ENABLE_AVCODEC_ITERATE 1
 
 #define GPU_VENDOR "AMD"
 #define DECODER_NAME  "vce"
