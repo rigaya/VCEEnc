@@ -55,7 +55,7 @@ const char *get_encoder_version();
 #define ENABLE_AVCODEC_AUDPROCESS_THREAD 1
 #define ENABLE_CPP_REGEX 1
 #define ENABLE_DTL 1
-#define ENABLE_AVCODEC_ITERATE 1
+
 
 #define GPU_VENDOR "AMD"
 #define DECODER_NAME  "vce"
@@ -74,6 +74,7 @@ const char *get_encoder_version();
 #define ENABLE_AVSW_READER        0
 #define ENABLE_SM_READER          0
 #define ENABLE_OPENCL             0
+#define ENABLE_CAPTION2ASS        0
 #else
 #define ENCODER_NAME  "VCEEnc"
 #define FOR_AUO                   0
@@ -84,6 +85,7 @@ const char *get_encoder_version();
 #define ENABLE_AVSW_READER        1
 #define ENABLE_SM_READER          1
 #define ENABLE_OPENCL             1
+#define ENABLE_CAPTION2ASS        1
 #endif
 
 #endif //##ifndef __RGY_VERSION_H__
