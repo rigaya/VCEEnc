@@ -969,11 +969,11 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetCXIndex(fcgCXHEVCLevel,         get_cx_index(list_hevc_level, vce.codecParam[RGY_CODEC_HEVC].nLevel));
     SetCXIndex(fcgCXHEVCProfile,       get_cx_index(list_hevc_profile, vce.codecParam[RGY_CODEC_HEVC].nProfile));
     SetCXIndex(fcgCXInterlaced,        get_cx_index(list_interlaced, vce.input.picstruct));
-    if (vce.input.sar[0] * vce.input.sar[1] <= 0)
-        vce.input.sar[0] = vce.input.sar[1] = 0;
-    SetCXIndex(fcgCXAspectRatio, (vce.input.sar[0] < 0));
-    SetNUValue(fcgNUAspectRatioX, abs(vce.input.sar[0]));
-    SetNUValue(fcgNUAspectRatioY, abs(vce.input.sar[1]));
+    if (vce.par[0] * vce.par[1] <= 0)
+        vce.par[0] = vce.par[1] = 0;
+    SetCXIndex(fcgCXAspectRatio, (vce.par[0] < 0));
+    SetNUValue(fcgNUAspectRatioX, abs(vce.par[0]));
+    SetNUValue(fcgNUAspectRatioY, abs(vce.par[1]));
 
     SetNUValue(fcgNUQPMax,               vce.nQPMax);
     SetNUValue(fcgNUQPMin,               vce.nQPMin);
@@ -1154,11 +1154,11 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
 
     cnf->vid.afs                    = fcgCBAFS->Checked;
     cnf->vid.auo_tcfile_out         = fcgCBAuoTcfileout->Checked;
-    vce.input.sar[0]                = (int)fcgNUAspectRatioX->Value;
-    vce.input.sar[1]                = (int)fcgNUAspectRatioY->Value;
+    vce.par[0]                      = (int)fcgNUAspectRatioX->Value;
+    vce.par[1]                      = (int)fcgNUAspectRatioY->Value;
     if (fcgCXAspectRatio->SelectedIndex == 1) {
-        vce.input.sar[0] *= -1;
-        vce.input.sar[1] *= -1;
+        vce.par[0] *= -1;
+        vce.par[1] *= -1;
     }
 
     //拡張部
