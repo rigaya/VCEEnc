@@ -230,6 +230,11 @@ float get_uv(__read_only image2d_t src_p0_0, __read_only image2d_t src_p0_1, flo
     }
 }
 
+
+#define PREREAD_Y ((mode == 4) ? 6 : 2) //必要になる前後の行のぶん
+#define SHARED_C_Y (SYN_BLOCK_Y * 2 + PREREAD_Y)
+#define SHARED_C_XY (SHARED_C_Y * SYN_BLOCK_INT_X)
+
 void proc_uv(
     __global uchar *__restrict__ dst,
     __read_only image2d_t src_p0_0,
@@ -237,6 +242,8 @@ void proc_uv(
     __read_only image2d_t src_p1_0,
     __read_only image2d_t src_p1_1,
     __global const uchar *__restrict__ sip,
+    __local float s_tmp[3][SHARED_C_Y][SYN_BLOCK_INT_X],
+    __local DATA s_out[SYN_BLOCK_Y][SYN_BLOCK_INT_X * 4],
     const int sip_pitch,
     const int src_width, const int src_height,
     const int imgx,  //グローバルスレッドID x
@@ -245,12 +252,7 @@ void proc_uv(
     const int tb_order, const uchar status
 ) {
     //static_assert(-1 <= mode && mode <= 4, "mode should be -1 - 4");
-#define PREREAD_Y ((mode == 4) ? 6 : 2) //必要になる前後の行のぶん
-#define SHARED_C_Y (SYN_BLOCK_Y * 2 + PREREAD_Y)
-#define SHARED_C_XY (SHARED_C_Y * SYN_BLOCK_INT_X)
 #define SOFFSET(x,y,depth) ((depth) * SHARED_C_XY + (y) * SYN_BLOCK_INT_X + (x))
-    __local float s_tmp[3][SHARED_C_Y][SYN_BLOCK_INT_X];
-    __local DATA s_out[SYN_BLOCK_Y][SYN_BLOCK_INT_X * 4];
     __local float *pSharedX = (__local float *)&s_tmp[0][0][0] + SOFFSET(lx, 0, 0);
     __local DATA *psOut = &s_out[ly][lx];
     int ix = get_group_id(0) * SYN_BLOCK_INT_X * 4 + get_local_id(0); //YUV422ベースの色差インデックス 1スレッドは横方向に4つの色差pixelを担当
@@ -357,10 +359,7 @@ void proc_uv(
     if (imgx < (src_width >> 1) && imgy < (src_height >> 1)) {
         *(__global DATA4 *)dst = *(__local DATA4 *)(&s_out[ly][lx << 2]);
     }
-#undef SHARED_C_Y
-#undef SHARED_C_XY
 #undef SOFFSET
-#undef PREREAD_Y
 }
 
 void set_y_h_pos(const int imgx, const int y_h_center, int height, const int src_pitch, int *y_h1_pos, int *y_h2_pos, int *y_h3_pos, int *y_h4_pos, int *y_h5_pos, int *y_h6_pos, int *y_h7_pos, int *y_h8_pos) {
@@ -403,6 +402,8 @@ __kernel void kernel_synthesize_mode_1234_yuv420(
     const int ly = get_local_id(1); //スレッド数=SYN_BLOCK_Y
     const int imgx = get_group_id(0) * SYN_BLOCK_INT_X /*blockDim.x*/ + lx; //グローバルスレッドID x
     const int imgy = get_group_id(1) * SYN_BLOCK_Y     /*blockDim.y*/ + ly; //グローバルスレッドID y
+    __local float s_tmp[3][SHARED_C_Y][SYN_BLOCK_INT_X];
+    __local DATA s_out[SYN_BLOCK_Y][SYN_BLOCK_INT_X * 4];
 
     if (imgx * 8 < width && imgy < (height >> 1)) {
         //y
@@ -422,11 +423,11 @@ __kernel void kernel_synthesize_mode_1234_yuv420(
         dst_v += uv_pos_dst;
 
         //u
-        proc_uv(dst_u, src_u0_0, src_u0_1, src_u1_0, src_u1_1, sip, sip_pitch, width, height, imgx, imgy,
+        proc_uv(dst_u, src_u0_0, src_u0_1, src_u1_0, src_u1_1, sip, s_tmp, s_out, sip_pitch, width, height, imgx, imgy,
             lx, ly, tb_order, status);
 
         //v
-        proc_uv(dst_v, src_v0_0, src_v0_1, src_v1_0, src_v1_1, sip, sip_pitch, width, height, imgx, imgy,
+        proc_uv(dst_v, src_v0_0, src_v0_1, src_v1_0, src_v1_1, sip, s_tmp, s_out, sip_pitch, width, height, imgx, imgy,
             lx, ly, tb_order, status);
     }
 }
