@@ -318,6 +318,7 @@ VCEParam::VCEParam() :
     nLTRFrames(0),
     bFiller(false),
     pa(),
+    pe(),
     bVBAQ(false),
     ssim(false),
     psnr(false),

@@ -176,6 +176,7 @@ tstring encoder_help() {
         _T("                                 - q-pel (best) = default\n")
         _T("   --gop-len <int>              set length of gop (default: auto)\n"),
         _T("   --vbaq                       enable VBAQ\n")
+        _T("   --pe                         enable Pre Encode\n")
         _T("   --pa                         enable Pre Analysis\n")
         _T("   --pa-sc <string>             sensitivity of scenechange detection\n")
         _T("                                 - none, low, medium(default), high\n")
@@ -626,6 +627,14 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
     }
     if (IS_OPTION("no-psnr")) {
         pParams->psnr = false;
+        return 0;
+    }
+    if (IS_OPTION("no-pe")) {
+        pParams->pe = false;
+        return 0;
+    }
+    if (IS_OPTION("pe")) {
+        pParams->pe = true;
         return 0;
     }
     if (IS_OPTION("no-pa")
@@ -1301,6 +1310,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_BOOL(_T("--ssim"), _T("--no-ssim"), ssim);
     OPT_BOOL(_T("--psnr"), _T("--no-psnr"), psnr);
 
+    OPT_BOOL(_T("--pe"), _T("--no-pe"), pe);
     OPT_BOOL(_T("--pa"), _T("--no-pa"), pa.enable);
     if (pParams->pa.sc) {
         OPT_LST(_T("pa-sc"), pa.scSensitivity, list_pa_sc_sensitivity);

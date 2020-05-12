@@ -292,6 +292,9 @@ Motion vector accuracy / default: auto
 - half-pel ... 1/2 pixel precision
 - full-pel ... 1 pixel accuracy (low accuracy)
 
+### --pe
+Enable pre-encode assisted rate control. (default: off)  
+
 ### --pa
 Enable pre analysis to enahance quality, supports VBR mode only. (default: off)  
 Can be adjusted by "--pa-xxx" options below.

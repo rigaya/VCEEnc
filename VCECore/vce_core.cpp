@@ -1433,6 +1433,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_SLICES_PER_FRAME(prm->codec),               (amf_int64)prm->nSlices);
     m_params.SetParam(AMF_PARAM_GOP_SIZE(prm->codec),                       (amf_int64)nGOPLen);
 
+    m_params.SetParam(AMF_PARAM_PREENCODE_ENABLE(prm->codec), prm->pe);
     if (prm->pa.enable && prm->rateControl != get_cx_value(get_rc_method(prm->codec), _T("VBR"))) {
         PrintMes(RGY_LOG_WARN, _T("Pre analysis is currently supported only with VBR mode.\n"));
         PrintMes(RGY_LOG_WARN, _T("Currenlty %s mode is selected, so pre analysis will be disabled.\n"), get_cx_desc(get_rc_method(prm->codec), prm->rateControl));
@@ -2585,6 +2586,9 @@ tstring VCECore::GetEncoderParam() {
     }
     if (GetPropertyBool(AMF_PARAM_LOWLATENCY_MODE(m_encCodec))) {
         others += _T("lowlatency ");
+    }
+    if (GetPropertyBool(AMF_PARAM_PREENCODE_ENABLE(m_encCodec))) {
+        others += _T("pe ");
     }
     if (GetPropertyBool(AMF_PARAM_ENFORCE_HRD(m_encCodec))) {
         others += _T("hrd ");
