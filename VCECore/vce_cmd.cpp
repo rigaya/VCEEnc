@@ -314,8 +314,8 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
     if (IS_OPTION("quality")) {
         i++;
         int value = AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED;
-        if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_vce_quality_preset, strInput[i]))) {
-            print_cmd_error_invalid_value(option_name, strInput[i], list_vce_quality_preset);
+        if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_vce_quality_preset_h264, strInput[i]))) {
+            print_cmd_error_invalid_value(option_name, strInput[i], list_vce_quality_preset_h264);
             return 1;
         }
         pParams->qualityPreset = value;
@@ -1132,19 +1132,37 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
             return 1;
         }
     }
-    if (pParams->codec == RGY_CODEC_HEVC) {
-        int nH264RateControl = pParams->rateControl;
-        switch (nH264RateControl) {
-        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR:
-            pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR;
-            break;
-        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR:
-            pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR;
-            break;
-        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP:
-        default:
-            pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP;
-            break;
+    if (pParams->codec != RGY_CODEC_H264) {
+        if (pParams->codec == RGY_CODEC_HEVC) {
+            int h264RateControl = pParams->rateControl;
+            switch (h264RateControl) {
+            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR:
+                pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR;
+                break;
+            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR:
+                pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR;
+                break;
+            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP:
+            default:
+                pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP;
+                break;
+            }
+            int h264qualityPreset = pParams->qualityPreset;
+            switch (h264qualityPreset) {
+            case AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED:
+                pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_SPEED;
+                break;
+            case AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY:
+                pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_QUALITY;
+                break;
+            case AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED:
+            default:
+                pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_BALANCED;
+                break;
+            }
+        } else {
+            fprintf(stderr, "Unsupported codec!\n");
+            abort();
         }
     }
 
@@ -1237,35 +1255,23 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     cmd << _T(" -c ") << get_chr_from_value(list_codec, pParams->codec);
 
     cmd << gen_cmd(&pParams->input, &encPrmDefault.input, save_disabled_prm);
-
     if (save_disabled_prm) {
-        switch (pParams->rateControl) {
-        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR:
-        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR:
-        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR: {
-            OPT_QP(_T("--cqp"), nQPI, nQPP, nQPB, true, true);
-        } break;
-        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP:
-        default: {
+        if (pParams->rateControl == get_codec_cqp(pParams->codec)) {
             cmd << _T(" --vbr ") << pParams->nBitrate;
-        } break;
+        } else {
+            OPT_QP(_T("--cqp"), nQPI, nQPP, nQPB, true, true);
         }
     }
-    OPT_LST(_T("--quality"), qualityPreset, list_vce_quality_preset);
-    switch (pParams->rateControl) {
-    case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR: {
+    cmd << _T(" --quality ") << get_chr_from_value(get_quality_preset(pParams->codec), (pParams->qualityPreset));
+    if (pParams->rateControl == get_codec_cbr(pParams->codec)) {
         cmd << _T(" --cbr ") << pParams->nBitrate;
-    } break;
-    case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR:
-    case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR: {
+    } else if (pParams->rateControl == get_codec_vbr(pParams->codec)
+        || pParams->rateControl == get_codec_vbr_lat(pParams->codec)) {
         cmd << _T(" --vbr ") << pParams->nBitrate;
-    } break;
-    case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP:
-    default: {
+    } else if (pParams->rateControl == get_codec_cqp(pParams->codec)) {
         OPT_QP(_T("--cqp"), nQPI, nQPP, nQPB, true, true);
-    } break;
     }
-    if (pParams->rateControl != AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP || save_disabled_prm) {
+    if (pParams->rateControl != get_codec_cqp(pParams->codec) || save_disabled_prm) {
         OPT_NUM(_T("--vbv-bufsize"), nVBVBufferSize);
         OPT_NUM(_T("--max-bitrate"), nMaxBitrate);
     }

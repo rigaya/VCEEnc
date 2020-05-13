@@ -725,8 +725,8 @@ System::Void frmConfig::InitData(CONF_GUIEX *set_config, const SYSTEM_DATA *syst
 System::Void frmConfig::InitComboBox() {
     //コンボボックスに値を設定する
     setComboBox(fcgCXCodec,         list_codec);
-    setComboBox(fcgCXEncMode,       list_vce_h264_rc_method);
-    setComboBox(fcgCXQualityPreset, list_vce_quality_preset);
+    setComboBox(fcgCXEncMode,       list_vce_rc_method_auo);
+    setComboBox(fcgCXQualityPreset, list_vce_quality_preset_h264);
     setComboBox(fcgCXCodecLevel,    list_avc_level);
     setComboBox(fcgCXCodecProfile,  list_avc_profile);
     setComboBox(fcgCXHEVCLevel,     list_hevc_level);
@@ -953,8 +953,8 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     parse_cmd(&vce, cnf->vce.cmd);
 
     SetCXIndex(fcgCXCodec,             get_cx_index(list_codec, vce.codec));
-    SetCXIndex(fcgCXEncMode,           get_cx_index(list_vce_h264_rc_method, vce.rateControl));
-    SetCXIndex(fcgCXQualityPreset,     get_cx_index(list_vce_quality_preset, vce.qualityPreset));
+    SetCXIndex(fcgCXEncMode,           get_cx_index(get_rc_method(vce.codec), vce.rateControl));
+    SetCXIndex(fcgCXQualityPreset,     get_cx_index(get_quality_preset(vce.codec), vce.qualityPreset));
     SetNUValue(fcgNUBitrate,           vce.nBitrate);
     SetNUValue(fcgNUMaxkbps,           vce.nMaxBitrate);
     SetNUValue(fcgNUVBVBufSize,        vce.nVBVBufferSize);
@@ -1088,8 +1088,8 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     VCEParam vce;
     vce.codec                                   = (RGY_CODEC)list_codec[fcgCXCodec->SelectedIndex].value;
     conf->vce.codec = vce.codec;
-    vce.rateControl                             = list_vce_h264_rc_method[fcgCXEncMode->SelectedIndex].value;
-    vce.qualityPreset                           = list_vce_quality_preset[fcgCXQualityPreset->SelectedIndex].value;
+    vce.rateControl                             = get_rc_method(vce.codec)[fcgCXEncMode->SelectedIndex].value;
+    vce.qualityPreset                           = get_quality_preset(vce.codec)[fcgCXQualityPreset->SelectedIndex].value;
     vce.codecParam[RGY_CODEC_H264].nProfile     = list_avc_profile[fcgCXCodecProfile->SelectedIndex].value;
     vce.codecParam[RGY_CODEC_H264].nLevel       = list_avc_level[fcgCXCodecLevel->SelectedIndex].value;
     vce.codecParam[RGY_CODEC_HEVC].nProfile     = list_hevc_profile[fcgCXHEVCProfile->SelectedIndex].value;

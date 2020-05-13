@@ -1414,7 +1414,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_USAGE(prm->codec),          (amf_int64)((prm->codec == RGY_CODEC_HEVC) ? AMF_VIDEO_ENCODER_HEVC_USAGE_TRANSCONDING : AMF_VIDEO_ENCODER_USAGE_TRANSCONDING));
     m_params.SetParam(AMF_PARAM_PROFILE(prm->codec),        (amf_int64)prm->codecParam[prm->codec].nProfile);
     m_params.SetParam(AMF_PARAM_PROFILE_LEVEL(prm->codec),  (amf_int64)prm->codecParam[prm->codec].nLevel);
-    m_params.SetParam(AMF_PARAM_QUALITY_PRESET(prm->codec), (amf_int64)get_quality_preset(prm->codec)[prm->qualityPreset]);
+    m_params.SetParam(AMF_PARAM_QUALITY_PRESET(prm->codec), (amf_int64)get_quality_preset(prm->codec)[prm->qualityPreset].value);
     m_params.SetParam(AMF_PARAM_QP_I(prm->codec),           (amf_int64)prm->nQPI);
     m_params.SetParam(AMF_PARAM_QP_P(prm->codec),           (amf_int64)prm->nQPP);
     m_params.SetParam(AMF_PARAM_TARGET_BITRATE(prm->codec), (amf_int64)prm->nBitrate * 1000);
@@ -1434,7 +1434,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_GOP_SIZE(prm->codec),                       (amf_int64)nGOPLen);
 
     m_params.SetParam(AMF_PARAM_PREENCODE_ENABLE(prm->codec), prm->pe);
-    if (prm->pa.enable && prm->rateControl != get_cx_value(get_rc_method(prm->codec), _T("VBR"))) {
+    if (prm->pa.enable && prm->rateControl != get_codec_vbr(prm->codec)) {
         PrintMes(RGY_LOG_WARN, _T("Pre analysis is currently supported only with VBR mode.\n"));
         PrintMes(RGY_LOG_WARN, _T("Currenlty %s mode is selected, so pre analysis will be disabled.\n"), get_cx_desc(get_rc_method(prm->codec), prm->rateControl));
         prm->pa.enable = false;
@@ -2477,8 +2477,7 @@ tstring VCECore::GetEncoderParam() {
             }
         }
     }
-    const int quality_preset = GetPropertyInt(AMF_PARAM_QUALITY_PRESET(m_encCodec));
-    mes += strsprintf(_T("Quality:       %s\n"), list_vce_quality_preset[get_quality_index(m_encCodec, quality_preset)].desc);
+    mes += strsprintf(_T("Quality:       %s\n"), getPropertyDesc(AMF_PARAM_QUALITY_PRESET(m_encCodec), get_quality_preset(m_encCodec)).c_str());
     if (GetPropertyInt(AMF_PARAM_RATE_CONTROL_METHOD(m_encCodec)) == get_rc_method(m_encCodec)[0].value) {
         mes += strsprintf(_T("CQP:           I:%d, P:%d"),
             GetPropertyInt(AMF_PARAM_QP_I(m_encCodec)),

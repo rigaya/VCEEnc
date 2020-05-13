@@ -151,6 +151,14 @@ static const wchar_t *const list_vpp_afs_analyze[] = {
     NULL
 };
 
+
+static const wchar_t *const list_vce_rc_method_auo[] = {
+    L"CQP - 固定量子化量",
+    L"CBR - 固定ビットレート",
+    L"VBR - 可変ビットレート",
+    NULL
+};
+
 static int get_cx_index(const wchar_t *const *list, const wchar_t *wchr) {
     for (int i = 0; list[i]; i++)
         if (0 == wcscmp(list[i], wchr))
