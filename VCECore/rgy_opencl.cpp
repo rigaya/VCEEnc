@@ -850,20 +850,22 @@ unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::build(const char *data, const siz
     if (data == nullptr || size == 0) {
         return nullptr;
     }
+    auto datalen = size;
     {
         const uint8_t *ptr = (const uint8_t *)data;
         if (ptr[0] == 0xEF && ptr[1] == 0xBB && ptr[2] == 0xBF) { //skip UTF-8 BOM
             data += 3;
+            datalen -= 3;
         }
     }
     const auto sep = _T("--------------------------------------------------------------------------\n");
     if (m_pLog->getLogLevel() <= RGY_LOG_DEBUG) {
-        m_pLog->write(RGY_LOG_DEBUG, _T("%sbuilding OpenCL source: size %u.\n"), sep, size);
+        m_pLog->write(RGY_LOG_DEBUG, _T("%sbuilding OpenCL source: size %u.\n"), sep, datalen);
         m_pLog->write(RGY_LOG_DEBUG, _T("options: %s\nsource\n"), char_to_tstring(options).c_str());
         m_pLog->write_log(RGY_LOG_DEBUG, (char_to_tstring(data, CP_UTF8) + _T("\n") + sep).c_str());
     }
     cl_int err = CL_SUCCESS;
-    cl_program program = clCreateProgramWithSource(m_context.get(), 1, &data, &size, &err);
+    cl_program program = clCreateProgramWithSource(m_context.get(), 1, &data, &datalen, &err);
     if (err != CL_SUCCESS) {
         m_pLog->write(RGY_LOG_ERROR, _T("Error (clCreateProgramWithSource): %s\n"), cl_errmes(err));
         return nullptr;
