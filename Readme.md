@@ -3,6 +3,7 @@
 by rigaya
 
 **[日本語版はこちら＞＞](./Readme.ja.md)**
+[![Build status](https://ci.appveyor.com/api/projects/status/b3nelkol182q7855?svg=true)](https://ci.appveyor.com/project/rigaya/vceenc)  
 
 This software is meant to investigate performance and image quality of HW encoder (VCE) of AMD.
 There are 2 types of software developed, one is command line version that runs independently, and the nother is a output plug-in of [Aviutl](http://spring-fragrance.mints.ne.jp/aviutl/).
