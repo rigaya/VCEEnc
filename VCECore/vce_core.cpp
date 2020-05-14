@@ -2311,6 +2311,17 @@ RGY_ERR VCECore::run() {
             }
         }
     }
+    while (dqEncFrames.size() > 0) {
+        auto &encframe = dqEncFrames.front();
+        RGY_ERR err = send_encoder(encframe);
+        if (err != RGY_ERR_NONE) {
+            res = err;
+            m_state = RGY_STATE_ERROR;
+            PrintMes(RGY_LOG_ERROR, _T("Failed to send frame to encoder.\n"));
+            break;
+        }
+        dqEncFrames.pop_front();
+    }
     if (m_thDecoder.joinable()) {
         DWORD exitCode = 0;
         while (GetExitCodeThread(m_thDecoder.native_handle(), &exitCode) == STILL_ACTIVE) {
