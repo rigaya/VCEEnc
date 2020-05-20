@@ -66,6 +66,21 @@ static void show_environment_info() {
     _ftprintf(stderr, _T("%s\n"), getEnviromentInfo(false).c_str());
 }
 
+static void show_option_list() {
+    show_version();
+
+    std::vector<std::string> optList;
+    for (const auto &optHelp : createOptionList()) {
+        optList.push_back(optHelp.first);
+    }
+    std::sort(optList.begin(), optList.end());
+
+    _ftprintf(stdout, _T("Option List:\n"));
+    for (const auto &optHelp : optList) {
+        _ftprintf(stdout, _T("--%s\n"), char_to_tstring(optHelp).c_str());
+    }
+}
+
 int parse_print_options(const TCHAR *option_name, const TCHAR *arg1) {
 
 #define IS_OPTION(x) (0 == _tcscmp(option_name, _T(x)))
@@ -77,6 +92,10 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1) {
     }
     if (IS_OPTION("version")) {
         show_version();
+        return 1;
+    }
+    if (IS_OPTION("option-list")) {
+        show_option_list();
         return 1;
     }
 #if 0

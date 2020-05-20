@@ -90,6 +90,9 @@ remuxer.exe -i "<video mp4file>" -i "<m4a(ALAC in mp4)file>" -o "<muxed mp4 file
 ### -v, --version
 バージョンの表示
 
+### --option-list
+オプションリストの表示。
+
 ### --check-hw [&lt;int&gt;]
 ハードウェアエンコの可否の表示。数字でDeviceIDを指定できる。省略した場合は"0"。
 

@@ -72,6 +72,9 @@ Show help
 ### -v, --version
 Show version of VCEEncC
 
+### --option-list
+Show option list.
+
 ### --check-hw [&lt;int&gt;]
 Check whether the specified device is able to run VCEEnc. DeviceID: "0" will be checked if not specified.
 
