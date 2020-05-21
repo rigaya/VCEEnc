@@ -1706,8 +1706,12 @@ RGY_ERR VCECore::run_decode() {
         RGYBitstream bitstream = RGYBitstreamInit();
         RGY_ERR sts = RGY_ERR_NONE;
         for (int i = 0; sts == RGY_ERR_NONE && m_state == RGY_STATE_RUNNING; i++) {
-            m_pFileReader->LoadNextFrame(nullptr); //進捗表示のため
-            sts = m_pFileReader->GetNextBitstream(&bitstream);
+            if ((  (sts = m_pFileReader->LoadNextFrame(nullptr)) != RGY_ERR_NONE //進捗表示のため
+                || (sts = m_pFileReader->GetNextBitstream(&bitstream)) != RGY_ERR_NONE)
+                && sts != RGY_ERR_MORE_DATA) {
+                m_state = RGY_STATE_ERROR;
+                break;
+            }
 
             amf::AMFBufferPtr pictureBuffer;
             if (sts == RGY_ERR_NONE) {
