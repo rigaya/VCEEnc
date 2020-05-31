@@ -56,6 +56,9 @@ const char *get_encoder_version();
 #define ENABLE_CPP_REGEX 1
 #define ENABLE_DTL 1
 
+#define ENABLE_DHDR10_INFO 0
+#define ENABLE_KEYFRAME_INSERT 0
+#define ENABLE_AUTO_PICSTRUCT 0
 
 #define GPU_VENDOR "AMD"
 #define DECODER_NAME  "vce"
