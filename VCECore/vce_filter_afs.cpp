@@ -28,6 +28,7 @@
 
 #include <map>
 #include <array>
+#include <emmintrin.h>
 #include "convert_csp.h"
 #include "vce_filter_afs.h"
 #include "afs_stg.h"
