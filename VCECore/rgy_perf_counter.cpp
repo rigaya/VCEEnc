@@ -276,6 +276,10 @@ int RGYGPUCounterWin::init() {
 
 int RGYGPUCounterWin::refreshCounters() {
     auto hr = S_OK;
+    if (pRefresher != nullptr) {
+        initialized = false;
+        return 1;
+    }
     if (FAILED(hr = pRefresher->Refresh(0L))) {
         return 1;
     }
@@ -338,14 +342,21 @@ int RGYGPUCounterWin::thread_func() {
     while (!m_abort) {
         auto timenow = std::chrono::system_clock::now();
         if (timenow - m_refreshedTime > std::chrono::milliseconds(500)) {
-            auto ret = refreshCounters();
-            if (ret) break;
+            try {
+                auto ret = refreshCounters();
+                if (ret) break;
+            } catch (...) {
+                break;
+            }
             m_refreshed = true;
             m_refreshedTime = timenow;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    close();
+    try {
+        close();
+    } catch (...) {
+    }
     CoUninitialize();
     return 0;
 }

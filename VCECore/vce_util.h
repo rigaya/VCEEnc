@@ -527,4 +527,6 @@ int64_t rational_rescale(int64_t v, rgy_rational<int> from, rgy_rational<int> to
 
 CodecCsp getHWDecCodecCsp();
 
+tstring AccelTypeToString(amf::AMF_ACCELERATION_TYPE accelType);
+
 #endif //#ifndef __VCE_UTIL_H__

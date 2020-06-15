@@ -233,6 +233,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="rgy_input.cpp" />
+    <ClCompile Include="vce_device.cpp" />
     <ClCompile Include="vce_filter.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -344,6 +345,7 @@
     <ClInclude Include="vce_cmd.h" />
     <ClInclude Include="vce_core.h" />
     <ClInclude Include="rgy_input.h" />
+    <ClInclude Include="vce_device.h" />
     <ClInclude Include="vce_filter.h" />
     <ClInclude Include="vce_filter_afs.h" />
     <ClInclude Include="vce_filter_ssim.h" />

@@ -285,7 +285,7 @@ VCEParam::VCEParam() :
     ctrl(),
     codec(RGY_CODEC_H264),
     codecParam(),
-    deviceID(0),
+    deviceID(-1),
     interopD3d9(false),
     interopD3d11(true),
     par(),
