@@ -48,13 +48,17 @@ public:
     RGY_ERR Init(bool dx9ex, int adapterID, bool bFullScreen, int width, int height, std::shared_ptr<RGYLog> log);
     RGY_ERR Terminate();
 
-    ATL::CComPtr<IDirect3DDevice9>     GetDevice();
-    std::wstring GetDisplayDeviceName() { return m_displayDeviceName; }
+    bool isValid() const;
+    ATL::CComPtr<IDirect3DDevice9> GetDevice();
+    LUID getLUID() const { return m_devLUID; };
+    std::wstring GetDisplayDeviceName() const { return m_displayDeviceName; }
+    static int adapterCount();
 private:
     RGY_ERR EnumerateAdapters();
 
     ATL::CComPtr<IDirect3D9>            m_pD3D;
     ATL::CComPtr<IDirect3DDevice9>      m_pD3DDevice;
+    LUID                                m_devLUID;
 
     static const int             MAXADAPTERS = 128;
     int                          m_adaptersCount;
@@ -72,12 +76,16 @@ public:
     RGY_ERR Init(int adapterID, bool onlyWithOutputs, std::shared_ptr<RGYLog> log);
     RGY_ERR Terminate();
 
+    bool isValid() const;
     ATL::CComPtr<ID3D11Device>      GetDevice();
-    std::wstring GetDisplayDeviceName() { return m_displayDeviceName; }
+    LUID getLUID() const { return m_devLUID; };
+    std::wstring GetDisplayDeviceName() const { return m_displayDeviceName; }
+    static int adapterCount();
 private:
     void EnumerateAdapters(bool onlyWithOutputs);
 
     ATL::CComPtr<ID3D11Device>   m_pD3DDevice;
+    LUID                         m_devLUID;
 
     static const int             MAXADAPTERS = 128;
     int                          m_adaptersCount;

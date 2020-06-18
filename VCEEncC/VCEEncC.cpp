@@ -48,9 +48,24 @@ static void show_help() {
 
 static void show_hw(int deviceid) {
     show_version();
-    if (check_if_vce_available(deviceid, RGY_LOG_ERROR)) {
-        _ftprintf(stdout, _T("VCE available\n"));
-        exit(0);
+    auto loglevel = RGY_LOG_ERROR;
+    if (check_if_vce_available(deviceid, loglevel)) {
+        auto core = std::make_unique<VCECore>();
+        auto err = RGY_ERR_NONE;
+        if ((err = core->initLog(loglevel)) == RGY_ERR_NONE
+            && (err = core->initAMFFactory()) == RGY_ERR_NONE
+            && (err = core->initTracer(loglevel)) == RGY_ERR_NONE) {
+            const auto devList = core->createDeviceList(false, true);
+            if (devList.size() > 0) {
+                _ftprintf(stdout, _T("VCE available\n"));
+                for (auto &dev : devList) {
+                    if (deviceid < 0 || dev->id() == deviceid) {
+                        _ftprintf(stdout, _T("device #%d: %s\n"), dev->id(), dev->name().c_str());
+                    }
+                }
+                exit(0);
+            }
+        }
     }
     _ftprintf(stdout, _T("VCE unavailable.\n"));
     exit(1);
@@ -105,7 +120,7 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1) {
     }
 #endif
     if (IS_OPTION("check-hw")) {
-        int deviceid = 0;
+        int deviceid = -1;
         if (arg1 && arg1[0] != '-') {
             int value = 0;
             if (1 == _stscanf_s(arg1, _T("%d"), &value)) {

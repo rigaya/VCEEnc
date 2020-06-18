@@ -43,6 +43,7 @@
 #include "rgy_output.h"
 #include "rgy_opencl.h"
 #include "rgy_device.h"
+#include "vce_device.h"
 #include "vce_param.h"
 #include "vce_filter.h"
 #include "vce_filter_ssim.h"
@@ -104,12 +105,14 @@ public:
     virtual RGY_ERR initLog(int loglevel);
     virtual RGY_ERR initLog(VCEParam *prm);
     virtual RGY_ERR initAMFFactory();
-    virtual RGY_ERR initContext(int log_level);
-    virtual RGY_ERR initDevice(const int deviceId, const bool interopD3d9, const bool interopD3d11);
+    virtual RGY_ERR initTracer(int log_level);
+    virtual RGY_ERR initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId);
     virtual RGY_ERR initInput(VCEParam *pParams);
     virtual RGY_ERR initOutput(VCEParam *prm);
     virtual RGY_ERR run();
     void Terminate();
+
+    virtual std::vector<std::unique_ptr<VCEDevice>> createDeviceList(bool interopD3d9, bool interopD3d11);
 
     void PrintMes(int log_level, const TCHAR *format, ...);
 
@@ -117,15 +120,14 @@ public:
     void PrintEncoderParam();
     void PrintResult();
 
-    RGY_ERR getEncCaps(RGY_CODEC codec, amf::AMFCapsPtr &encoderCaps);
-    tstring QueryIOCaps(amf::AMFIOCapsPtr& ioCaps);
-    tstring QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps);
+    VCEDevice *dev() { return m_dev.get(); };
 
     void SetAbortFlagPointer(bool *abortFlag);
 protected:
-    static tstring AccelTypeToString(amf::AMF_ACCELERATION_TYPE accelType);
     virtual RGY_ERR readChapterFile(tstring chapfile);
 
+    RGY_ERR checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm);
+    RGY_ERR gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm);
     virtual RGY_CSP GetEncoderCSP(const VCEParam *inputParam);
     virtual RGY_ERR checkParam(VCEParam *prm);
     virtual RGY_ERR initPerfMonitor(VCEParam *prm);
@@ -135,7 +137,6 @@ protected:
     virtual RGY_ERR InitChapters(VCEParam *prm);
     virtual RGY_ERR initEncoder(VCEParam *prm);
     virtual RGY_ERR initSSIMCalc(VCEParam *prm);
-    virtual tstring getGPUInfo();
 
     virtual RGY_ERR run_decode();
     virtual RGY_ERR run_output();
@@ -171,16 +172,13 @@ protected:
     RGY_PICSTRUCT      m_picStruct;
     VideoVUIInfo       m_encVUI;
 
-    DeviceDX9 m_dx9;
-    DeviceDX11 m_dx11;
-    shared_ptr<RGYOpenCLContext> m_cl;
+    std::unique_ptr<VCEDevice> m_dev;
     unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter> m_dll;
     amf::AMFFactory *m_pFactory;
     amf::AMFDebug *m_pDebug;
     amf::AMFTrace *m_pTrace;
     RGYLogTracer m_tracer;
     uint64_t m_AMFRuntimeVersion;
-    amf::AMFContextPtr m_pContext;
 
     vector<unique_ptr<RGYFilter>> m_vpFilters;
     shared_ptr<RGYFilterParam>    m_pLastFilterParam;
@@ -208,6 +206,7 @@ public:
     virtual ~VCEFeatures() {};
 
     RGY_ERR init(int deviceId, int logLevel);
+    tstring devName() const { return m_core->dev()->getGPUInfo(); }
     tstring checkFeatures(RGY_CODEC codec);
 protected:
     std::unique_ptr<VCECore> m_core;

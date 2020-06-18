@@ -70,25 +70,6 @@
 
 static const amf::AMF_SURFACE_FORMAT formatOut = amf::AMF_SURFACE_NV12;
 
-tstring VCECore::AccelTypeToString(amf::AMF_ACCELERATION_TYPE accelType) {
-    tstring strValue;
-    switch (accelType) {
-    case amf::AMF_ACCEL_NOT_SUPPORTED:
-        strValue = _T("Not supported");
-        break;
-    case amf::AMF_ACCEL_HARDWARE:
-        strValue = _T("Hardware-accelerated");
-        break;
-    case amf::AMF_ACCEL_GPU:
-        strValue = _T("GPU-accelerated");
-        break;
-    case amf::AMF_ACCEL_SOFTWARE:
-        strValue = _T("Not accelerated (software)");
-        break;
-    }
-    return strValue;
-}
-
 void VCECore::PrintMes(int log_level, const TCHAR *format, ...) {
     if (m_pLog.get() == nullptr || log_level < m_pLog->getLogLevel()) {
         return;
@@ -134,15 +115,13 @@ VCECore::VCECore() :
     m_sar(),
     m_picStruct(RGY_PICSTRUCT_UNKNOWN),
     m_encVUI(),
+    m_dev(),
     m_dll(),
-    m_dx9(),
-    m_dx11(),
     m_pFactory(nullptr),
     m_pDebug(nullptr),
     m_pTrace(nullptr),
     m_tracer(),
     m_AMFRuntimeVersion(0),
-    m_pContext(),
     m_vpFilters(),
     m_pLastFilterParam(),
     m_ssim(),
@@ -195,17 +174,9 @@ void VCECore::Terminate() {
         PrintMes(RGY_LOG_DEBUG, _T("Closed Decoder.\n"));
     }
 
-    if (m_pContext != nullptr) {
-        PrintMes(RGY_LOG_DEBUG, _T("Closing AMF Context...\n"));
-        m_pContext->Terminate();
-        m_pContext = nullptr;
-        PrintMes(RGY_LOG_DEBUG, _T("Closed AMF Context.\n"));
-    }
     m_vpFilters.clear();
     m_pLastFilterParam.reset();
-    m_cl.reset();
-    m_dx11.Terminate();
-    m_dx9.Terminate();
+    m_dev.reset();
 
     m_pFileWriterListAudio.clear();
     m_pFileWriter.reset();
@@ -594,75 +565,6 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCECore::initDevice(const int deviceId, const bool interopD3d9, const bool interopD3d11) {
-    if (interopD3d9) {
-        auto err = m_dx9.Init(true, deviceId, false, 1280, 720, m_pLog);
-        if (err != RGY_ERR_NONE) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to get directX9 device.\n"));
-            return RGY_ERR_DEVICE_LOST;
-        }
-        auto amferr = m_pContext->InitDX9(m_dx9.GetDevice());
-        if (amferr != AMF_OK) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by directX9.\n"));
-            return err_to_rgy(amferr);
-        }
-    }
-    if (interopD3d11) {
-        auto err = m_dx11.Init(deviceId, false, m_pLog);
-        if (err != RGY_ERR_NONE) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to get directX11 device.\n"));
-            return RGY_ERR_DEVICE_LOST;
-        }
-        auto amferr = m_pContext->InitDX11(m_dx11.GetDevice());
-        if (amferr != AMF_OK) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by directX11.\n"));
-            return err_to_rgy(amferr);
-        }
-    }
-
-    RGYOpenCL cl(m_pLog);
-    auto platforms = cl.getPlatforms("AMD");
-    if (platforms.size() == 0) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to find OpenCL platforms.\n"));
-        return RGY_ERR_DEVICE_LOST;
-    }
-    auto& platform = platforms[0];
-    if (interopD3d9) {
-        if (platform->createDeviceListD3D9(CL_DEVICE_TYPE_GPU, (void *)m_dx9.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to find device.\n"));
-            return RGY_ERR_DEVICE_LOST;
-        }
-    } else if (interopD3d11) {
-        if (platform->createDeviceListD3D11(CL_DEVICE_TYPE_GPU, (void *)m_dx11.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to find device.\n"));
-            return RGY_ERR_DEVICE_LOST;
-        }
-    } else {
-        if (platform->createDeviceList(CL_DEVICE_TYPE_GPU) != CL_SUCCESS || platform->devs().size() == 0) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to find device.\n"));
-            return RGY_ERR_DEVICE_LOST;
-        }
-    }
-    auto devices = platform->devs();
-    if ((int)devices.size() <= deviceId) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to device #%d.\n"), deviceId);
-        return RGY_ERR_DEVICE_LOST;
-    }
-    platform->setDev(devices[deviceId], m_dx9.GetDevice(), m_dx11.GetDevice());
-
-    m_cl = std::make_shared<RGYOpenCLContext>(platform, m_pLog);
-    if (m_cl->createContext() != CL_SUCCESS) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to create OpenCL context.\n"));
-        return RGY_ERR_UNKNOWN;
-    }
-    auto amferr = m_pContext->InitOpenCL(m_cl->queue().get());
-    if (amferr != AMF_OK) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by OpenCL.\n"));
-        return err_to_rgy(amferr);
-    }
-    return RGY_ERR_NONE;
-}
-
 #pragma warning(push)
 #pragma warning(disable: 4100)
 RGY_ERR VCECore::initDecoder(VCEParam *prm) {
@@ -681,7 +583,7 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
         codec_uvd_name = AMFVideoDecoderHW_H265_MAIN10;
     }
     PrintMes(RGY_LOG_DEBUG, _T("decoder: use codec \"%s\".\n"), wstring_to_tstring(codec_uvd_name).c_str());
-    auto res = m_pFactory->CreateComponent(m_pContext, codec_uvd_name, &m_pDecoder);
+    auto res = m_pFactory->CreateComponent(m_dev->context(), codec_uvd_name, &m_pDecoder);
     if (res != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to create decoder context: %s\n"), AMFRetString(res));
         return err_to_rgy(res);
@@ -701,7 +603,7 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
     PrintMes(RGY_LOG_DEBUG, _T("set codec header to decoder: %d bytes.\n"), header.size());
 
     amf::AMFBufferPtr buffer;
-    m_pContext->AllocBuffer(amf::AMF_MEMORY_HOST, header.size(), &buffer);
+    m_dev->context()->AllocBuffer(amf::AMF_MEMORY_HOST, header.size(), &buffer);
 
     memcpy(buffer->GetNative(), header.data(), header.size());
     m_pDecoder->SetProperty(AMF_VIDEO_DECODER_EXTRADATA, amf::AMFVariant(buffer));
@@ -728,7 +630,7 @@ RGY_ERR VCECore::initConverter(VCEParam *prm) {
         PrintMes(RGY_LOG_DEBUG, _T("converter not required.\n"));
         return RGY_ERR_NONE;
     }
-    auto res = m_pFactory->CreateComponent(m_pContext, AMFVideoConverter, &m_pConverter);
+    auto res = m_pFactory->CreateComponent(m_dev->context(), AMFVideoConverter, &m_pConverter);
     if (res != AMF_OK) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to create converter context: %s\n"), AMFRetString(res));
         return err_to_rgy(res);
@@ -749,126 +651,6 @@ RGY_ERR VCECore::initConverter(VCEParam *prm) {
     }
     PrintMes(RGY_LOG_DEBUG, _T("initialized converter.\n"));
     return RGY_ERR_NONE;
-}
-
-RGY_ERR VCECore::getEncCaps(RGY_CODEC codec, amf::AMFCapsPtr &encoderCaps) {
-    amf::AMFComponentPtr p_encoder;
-    auto ret = m_pFactory->CreateComponent(m_pContext, codec_rgy_to_enc(codec), &p_encoder);
-    if (ret == AMF_OK) {
-        //HEVCでのAMFComponent::GetCaps()は、AMFComponent::Init()を呼んでおかないと成功しない
-        p_encoder->Init(amf::AMF_SURFACE_NV12, 1280, 720);
-        ret = p_encoder->GetCaps(&encoderCaps);
-    }
-    return err_to_rgy(ret);
-}
-
-tstring VCECore::QueryIOCaps(amf::AMFIOCapsPtr& ioCaps) {
-    tstring str;
-    bool result = true;
-    if (ioCaps != NULL) {
-        amf_int32 minWidth, maxWidth;
-        ioCaps->GetWidthRange(&minWidth, &maxWidth);
-        str += strsprintf(_T("Width:       %d - %d\n"), minWidth, maxWidth);
-
-        amf_int32 minHeight, maxHeight;
-        ioCaps->GetHeightRange(&minHeight, &maxHeight);
-        str += strsprintf(_T("Height:      %d - %d\n"), minHeight, maxHeight);
-
-        amf_int32 vertAlign = ioCaps->GetVertAlign();
-        str += strsprintf(_T("alignment:   %d\n"), vertAlign);
-
-        amf_bool interlacedSupport = ioCaps->IsInterlacedSupported();
-        str += strsprintf(_T("Interlace:   %s\n"), interlacedSupport ? _T("yes") : _T("no"));
-
-        amf_int32 numOfFormats = ioCaps->GetNumOfFormats();
-        str += _T("pix format:  ");
-        for (amf_int32 i = 0; i < numOfFormats; i++) {
-            amf::AMF_SURFACE_FORMAT format;
-            amf_bool native = false;
-            if (ioCaps->GetFormatAt(i, &format, &native) == AMF_OK) {
-                if (i) str += _T(", ");
-                str += wstring_to_tstring(m_pTrace->SurfaceGetFormatName(format)) + ((native) ? _T("(native)") : _T(""));
-            }
-        }
-        str += _T("\n");
-
-        if (result == true) {
-            amf_int32 numOfMemTypes = ioCaps->GetNumOfMemoryTypes();
-            str += _T("memory type: ");
-            for (amf_int32 i = 0; i < numOfMemTypes; i++) {
-                amf::AMF_MEMORY_TYPE memType;
-                amf_bool native = false;
-                if (ioCaps->GetMemoryTypeAt(i, &memType, &native) == AMF_OK) {
-                    if (i) str += _T(", ");
-                    str += wstring_to_tstring(m_pTrace->GetMemoryTypeName(memType)) + ((native) ? _T("(native)") : _T(""));
-                }
-            }
-        }
-        str += _T("\n");
-    } else {
-        str += _T("failed to get io capability\n");
-    }
-    return str;
-}
-
-tstring VCECore::QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
-    tstring str;
-    if (encoderCaps == NULL) {
-        str += _T("failed to get encoder capability\n");
-    }
-    amf::AMF_ACCELERATION_TYPE accelType = encoderCaps->GetAccelerationType();
-    str += _T("acceleration:   ") + AccelTypeToString(accelType) + _T("\n");
-
-    amf_uint32 maxProfile = 0;
-    encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_PROFILE(codec), &maxProfile);
-    str += _T("max profile:    ") + tstring(get_cx_desc(get_profile_list(codec), maxProfile)) + _T("\n");
-
-    amf_uint32 maxLevel = 0;
-    encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_LEVEL(codec), &maxLevel);
-    str += _T("max level:      ") + tstring(get_cx_desc(get_level_list(codec), maxLevel)) + _T("\n");
-
-    amf_uint32 maxBitrate = 0;
-    encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_BITRATE(codec), &maxBitrate);
-    str += strsprintf(_T("max bitrate:    %d kbps\n"), maxBitrate / 1000);
-
-    amf_uint32 maxRef = 0, minRef = 0;
-    encoderCaps->GetProperty(AMF_PARAM_CAP_MIN_REFERENCE_FRAMES(codec), &minRef);
-    encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_REFERENCE_FRAMES(codec), &maxRef);
-    str += strsprintf(_T("ref frames:     %d-%d\n"), minRef, maxRef);
-
-    if (codec == RGY_CODEC_H264) {
-        //amf_uint32 maxTemporalLayers = 0;
-        //encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_MAX_TEMPORAL_LAYERS, &maxTemporalLayers);
-        //str += strsprintf(_T("max temp layers:  %d\n"), maxTemporalLayers);
-
-        bool bBPictureSupported = false;
-        encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_BFRAMES, &bBPictureSupported);
-        str += strsprintf(_T("Bframe support: %s\n"), (bBPictureSupported) ? _T("yes") : _T("no"));
-
-        amf_uint32 NumOfHWInstances = 0;
-        encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_NUM_OF_HW_INSTANCES, &NumOfHWInstances);
-        str += strsprintf(_T("HW instances:   %d\n"), NumOfHWInstances);
-    } else if (codec == RGY_CODEC_HEVC) {
-        //いまは特になし
-    }
-
-    amf_uint32 maxNumOfStreams = 0;
-    encoderCaps->GetProperty(AMF_PARAM_CAP_NUM_OF_STREAMS(codec), &maxNumOfStreams);
-    str += strsprintf(_T("max streams:    %d\n"), maxNumOfStreams);
-
-
-    str += strsprintf(_T("\n%s encoder input:\n"), CodecToStr(codec).c_str());
-    amf::AMFIOCapsPtr inputCaps;
-    if (encoderCaps->GetInputCaps(&inputCaps) == AMF_OK) {
-        str += QueryIOCaps(inputCaps);
-    }
-
-    str += strsprintf(_T("\n%s encoder output:\n"), CodecToStr(codec).c_str());
-    amf::AMFIOCapsPtr outputCaps;
-    if (encoderCaps->GetOutputCaps(&outputCaps) == AMF_OK) {
-        str += QueryIOCaps(outputCaps);
-    }
-    return str;
 }
 
 RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
@@ -940,8 +722,8 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         || inputParam->vpp.afs.enable) {
         //swデコードならGPUに上げる必要がある
         if (m_pFileReader->getInputCodec() == RGY_CODEC_UNKNOWN) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
-            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_cl));
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_dev->cl()));
             shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
             param->frameIn = inputFrame;
             param->frameOut.csp = param->frameIn.csp;
@@ -973,8 +755,8 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         //colorspace
 #if 0
         if (inputParam->vpp.colorspace.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
-            unique_ptr<RGYFilter> filter(new RGYFilterColorspace(m_cl));
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterColorspace(m_dev->cl()));
             shared_ptr<RGYFilterParamColorspace> param(new RGYFilterParamColorspace());
             param->colorspace = inputParam->vpp.colorspace;
             param->encCsp = encCsp;
@@ -997,8 +779,8 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
 #endif
         if (filterCsp != inputFrame.csp
             || cropRequired) { //cropが必要ならただちに適用する
-            amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
-            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_cl));
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_dev->cl()));
             shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
             param->frameIn = inputFrame;
             param->frameOut.csp = encCsp;
@@ -1036,8 +818,8 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
                 PrintMes(RGY_LOG_ERROR, _T("Please set input interlace field order (--interlace tff/bff) for vpp-afs.\n"));
                 return RGY_ERR_INVALID_PARAM;
             }
-            amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
-            unique_ptr<RGYFilter> filter(new RGYFilterAfs(m_cl));
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterAfs(m_dev->cl()));
             shared_ptr<RGYFilterParamAfs> param(new RGYFilterParamAfs());
             param->afs = inputParam->vpp.afs;
             param->afs.tb_order = (inputParam->input.picstruct & RGY_PICSTRUCT_TFF) != 0;
@@ -1063,8 +845,8 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         }
         //リサイズ
         if (resizeRequired) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
-            unique_ptr<RGYFilter> filterResize(new RGYFilterResize(m_cl));
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filterResize(new RGYFilterResize(m_dev->cl()));
             shared_ptr<RGYFilterParamResize> param(new RGYFilterParamResize());
             param->interp = (inputParam->vpp.resize != RGY_VPP_RESIZE_AUTO) ? inputParam->vpp.resize : RGY_VPP_RESIZE_SPLINE36;
             param->frameIn = inputFrame;
@@ -1090,8 +872,8 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     {
         //もし入力がCPUメモリで色空間が違うなら、一度そのままGPUに転送する必要がある
         if (inputFrame.mem_type == RGY_MEM_TYPE_CPU && inputFrame.csp != GetEncoderCSP(inputParam)) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
-            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_cl));
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_dev->cl()));
             shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
             param->frameIn = inputFrame;
             param->frameOut.csp = param->frameIn.csp;
@@ -1108,8 +890,8 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             inputFrame = param->frameOut;
             m_encFps = param->baseFps;
         }
-        amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
-        unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_cl));
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_dev->cl()));
         shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
         param->frameIn = inputFrame;
         param->frameOut.csp = GetEncoderCSP(inputParam);
@@ -1140,7 +922,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
     if (m_pLog->getLogLevel() <= RGY_LOG_DEBUG) {
         TCHAR cpuInfo[256] = { 0 };
-        tstring gpu_info = getGPUInfo();
+        tstring gpu_info = m_dev->getGPUInfo();
         //std::wstring deviceName = (m_deviceDX9.GetDevice() == nullptr) ? m_deviceDX11.GetDisplayDeviceName() : m_deviceDX9.GetDisplayDeviceName();
         //deviceName = str_replace(deviceName, L" (TM)", L"");
         //deviceName = str_replace(deviceName, L" (R)", L"");
@@ -1155,7 +937,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
     m_encCodec = prm->codec;
     const amf::AMF_SURFACE_FORMAT formatIn = amf::AMF_SURFACE_NV12;
-    if (AMF_OK != (res = m_pFactory->CreateComponent(m_pContext, codec_rgy_to_enc(prm->codec), &m_pEncoder))) {
+    if (AMF_OK != (res = m_pFactory->CreateComponent(m_dev->context(), codec_rgy_to_enc(prm->codec), &m_pEncoder))) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to AMFCreateComponent: %s.\n"), AMFRetString(res));
         return err_to_rgy(res);
     }
@@ -1174,7 +956,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_PROFILE(prm->codec), &maxProfile);
         PrintMes(RGY_LOG_DEBUG, _T("Max Profile: %s.\n"), get_cx_desc(get_profile_list(prm->codec), maxProfile));
         if (prm->codecParam[prm->codec].nProfile > maxProfile) {
-            PrintMes(RGY_LOG_ERROR, _T("Max supported %s Level on this platform is %s (%s specified).\n"),
+            PrintMes(RGY_LOG_ERROR, _T("Max supported %s profile on this platform is %s (%s specified).\n"),
                 CodecToStr(prm->codec).c_str(),
                 get_cx_desc(get_profile_list(prm->codec), maxProfile),
                 get_cx_desc(get_profile_list(prm->codec), prm->codecParam[prm->codec].nProfile));
@@ -1233,6 +1015,13 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
         } else if (prm->codec == RGY_CODEC_HEVC) {
             //いまはなにもなし
+        }
+
+        if (prm->pa.enable) {
+            bool preAnalysisSupported = false;
+            encoderCaps->GetProperty(AMF_PARAM_CAP_PRE_ANALYSIS(prm->codec), &preAnalysisSupported);
+            PrintMes(RGY_LOG_WARN, _T("Pre-analysis is not supported on this device, disabled.\n"));
+            prm->pa.enable = false;
         }
 
         amf::AMFIOCapsPtr inputCaps;
@@ -1439,8 +1228,8 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         PrintMes(RGY_LOG_WARN, _T("Currenlty %s mode is selected, so pre analysis will be disabled.\n"), get_cx_desc(get_rc_method(prm->codec), prm->rateControl));
         prm->pa.enable = false;
     }
-    m_params.SetParam(AMF_PARAM_PRE_ANALYSIS_ENABLE(prm->codec), prm->pa.enable);
     if (prm->pa.enable) {
+        m_params.SetParam(AMF_PARAM_PRE_ANALYSIS_ENABLE(prm->codec), prm->pa.enable);
         m_params.SetParam(AMF_PA_SCENE_CHANGE_DETECTION_ENABLE, prm->pa.sc);
         if (prm->pa.sc) m_params.SetParam(AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY, (amf_int64)prm->pa.scSensitivity);
         m_params.SetParam(AMF_PA_STATIC_SCENE_DETECTION_ENABLE, prm->pa.ss);
@@ -1554,7 +1343,7 @@ RGY_ERR VCECore::initAMFFactory() {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCECore::initContext(int log_level) {
+RGY_ERR VCECore::initTracer(int log_level) {
     m_pTrace->EnableWriter(AMF_TRACE_WRITER_DEBUG_OUTPUT, log_level < RGY_LOG_INFO);
     if (log_level < RGY_LOG_INFO)
         m_pTrace->SetWriterLevel(AMF_TRACE_WRITER_DEBUG_OUTPUT, loglevel_rgy_to_enc(log_level));
@@ -1564,20 +1353,297 @@ RGY_ERR VCECore::initContext(int log_level) {
     m_tracer.init(m_pLog);
     m_pTrace->RegisterWriter(L"RGYLOGWriter", &m_tracer, log_level < RGY_LOG_INFO);
     m_pTrace->SetWriterLevel(L"RGYLOGWriter", loglevel_rgy_to_enc(log_level));
+    return RGY_ERR_NONE;
+}
 
-    auto res = m_pFactory->CreateContext(&m_pContext);
-    if (res != AMF_OK) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to CreateContext(): %s.\n"), get_err_mes(err_to_rgy(res)));
-        return err_to_rgy(res);
+std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3d9, bool interopD3d11) {
+    std::vector<std::unique_ptr<VCEDevice>> devs;
+    const int adapterCount = DeviceDX11::adapterCount();
+    for (int i = 0; i < adapterCount; i++) {
+        auto dev = std::make_unique<VCEDevice>(m_pLog, m_pFactory, m_pTrace);
+        if (dev->init(i, interopD3d9, interopD3d11) == RGY_ERR_NONE) {
+            devs.push_back(std::move(dev));
+        }
     }
-    PrintMes(RGY_LOG_DEBUG, _T("CreateContext() Success.\n"));
+    return devs;
+}
+
+RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm) {
+    const amf::AMF_SURFACE_FORMAT formatIn = amf::AMF_SURFACE_NV12;
+    //エンコーダの対応をチェック
+    tstring message; //GPUチェックのメッセージ
+    for (auto gpu = gpuList.begin(); gpu != gpuList.end(); ) {
+        PrintMes(RGY_LOG_DEBUG, _T("Checking GPU #%d (%s) for codec %s.\n"),
+            (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
+        //コーデックのチェック
+        amf::AMFCapsPtr encoderCaps = (*gpu)->getEncCaps(prm->codec);
+        if (encoderCaps == nullptr) {
+            message += strsprintf(_T("GPU #%d (%s) does not support %s encoding.\n"),
+                (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
+            gpu = gpuList.erase(gpu);
+            continue;
+        }
+
+        amf::AMF_ACCELERATION_TYPE accelType = encoderCaps->GetAccelerationType();
+        PrintMes(RGY_LOG_DEBUG, _T("  acceleration: %s.\n"), AccelTypeToString(accelType).c_str());
+        if (accelType != amf::AMF_ACCEL_GPU && accelType != amf::AMF_ACCEL_HARDWARE) {
+            message += strsprintf(_T("GPU #%d (%s) does not HW Acceleration of %s encoding.\n"),
+                (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
+            gpu = gpuList.erase(gpu);
+            continue;
+        }
+
+        int maxProfile = 0;
+        encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_PROFILE(prm->codec), &maxProfile);
+        PrintMes(RGY_LOG_DEBUG, _T("  Max Profile: %s.\n"), get_cx_desc(get_profile_list(prm->codec), maxProfile));
+        if (prm->codecParam[prm->codec].nProfile > maxProfile) {
+            message += strsprintf(_T("GPU #%d (%s) does not support %s %s profile (max supported: %s).\n"),
+                (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
+                get_cx_desc(get_profile_list(prm->codec), prm->codecParam[prm->codec].nProfile),
+                get_cx_desc(get_profile_list(prm->codec), maxProfile));
+            return RGY_ERR_UNSUPPORTED;
+        }
+
+        int maxLevel = 0;
+        encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_LEVEL(prm->codec), &maxLevel);
+        PrintMes(RGY_LOG_DEBUG, _T("  Max Level: %s.\n"), get_cx_desc(get_level_list(prm->codec), maxLevel));
+        if (prm->codecParam[prm->codec].nLevel > maxLevel) {
+            message += strsprintf(_T("GPU #%d (%s) does not support %s Level %s (max supported: %s).\n"),
+                (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
+                get_cx_desc(get_level_list(prm->codec), prm->codecParam[prm->codec].nLevel),
+                get_cx_desc(get_level_list(prm->codec), maxLevel));
+            gpu = gpuList.erase(gpu);
+            continue;
+        }
+
+        amf::AMFIOCapsPtr inputCaps;
+        if (encoderCaps->GetInputCaps(&inputCaps) == AMF_OK) {
+            bool formatSupported = false;
+            int numOfFormats = inputCaps->GetNumOfFormats();
+            for (int i = 0; i < numOfFormats; i++) {
+                amf::AMF_SURFACE_FORMAT format;
+                amf_bool native = false;
+                if (inputCaps->GetFormatAt(i, &format, &native) == AMF_OK && format == formatIn) {
+                    formatSupported = true;
+                    break;
+                }
+            }
+            if (!formatSupported) {
+                message += strsprintf(_T("GPU #%d (%s) [%s] does not support input format %s.\n"),
+                    (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
+                    m_pTrace->SurfaceGetFormatName(formatIn));
+                gpu = gpuList.erase(gpu);
+                continue;
+            }
+        }
+
+        amf::AMFIOCapsPtr outputCaps;
+        if (encoderCaps->GetOutputCaps(&outputCaps) == AMF_OK) {
+#if 0
+            int minWidth, maxWidth;
+            outputCaps->GetWidthRange(&minWidth, &maxWidth);
+            if (m_encWidth < minWidth || maxWidth < m_encWidth) {
+                message += strsprintf(_T("GPU #%d (%s) [%s] does not support width %d (supported %d - %d).\n"),
+                    (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
+                    m_encWidth, minWidth, maxWidth);
+                gpu = gpuList.erase(gpu);
+                continue;
+            }
+
+            int minHeight, maxHeight;
+            outputCaps->GetHeightRange(&minHeight, &maxHeight);
+            if (m_encHeight < minHeight || maxHeight < m_encHeight) {
+                message += strsprintf(_T("GPU #%d (%s) [%s] does not support height %d (supported %d - %d).\n"),
+                    (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
+                    m_encHeight, minHeight, maxHeight);
+                gpu = gpuList.erase(gpu);
+                continue;
+            }
+#endif
+            bool formatSupported = false;
+            int numOfFormats = outputCaps->GetNumOfFormats();
+            for (int i = 0; i < numOfFormats; i++) {
+                amf::AMF_SURFACE_FORMAT format;
+                amf_bool native = false;
+                if (outputCaps->GetFormatAt(i, &format, &native) == AMF_OK && format == formatOut) {
+                    formatSupported = true;
+                    break;
+                }
+            }
+            if (!formatSupported) {
+                message += strsprintf(_T("GPU #%d (%s) [%s] does not support ouput format %s.\n"),
+                    (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
+                    m_pTrace->SurfaceGetFormatName(formatOut));
+                gpu = gpuList.erase(gpu);
+                continue;
+            }
+            //インタレ保持のチェック
+            const bool interlacedEncoding = 
+                (prm->input.picstruct & RGY_PICSTRUCT_INTERLACED)
+                && !prm->vpp.afs.enable;
+            if (interlacedEncoding
+                && !outputCaps->IsInterlacedSupported()) {
+                message += strsprintf(_T("GPU #%d (%s) does not support %s interlaced encoding.\n"),
+                    (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
+                gpu = gpuList.erase(gpu);
+                continue;
+            }
+        }
+
+        PrintMes(RGY_LOG_DEBUG, _T("GPU #%d (%s) available for encode.\n"), (*gpu)->id(), (*gpu)->name().c_str());
+        gpu++;
+    }
+    PrintMes((gpuList.size() == 0) ? RGY_LOG_ERROR : RGY_LOG_DEBUG, _T("%s\n"), message.c_str());
+    if (gpuList.size() == 0) {
+        return RGY_ERR_UNSUPPORTED;
+    }
+    if (gpuList.size() == 1) {
+        return RGY_ERR_NONE;
+    }
+
+    if (prm->nBframes > 0) {
+        bool support_bframe = false;
+        for (auto gpu = gpuList.begin(); gpu != gpuList.end(); gpu++) {
+            //コーデックのチェック
+            amf::AMFCapsPtr encoderCaps = (*gpu)->getEncCaps(prm->codec);
+            if (encoderCaps == nullptr) {
+                PrintMes(RGY_LOG_ERROR, _T("checkGPUListByEncoder: Unexpected error!.\n"));
+                return RGY_ERR_UNKNOWN;
+            }
+            if (prm->codec == RGY_CODEC_H264) {
+                bool bBPictureSupported = false;
+                encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_BFRAMES, &bBPictureSupported);
+                support_bframe |= bBPictureSupported;
+            }
+        }
+        //BフレームサポートのあるGPUがあれば、BフレームをサポートしないGPUは除外する
+        if (support_bframe) {
+            for (auto gpu = gpuList.begin(); gpu != gpuList.end(); ) {
+                //コーデックのチェック
+                amf::AMFCapsPtr encoderCaps = (*gpu)->getEncCaps(prm->codec);
+                if (encoderCaps == nullptr) {
+                    PrintMes(RGY_LOG_ERROR, _T("checkGPUListByEncoder: Unexpected error!.\n"));
+                    return RGY_ERR_UNKNOWN;
+                }
+                if (prm->codec == RGY_CODEC_H264) {
+                    bool bBPictureSupported = false;
+                    encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_BFRAMES, &bBPictureSupported);
+                    if (!bBPictureSupported) {
+                        PrintMes(RGY_LOG_DEBUG, _T("GPU #%d (%s) [%s] does not support B frame.\n"),
+                            (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
+                        gpu = gpuList.erase(gpu);
+                        continue;
+                    }
+                }
+                gpu++;
+            }
+        }
+    }
+
+    if (prm->pa.enable) {
+        //Pre-analysisのチェック
+        bool support_preanalysis = false;
+        for (auto gpu = gpuList.begin(); gpu != gpuList.end(); gpu++) {
+            amf::AMFCapsPtr encoderCaps = (*gpu)->getEncCaps(prm->codec);
+            if (encoderCaps == nullptr) {
+                PrintMes(RGY_LOG_ERROR, _T("checkGPUListByEncoder: Unexpected error!.\n"));
+                return RGY_ERR_UNKNOWN;
+            }
+            bool preanalysisSupported = false;
+            encoderCaps->GetProperty(AMF_PARAM_CAP_PRE_ANALYSIS(prm->codec), &preanalysisSupported);
+            support_preanalysis |= preanalysisSupported;
+        }
+        //Pre-analysisサポートのあるGPUがあれば、Pre-analysisをサポートしないGPUは除外する
+        if (support_preanalysis) {
+            for (auto gpu = gpuList.begin(); gpu != gpuList.end(); ) {
+                amf::AMFCapsPtr encoderCaps = (*gpu)->getEncCaps(prm->codec);
+                if (encoderCaps == nullptr) {
+                    PrintMes(RGY_LOG_ERROR, _T("checkGPUListByEncoder: Unexpected error!.\n"));
+                    return RGY_ERR_UNKNOWN;
+                }
+                bool preanalysisSupported = false;
+                encoderCaps->GetProperty(AMF_PARAM_CAP_PRE_ANALYSIS(prm->codec), &preanalysisSupported);
+                if (!preanalysisSupported) {
+                    PrintMes(RGY_LOG_DEBUG, _T("GPU #%d (%s) [%s] does not support pre analysis.\n"),
+                        (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
+                    gpu = gpuList.erase(gpu);
+                    continue;
+                }
+                gpu++;
+            }
+        }
+    }
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm) {
+    if (gpuList.size() <= 1) {
+        return RGY_ERR_NONE;
+    }
+    bool counterIsIntialized = m_pPerfMonitor->isPerfCounterInitialized();
+    for (int i = 0; i < 4 && !counterIsIntialized; i++) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        counterIsIntialized = m_pPerfMonitor->isPerfCounterInitialized();
+    }
+    if (!counterIsIntialized) {
+        return RGY_ERR_NONE;
+    }
+    while (!m_pPerfMonitor->isPerfCounterRefreshed()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    auto entries = m_pPerfMonitor->GetPerfCountersSystem();
+
+    std::map<int, double> gpuscore;
+    for (const auto &gpu : gpuList) {
+        auto counters = RGYGPUCounterWinEntries(entries).filter_luid(gpu->luid()).get();
+        auto ve_utilization = RGYGPUCounterWinEntries(counters).filter_type(L"encode").sum();
+        auto gpu_utilization = std::max(std::max(std::max(
+            RGYGPUCounterWinEntries(counters).filter_type(L"cuda").sum(), //nvenc
+            RGYGPUCounterWinEntries(counters).filter_type(L"compute").sum()), //vce-opencl
+            RGYGPUCounterWinEntries(counters).filter_type(L"3d").sum()), //qsv
+            RGYGPUCounterWinEntries(counters).filter_type(L"videoprocessing").sum());
+        double core_score = 0.0;
+        double cc_score = 0.0;
+        double ve_score = 100.0 * (1.0 - std::pow(ve_utilization / 100.0, 1.0)) * prm->ctrl.gpuSelect.ve;
+        double gpu_score = 100.0 * (1.0 - std::pow(gpu_utilization / 100.0, 1.5)) * prm->ctrl.gpuSelect.gpu;
+
+        gpuscore[gpu->id()] = cc_score + ve_score + gpu_score + core_score;
+        PrintMes(RGY_LOG_DEBUG, _T("GPU #%d (%s) score: %.1f: VE %.1f, GPU %.1f, CC %.1f, Core %.1f.\n"), gpu->id(), gpu->name().c_str(),
+            gpuscore[gpu->id()], ve_score, gpu_score, cc_score, core_score);
+    }
+    std::sort(gpuList.begin(), gpuList.end(), [&](const std::unique_ptr<VCEDevice> &a, const std::unique_ptr<VCEDevice> &b) {
+        if (gpuscore.at(a->id()) != gpuscore.at(b->id())) {
+            return gpuscore.at(a->id()) > gpuscore.at(b->id());
+        }
+        return a->id() < b->id();
+        });
+
+    PrintMes(RGY_LOG_DEBUG, _T("GPU Priority\n"));
+    for (const auto &gpu : gpuList) {
+        PrintMes(RGY_LOG_DEBUG, _T("GPU #%d (%s): score %.1f\n"), gpu->id(), gpu->name().c_str(), gpuscore[gpu->id()]);
+    }
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId) {
+    auto gpu = (deviceId < 0)
+        ? gpuList.begin()
+        : std::find_if(gpuList.begin(), gpuList.end(), [device_id = deviceId](const std::unique_ptr<VCEDevice> &gpuinfo) {
+            return gpuinfo->id() == device_id;
+          });
+    if (gpu == gpuList.end()) {
+        PrintMes(RGY_LOG_ERROR, _T("Selected device #%d not found\n"), deviceId);
+        return RGY_ERR_NOT_FOUND;
+    }
+    PrintMes(RGY_LOG_DEBUG, _T("InitDevice: device #%d (%s) selected.\n"), (*gpu)->id(), (*gpu)->name().c_str());
+    m_dev = std::move(*gpu);
     return RGY_ERR_NONE;
 }
 
 RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
     if (prm->ssim || prm->psnr) {
-        amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
-        unique_ptr<RGYFilterSsim> filterSsim(new RGYFilterSsim(m_cl));
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilterSsim> filterSsim(new RGYFilterSsim(m_dev->cl()));
         shared_ptr<RGYFilterParamSsim> param(new RGYFilterParamSsim());
         param->input = videooutputinfo(
             prm->codec,
@@ -1588,7 +1654,7 @@ RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
         );
         param->factory = m_pFactory;
         param->trace = m_pTrace;
-        param->context = m_pContext;
+        param->context = m_dev->context();
         param->input.srcWidth = m_encWidth;
         param->input.srcHeight = m_encHeight;
         param->frameIn = m_pLastFilterParam->frameOut;
@@ -1622,12 +1688,17 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    ret = initContext(prm->ctrl.loglevel);
+    ret = initTracer(prm->ctrl.loglevel);
     if (ret != RGY_ERR_NONE) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to initalize VCE context: %s"), get_err_mes(ret));
+        PrintMes(RGY_LOG_ERROR, _T("Failed to set up AMF Tracer: %s"), get_err_mes(ret));
         return ret;
     }
-    PrintMes(RGY_LOG_DEBUG, _T("Created AMF Context.\n"));
+
+    auto devList = createDeviceList(prm->interopD3d9, prm->interopD3d11);
+    if (devList.size() == 0) {
+        PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
+        return ret;
+    }
 
     if (prm->bTimerPeriodTuning) {
         m_bTimerPeriodTuning = true;
@@ -1648,6 +1719,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     }
 
     m_pPerfMonitor = std::make_unique<CPerfMonitor>();
+    m_pPerfMonitor->runCounterThread();
 
     prm->input.csp = RGY_CSP_NV12;
     m_nAVSyncMode = prm->common.AVSyncMode;
@@ -1660,7 +1732,15 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    if (RGY_ERR_NONE != (ret = initDevice(0, prm->interopD3d9, prm->interopD3d11))) {
+    if (RGY_ERR_NONE != (ret = checkGPUListByEncoder(devList, prm))) {
+        return ret;
+    }
+
+    if (RGY_ERR_NONE != (ret = gpuAutoSelect(devList, prm))) {
+        return ret;
+    }
+
+    if (RGY_ERR_NONE != (ret = initDevice(devList, prm->deviceID))) {
         return ret;
     }
 
@@ -1715,7 +1795,7 @@ RGY_ERR VCECore::run_decode() {
 
             amf::AMFBufferPtr pictureBuffer;
             if (sts == RGY_ERR_NONE) {
-                auto ar = m_pContext->AllocBuffer(amf::AMF_MEMORY_HOST, bitstream.size(), &pictureBuffer);
+                auto ar = m_dev->context()->AllocBuffer(amf::AMF_MEMORY_HOST, bitstream.size(), &pictureBuffer);
                 if (ar != AMF_OK) {
                     return err_to_rgy(ar);
                 }
@@ -2003,7 +2083,7 @@ RGY_ERR VCECore::run() {
                 && inframeInfo.mem_type != RGY_MEM_TYPE_CPU
                 && inAmf
                 && inAmf->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
-                amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
+                amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
 #if 0
                 auto ar = inAmf->Interop(amf::AMF_MEMORY_OPENCL);
 #else
@@ -2015,7 +2095,7 @@ RGY_ERR VCECore::run() {
 #else
                 auto frameinfo = inframe->info();
                 amf::AMFSurfacePtr pSurface;
-                auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_HOST, csp_rgy_to_enc(frameinfo.csp),
+                auto ar = m_dev->context()->AllocSurface(amf::AMF_MEMORY_HOST, csp_rgy_to_enc(frameinfo.csp),
                     16, 16, &pSurface);
                 auto ar2 = inAmf->CopySurfaceRegion(pSurface, 0, 0, 0, 0, 16, 16);
 #endif
@@ -2032,7 +2112,7 @@ RGY_ERR VCECore::run() {
         while (filterframes.size() > 0 || bDrain) {
             //フィルタリングするならここ
             for (uint32_t ifilter = filterframes.front().second; ifilter < m_vpFilters.size() - 1; ifilter++) {
-                amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
+                amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
                 int nOutFrames = 0;
                 FrameInfo *outInfo[16] = { 0 };
                 auto sts_filter = m_vpFilters[ifilter]->filter(&filterframes.front().first, (FrameInfo **)&outInfo, &nOutFrames);
@@ -2063,11 +2143,11 @@ RGY_ERR VCECore::run() {
                 filterframes.pop_front();
             } else {
                 //エンコードバッファにコピー
-                amf::AMFContext::AMFOpenCLLocker locker(m_pContext);
+                amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
                 auto &lastFilter = m_vpFilters[m_vpFilters.size()-1];
                 amf::AMFSurfacePtr pSurface;
-                if (m_dx11.GetDevice() != nullptr) {
-                    auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_DX11, csp_rgy_to_enc(lastFilter->GetFilterParam()->frameOut.csp),
+                if (m_dev->dx11interlop()) {
+                    auto ar = m_dev->context()->AllocSurface(amf::AMF_MEMORY_DX11, csp_rgy_to_enc(lastFilter->GetFilterParam()->frameOut.csp),
                         m_encWidth, m_encHeight, &pSurface);
                     if (ar != AMF_OK) {
                         PrintMes(RGY_LOG_ERROR, _T("Failed to allocate surface: %s.\n"), get_err_mes(err_to_rgy(ar)));
@@ -2079,7 +2159,7 @@ RGY_ERR VCECore::run() {
                         return err_to_rgy(ar);
                     }
                 } else {
-                    auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_OPENCL, csp_rgy_to_enc(lastFilter->GetFilterParam()->frameOut.csp),
+                    auto ar = m_dev->context()->AllocSurface(amf::AMF_MEMORY_OPENCL, csp_rgy_to_enc(lastFilter->GetFilterParam()->frameOut.csp),
                         m_encWidth, m_encHeight, &pSurface);
                     if (ar != AMF_OK) {
                         PrintMes(RGY_LOG_ERROR, _T("Failed to allocate surface: %s.\n"), get_err_mes(err_to_rgy(ar)));
@@ -2107,7 +2187,7 @@ RGY_ERR VCECore::run() {
                     int dummy = 0;
                     m_ssim->filter(&encSurfaceInfo, nullptr, &dummy);
                 }
-                auto err = m_cl->queue().finish();
+                auto err = m_dev->cl()->queue().finish();
                 if (err != RGY_ERR_NONE) {
                     PrintMes(RGY_LOG_ERROR, _T("Failed to finish queue after \"%s\".\n"), lastFilter->name().c_str());
                     return sts_filter;
@@ -2185,7 +2265,7 @@ RGY_ERR VCECore::run() {
         unique_ptr<RGYFrame> inputFrame;
         if (m_pDecoder == nullptr) {
             amf::AMFSurfacePtr pSurface;
-            auto ar = m_pContext->AllocSurface(amf::AMF_MEMORY_HOST, csp_rgy_to_enc(inputFrameInfo.csp),
+            auto ar = m_dev->context()->AllocSurface(amf::AMF_MEMORY_HOST, csp_rgy_to_enc(inputFrameInfo.csp),
                 inputFrameInfo.srcWidth - inputFrameInfo.crop.e.left - inputFrameInfo.crop.e.right,
                 inputFrameInfo.srcHeight - inputFrameInfo.crop.e.bottom - inputFrameInfo.crop.e.up,
                 &pSurface);
@@ -2371,18 +2451,6 @@ RGY_ERR VCECore::run() {
     return RGY_ERR_NONE;
 }
 
-tstring VCECore::getGPUInfo() {
-    if (m_dx11.GetDevice()) {
-        auto str = m_dx11.GetDisplayDeviceName();
-        str = str_replace(str, L"(TM)", L"");
-        str = str_replace(str, L"(R)", L"");
-        str = str_replace(str, L" Series", L"");
-        str = str_replace(str, L" Graphics", L"");
-        return wstring_to_tstring(str);
-    }
-    return RGYOpenCLDevice(m_cl->platform()->dev(0)).infostr();
-}
-
 void VCECore::PrintEncoderParam() {
     PrintMes(RGY_LOG_INFO, GetEncoderParam().c_str());
 }
@@ -2421,14 +2489,15 @@ tstring VCECore::GetEncoderParam() {
     };
 
     auto getPropertyDesc = [pProperty, GetPropertyInt](const wchar_t *pName, const CX_DESC *list) {
-        return tstring(get_cx_desc(list, GetPropertyInt(pName)));
+        auto ptr = get_cx_desc(list, GetPropertyInt(pName));
+        return (ptr) ? tstring(ptr) : _T("");
     };
 
     tstring mes;
 
     TCHAR cpu_info[256];
     getCPUInfo(cpu_info);
-    tstring gpu_info = getGPUInfo();
+    tstring gpu_info = m_dev->getGPUInfo();
 
     OSVERSIONINFOEXW osversioninfo = { 0 };
     tstring osversionstr = getOSVersion(&osversioninfo);
@@ -2633,8 +2702,12 @@ RGY_ERR VCEFeatures::init(int deviceId, int logLevel) {
     auto err = RGY_ERR_NONE;
     if (   (err = m_core->initLog(logLevel)) != RGY_ERR_NONE
         || (err = m_core->initAMFFactory()) != RGY_ERR_NONE
-        || (err = m_core->initContext(logLevel)) != RGY_ERR_NONE
-        || (err = m_core->initDevice(deviceId, false, false)) != RGY_ERR_NONE) {
+        || (err = m_core->initTracer(logLevel)) != RGY_ERR_NONE) {
+        return err;
+    }
+
+    auto devList = m_core->createDeviceList(false, true);
+    if ((err = m_core->initDevice(devList, deviceId)) != RGY_ERR_NONE) {
         return err;
     }
     return RGY_ERR_NONE;
@@ -2642,9 +2715,9 @@ RGY_ERR VCEFeatures::init(int deviceId, int logLevel) {
 
 tstring VCEFeatures::checkFeatures(RGY_CODEC codec) {
     tstring str;
-    amf::AMFCapsPtr encCaps;
-    if (m_core->getEncCaps(codec, encCaps) == RGY_ERR_NONE) {
-        str = m_core->QueryIOCaps(codec, encCaps);
+    amf::AMFCapsPtr encCaps = m_core->dev()->getEncCaps(codec);
+    if (encCaps != nullptr) {
+        str = m_core->dev()->QueryIOCaps(codec, encCaps);
     }
     return str;
 }
@@ -2659,7 +2732,7 @@ tstring check_vce_features(const std::vector<RGY_CODEC> &codecs, int deviceId, i
     if (vce.init(deviceId, logLevel) != RGY_ERR_NONE) {
         return _T("VCE not available.\n");
     }
-    tstring str;
+    tstring str = strsprintf(_T("device #%d: "), deviceId) + vce.devName() + _T("\n");
     for (const auto codec : codecs) {
         auto ret = vce.checkFeatures(codec);
         if (ret.length() > 0) {

@@ -210,6 +210,25 @@ const TCHAR *AMFRetString(AMF_RESULT ret) {
 #undef AMFRESULT_TO_STR
 }
 
+tstring AccelTypeToString(amf::AMF_ACCELERATION_TYPE accelType) {
+    tstring strValue;
+    switch (accelType) {
+    case amf::AMF_ACCEL_NOT_SUPPORTED:
+        strValue = _T("Not supported");
+        break;
+    case amf::AMF_ACCEL_HARDWARE:
+        strValue = _T("Hardware-accelerated");
+        break;
+    case amf::AMF_ACCEL_GPU:
+        strValue = _T("GPU-accelerated");
+        break;
+    case amf::AMF_ACCEL_SOFTWARE:
+        strValue = _T("Not accelerated (software)");
+        break;
+    }
+    return strValue;
+}
+
 void RGYBitstream::addFrameData(RGYFrameData *frameData) {
     if (frameData != nullptr) {
         frameDataNum++;

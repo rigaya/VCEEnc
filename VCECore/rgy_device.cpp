@@ -26,7 +26,6 @@
 // -------------------------------------------------------------------------------------------
 
 #include <set>
-#include <list>
 #include "rgy_tchar.h"
 #include "rgy_device.h"
 #include "rgy_log.h"
@@ -47,6 +46,7 @@
 DeviceDX9::DeviceDX9() :
     m_pD3D(),
     m_pD3DDevice(),
+    m_devLUID(),
     m_adaptersCount(0),
     m_adaptersIndexes(),
     m_displayDeviceName(),
@@ -56,6 +56,10 @@ DeviceDX9::DeviceDX9() :
 
 DeviceDX9::~DeviceDX9() {
     Terminate();
+}
+
+bool DeviceDX9::isValid() const {
+    return m_pD3DDevice != nullptr;
 }
 
 ATL::CComPtr<IDirect3DDevice9> DeviceDX9::GetDevice() {
@@ -84,9 +88,12 @@ RGY_ERR DeviceDX9::Init(bool dx9ex, int adapterID, bool bFullScreen, int width, 
 
     //convert logical id to real index
     adapterID = m_adaptersIndexes[adapterID];
-    D3DADAPTER_IDENTIFIER9 adapterIdentifier ={ 0 };
+    D3DADAPTER_IDENTIFIER9 adapterIdentifier = { 0 };
     hr = m_pD3D->GetAdapterIdentifier(adapterID, 0, &adapterIdentifier);
     CHECK_HRESULT_ERROR_RETURN(hr, L"m_pD3D->GetAdapterIdentifier Failed");
+
+    //Get LUID
+    pD3DEx->GetAdapterLUID((UINT)adapterID, &m_devLUID);
 
     std::wstringstream wstrDeviceName; wstrDeviceName << adapterIdentifier.DeviceName;
     m_displayDeviceName = wstrDeviceName.str();
@@ -185,7 +192,7 @@ RGY_ERR DeviceDX9::EnumerateAdapters() {
         HRESULT hr = Direct3DCreate9Ex(D3D_SDK_VERSION, &pD3DEx);
         CHECK_HRESULT_ERROR_RETURN(hr, L"Direct3DCreate9Ex Failed");
     }
-    std::list<LUID> enumeratedAdapterLUIDs;
+    std::vector<LUID> enumeratedAdapterLUIDs;
     while (true) {
         D3DDISPLAYMODE displayMode;
         HRESULT hr = pD3DEx->EnumAdapterModes(count, D3DFMT_X8R8G8B8, 0, &displayMode);
@@ -204,7 +211,7 @@ RGY_ERR DeviceDX9::EnumerateAdapters() {
         LUID adapterLuid;
         pD3DEx->GetAdapterLUID(count, &adapterLuid);
         bool enumerated = false;
-        for (std::list<LUID>::iterator it = enumeratedAdapterLUIDs.begin(); it != enumeratedAdapterLUIDs.end(); it++) {
+        for (auto it = enumeratedAdapterLUIDs.begin(); it != enumeratedAdapterLUIDs.end(); it++) {
             if (adapterLuid.HighPart == it->HighPart && adapterLuid.LowPart == it->LowPart) {
                 enumerated = true;
                 break;
@@ -227,8 +234,52 @@ RGY_ERR DeviceDX9::EnumerateAdapters() {
     return RGY_ERR_NONE;
 }
 
+int DeviceDX9::adapterCount() {
+    int count = 0;
+    ATL::CComPtr<IDirect3D9Ex> pD3DEx;
+    {
+        HRESULT hr = Direct3DCreate9Ex(D3D_SDK_VERSION, &pD3DEx);
+        if (hr != S_OK) return 0;
+    }
+    std::vector<LUID> enumeratedAdapterLUIDs;
+    while (true) {
+        D3DDISPLAYMODE displayMode;
+        HRESULT hr = pD3DEx->EnumAdapterModes(count, D3DFMT_X8R8G8B8, 0, &displayMode);
+
+        if (hr != D3D_OK && hr != D3DERR_NOTAVAILABLE) {
+            break;
+        }
+        D3DADAPTER_IDENTIFIER9 adapterIdentifier = { 0 };
+        pD3DEx->GetAdapterIdentifier(count, 0, &adapterIdentifier);
+
+        if (adapterIdentifier.VendorId != 0x1002) {
+            count++;
+            continue;
+        }
+
+        LUID adapterLuid;
+        pD3DEx->GetAdapterLUID(count, &adapterLuid);
+        bool enumerated = false;
+        for (auto it = enumeratedAdapterLUIDs.begin(); it != enumeratedAdapterLUIDs.end(); it++) {
+            if (adapterLuid.HighPart == it->HighPart && adapterLuid.LowPart == it->LowPart) {
+                enumerated = true;
+                break;
+            }
+        }
+        if (enumerated) {
+            count++;
+            continue;
+        }
+
+        enumeratedAdapterLUIDs.push_back(adapterLuid);
+        count++;
+    }
+    return (int)enumeratedAdapterLUIDs.size();
+}
+
 DeviceDX11::DeviceDX11() :
     m_pD3DDevice(),
+    m_devLUID(),
     m_adaptersCount(0),
     m_adaptersIndexes(),
     m_displayDeviceName(),
@@ -240,7 +291,11 @@ DeviceDX11::~DeviceDX11() {
     Terminate();
 }
 
-ATL::CComPtr<ID3D11Device>      DeviceDX11::GetDevice() {
+bool DeviceDX11::isValid() const {
+    return m_pD3DDevice != nullptr;
+}
+
+ATL::CComPtr<ID3D11Device> DeviceDX11::GetDevice() {
     return m_pD3DDevice;
 }
 
@@ -273,7 +328,7 @@ RGY_ERR DeviceDX11::Init(int adapterID, bool onlyWithOutputs, shared_ptr<RGYLog>
     DXGI_ADAPTER_DESC desc;
     pAdapter->GetDesc(&desc);
     m_displayDeviceName = desc.Description;
-
+    m_devLUID = desc.AdapterLuid;
 
     ATL::CComPtr<IDXGIOutput> pOutput;
     if (SUCCEEDED(pAdapter->EnumOutputs(0, &pOutput))) {
@@ -379,4 +434,32 @@ void DeviceDX11::EnumerateAdapters(bool onlyWithOutputs) {
         m_adaptersCount++;
         count++;
     }
+}
+
+int DeviceDX11::adapterCount() {
+    ATL::CComPtr<IDXGIFactory> pFactory;
+    HRESULT hr = CreateDXGIFactory(__uuidof(IDXGIFactory), (void **)&pFactory);
+    if (FAILED(hr)) {
+        return 0;
+    }
+
+    UINT count = 0;
+    int adaptersCount = 0;
+    while (true) {
+        ATL::CComPtr<IDXGIAdapter> pAdapter;
+        if (pFactory->EnumAdapters(count, &pAdapter) == DXGI_ERROR_NOT_FOUND) {
+            break;
+        }
+
+        DXGI_ADAPTER_DESC desc;
+        pAdapter->GetDesc(&desc);
+
+        if (desc.VendorId != 0x1002) {
+            count++;
+            continue;
+        }
+        adaptersCount++;
+        count++;
+    }
+    return adaptersCount;
 }
