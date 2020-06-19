@@ -259,9 +259,39 @@ tstring VppAfs::print() const {
 #undef ON_OFF
 }
 
+VppKnn::VppKnn() :
+    enable(false),
+    radius(FILTER_DEFAULT_KNN_RADIUS),
+    strength(FILTER_DEFAULT_KNN_STRENGTH),
+    lerpC(FILTER_DEFAULT_KNN_LERPC),
+    weight_threshold(FILTER_DEFAULT_KNN_WEIGHT_THRESHOLD),
+    lerp_threshold(FILTER_DEFAULT_KNN_LERPC_THRESHOLD) {
+}
+
+bool VppKnn::operator==(const VppKnn &x) const {
+    return enable == x.enable
+        && radius == x.radius
+        && strength == x.strength
+        && lerpC == x.lerpC
+        && weight_threshold == x.weight_threshold
+        && lerp_threshold == x.lerp_threshold;
+}
+bool VppKnn::operator!=(const VppKnn &x) const {
+    return !(*this == x);
+}
+
+tstring VppKnn::print() const {
+    return strsprintf(
+        _T("denoise(knn): radius %d, strength %.2f, lerp %.2f\n")
+        _T("                              th_weight %.2f, th_lerp %.2f"),
+        radius, strength, lerpC,
+        weight_threshold, lerp_threshold);
+}
+
 VCEVppParam::VCEVppParam() :
     resize(RGY_VPP_RESIZE_AUTO),
-    afs() {
+    afs(),
+    knn() {
 
 }
 

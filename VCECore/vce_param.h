@@ -67,6 +67,12 @@ static const bool  FILTER_DEFAULT_AFS_RFF = false;
 static const bool  FILTER_DEFAULT_AFS_TIMECODE = false;
 static const bool  FILTER_DEFAULT_AFS_LOG = false;
 
+static const int   FILTER_DEFAULT_KNN_RADIUS = 3;
+static const float FILTER_DEFAULT_KNN_STRENGTH = 0.08f;
+static const float FILTER_DEFAULT_KNN_LERPC = 0.20f;
+static const float FILTER_DEFAULT_KNN_WEIGHT_THRESHOLD = 0.01f;
+static const float FILTER_DEFAULT_KNN_LERPC_THRESHOLD = 0.80f;
+
 enum {
     VCE_RC_CQP = 0,
     VCE_RC_CBR = 3,
@@ -408,9 +414,24 @@ struct VppAfs {
     void check();
 };
 
+struct VppKnn {
+    bool  enable;
+    int   radius;
+    float strength;
+    float lerpC;
+    float weight_threshold;
+    float lerp_threshold;
+
+    VppKnn();
+    bool operator==(const VppKnn &x) const;
+    bool operator!=(const VppKnn &x) const;
+    tstring print() const;
+};
+
 struct VCEVppParam {
     RGY_VPP_RESIZE_ALGO resize;
     VppAfs afs;
+    VppKnn knn;
 
     VCEVppParam();
 };

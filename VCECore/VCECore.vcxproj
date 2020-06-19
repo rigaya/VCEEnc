@@ -276,6 +276,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="vce_filter_denoise_knn.cpp" />
     <ClCompile Include="vce_filter_resize.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -348,6 +349,7 @@
     <ClInclude Include="vce_device.h" />
     <ClInclude Include="vce_filter.h" />
     <ClInclude Include="vce_filter_afs.h" />
+    <ClInclude Include="vce_filter_denoise_knn.h" />
     <ClInclude Include="vce_filter_ssim.h" />
     <ClInclude Include="vce_util.h" />
     <ClInclude Include="vce_param.h" />
@@ -486,6 +488,7 @@
     <None Include="vce_filter_afs_filter.cl" />
     <None Include="vce_filter_afs_merge.cl" />
     <None Include="vce_filter_afs_synthesize.cl" />
+    <None Include="vce_filter_denoise_knn.cl" />
     <None Include="vce_filter_resize.cl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>

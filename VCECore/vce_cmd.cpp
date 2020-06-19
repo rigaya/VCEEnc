@@ -222,7 +222,66 @@ tstring encoder_help() {
         _T("   --ssim                       calc ssim\n")
         _T("   --psnr                       calc psnr\n")
         _T("\n"));
+    str += strsprintf(_T("")
+        _T("   --vpp-afs [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     enable auto field shift deinterlacer\n")
+        _T("    params\n")
+        _T("      preset=<string>\n")
+        _T("          default, triple, double, anime, cinema, min_afterimg,\n")
+        _T("          24fps, 24fps_sd, 30fps\n")
+        _T("      ini=<string>\n")
+        _T("          read setting from ini file specified (output of afs.auf)\n")
+        _T("\n")
+        _T("      !! params from preset & ini will be overrided by user settings below !!\n")
+        _T("\n")
+        _T("                   Aviutlでのパラメータ名\n")
+        _T("      top=<int>           (上)         clip range to scan (default=%d)\n")
+        _T("      bottom=<int>        (下)         clip range to scan (default=%d)\n")
+        _T("      left=<int>          (左)         clip range to scan (default=%d)\n")
+        _T("      right=<int>         (右)         clip range to scan (default=%d)\n")
+        _T("                                        left & right must be muitiple of 4\n")
+        _T("      method_switch=<int> (切替点)     (default=%d, 0-256)\n")
+        _T("      coeff_shift=<int>   (判定比)     (default=%d, 0-256)\n")
+        _T("      thre_shift=<int>    (縞(シフト)) stripe(shift)thres (default=%d, 0-1024)\n")
+        _T("      thre_deint=<int>    (縞(解除))   stripe(deint)thres (default=%d, 0-1024)\n")
+        _T("      thre_motion_y=<int> (Y動き)      Y motion threshold (default=%d, 0-1024)\n")
+        _T("      thre_motion_c=<int> (C動き)      C motion threshold (default=%d, 0-1024)\n")
+        _T("      level=<int>         (解除Lv)     set deint level    (default=%d, 0-4\n")
+        _T("      shift=<bool>  (フィールドシフト) enable field shift (default=%s)\n")
+        _T("      drop=<bool>   (ドロップ)         enable frame drop  (default=%s)\n")
+        _T("      smooth=<bool> (スムージング)     enable smoothing   (default=%s)\n")
+        _T("      24fps=<bool>  (24fps化)          force 30fps->24fps (default=%s)\n")
+        _T("      tune=<bool>   (調整モード)       show scan result   (default=%s)\n")
+        _T("      rff=<bool>                       rff flag aware     (default=%s)\n")
+        _T("      timecode=<bool>                  output timecode    (default=%s)\n")
+        _T("      log=<bool>                       output log         (default=%s)\n"),
+        FILTER_DEFAULT_AFS_CLIP_TB, FILTER_DEFAULT_AFS_CLIP_TB,
+        FILTER_DEFAULT_AFS_CLIP_LR, FILTER_DEFAULT_AFS_CLIP_LR,
+        FILTER_DEFAULT_AFS_METHOD_SWITCH, FILTER_DEFAULT_AFS_COEFF_SHIFT,
+        FILTER_DEFAULT_AFS_THRE_SHIFT, FILTER_DEFAULT_AFS_THRE_DEINT,
+        FILTER_DEFAULT_AFS_THRE_YMOTION, FILTER_DEFAULT_AFS_THRE_CMOTION,
+        FILTER_DEFAULT_AFS_ANALYZE,
+        FILTER_DEFAULT_AFS_SHIFT   ? _T("on") : _T("off"),
+        FILTER_DEFAULT_AFS_DROP    ? _T("on") : _T("off"),
+        FILTER_DEFAULT_AFS_SMOOTH  ? _T("on") : _T("off"),
+        FILTER_DEFAULT_AFS_FORCE24 ? _T("on") : _T("off"),
+        FILTER_DEFAULT_AFS_TUNE    ? _T("on") : _T("off"),
+        FILTER_DEFAULT_AFS_RFF     ? _T("on") : _T("off"),
+        FILTER_DEFAULT_AFS_TIMECODE ? _T("on") : _T("off"),
+        FILTER_DEFAULT_AFS_LOG      ? _T("on") : _T("off"));
     str += print_list_options(_T("--vpp-resize <string>"), list_vpp_resize, 0);
+    str += strsprintf(_T("")
+        _T("   --vpp-knn [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     enable denoise filter by K-nearest neighbor.\n")
+        _T("    params\n")
+        _T("      radius=<int>              radius of knn (default=%d)\n")
+        _T("      strength=<float>          strength of knn (default=%.2f, 0.0-1.0)\n")
+        _T("      lerp=<float>              balance of orig & blended pixel (default=%.2f)\n")
+        _T("                                  lower value results strong denoise.\n")
+        _T("      th_lerp=<float>           edge detect threshold (default=%.2f, 0.0-1.0)\n")
+        _T("                                  higher value will preserve edge.\n"),
+        FILTER_DEFAULT_KNN_RADIUS, FILTER_DEFAULT_KNN_STRENGTH, FILTER_DEFAULT_KNN_LERPC,
+        FILTER_DEFAULT_KNN_LERPC_THRESHOLD);
     str += _T("\n");
     str += gen_cmd_help_ctrl();
     return str;
@@ -1022,6 +1081,91 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+    if (IS_OPTION("vpp-knn")) {
+        pParams->vpp.knn.enable = true;
+        if (i+1 >= nArgNum || strInput[i+1][0] == _T('-')) {
+            pParams->vpp.knn.radius = FILTER_DEFAULT_KNN_RADIUS;
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{ "radius", "strength", "lerp", "th_weight", "th_lerp" };
+
+        int radius = FILTER_DEFAULT_KNN_RADIUS;
+        if (1 != _stscanf_s(strInput[i], _T("%d"), &radius)) {
+            for (const auto& param : split(strInput[i], _T(","))) {
+                auto pos = param.find_first_of(_T("="));
+                if (pos != std::string::npos) {
+                    auto param_arg = param.substr(0, pos);
+                    auto param_val = param.substr(pos+1);
+                    param_arg = tolowercase(param_arg);
+                    if (param_arg == _T("enable")) {
+                        bool b = false;
+                        if (!cmd_string_to_bool(&b, param_val)) {
+                            pParams->vpp.knn.enable = b;
+                        } else {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                        continue;
+                    }
+                    if (param_arg == _T("radius")) {
+                        try {
+                            pParams->vpp.knn.radius = std::stoi(param_val);
+                        } catch (...) {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                        continue;
+                    }
+                    if (param_arg == _T("strength")) {
+                        try {
+                            pParams->vpp.knn.strength = std::stof(param_val);
+                        } catch (...) {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                        continue;
+                    }
+                    if (param_arg == _T("lerp")) {
+                        try {
+                            pParams->vpp.knn.lerpC = std::stof(param_val);
+                        } catch (...) {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                        continue;
+                    }
+                    if (param_arg == _T("th_weight")) {
+                        try {
+                            pParams->vpp.knn.weight_threshold = std::stof(param_val);
+                        } catch (...) {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                        continue;
+                    }
+                    if (param_arg == _T("th_lerp")) {
+                        try {
+                            pParams->vpp.knn.lerp_threshold = std::stof(param_val);
+                        } catch (...) {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                        continue;
+                    }
+                    print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                    return 1;
+                } else {
+                    print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                    return 1;
+                }
+            }
+        } else {
+            pParams->vpp.knn.radius = radius;
+        }
+        return 0;
+    }
 
     auto ret = parse_one_input_option(option_name, strInput, i, nArgNum, &pParams->input, argData);
     if (ret >= 0) return ret;
@@ -1377,6 +1521,24 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
             cmd << _T(" --vpp-afs ") << tmp.str().substr(1);
         } else if (pParams->vpp.afs.enable) {
             cmd << _T(" --vpp-afs");
+        }
+    }
+    if (pParams->vpp.knn != encPrmDefault.vpp.knn) {
+        tmp.str(tstring());
+        if (!pParams->vpp.knn.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (pParams->vpp.knn.enable || save_disabled_prm) {
+            ADD_NUM(_T("radius"), vpp.knn.radius);
+            ADD_FLOAT(_T("strength"), vpp.knn.strength, 3);
+            ADD_FLOAT(_T("lerp"), vpp.knn.lerpC, 3);
+            ADD_FLOAT(_T("th_weight"), vpp.knn.weight_threshold, 3);
+            ADD_FLOAT(_T("th_lerp"), vpp.knn.lerp_threshold, 3);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-knn ") << tmp.str().substr(1);
+        } else if (pParams->vpp.knn.enable) {
+            cmd << _T(" --vpp-knn");
         }
     }
 

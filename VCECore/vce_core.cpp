@@ -52,6 +52,7 @@
 #include "vce_param.h"
 #include "vce_filter.h"
 #include "vce_filter_afs.h"
+#include "vce_filter_denoise_knn.h"
 #include "rgy_version.h"
 #include "rgy_bitstream.h"
 #include "rgy_chapter.h"
@@ -719,7 +720,8 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     //フィルタが必要
     if (resizeRequired
         || cropRequired
-        || inputParam->vpp.afs.enable) {
+        || inputParam->vpp.afs.enable
+        || inputParam->vpp.knn.enable) {
         //swデコードならGPUに上げる必要がある
         if (m_pFileReader->getInputCodec() == RGY_CODEC_UNKNOWN) {
             amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
@@ -830,6 +832,28 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             param->outTimebase = m_outputTimebase;
             param->baseFps = m_encFps;
             param->outFilename = inputParam->common.outputFilename;
+            param->bOutOverwrite = false;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filter));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+        //knn
+        if (inputParam->vpp.knn.enable) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterDenoiseKnn(m_dev->cl()));
+            shared_ptr<RGYFilterParamDenoiseKnn> param(new RGYFilterParamDenoiseKnn());
+            param->knn = inputParam->vpp.knn;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
             param->bOutOverwrite = false;
             auto sts = filter->init(param, m_pLog);
             if (sts != RGY_ERR_NONE) {
@@ -1478,7 +1502,7 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
                 continue;
             }
             //インタレ保持のチェック
-            const bool interlacedEncoding = 
+            const bool interlacedEncoding =
                 (prm->input.picstruct & RGY_PICSTRUCT_INTERLACED)
                 && !prm->vpp.afs.enable;
             if (interlacedEncoding

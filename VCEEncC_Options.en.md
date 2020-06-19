@@ -975,6 +975,27 @@ example: same as --vpp-afs preset=24fps
 --vpp-afs preset=anime,method_switch=92,thre_shift=448,24fps=true
 ```
 
+### --vpp-knn [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+Strong noise reduction filter.
+
+**Parameters**
+- radius=&lt;int&gt;  (default=3, 1-5)   
+  radius of filter.
+
+- strength=&lt;float&gt;  (default=0.08, 0.0 - 1.0)   
+  Strength of the filter.
+
+- lerp=&lt;float&gt;   (default=0.2, 0.0 - 1.0)  
+  The degree of blending of the original pixel to the noise reduction pixel.
+
+- th_lerp=&lt;float&gt;  (default=0.8, 0.0 - 1.0)  
+  Threshold of edge detection. 
+
+```
+Example: slightly stronger than default
+--vpp-knn radius=3,strength=0.10,lerp=0.1
+```
+
 ## Other Options
 
 ### --output-buf &lt;int&gt;

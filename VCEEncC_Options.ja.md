@@ -1007,6 +1007,26 @@ log=0
   - ログ再生
   - YUY2補間
   - シフト・解除なし
+  
+### --vpp-knn [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+**パラメータ**
+- radius=&lt;int&gt;  (default=3, 1-5)  
+  適用半径。
+
+- strength=&lt;float&gt;  (default=0.08, 0.0 - 1.0)    
+  フィルタの強さ。
+
+- lerp=&lt;float&gt;  (default=0.2, 0.0 - 1.0)  
+  ノイズ除去ピクセルへのオリジナルピクセルのブレンド度合い。
+
+- th_lerp=&lt;float&gt;   (default=0.8, 0.0 - 1.0)  
+  エッジ検出の閾値。
+
+```
+例: すこし強め
+--vpp-knn radius=3,strength=0.10,lerp=0.1
+```
 
 ## 制御系のオプション
 
