@@ -107,7 +107,7 @@ RGY_ERR RGYFilterResize::resizeFrame(FrameInfo *pOutputFrame, const FrameInfo *p
     return RGY_ERR_NONE;
 }
 
-RGYFilterResize::RGYFilterResize(shared_ptr<RGYOpenCLContext> context) : RGYFilter(context), m_bInterlacedWarn(false), m_weightSpline(), m_resize() {
+RGYFilterResize::RGYFilterResize(shared_ptr<RGYOpenCLContext> context) : RGYFilter(context), m_bInterlacedWarn(false), m_weightSpline(), m_resize(), m_srcImage() {
     m_name = _T("resize");
 }
 
