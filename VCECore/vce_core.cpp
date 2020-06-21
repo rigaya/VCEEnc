@@ -53,6 +53,7 @@
 #include "vce_filter.h"
 #include "vce_filter_afs.h"
 #include "vce_filter_denoise_knn.h"
+#include "vce_filter_denoise_pmd.h"
 #include "rgy_version.h"
 #include "rgy_bitstream.h"
 #include "rgy_chapter.h"
@@ -721,7 +722,8 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     if (resizeRequired
         || cropRequired
         || inputParam->vpp.afs.enable
-        || inputParam->vpp.knn.enable) {
+        || inputParam->vpp.knn.enable
+        || inputParam->vpp.pmd.enable) {
         //swデコードならGPUに上げる必要がある
         if (m_pFileReader->getInputCodec() == RGY_CODEC_UNKNOWN) {
             amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
@@ -851,6 +853,28 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             unique_ptr<RGYFilter> filter(new RGYFilterDenoiseKnn(m_dev->cl()));
             shared_ptr<RGYFilterParamDenoiseKnn> param(new RGYFilterParamDenoiseKnn());
             param->knn = inputParam->vpp.knn;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
+            param->bOutOverwrite = false;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filter));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+        //pmd
+        if (inputParam->vpp.pmd.enable) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterDenoisePmd(m_dev->cl()));
+            shared_ptr<RGYFilterParamDenoisePmd> param(new RGYFilterParamDenoisePmd());
+            param->pmd = inputParam->vpp.pmd;
             param->frameIn = inputFrame;
             param->frameOut = inputFrame;
             param->baseFps = m_encFps;

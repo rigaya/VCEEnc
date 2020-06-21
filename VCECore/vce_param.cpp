@@ -288,10 +288,36 @@ tstring VppKnn::print() const {
         weight_threshold, lerp_threshold);
 }
 
+VppPmd::VppPmd() :
+    enable(false),
+    strength(FILTER_DEFAULT_PMD_STRENGTH),
+    threshold(FILTER_DEFAULT_PMD_THRESHOLD),
+    applyCount(FILTER_DEFAULT_PMD_APPLY_COUNT),
+    useExp(FILTER_DEFAULT_PMD_USE_EXP) {
+
+}
+
+bool VppPmd::operator==(const VppPmd& x) const {
+    return enable == x.enable
+        && strength == x.strength
+        && threshold == x.threshold
+        && applyCount == x.applyCount
+        && useExp == x.useExp;
+}
+bool VppPmd::operator!=(const VppPmd& x) const {
+    return !(*this == x);
+}
+
+tstring VppPmd::print() const {
+    return strsprintf(_T("denoise(pmd): strength %d, threshold %d, apply %d, exp %d"),
+        (int)strength, (int)threshold, applyCount, useExp);
+}
+
 VCEVppParam::VCEVppParam() :
     resize(RGY_VPP_RESIZE_AUTO),
     afs(),
-    knn() {
+    knn(),
+    pmd() {
 
 }
 

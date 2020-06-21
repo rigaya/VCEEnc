@@ -73,6 +73,11 @@ static const float FILTER_DEFAULT_KNN_LERPC = 0.20f;
 static const float FILTER_DEFAULT_KNN_WEIGHT_THRESHOLD = 0.01f;
 static const float FILTER_DEFAULT_KNN_LERPC_THRESHOLD = 0.80f;
 
+static const float FILTER_DEFAULT_PMD_STRENGTH = 100.0f;
+static const float FILTER_DEFAULT_PMD_THRESHOLD = 100.0f;
+static const int   FILTER_DEFAULT_PMD_APPLY_COUNT = 2;
+static const bool  FILTER_DEFAULT_PMD_USE_EXP = true;
+
 enum {
     VCE_RC_CQP = 0,
     VCE_RC_CBR = 3,
@@ -428,10 +433,24 @@ struct VppKnn {
     tstring print() const;
 };
 
+struct VppPmd {
+    bool  enable;
+    float strength;
+    float threshold;
+    int   applyCount;
+    bool  useExp;
+
+    VppPmd();
+    bool operator==(const VppPmd &x) const;
+    bool operator!=(const VppPmd &x) const;
+    tstring print() const;
+};
+
 struct VCEVppParam {
     RGY_VPP_RESIZE_ALGO resize;
     VppAfs afs;
     VppKnn knn;
+    VppPmd pmd;
 
     VCEVppParam();
 };

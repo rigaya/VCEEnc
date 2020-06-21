@@ -282,6 +282,15 @@ tstring encoder_help() {
         _T("                                  higher value will preserve edge.\n"),
         FILTER_DEFAULT_KNN_RADIUS, FILTER_DEFAULT_KNN_STRENGTH, FILTER_DEFAULT_KNN_LERPC,
         FILTER_DEFAULT_KNN_LERPC_THRESHOLD);
+    str += strsprintf(_T("\n")
+        _T("   --vpp-pmd [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     enable denoise filter by pmd.\n")
+        _T("    params\n")
+        _T("      apply_count=<int>         count to apply pmd denoise (default=%d)\n")
+        _T("      strength=<float>          strength of pmd (default=%.2f, 0.0-100.0)\n")
+        _T("      threshold=<float>         threshold of pmd (default=%.2f, 0.0-255.0)\n")
+        _T("                                  lower value will preserve edge.\n"),
+        FILTER_DEFAULT_PMD_APPLY_COUNT, FILTER_DEFAULT_PMD_STRENGTH, FILTER_DEFAULT_PMD_THRESHOLD);
     str += _T("\n");
     str += gen_cmd_help_ctrl();
     return str;
@@ -1166,6 +1175,81 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+    if (IS_OPTION("vpp-pmd")) {
+        pParams->vpp.pmd.enable = true;
+        if (i+1 >= nArgNum || strInput[i+1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{ "apply_count", "strength", "threshold", "useexp" };
+
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos+1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.pmd.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("apply_count")) {
+                    try {
+                        pParams->vpp.pmd.applyCount = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("strength")) {
+                    try {
+                        pParams->vpp.pmd.strength = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("threshold")) {
+                    try {
+                        pParams->vpp.pmd.threshold = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("useexp")) {
+                    try {
+                        pParams->vpp.pmd.useExp = std::stoi(param_val) != 0;
+                    } catch (...) {
+                        bool b = false;
+                        if (!cmd_string_to_bool(&b, param_val)) {
+                            pParams->vpp.pmd.useExp = b;
+                        } else {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
 
     auto ret = parse_one_input_option(option_name, strInput, i, nArgNum, &pParams->input, argData);
     if (ret >= 0) return ret;
@@ -1539,6 +1623,23 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
             cmd << _T(" --vpp-knn ") << tmp.str().substr(1);
         } else if (pParams->vpp.knn.enable) {
             cmd << _T(" --vpp-knn");
+        }
+    }
+    if (pParams->vpp.pmd != encPrmDefault.vpp.pmd) {
+        tmp.str(tstring());
+        if (!pParams->vpp.pmd.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (pParams->vpp.pmd.enable || save_disabled_prm) {
+            ADD_NUM(_T("apply_count"), vpp.pmd.applyCount);
+            ADD_FLOAT(_T("strength"), vpp.pmd.strength, 3);
+            ADD_FLOAT(_T("threshold"), vpp.pmd.threshold, 3);
+            ADD_NUM(_T("useexp"), vpp.pmd.useExp);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-pmd ") << tmp.str().substr(1);
+        } else if (pParams->vpp.pmd.enable) {
+            cmd << _T(" --vpp-pmd");
         }
     }
 

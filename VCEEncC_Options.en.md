@@ -996,6 +996,24 @@ Example: slightly stronger than default
 --vpp-knn radius=3,strength=0.10,lerp=0.1
 ```
 
+### --vpp-pmd [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+Rather weak noise reduction by modified pmd method, aimed to preserve edge while noise reduction.
+
+**Parameters**
+- apply_count=&lt;int&gt;  (default=2, 1- )  
+  Number of times to apply the filter. 
+
+- strength=&lt;float&gt;  (default=100, 0-100)  
+  Strength of the filter. 
+
+- threshold=&lt;float&gt;  (default=100, 0-255)  
+  Threshold for edge detection. The smaller the value is, more will be detected as edge, which will be preserved.
+
+```
+Example: Slightly weak than default
+--vpp-pmd apply_count=2,strength=90,threshold=120
+```
+
 ## Other Options
 
 ### --output-buf &lt;int&gt;

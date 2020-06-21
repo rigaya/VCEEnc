@@ -1028,6 +1028,24 @@ log=0
 --vpp-knn radius=3,strength=0.10,lerp=0.1
 ```
 
+### --vpp-pmd [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+正則化pmd法によるノイズ除去。弱めのノイズ除去を行いたいときに使用する。
+
+**パラメータ**
+- apply_count=&lt;int&gt;  (default=2, 1- )  
+  適用回数。デフォルトは2。
+
+- strength=&lt;float&gt;  (default=100, 0-100)  
+  フィルタの強さ。
+
+- threshold=&lt;float&gt;  (default=100, 0-255)  
+  フィルタの輪郭検出の閾値。小さいほど輪郭を保持するようになるが、フィルタの効果も弱まる。
+
+```
+例: すこし弱め
+--vpp-pmd apply_count=2,strength=90,threshold=120
+```
+
 ## 制御系のオプション
 
 ### --output-buf &lt;int&gt;
