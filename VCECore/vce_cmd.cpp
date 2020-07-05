@@ -291,6 +291,17 @@ tstring encoder_help() {
         _T("      threshold=<float>         threshold of pmd (default=%.2f, 0.0-255.0)\n")
         _T("                                  lower value will preserve edge.\n"),
         FILTER_DEFAULT_PMD_APPLY_COUNT, FILTER_DEFAULT_PMD_STRENGTH, FILTER_DEFAULT_PMD_THRESHOLD);
+    str += strsprintf(_T("\n")
+        _T("   --vpp-edgelevel [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     edgelevel filter to enhance edge.\n")
+        _T("    params\n")
+        _T("      strength=<float>          strength (default=%d, -31 - 31)\n")
+        _T("      threshold=<float>         threshold to ignore noise (default=%.1f, 0-255)\n")
+        _T("      black=<float>             allow edge to be darker on edge enhancement\n")
+        _T("                                  (default=%.1f, 0-31)\n")
+        _T("      white=<float>             allow edge to be brighter on edge enhancement\n")
+        _T("                                  (default=%.1f, 0-31)\n"),
+        FILTER_DEFAULT_EDGELEVEL_STRENGTH, FILTER_DEFAULT_EDGELEVEL_THRESHOLD, FILTER_DEFAULT_EDGELEVEL_BLACK, FILTER_DEFAULT_EDGELEVEL_WHITE);
     str += _T("\n");
     str += gen_cmd_help_ctrl();
     return str;
@@ -1250,6 +1261,71 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+    if (IS_OPTION("vpp-edgelevel")) {
+        pParams->vpp.edgelevel.enable = true;
+        if (i+1 >= nArgNum || strInput[i+1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+        const auto paramList = std::vector<std::string>{ "strength", "threshold", "black", "white" };
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos+1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.edgelevel.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("strength")) {
+                    try {
+                        pParams->vpp.edgelevel.strength = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("threshold")) {
+                    try {
+                        pParams->vpp.edgelevel.threshold = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("black")) {
+                    try {
+                        pParams->vpp.edgelevel.black = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("white")) {
+                    try {
+                        pParams->vpp.edgelevel.white = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
 
     auto ret = parse_one_input_option(option_name, strInput, i, nArgNum, &pParams->input, argData);
     if (ret >= 0) return ret;
@@ -1640,6 +1716,23 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
             cmd << _T(" --vpp-pmd ") << tmp.str().substr(1);
         } else if (pParams->vpp.pmd.enable) {
             cmd << _T(" --vpp-pmd");
+        }
+    }
+    if (pParams->vpp.edgelevel != encPrmDefault.vpp.edgelevel) {
+        tmp.str(tstring());
+        if (!pParams->vpp.edgelevel.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (pParams->vpp.edgelevel.enable || save_disabled_prm) {
+            ADD_FLOAT(_T("strength"), vpp.edgelevel.strength, 3);
+            ADD_FLOAT(_T("threshold"), vpp.edgelevel.threshold, 3);
+            ADD_FLOAT(_T("black"), vpp.edgelevel.black, 3);
+            ADD_FLOAT(_T("white"), vpp.edgelevel.white, 3);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-edgelevel ") << tmp.str().substr(1);
+        } else if (pParams->vpp.edgelevel.enable) {
+            cmd << _T(" --vpp-edgelevel");
         }
     }
 

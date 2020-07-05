@@ -78,6 +78,11 @@ static const float FILTER_DEFAULT_PMD_THRESHOLD = 100.0f;
 static const int   FILTER_DEFAULT_PMD_APPLY_COUNT = 2;
 static const bool  FILTER_DEFAULT_PMD_USE_EXP = true;
 
+static const float FILTER_DEFAULT_EDGELEVEL_STRENGTH = 5.0f;
+static const float FILTER_DEFAULT_EDGELEVEL_THRESHOLD = 20.0f;
+static const float FILTER_DEFAULT_EDGELEVEL_BLACK = 0.0f;
+static const float FILTER_DEFAULT_EDGELEVEL_WHITE = 0.0f;
+
 enum {
     VCE_RC_CQP = 0,
     VCE_RC_CBR = 3,
@@ -446,11 +451,25 @@ struct VppPmd {
     tstring print() const;
 };
 
+struct VppEdgelevel {
+    bool  enable;
+    float strength;
+    float threshold;
+    float black;
+    float white;
+
+    VppEdgelevel();
+    bool operator==(const VppEdgelevel &x) const;
+    bool operator!=(const VppEdgelevel &x) const;
+    tstring print() const;
+};
+
 struct VCEVppParam {
     RGY_VPP_RESIZE_ALGO resize;
     VppAfs afs;
     VppKnn knn;
     VppPmd pmd;
+    VppEdgelevel edgelevel;
 
     VCEVppParam();
 };

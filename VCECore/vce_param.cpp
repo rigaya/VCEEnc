@@ -313,11 +313,36 @@ tstring VppPmd::print() const {
         (int)strength, (int)threshold, applyCount, useExp);
 }
 
+VppEdgelevel::VppEdgelevel() :
+    enable(false),
+    strength(FILTER_DEFAULT_EDGELEVEL_STRENGTH),
+    threshold(FILTER_DEFAULT_EDGELEVEL_THRESHOLD),
+    black(FILTER_DEFAULT_EDGELEVEL_BLACK),
+    white(FILTER_DEFAULT_EDGELEVEL_WHITE) {
+}
+
+bool VppEdgelevel::operator==(const VppEdgelevel &x) const {
+    return enable == x.enable
+        && strength == x.strength
+        && threshold == x.threshold
+        && black == x.black
+        && white == x.white;
+}
+bool VppEdgelevel::operator!=(const VppEdgelevel &x) const {
+    return !(*this == x);
+}
+
+tstring VppEdgelevel::print() const {
+    return strsprintf(_T("edgelevel: strength %.1f, threshold %.1f, black %.1f, white %.1f"),
+        strength, threshold, black, white);
+}
+
 VCEVppParam::VCEVppParam() :
     resize(RGY_VPP_RESIZE_AUTO),
     afs(),
     knn(),
-    pmd() {
+    pmd(),
+    edgelevel() {
 
 }
 

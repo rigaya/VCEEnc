@@ -1014,6 +1014,30 @@ Example: Slightly weak than default
 --vpp-pmd apply_count=2,strength=90,threshold=120
 ```
 
+### --vpp-edgelevel [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+Edge level adjustment filter, for edge sharpening.
+
+**Parameters**
+- strength=&lt;float&gt; (default=5.0, -31 - 31)  
+  Strength of edge sharpening. Larger value will result stronger edge sharpening.
+
+- threshold=&lt;float&gt;  (default=20.0, 0 - 255)  
+  Noise threshold to avoid enhancing noise. Larger value will treat larger luminance change as noise.
+
+- black=&lt;float&gt;  (default=0.0, 0-31)  
+  strength to enhance dark part of edges.
+
+- white=&lt;float&gt;  (default=0.0, 0-31)  
+  strength to enhance bright part of edges.
+
+```
+Example: Somewhat stronger (Aviutl version default)
+--vpp-edgelevel strength=10.0,threshold=16.0,black=0,white=0
+
+Example: Strengthening the black part of the outline
+--vpp-edgelevel strength=5.0,threshold=24.0,black=6.0
+```
+
 ## Other Options
 
 ### --output-buf &lt;int&gt;

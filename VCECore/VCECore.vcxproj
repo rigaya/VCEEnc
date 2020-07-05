@@ -278,6 +278,7 @@
     </ClCompile>
     <ClCompile Include="vce_filter_denoise_knn.cpp" />
     <ClCompile Include="vce_filter_denoise_pmd.cpp" />
+    <ClCompile Include="vce_filter_edgelevel.cpp" />
     <ClCompile Include="vce_filter_resize.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -352,6 +353,7 @@
     <ClInclude Include="vce_filter_afs.h" />
     <ClInclude Include="vce_filter_denoise_knn.h" />
     <ClInclude Include="vce_filter_denoise_pmd.h" />
+    <ClInclude Include="vce_filter_edgelevel.h" />
     <ClInclude Include="vce_filter_ssim.h" />
     <ClInclude Include="vce_util.h" />
     <ClInclude Include="vce_param.h" />
@@ -492,6 +494,7 @@
     <None Include="vce_filter_afs_synthesize.cl" />
     <None Include="vce_filter_denoise_knn.cl" />
     <None Include="vce_filter_denoise_pmd.cl" />
+    <None Include="vce_filter_edgelevel.cl" />
     <None Include="vce_filter_resize.cl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>

@@ -1046,6 +1046,30 @@ log=0
 --vpp-pmd apply_count=2,strength=90,threshold=120
 ```
 
+### --vpp-edgelevel [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+エッジレベル調整フィルタ。輪郭強調用のフィルタ。
+
+**パラメータ**
+- strength=&lt;float&gt; (default=5.0, -31 - 31)  
+  輪郭強調の強さ。より大きな値とすることで、輪郭強調が強力になる。
+
+- threshold=&lt;float&gt;  (default=20.0, 0 - 255)  
+  輪郭強調を行わないようにするノイズの閾値。より大きな値ほど大きな輝度の変化をノイズとして扱うようになる。
+
+- black=&lt;float&gt;  (default=0.0, 0-31)  
+  輪郭の黒い部分について、より黒くシュートさせて輪郭を強調するようにする。
+
+- white=&lt;float&gt;  (default=0.0, 0-31)  
+  輪郭の白く部分について、より白くシュートさせて輪郭を強調するようにする。
+
+```
+例: やや強め(Aviutl版のデフォルト)
+--vpp-edgelevel strength=10.0,threshold=16.0,black=0,white=0
+
+例: 輪郭の黒い部分を気持ち強める
+--vpp-edgelevel strength=5.0,threshold=24.0,black=6.0
+```
+
 ## 制御系のオプション
 
 ### --output-buf &lt;int&gt;
