@@ -80,6 +80,15 @@ public:
         return dataptr + dataOffset;
     }
 
+    uint8_t *release() {
+        uint8_t *ptr = dataptr;
+        dataptr = nullptr;
+        dataOffset = 0;
+        dataLength = 0;
+        maxLength = 0;
+        return ptr;
+    }
+
     uint32_t dataflag() const {
         return dataFlag;
     }
