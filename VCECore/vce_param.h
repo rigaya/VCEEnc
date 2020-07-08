@@ -226,6 +226,23 @@ const CX_DESC list_pa_caq_strength[] = {
     { NULL, NULL }
 };
 
+
+
+const CX_DESC list_vpp_denoise[] = {
+    { _T("none"),   0 },
+    { _T("knn"),    1 },
+    { _T("pmd"),    2 },
+    //{ _T("smooth"), 3 },
+    { NULL, 0 }
+};
+
+const CX_DESC list_vpp_detail_enahance[] = {
+    { _T("none"),       0 },
+    //{ _T("unsharp"),    1 },
+    { _T("edgelevel"),  2 },
+    { NULL, 0 }
+};
+
 enum RGY_VPP_RESIZE_ALGO {
     RGY_VPP_RESIZE_AUTO,
     RGY_VPP_RESIZE_BILINEAR,
