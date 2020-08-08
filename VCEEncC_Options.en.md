@@ -1014,6 +1014,24 @@ Example: Slightly weak than default
 --vpp-pmd apply_count=2,strength=90,threshold=120
 ```
 
+### --vpp-unsharp [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+unsharp filter, for edge and detail enhancement.
+
+**Parameters**
+- radius=&lt;int&gt; (default=3, 1-9)  
+  radius of edge / detail detection.
+
+- weight=&lt;float&gt; (default=0.5, 0-10)  
+  Strength of edge and detail emphasis. Larger value will result stronger effect.
+
+- threshold=&lt;float&gt;  (default=10.0, 0-255)  
+  Threshold for edge and detail detection.
+
+```
+Example: Somewhat stronger
+--vpp-unsharp weight=1.0
+```
+
 ### --vpp-edgelevel [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 Edge level adjustment filter, for edge sharpening.
 

@@ -292,6 +292,14 @@ tstring encoder_help() {
         _T("                                  lower value will preserve edge.\n"),
         FILTER_DEFAULT_PMD_APPLY_COUNT, FILTER_DEFAULT_PMD_STRENGTH, FILTER_DEFAULT_PMD_THRESHOLD);
     str += strsprintf(_T("\n")
+        _T("   --vpp-unsharp [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     enable unsharp filter.\n")
+        _T("    params\n")
+        _T("      radius=<int>              filter range for edge detection (default=%d, 1-9)\n")
+        _T("      weight=<float>            strength of filter (default=%.2f, 0-10)\n")
+        _T("      threshold=<float>         min brightness change to be sharpened (default=%.2f, 0-255)\n"),
+        FILTER_DEFAULT_UNSHARP_RADIUS, FILTER_DEFAULT_UNSHARP_WEIGHT, FILTER_DEFAULT_UNSHARP_THRESHOLD);
+    str += strsprintf(_T("\n")
         _T("   --vpp-edgelevel [<param1>=<value>][,<param2>=<value>][...]\n")
         _T("     edgelevel filter to enhance edge.\n")
         _T("    params\n")
@@ -1275,6 +1283,63 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+    if (IS_OPTION("vpp-unsharp")) {
+        pParams->vpp.unsharp.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            pParams->vpp.unsharp.radius = FILTER_DEFAULT_UNSHARP_RADIUS;
+            return 0;
+        }
+        i++;
+        const auto paramList = std::vector<std::string>{ "radius", "weight", "threshold" };
+        for (const auto &param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = tolowercase(param.substr(0, pos));
+                auto param_val = param.substr(pos + 1);
+                if (param_arg == _T("enable")) {
+                    if (param_val == _T("true")) {
+                        pParams->vpp.unsharp.enable = true;
+                    } else if (param_val == _T("false")) {
+                        pParams->vpp.unsharp.enable = false;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("radius")) {
+                    try {
+                        pParams->vpp.unsharp.radius = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("weight")) {
+                    try {
+                        pParams->vpp.unsharp.weight = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("threshold")) {
+                    try {
+                        pParams->vpp.unsharp.threshold = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
     if (IS_OPTION("vpp-edgelevel")) {
         pParams->vpp.edgelevel.enable = true;
         if (i+1 >= nArgNum || strInput[i+1][0] == _T('-')) {
@@ -1827,6 +1892,22 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
             cmd << _T(" --vpp-pmd ") << tmp.str().substr(1);
         } else if (pParams->vpp.pmd.enable) {
             cmd << _T(" --vpp-pmd");
+        }
+    }
+    if (pParams->vpp.unsharp != encPrmDefault.vpp.unsharp) {
+        tmp.str(tstring());
+        if (!pParams->vpp.unsharp.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (pParams->vpp.unsharp.enable || save_disabled_prm) {
+            ADD_NUM(_T("radius"), vpp.unsharp.radius);
+            ADD_FLOAT(_T("weight"), vpp.unsharp.weight, 3);
+            ADD_FLOAT(_T("threshold"), vpp.unsharp.threshold, 3);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-unsharp ") << tmp.str().substr(1);
+        } else if (pParams->vpp.unsharp.enable) {
+            cmd << _T(" --vpp-unsharp");
         }
     }
     if (pParams->vpp.edgelevel != encPrmDefault.vpp.edgelevel) {

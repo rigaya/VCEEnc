@@ -54,6 +54,7 @@
 #include "vce_filter_afs.h"
 #include "vce_filter_denoise_knn.h"
 #include "vce_filter_denoise_pmd.h"
+#include "vce_filter_unsharp.h"
 #include "vce_filter_edgelevel.h"
 #include "vce_filter_tweak.h"
 #include "rgy_version.h"
@@ -726,8 +727,9 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         || inputParam->vpp.afs.enable
         || inputParam->vpp.knn.enable
         || inputParam->vpp.pmd.enable
-        || inputParam->vpp.tweak.enable
-        || inputParam->vpp.edgelevel.enable) {
+        || inputParam->vpp.unsharp.enable
+        || inputParam->vpp.edgelevel.enable
+        || inputParam->vpp.tweak.enable) {
         //swデコードならGPUに上げる必要がある
         if (m_pFileReader->getInputCodec() == RGY_CODEC_UNKNOWN) {
             amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
@@ -913,6 +915,28 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             }
             //フィルタチェーンに追加
             m_vpFilters.push_back(std::move(filterResize));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+        //unsharp
+        if (inputParam->vpp.unsharp.enable) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterUnsharp(m_dev->cl()));
+            shared_ptr<RGYFilterParamUnsharp> param(new RGYFilterParamUnsharp());
+            param->unsharp = inputParam->vpp.unsharp;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
+            param->bOutOverwrite = false;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filter));
             //パラメータ情報を更新
             m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
             //入力フレーム情報を更新

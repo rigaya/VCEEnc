@@ -89,6 +89,10 @@ static const float FILTER_DEFAULT_EDGELEVEL_THRESHOLD = 20.0f;
 static const float FILTER_DEFAULT_EDGELEVEL_BLACK = 0.0f;
 static const float FILTER_DEFAULT_EDGELEVEL_WHITE = 0.0f;
 
+static const int   FILTER_DEFAULT_UNSHARP_RADIUS = 3;
+static const float FILTER_DEFAULT_UNSHARP_WEIGHT = 0.5f;
+static const float FILTER_DEFAULT_UNSHARP_THRESHOLD = 10.0f;
+
 enum {
     VCE_RC_CQP = 0,
     VCE_RC_CBR = 3,
@@ -474,17 +478,15 @@ struct VppPmd {
     tstring print() const;
 };
 
-struct VppTweak {
+struct VppUnsharp {
     bool  enable;
-    float brightness; // -1.0 - 1.0 (0.0)
-    float contrast;   // -2.0 - 2.0 (1.0)
-    float gamma;      //  0.1 - 10.0 (1.0)
-    float saturation; //  0.0 - 3.0 (1.0)
-    float hue;        // -180 - 180 (0.0)
+    int   radius;
+    float weight;
+    float threshold;
 
-    VppTweak();
-    bool operator==(const VppTweak &x) const;
-    bool operator!=(const VppTweak &x) const;
+    VppUnsharp();
+    bool operator==(const VppUnsharp &x) const;
+    bool operator!=(const VppUnsharp &x) const;
     tstring print() const;
 };
 
@@ -501,13 +503,28 @@ struct VppEdgelevel {
     tstring print() const;
 };
 
+struct VppTweak {
+    bool  enable;
+    float brightness; // -1.0 - 1.0 (0.0)
+    float contrast;   // -2.0 - 2.0 (1.0)
+    float gamma;      //  0.1 - 10.0 (1.0)
+    float saturation; //  0.0 - 3.0 (1.0)
+    float hue;        // -180 - 180 (0.0)
+
+    VppTweak();
+    bool operator==(const VppTweak &x) const;
+    bool operator!=(const VppTweak &x) const;
+    tstring print() const;
+};
+
 struct VCEVppParam {
     RGY_VPP_RESIZE_ALGO resize;
     VppAfs afs;
     VppKnn knn;
     VppPmd pmd;
-    VppTweak tweak;
+    VppUnsharp unsharp;
     VppEdgelevel edgelevel;
+    VppTweak tweak;
 
     VCEVppParam();
 };

@@ -207,6 +207,9 @@
     <ClCompile Include="vce_filter_tweak.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="vce_filter_unsharp.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu_info.h">
@@ -384,7 +387,10 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="vce_filter_tweak.h">
-      <Filter>ソース ファイル</Filter>
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="vce_filter_unsharp.h">
+      <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -433,6 +439,9 @@
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="vce_filter_tweak.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="vce_filter_unsharp.cl">
       <Filter>ソース ファイル</Filter>
     </None>
   </ItemGroup>

@@ -313,30 +313,27 @@ tstring VppPmd::print() const {
         (int)strength, (int)threshold, applyCount, useExp);
 }
 
-VppTweak::VppTweak() :
+VppUnsharp::VppUnsharp() :
     enable(false),
-    brightness(FILTER_DEFAULT_TWEAK_BRIGHTNESS),
-    contrast(FILTER_DEFAULT_TWEAK_CONTRAST),
-    gamma(FILTER_DEFAULT_TWEAK_GAMMA),
-    saturation(FILTER_DEFAULT_TWEAK_SATURATION),
-    hue(FILTER_DEFAULT_TWEAK_HUE) {
+    radius(FILTER_DEFAULT_UNSHARP_RADIUS),
+    weight(FILTER_DEFAULT_UNSHARP_WEIGHT),
+    threshold(FILTER_DEFAULT_UNSHARP_THRESHOLD) {
+
 }
 
-bool VppTweak::operator==(const VppTweak& x) const {
+bool VppUnsharp::operator==(const VppUnsharp &x) const {
     return enable == x.enable
-        && brightness == x.brightness
-        && contrast == x.contrast
-        && gamma == x.gamma
-        && saturation == x.saturation
-        && hue == x.hue;
+        && radius == x.radius
+        && weight == x.weight
+        && threshold == x.threshold;
 }
-bool VppTweak::operator!=(const VppTweak& x) const {
+bool VppUnsharp::operator!=(const VppUnsharp &x) const {
     return !(*this == x);
 }
 
-tstring VppTweak::print() const {
-    return strsprintf(_T("tweak: brightness %.2f, contrast %.2f, saturation %.2f, gamma %.2f, hue %.2f"),
-        brightness, contrast, saturation, gamma, hue);
+tstring VppUnsharp::print() const {
+    return strsprintf(_T("unsharp: radius %d, weight %.1f, threshold %.1f"),
+        radius, weight, threshold);
 }
 
 VppEdgelevel::VppEdgelevel() :
@@ -363,13 +360,40 @@ tstring VppEdgelevel::print() const {
         strength, threshold, black, white);
 }
 
+VppTweak::VppTweak() :
+    enable(false),
+    brightness(FILTER_DEFAULT_TWEAK_BRIGHTNESS),
+    contrast(FILTER_DEFAULT_TWEAK_CONTRAST),
+    gamma(FILTER_DEFAULT_TWEAK_GAMMA),
+    saturation(FILTER_DEFAULT_TWEAK_SATURATION),
+    hue(FILTER_DEFAULT_TWEAK_HUE) {
+}
+
+bool VppTweak::operator==(const VppTweak &x) const {
+    return enable == x.enable
+        && brightness == x.brightness
+        && contrast == x.contrast
+        && gamma == x.gamma
+        && saturation == x.saturation
+        && hue == x.hue;
+}
+bool VppTweak::operator!=(const VppTweak &x) const {
+    return !(*this == x);
+}
+
+tstring VppTweak::print() const {
+    return strsprintf(_T("tweak: brightness %.2f, contrast %.2f, saturation %.2f, gamma %.2f, hue %.2f"),
+        brightness, contrast, saturation, gamma, hue);
+}
+
 VCEVppParam::VCEVppParam() :
     resize(RGY_VPP_RESIZE_AUTO),
     afs(),
     knn(),
     pmd(),
-    tweak(),
-    edgelevel() {
+    unsharp(),
+    edgelevel(),
+    tweak() {
 
 }
 
