@@ -78,6 +78,12 @@ static const float FILTER_DEFAULT_PMD_THRESHOLD = 100.0f;
 static const int   FILTER_DEFAULT_PMD_APPLY_COUNT = 2;
 static const bool  FILTER_DEFAULT_PMD_USE_EXP = true;
 
+static const float FILTER_DEFAULT_TWEAK_BRIGHTNESS = 0.0f;
+static const float FILTER_DEFAULT_TWEAK_CONTRAST = 1.0f;
+static const float FILTER_DEFAULT_TWEAK_GAMMA = 1.0f;
+static const float FILTER_DEFAULT_TWEAK_SATURATION = 1.0f;
+static const float FILTER_DEFAULT_TWEAK_HUE = 0.0f;
+
 static const float FILTER_DEFAULT_EDGELEVEL_STRENGTH = 5.0f;
 static const float FILTER_DEFAULT_EDGELEVEL_THRESHOLD = 20.0f;
 static const float FILTER_DEFAULT_EDGELEVEL_BLACK = 0.0f;
@@ -468,6 +474,20 @@ struct VppPmd {
     tstring print() const;
 };
 
+struct VppTweak {
+    bool  enable;
+    float brightness; // -1.0 - 1.0 (0.0)
+    float contrast;   // -2.0 - 2.0 (1.0)
+    float gamma;      //  0.1 - 10.0 (1.0)
+    float saturation; //  0.0 - 3.0 (1.0)
+    float hue;        // -180 - 180 (0.0)
+
+    VppTweak();
+    bool operator==(const VppTweak &x) const;
+    bool operator!=(const VppTweak &x) const;
+    tstring print() const;
+};
+
 struct VppEdgelevel {
     bool  enable;
     float strength;
@@ -486,6 +506,7 @@ struct VCEVppParam {
     VppAfs afs;
     VppKnn knn;
     VppPmd pmd;
+    VppTweak tweak;
     VppEdgelevel edgelevel;
 
     VCEVppParam();

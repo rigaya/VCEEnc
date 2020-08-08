@@ -311,6 +311,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="vce_filter_tweak.cpp" />
     <ClCompile Include="vce_util.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -375,6 +376,7 @@
     <ClInclude Include="vce_filter_denoise_pmd.h" />
     <ClInclude Include="vce_filter_edgelevel.h" />
     <ClInclude Include="vce_filter_ssim.h" />
+    <ClInclude Include="vce_filter_tweak.h" />
     <ClInclude Include="vce_util.h" />
     <ClInclude Include="vce_param.h" />
     <ClInclude Include="rgy_version.h" />
@@ -522,6 +524,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
     <None Include="vce_filter_ssim.cl" />
+    <None Include="vce_filter_tweak.cl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{06E67B5B-0DA2-4503-A1CA-D75F94BD977A}</ProjectGuid>

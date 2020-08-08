@@ -1070,6 +1070,25 @@ log=0
 --vpp-edgelevel strength=5.0,threshold=24.0,black=6.0
 ```
 
+
+### --vpp-tweak [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+**パラメータ**
+- brightness=&lt;float&gt; (default=0.0, -1.0 - 1.0)  
+
+- contrast=&lt;float&gt; (default=1.0, -2.0 - 2.0)  
+
+- gamma=&lt;float&gt; (default=1.0, 0.1 - 10.0)  
+
+- saturation=&lt;float&gt; (default=1.0, 0.0 - 3.0)  
+
+- hue=&lt;float&gt; (default=0.0, -180 - 180)  
+
+```
+例:
+--vpp-tweak brightness=0.1,contrast=1.5,gamma=0.75
+```
+
 ## 制御系のオプション
 
 ### --output-buf &lt;int&gt;
