@@ -281,6 +281,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="vce_filter_deband.cpp" />
     <ClCompile Include="vce_filter_denoise_knn.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -373,6 +374,7 @@
     <ClInclude Include="vce_device.h" />
     <ClInclude Include="vce_filter.h" />
     <ClInclude Include="vce_filter_afs.h" />
+    <ClInclude Include="vce_filter_deband.h" />
     <ClInclude Include="vce_filter_denoise_knn.h" />
     <ClInclude Include="vce_filter_denoise_pmd.h" />
     <ClInclude Include="vce_filter_edgelevel.h" />
@@ -516,6 +518,8 @@
     <None Include="vce_filter_afs_filter.cl" />
     <None Include="vce_filter_afs_merge.cl" />
     <None Include="vce_filter_afs_synthesize.cl" />
+    <None Include="vce_filter_deband.cl" />
+    <None Include="vce_filter_deband_gen_rand.cl" />
     <None Include="vce_filter_denoise_knn.cl" />
     <None Include="vce_filter_denoise_pmd.cl" />
     <None Include="vce_filter_edgelevel.cl" />
@@ -648,7 +652,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;..\clRNG\src\include;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;VCE_AUO;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -674,7 +678,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugStatic|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;..\clRNG\src\include;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -701,7 +705,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;..\clRNG\src\include;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;VCE_AUO;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -727,7 +731,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugStatic|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;..\clRNG\src\include;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -759,7 +763,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;..\clRNG\src\include;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;VCE_AUO;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -793,7 +797,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;..\clRNG\src\include;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;VCE_AUO;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -828,7 +832,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;..\clRNG\src\include;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -863,7 +867,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
       <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(AMDAPPSDKROOT)\include;..\AMF\amf\public\include;..\AMF\amf\public\include\core;..\AMF\amf\public\include\components;..\ffmpeg_lgpl\include;..\ChapterRW;..\dtl;..\cppcodec;..\tinyxml2;..\clRNG\src\include;$(AVISYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include;$(VAPOURSYNTH_SDK)\include\vapoursynth;$(CAPTION2ASS_SRC)\common;$(OPENCL_HEADERS);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_CRT_SECURE_NO_WARNINGS;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>

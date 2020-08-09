@@ -57,6 +57,7 @@
 #include "vce_filter_unsharp.h"
 #include "vce_filter_edgelevel.h"
 #include "vce_filter_tweak.h"
+#include "vce_filter_deband.h"
 #include "rgy_version.h"
 #include "rgy_bitstream.h"
 #include "rgy_chapter.h"
@@ -729,7 +730,8 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         || inputParam->vpp.pmd.enable
         || inputParam->vpp.unsharp.enable
         || inputParam->vpp.edgelevel.enable
-        || inputParam->vpp.tweak.enable) {
+        || inputParam->vpp.tweak.enable
+        || inputParam->vpp.deband.enable) {
         //swデコードならGPUに上げる必要がある
         if (m_pFileReader->getInputCodec() == RGY_CODEC_UNKNOWN) {
             amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
@@ -975,6 +977,28 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             param->frameOut = inputFrame;
             param->baseFps = m_encFps;
             param->bOutOverwrite = true;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filter));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+        //deband
+        if (inputParam->vpp.deband.enable) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterDeband(m_dev->cl()));
+            shared_ptr<RGYFilterParamDeband> param(new RGYFilterParamDeband());
+            param->deband = inputParam->vpp.deband;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
+            param->bOutOverwrite = false;
             auto sts = filter->init(param, m_pLog);
             if (sts != RGY_ERR_NONE) {
                 return sts;

@@ -248,6 +248,7 @@ int initOpenCLGlobal() {
     LOAD(clCreateCommandQueue);
     LOAD(clReleaseCommandQueue);
     LOAD(clCreateContext);
+    LOAD(clGetCommandQueueInfo);
     LOAD(clReleaseContext);
 
     LOAD(clCreateProgramWithSource);
@@ -999,7 +1000,22 @@ unique_ptr<RGYCLFrame> RGYOpenCLContext::createImageFromFrameBuffer(const FrameI
 
 std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const FrameInfo& frame, cl_mem_flags flags) {
     cl_int err = CL_SUCCESS;
-    const int pixsize = RGY_CSP_BIT_DEPTH[frame.csp] > 8 ? 2 : 1;
+    int pixsize = RGY_CSP_BIT_DEPTH[frame.csp] > 8 ? 2 : 1;
+    switch (frame.csp) {
+    case RGY_CSP_RGB24R:
+    case RGY_CSP_RGB24:
+    case RGY_CSP_BGR24:
+    case RGY_CSP_YC48:
+        pixsize *= 3;
+        break;
+    case RGY_CSP_RGB32R:
+    case RGY_CSP_RGB32:
+    case RGY_CSP_BGR32:
+        pixsize *= 4;
+        break;
+    default:
+        break;
+    }
     FrameInfo clframe = frame;
     clframe.mem_type = RGY_MEM_TYPE_GPU;
     for (int i = 0; i < _countof(clframe.ptr); i++) {

@@ -1074,6 +1074,50 @@ Example:
 --vpp-tweak brightness=0.1,contrast=1.5,gamma=0.75
 ```
 
+
+### --vpp-deband [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+**Parameters**
+- range=&lt;int&gt; (default=15, 0-127)  
+  Blur range. Samples to be used for blur are taken from pixels within this range.
+
+- sample=&lt;int&gt; (default=1, 0-2)  
+  - sample = 0
+    Processing is performed by referring a pixel within "range".
+
+  - sample = 1
+    Blur processing is performed by referring total of 2 pixels, a pixel within "range" and its point symmetric pixel.
+
+  - sample = 2
+    Blur processing is performed by referring total of 4 pixels including 2 pixels within "range" and their point symmetric pixels.
+
+- thre=&lt;int&gt; (set same threshold for y, cb & cr)
+- thre_y=&lt;int&gt; (default=15, 0-31)
+- thre_cb=&lt;int&gt; (default=15, 0-31)
+- thre_cr=&lt;int&gt; (default=15, 0-31)  
+  Threshold for y, cb, cr blur. If this value is high, the filter will be stronger, but thin lines and edges are likely to disappear.
+
+- dither=&lt;int&gt;   (set same dither for y & c)
+- dither_y=&lt;int&gt; (default=15, 0-31)
+- dither_c=&lt;int&gt; (default=15, 0-31)  
+  Dither strength of y & c.
+
+- seed=&lt;int&gt;  
+  Change of random number seed. (default = 1234)
+
+- blurfirst (default=off)  
+  Stronger effect could be expected, by processing blur first.
+  However side effects may also become stronger, which might make thin lines to disappear.
+
+- rand_each_frame (default=off)  
+  Change the random number used by the filter every frame.
+
+```
+Example:
+--vpp-deband range=31,dither=12,rand_each_frame
+```
+
+
 ## Other Options
 
 ### --output-buf &lt;int&gt;

@@ -63,6 +63,7 @@ CL_EXTERN cl_int (CL_API_CALL *f_clGetDeviceIDsFromD3D11KHR)(cl_platform_id plat
 CL_EXTERN cl_context (CL_API_CALL* f_clCreateContext) (const cl_context_properties * properties, cl_uint num_devices, const cl_device_id * devices, void (CL_CALLBACK * pfn_notify)(const char *, const void *, size_t, void *), void * user_data, cl_int * errcode_ret);
 CL_EXTERN cl_int (CL_API_CALL* f_clReleaseContext) (cl_context context);
 CL_EXTERN cl_command_queue (CL_API_CALL* f_clCreateCommandQueue)(cl_context context, cl_device_id device, cl_command_queue_properties properties, cl_int * errcode_ret);
+CL_EXTERN cl_int (CL_API_CALL* f_clGetCommandQueueInfo)(cl_command_queue command_queue, cl_command_queue_info param_name, size_t param_value_size, void *param_value, size_t *param_value_size_ret);
 CL_EXTERN cl_int (CL_API_CALL* f_clReleaseCommandQueue) (cl_command_queue command_queue);
 
 CL_EXTERN cl_program(CL_API_CALL* f_clCreateProgramWithSource) (cl_context context, cl_uint count, const char **strings, const size_t *lengths, cl_int *errcode_ret);
@@ -121,6 +122,7 @@ CL_EXTERN cl_int(CL_API_CALL *f_clFinish)(cl_command_queue command_queue);
 #define clCreateContext f_clCreateContext
 #define clReleaseContext f_clReleaseContext
 #define clCreateCommandQueue f_clCreateCommandQueue
+#define clGetCommandQueueInfo f_clGetCommandQueueInfo
 #define clReleaseCommandQueue f_clReleaseCommandQueue
 
 #define clCreateProgramWithSource f_clCreateProgramWithSource

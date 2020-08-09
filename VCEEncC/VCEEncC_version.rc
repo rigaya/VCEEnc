@@ -21,6 +21,12 @@ VCE_FILTER_UNSHARP_CL     EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_unsharp.
 VCE_FILTER_EDGELEVEL_CL   EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_edgelevel.cl"
 VCE_FILTER_TWEAK_CL       EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_tweak.cl"
 
+VCE_FILTER_DEBAND_CL                 EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_deband.cl"
+VCE_FILTER_DEBAND_GEN_RAND_CL        EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_deband_gen_rand.cl"
+VCE_FILTER_CLRNG_CLH                 EXE_DATA DISCARDABLE "..\\clRNG\\src\\include\\clRNG\\clRNG.clh"
+VCE_FILTER_CLRNG_MRG31K3P_CLH        EXE_DATA DISCARDABLE "..\\clRNG\\src\\include\\clRNG\\mrg31k3p.clh"
+VCE_FILTER_CLRNG_MRG31K3P_PRIVATE_CH EXE_DATA DISCARDABLE "..\\clRNG\\src\\include\\clRNG\\private\\mrg31k3p.c.h"
+
 VCE_FILTER_AFS_FILTER_CL     EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_afs_filter.cl"
 VCE_FILTER_AFS_MERGE_CL      EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_afs_merge.cl"
 VCE_FILTER_AFS_ANALYZE_CL    EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_afs_analyze.cl"

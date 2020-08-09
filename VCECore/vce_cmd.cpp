@@ -324,6 +324,28 @@ tstring encoder_help() {
         FILTER_DEFAULT_TWEAK_GAMMA,
         FILTER_DEFAULT_TWEAK_SATURATION,
         FILTER_DEFAULT_TWEAK_HUE);
+    str += strsprintf(_T("\n")
+        _T("   --vpp-deband [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     enable deband filter.\n")
+        _T("    params\n")
+        _T("      range=<int>               range (default=%d, 0-127)\n")
+        _T("      sample=<int>              sample (default=%d, 0-2)\n")
+        _T("      thre=<int>                threshold for y, cb & cr\n")
+        _T("      thre_y=<int>              threshold for y (default=%d, 0-31)\n")
+        _T("      thre_cb=<int>             threshold for cb (default=%d, 0-31)\n")
+        _T("      thre_cr=<int>             threshold for cr (default=%d, 0-31)\n")
+        _T("      dither=<int>              strength of dither for y, cb & cr\n")
+        _T("      dither_y=<int>            strength of dither for y (default=%d, 0-31)\n")
+        _T("      dither_c=<int>            strength of dither for cb/cr (default=%d, 0-31)\n")
+        _T("      seed=<int>                rand seed (default=%d)\n")
+        _T("      blurfirst                 blurfirst (default=%s)\n")
+        _T("      rand_each_frame           generate rand for each frame (default=%s)\n"),
+        FILTER_DEFAULT_DEBAND_RANGE, FILTER_DEFAULT_DEBAND_MODE,
+        FILTER_DEFAULT_DEBAND_THRE_Y, FILTER_DEFAULT_DEBAND_THRE_CB, FILTER_DEFAULT_DEBAND_THRE_CR,
+        FILTER_DEFAULT_DEBAND_DITHER_Y, FILTER_DEFAULT_DEBAND_DITHER_C,
+        FILTER_DEFAULT_DEBAND_SEED,
+        FILTER_DEFAULT_DEBAND_BLUR_FIRST ? _T("on") : _T("off"),
+        FILTER_DEFAULT_DEBAND_RAND_EACH_FRAME ? _T("on") : _T("off"));
     str += _T("\n");
     str += gen_cmd_help_ctrl();
     return str;
@@ -1485,6 +1507,164 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+    if (IS_OPTION("vpp-deband")) {
+        pParams->vpp.deband.enable = true;
+        if (i+1 >= nArgNum || strInput[i+1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{
+            "range", "thre", "thre_y", "thre_cb",
+            "thre_cr", "dither", "dither_y", "dither_c", "sample", "seed",
+            "blurfirst", "rand_each_frame" };
+
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos+1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.deband.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("range")) {
+                    try {
+                        pParams->vpp.deband.range = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thre")) {
+                    try {
+                        pParams->vpp.deband.threY = std::stoi(param_val);
+                        pParams->vpp.deband.threCb = pParams->vpp.deband.threY;
+                        pParams->vpp.deband.threCr = pParams->vpp.deband.threY;
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thre_y")) {
+                    try {
+                        pParams->vpp.deband.threY = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thre_cb")) {
+                    try {
+                        pParams->vpp.deband.threCb = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thre_cr")) {
+                    try {
+                        pParams->vpp.deband.threCr = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("dither")) {
+                    try {
+                        pParams->vpp.deband.ditherY = std::stoi(param_val);
+                        pParams->vpp.deband.ditherC = pParams->vpp.deband.ditherY;
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("dither_y")) {
+                    try {
+                        pParams->vpp.deband.ditherY = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("dither_c")) {
+                    try {
+                        pParams->vpp.deband.ditherC = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("sample")) {
+                    try {
+                        pParams->vpp.deband.sample = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("seed")) {
+                    try {
+                        pParams->vpp.deband.seed = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("blurfirst")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.deband.blurFirst = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("rand_each_frame")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.deband.randEachFrame = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                if (param == _T("blurfirst")) {
+                    pParams->vpp.deband.blurFirst = true;
+                    continue;
+                }
+                if (param == _T("rand_each_frame")) {
+                    pParams->vpp.deband.randEachFrame = true;
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
 
     auto ret = parse_one_input_option(option_name, strInput, i, nArgNum, &pParams->input, argData);
     if (ret >= 0) return ret;
@@ -1943,6 +2123,37 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
             cmd << _T(" --vpp-tweak ") << tmp.str().substr(1);
         } else if (pParams->vpp.tweak.enable) {
             cmd << _T(" --vpp-tweak");
+        }
+    }
+    if (pParams->vpp.deband != encPrmDefault.vpp.deband) {
+        tmp.str(tstring());
+        if (!pParams->vpp.deband.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (pParams->vpp.deband.enable || save_disabled_prm) {
+            ADD_NUM(_T("range"), vpp.deband.range);
+            if (pParams->vpp.deband.threY == pParams->vpp.deband.threCb
+                && pParams->vpp.deband.threY == pParams->vpp.deband.threCr) {
+                ADD_NUM(_T("thre"), vpp.deband.threY);
+            } else {
+                ADD_NUM(_T("thre_y"), vpp.deband.threY);
+                ADD_NUM(_T("thre_cb"), vpp.deband.threCb);
+                ADD_NUM(_T("thre_cr"), vpp.deband.threCr);
+            }
+            if (pParams->vpp.deband.ditherY == pParams->vpp.deband.ditherC) {
+                ADD_NUM(_T("dither"), vpp.deband.ditherY);
+            } else {
+                ADD_NUM(_T("dither_y"), vpp.deband.ditherY);
+                ADD_NUM(_T("dither_c"), vpp.deband.ditherC);
+            }
+            ADD_NUM(_T("sample"), vpp.deband.sample);
+            ADD_BOOL(_T("blurfirst"), vpp.deband.blurFirst);
+            ADD_BOOL(_T("rand_each_frame"), vpp.deband.randEachFrame);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-deband ") << tmp.str().substr(1);
+        } else if (pParams->vpp.deband.enable) {
+            cmd << _T(" --vpp-deband");
         }
     }
 

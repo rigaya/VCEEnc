@@ -1107,6 +1107,48 @@ unsharpフィルタ。輪郭・ディテール強調用のフィルタ。
 --vpp-tweak brightness=0.1,contrast=1.5,gamma=0.75
 ```
 
+### --vpp-deband [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+**パラメータ**
+- range=&lt;int&gt; (default=15, 0-127)  
+  ぼかす範囲。この範囲内の近傍画素からサンプルを取り、ブラー処理を行う。
+
+- sample=&lt;int&gt; (default=1, 0-2)  
+  - 設定値：0  
+    周辺1画素を参照し、元の画素値を維持したまま処理を行う。
+
+  - 設定値：1  
+    周辺1画素とその点対称画素の計2画素を参照し、ブラー処理を行う。
+
+  - 設定値：2  
+    周辺2画素とその点対称画素の計4画素を参照し、ブラー処理を行う。
+
+- thre=&lt;int&gt; (一括設定)
+- thre_y=&lt;int&gt; (default=15, 0-31)
+- thre_cb=&lt;int&gt; (default=15, 0-31)
+- thre_cr=&lt;int&gt; (default=15, 0-31)  
+  y,cb,cr 各成分の閾値。この値が高いと階調飛びを減らす一方で、細かい線などが潰れやすくなる。
+
+- dither=&lt;int&gt; (一括設定)
+- dither_y=&lt;int&gt; (default=15, 0-31)
+- dither_c=&lt;int&gt; (default=15, 0-31)  
+  y成分と cb+cr成分のディザの強さ。
+
+- seed=&lt;int&gt;  
+  乱数シードの変更。 (default=1234)
+
+- blurfirst (default=off)  
+  ブラー処理を先にすることでディザ強度を減らしつつ、階調飛びが多い素材での効果を上げる。
+  全体的に副作用が強くなり細かい線が潰れやすくなる。
+
+- rand_each_frame (default=off)  
+  毎フレーム使用する乱数を変更する。
+
+```
+例:
+--vpp-deband range=31,dither=12,rand_each_frame
+```
+
 ## 制御系のオプション
 
 ### --output-buf &lt;int&gt;

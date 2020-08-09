@@ -93,6 +93,17 @@ static const int   FILTER_DEFAULT_UNSHARP_RADIUS = 3;
 static const float FILTER_DEFAULT_UNSHARP_WEIGHT = 0.5f;
 static const float FILTER_DEFAULT_UNSHARP_THRESHOLD = 10.0f;
 
+static const int   FILTER_DEFAULT_DEBAND_RANGE = 15;
+static const int   FILTER_DEFAULT_DEBAND_THRE_Y = 15;
+static const int   FILTER_DEFAULT_DEBAND_THRE_CB = 15;
+static const int   FILTER_DEFAULT_DEBAND_THRE_CR = 15;
+static const int   FILTER_DEFAULT_DEBAND_DITHER_Y = 15;
+static const int   FILTER_DEFAULT_DEBAND_DITHER_C = 15;
+static const int   FILTER_DEFAULT_DEBAND_MODE = 1;
+static const int   FILTER_DEFAULT_DEBAND_SEED = 1234;
+static const bool  FILTER_DEFAULT_DEBAND_BLUR_FIRST = false;
+static const bool  FILTER_DEFAULT_DEBAND_RAND_EACH_FRAME = false;
+
 enum {
     VCE_RC_CQP = 0,
     VCE_RC_CBR = 3,
@@ -517,6 +528,25 @@ struct VppTweak {
     tstring print() const;
 };
 
+struct VppDeband {
+    bool enable;
+    int range;
+    int threY;
+    int threCb;
+    int threCr;
+    int ditherY;
+    int ditherC;
+    int sample;
+    int seed;
+    bool blurFirst;
+    bool randEachFrame;
+
+    VppDeband();
+    bool operator==(const VppDeband &x) const;
+    bool operator!=(const VppDeband &x) const;
+    tstring print() const;
+};
+
 struct VCEVppParam {
     RGY_VPP_RESIZE_ALGO resize;
     VppAfs afs;
@@ -525,6 +555,7 @@ struct VCEVppParam {
     VppUnsharp unsharp;
     VppEdgelevel edgelevel;
     VppTweak tweak;
+    VppDeband deband;
 
     VCEVppParam();
 };

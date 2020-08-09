@@ -386,6 +386,48 @@ tstring VppTweak::print() const {
         brightness, contrast, saturation, gamma, hue);
 }
 
+VppDeband::VppDeband() :
+    enable(false),
+    range(FILTER_DEFAULT_DEBAND_RANGE),
+    threY(FILTER_DEFAULT_DEBAND_THRE_Y),
+    threCb(FILTER_DEFAULT_DEBAND_THRE_CB),
+    threCr(FILTER_DEFAULT_DEBAND_THRE_CR),
+    ditherY(FILTER_DEFAULT_DEBAND_DITHER_Y),
+    ditherC(FILTER_DEFAULT_DEBAND_DITHER_C),
+    sample(FILTER_DEFAULT_DEBAND_MODE),
+    seed(FILTER_DEFAULT_DEBAND_SEED),
+    blurFirst(FILTER_DEFAULT_DEBAND_BLUR_FIRST),
+    randEachFrame(FILTER_DEFAULT_DEBAND_RAND_EACH_FRAME) {
+
+}
+
+bool VppDeband::operator==(const VppDeband &x) const {
+    return enable == x.enable
+        && range == x.range
+        && threY == x.threY
+        && threCb == x.threCb
+        && threCr == x.threCr
+        && ditherY == x.ditherY
+        && ditherC == x.ditherC
+        && sample == x.sample
+        && seed == x.seed
+        && blurFirst == x.blurFirst
+        && randEachFrame == x.randEachFrame;
+}
+bool VppDeband::operator!=(const VppDeband &x) const {
+    return !(*this == x);
+}
+
+tstring VppDeband::print() const {
+    return strsprintf(_T("deband: mode %d, range %d, threY %d, threCb %d, threCr %d\n")
+        _T("                       ditherY %d, ditherC %d, blurFirst %s, randEachFrame %s"),
+        sample, range,
+        threY, threCb, threCr,
+        ditherY, ditherC,
+        blurFirst ? _T("yes") : _T("no"),
+        randEachFrame ? _T("yes") : _T("no"));
+}
+
 VCEVppParam::VCEVppParam() :
     resize(RGY_VPP_RESIZE_AUTO),
     afs(),
@@ -393,7 +435,8 @@ VCEVppParam::VCEVppParam() :
     pmd(),
     unsharp(),
     edgelevel(),
-    tweak() {
+    tweak(),
+    deband() {
 
 }
 

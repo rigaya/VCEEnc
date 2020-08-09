@@ -10,3 +10,6 @@
 [submodule "cppcodec"]
 	path = cppcodec
 	url = https://github.com/tplgy/cppcodec.git
+[submodule "clRNG"]
+	path = clRNG
+	url = https://github.com/clMathLibraries/clRNG.git
