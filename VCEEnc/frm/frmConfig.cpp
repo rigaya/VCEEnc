@@ -748,6 +748,7 @@ System::Void frmConfig::InitComboBox() {
     setComboBox(fcgCXVppResizeAlg,   list_vpp_resize);
     setComboBox(fcgCXVppDeinterlace, list_vpp_deinterlacer);
     setComboBox(fcgCXVppAfsAnalyze,  list_vpp_afs_analyze);
+    setComboBox(fcgCXVppDebandSample, list_vpp_deband);
 
     setComboBox(fcgCXAudioEncTiming, audio_enc_timing_desc);
     setComboBox(fcgCXAudioDelayCut,  AUDIO_DELAY_CUT_MODE);
@@ -828,8 +829,9 @@ System::Void frmConfig::fcgChangeEnabled(System::Object^  sender, System::EventA
     fcgPNVppDenoiseKnn->Visible = (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("knn")));
     fcgPNVppDenoisePmd->Visible = (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("pmd")));
     fcgPNVppDenoiseSmooth->Visible = false; // (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("smooth")));
-    fcgPNVppUnsharp->Visible = false; // (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("unsharp")));
+    fcgPNVppUnsharp->Visible = (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("unsharp")));
     fcgPNVppEdgelevel->Visible = (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("edgelevel")));
+    fcggroupBoxVppDeband->Enabled = fcgCBVppDebandEnable->Checked;
 
     this->ResumeLayout();
     this->PerformLayout();
@@ -1019,9 +1021,9 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
         SetCXIndex(fcgCXVppDenoiseMethod, dnoise_idx);
 
         int detail_enahance_idx = 0;
-        /*if (vce.vpp.unsharp.enable) {
+        if (vce.vpp.unsharp.enable) {
             detail_enahance_idx = get_cx_index(list_vpp_detail_enahance, _T("unsharp"));
-        } else*/ if (vce.vpp.edgelevel.enable) {
+        } else if (vce.vpp.edgelevel.enable) {
             detail_enahance_idx = get_cx_index(list_vpp_detail_enahance, _T("edgelevel"));
         }
         SetCXIndex(fcgCXVppDetailEnhance, detail_enahance_idx);
@@ -1042,19 +1044,19 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
         SetNUValue(fcgNUVppDenoisePmdThreshold,  vce.vpp.pmd.threshold);
         //SetNUValue(fcgNUVppDenoiseSmoothQuality, vce.vpp.smooth.quality);
         //SetNUValue(fcgNUVppDenoiseSmoothQP,      vce.vpp.smooth.qp);
-        //fcgCBVppDebandEnable->Checked          = vce.vpp.deband.enable;
-        //SetNUValue(fcgNUVppDebandRange,          vce.vpp.deband.range);
-        //SetNUValue(fcgNUVppDebandThreY,          vce.vpp.deband.threY);
-        //SetNUValue(fcgNUVppDebandThreCb,         vce.vpp.deband.threCb);
-        //SetNUValue(fcgNUVppDebandThreCr,         vce.vpp.deband.threCr);
-        //SetNUValue(fcgNUVppDebandDitherY,        vce.vpp.deband.ditherY);
-        //SetNUValue(fcgNUVppDebandDitherC,        vce.vpp.deband.ditherC);
-        //SetCXIndex(fcgCXVppDebandSample,         vce.vpp.deband.sample);
-        //fcgCBVppDebandBlurFirst->Checked       = vce.vpp.deband.blurFirst;
-        //fcgCBVppDebandRandEachFrame->Checked   = vce.vpp.deband.randEachFrame;
-        //SetNUValue(fcgNUVppUnsharpRadius,        vce.vpp.unsharp.radius);
-        //SetNUValue(fcgNUVppUnsharpWeight,        vce.vpp.unsharp.weight);
-        //SetNUValue(fcgNUVppUnsharpThreshold,     vce.vpp.unsharp.threshold);
+        fcgCBVppDebandEnable->Checked          = vce.vpp.deband.enable;
+        SetNUValue(fcgNUVppDebandRange,          vce.vpp.deband.range);
+        SetNUValue(fcgNUVppDebandThreY,          vce.vpp.deband.threY);
+        SetNUValue(fcgNUVppDebandThreCb,         vce.vpp.deband.threCb);
+        SetNUValue(fcgNUVppDebandThreCr,         vce.vpp.deband.threCr);
+        SetNUValue(fcgNUVppDebandDitherY,        vce.vpp.deband.ditherY);
+        SetNUValue(fcgNUVppDebandDitherC,        vce.vpp.deband.ditherC);
+        SetCXIndex(fcgCXVppDebandSample,         vce.vpp.deband.sample);
+        fcgCBVppDebandBlurFirst->Checked       = vce.vpp.deband.blurFirst;
+        fcgCBVppDebandRandEachFrame->Checked   = vce.vpp.deband.randEachFrame;
+        SetNUValue(fcgNUVppUnsharpRadius,        vce.vpp.unsharp.radius);
+        SetNUValue(fcgNUVppUnsharpWeight,        vce.vpp.unsharp.weight);
+        SetNUValue(fcgNUVppUnsharpThreshold,     vce.vpp.unsharp.threshold);
         SetNUValue(fcgNUVppEdgelevelStrength,    vce.vpp.edgelevel.strength);
         SetNUValue(fcgNUVppEdgelevelThreshold,   vce.vpp.edgelevel.threshold);
         SetNUValue(fcgNUVppEdgelevelBlack,       vce.vpp.edgelevel.black);
@@ -1198,10 +1200,10 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     //vce.vpp.smooth.quality = (int)fcgNUVppDenoiseSmoothQuality->Value;
     //vce.vpp.smooth.qp = (int)fcgNUVppDenoiseSmoothQP->Value;
 
-    //vce.vpp.unsharp.enable = fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("unsharp"));
-    //vce.vpp.unsharp.radius = (int)fcgNUVppUnsharpRadius->Value;
-    //vce.vpp.unsharp.weight = (float)fcgNUVppUnsharpWeight->Value;
-    //vce.vpp.unsharp.threshold = (float)fcgNUVppUnsharpThreshold->Value;
+    vce.vpp.unsharp.enable = fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("unsharp"));
+    vce.vpp.unsharp.radius = (int)fcgNUVppUnsharpRadius->Value;
+    vce.vpp.unsharp.weight = (float)fcgNUVppUnsharpWeight->Value;
+    vce.vpp.unsharp.threshold = (float)fcgNUVppUnsharpThreshold->Value;
 
     vce.vpp.edgelevel.enable = fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("edgelevel"));
     vce.vpp.edgelevel.strength = (float)fcgNUVppEdgelevelStrength->Value;
@@ -1209,16 +1211,16 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.vpp.edgelevel.black = (float)fcgNUVppEdgelevelBlack->Value;
     vce.vpp.edgelevel.white = (float)fcgNUVppEdgelevelWhite->Value;
 
-    //vce.vpp.deband.enable = fcgCBVppDebandEnable->Checked;
-    //vce.vpp.deband.range = (int)fcgNUVppDebandRange->Value;
-    //vce.vpp.deband.threY = (int)fcgNUVppDebandThreY->Value;
-    //vce.vpp.deband.threCb = (int)fcgNUVppDebandThreCb->Value;
-    //vce.vpp.deband.threCr = (int)fcgNUVppDebandThreCr->Value;
-    //vce.vpp.deband.ditherY = (int)fcgNUVppDebandDitherY->Value;
-    //vce.vpp.deband.ditherC = (int)fcgNUVppDebandDitherC->Value;
-    //vce.vpp.deband.sample = fcgCXVppDebandSample->SelectedIndex;
-    //vce.vpp.deband.blurFirst = fcgCBVppDebandBlurFirst->Checked;
-    //vce.vpp.deband.randEachFrame = fcgCBVppDebandRandEachFrame->Checked;
+    vce.vpp.deband.enable = fcgCBVppDebandEnable->Checked;
+    vce.vpp.deband.range = (int)fcgNUVppDebandRange->Value;
+    vce.vpp.deband.threY = (int)fcgNUVppDebandThreY->Value;
+    vce.vpp.deband.threCb = (int)fcgNUVppDebandThreCb->Value;
+    vce.vpp.deband.threCr = (int)fcgNUVppDebandThreCr->Value;
+    vce.vpp.deband.ditherY = (int)fcgNUVppDebandDitherY->Value;
+    vce.vpp.deband.ditherC = (int)fcgNUVppDebandDitherC->Value;
+    vce.vpp.deband.sample = fcgCXVppDebandSample->SelectedIndex;
+    vce.vpp.deband.blurFirst = fcgCBVppDebandBlurFirst->Checked;
+    vce.vpp.deband.randEachFrame = fcgCBVppDebandRandEachFrame->Checked;
 
     vce.vpp.afs.enable             = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"自動フィールドシフト"));
     vce.vpp.afs.timecode           = false;

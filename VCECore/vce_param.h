@@ -259,7 +259,7 @@ const CX_DESC list_vpp_denoise[] = {
 
 const CX_DESC list_vpp_detail_enahance[] = {
     { _T("none"),       0 },
-    //{ _T("unsharp"),    1 },
+    { _T("unsharp"),    1 },
     { _T("edgelevel"),  2 },
     { NULL, 0 }
 };
@@ -284,6 +284,13 @@ const CX_DESC list_vpp_resize[] = {
     { _T("lanczos3"), RGY_VPP_RESIZE_LANCZOS3 },
     { _T("lanczos4"), RGY_VPP_RESIZE_LANCZOS4 },
     { NULL, NULL }
+};
+
+const CX_DESC list_vpp_deband[] = {
+    { _T("0 - 1点参照"),  0 },
+    { _T("1 - 2点参照"),  1 },
+    { _T("2 - 4点参照"),  2 },
+    { NULL, 0 }
 };
 
 const CX_DESC list_vce_quality_preset_h264[] = {
