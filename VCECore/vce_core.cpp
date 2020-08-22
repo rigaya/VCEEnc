@@ -1347,7 +1347,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_USAGE(prm->codec),          (amf_int64)((prm->codec == RGY_CODEC_HEVC) ? AMF_VIDEO_ENCODER_HEVC_USAGE_TRANSCONDING : AMF_VIDEO_ENCODER_USAGE_TRANSCONDING));
     m_params.SetParam(AMF_PARAM_PROFILE(prm->codec),        (amf_int64)prm->codecParam[prm->codec].nProfile);
     m_params.SetParam(AMF_PARAM_PROFILE_LEVEL(prm->codec),  (amf_int64)prm->codecParam[prm->codec].nLevel);
-    m_params.SetParam(AMF_PARAM_QUALITY_PRESET(prm->codec), (amf_int64)get_quality_preset(prm->codec)[prm->qualityPreset].value);
+    m_params.SetParam(AMF_PARAM_QUALITY_PRESET(prm->codec), (amf_int64)prm->qualityPreset);
     m_params.SetParam(AMF_PARAM_QP_I(prm->codec),           (amf_int64)prm->nQPI);
     m_params.SetParam(AMF_PARAM_QP_P(prm->codec),           (amf_int64)prm->nQPP);
     m_params.SetParam(AMF_PARAM_TARGET_BITRATE(prm->codec), (amf_int64)prm->nBitrate * 1000);
