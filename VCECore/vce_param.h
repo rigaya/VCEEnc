@@ -293,6 +293,13 @@ const CX_DESC list_vpp_deband[] = {
     { NULL, 0 }
 };
 
+const CX_DESC list_vpp_rotate[] = {
+    { _T("90"),   90 },
+    { _T("180"), 180 },
+    { _T("270"), 270 },
+    { NULL, 0 }
+};
+
 const CX_DESC list_vce_quality_preset_h264[] = {
     { _T("balanced"), AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED },
     { _T("fast"),     AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED },
@@ -545,6 +552,20 @@ struct VppTweak {
     tstring print() const;
 };
 
+struct VppTransform {
+    bool enable;
+    bool transpose;
+    bool flipX;
+    bool flipY;
+
+    VppTransform();
+    int rotate() const;
+    bool setRotate(int rotate);
+    bool operator==(const VppTransform &x) const;
+    bool operator!=(const VppTransform &x) const;
+    tstring print() const;
+};
+
 struct VppDeband {
     bool enable;
     int range;
@@ -573,6 +594,7 @@ struct VCEVppParam {
     VppUnsharp unsharp;
     VppEdgelevel edgelevel;
     VppTweak tweak;
+    VppTransform transform;
     VppDeband deband;
 
     VCEVppParam();

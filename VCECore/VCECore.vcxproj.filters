@@ -216,6 +216,9 @@
     <ClCompile Include="vce_filter_pad.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="vce_filter_transform.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu_info.h">
@@ -401,6 +404,9 @@
     <ClInclude Include="vce_filter_deband.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="vce_filter_transform.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="ram_speed_x64.asm">
@@ -460,6 +466,9 @@
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="vce_filter_pad.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="vce_filter_transform.cl">
       <Filter>ソース ファイル</Filter>
     </None>
   </ItemGroup>

@@ -328,6 +328,16 @@ tstring encoder_help() {
         FILTER_DEFAULT_TWEAK_SATURATION,
         FILTER_DEFAULT_TWEAK_HUE);
     str += strsprintf(_T("\n")
+        _T("   --vpp-rotate <int>           rotate video (90, 180, 270)\n")
+    );
+    str += strsprintf(_T("\n")
+        _T("   --vpp-transform [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("    params\n")
+        _T("      flip_x=<bool>\n")
+        _T("      flip_y=<bool>\n")
+        _T("      transpose=<bool>\n")
+    );
+    str += strsprintf(_T("\n")
         _T("   --vpp-deband [<param1>=<value>][,<param2>=<value>][...]\n")
         _T("     enable deband filter.\n")
         _T("    params\n")
@@ -1590,6 +1600,100 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+    if (IS_OPTION("vpp-rotate")) {
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        int value = 0;
+        if (get_list_value(list_vpp_rotate, strInput[i], &value)) {
+            pParams->vpp.transform.enable = true;
+            if (!pParams->vpp.transform.setRotate(value)) {
+                print_cmd_error_invalid_value(option_name, strInput[i], list_vpp_rotate);
+                return 1;
+            }
+        } else {
+            print_cmd_error_invalid_value(option_name, strInput[i], list_vpp_rotate);
+            return 1;
+        }
+        return 0;
+    }
+    if (IS_OPTION("vpp-transform")) {
+        pParams->vpp.transform.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{ "flip_x", "flip_y", "transpose" };
+        for (const auto &param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos + 1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.transform.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("flip_x")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.transform.flipX = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("flip_y")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.transform.flipY = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("transpose")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.transform.transpose = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                if (param == _T("flip_x")) {
+                    pParams->vpp.transform.flipX = true;
+                    continue;
+                }
+                if (param == _T("flip_y")) {
+                    pParams->vpp.transform.flipY = true;
+                    continue;
+                }
+                if (param == _T("transpose")) {
+                    pParams->vpp.transform.transpose = true;
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
     if (IS_OPTION("vpp-deband")) {
         pParams->vpp.deband.enable = true;
         if (i+1 >= nArgNum || strInput[i+1][0] == _T('-')) {
@@ -2223,6 +2327,25 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
             cmd << _T(" --vpp-tweak ") << tmp.str().substr(1);
         } else if (pParams->vpp.tweak.enable) {
             cmd << _T(" --vpp-tweak");
+        }
+    }
+    OPT_LST(_T("--vpp-rotate"), vpp.transform.rotate(), list_vpp_rotate);
+    if (!pParams->vpp.transform.rotate()) {
+        if (pParams->vpp.transform != encPrmDefault.vpp.transform) {
+            tmp.str(tstring());
+            if (!pParams->vpp.transform.enable && save_disabled_prm) {
+                tmp << _T(",enable=false");
+            }
+            if (pParams->vpp.transform.enable || save_disabled_prm) {
+                ADD_BOOL(_T("flip_x"), vpp.transform.flipX);
+                ADD_BOOL(_T("flip_y"), vpp.transform.flipY);
+                ADD_BOOL(_T("transpose"), vpp.transform.transpose);
+            }
+            if (!tmp.str().empty()) {
+                cmd << _T(" --vpp-transform ") << tmp.str().substr(1);
+            } else if (pParams->vpp.transform.enable) {
+                cmd << _T(" --vpp-transform");
+            }
         }
     }
     if (pParams->vpp.deband != encPrmDefault.vpp.deband) {

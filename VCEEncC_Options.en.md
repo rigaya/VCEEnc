@@ -1059,6 +1059,20 @@ Example: Strengthening the black part of the outline
 --vpp-edgelevel strength=5.0,threshold=24.0,black=6.0
 ```
 
+### --vpp-rotate &lt;int&gt;
+
+Rotate video. 90, 180, 270 degrees is allowed.
+
+
+### --vpp-transform [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+**Parameters**
+- flip_x=&lt;bool&gt;
+
+- flip_y=&lt;bool&gt;
+
+- transpose=&lt;bool&gt;
+
 ### --vpp-tweak [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 
 **Parameters**

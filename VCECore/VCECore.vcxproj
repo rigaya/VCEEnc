@@ -318,6 +318,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="vce_filter_transform.cpp" />
     <ClCompile Include="vce_filter_tweak.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -395,6 +396,7 @@
     <ClInclude Include="vce_filter_denoise_pmd.h" />
     <ClInclude Include="vce_filter_edgelevel.h" />
     <ClInclude Include="vce_filter_ssim.h" />
+    <ClInclude Include="vce_filter_transform.h" />
     <ClInclude Include="vce_filter_tweak.h" />
     <ClInclude Include="vce_filter_unsharp.h" />
     <ClInclude Include="vce_util.h" />
@@ -547,6 +549,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
     <None Include="vce_filter_ssim.cl" />
+    <None Include="vce_filter_transform.cl" />
     <None Include="vce_filter_tweak.cl" />
     <None Include="vce_filter_unsharp.cl" />
   </ItemGroup>

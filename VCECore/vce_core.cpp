@@ -57,6 +57,7 @@
 #include "vce_filter_unsharp.h"
 #include "vce_filter_edgelevel.h"
 #include "vce_filter_tweak.h"
+#include "vce_filter_transform.h"
 #include "vce_filter_deband.h"
 #include "rgy_version.h"
 #include "rgy_bitstream.h"
@@ -732,6 +733,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         || inputParam->vpp.unsharp.enable
         || inputParam->vpp.edgelevel.enable
         || inputParam->vpp.tweak.enable
+        || inputParam->vpp.transform.enable
         || inputParam->vpp.deband.enable) {
         //swデコードならGPUに上げる必要がある
         if (m_pFileReader->getInputCodec() == RGY_CODEC_UNKNOWN) {
@@ -843,6 +845,28 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             param->outTimebase = m_outputTimebase;
             param->baseFps = m_encFps;
             param->outFilename = inputParam->common.outputFilename;
+            param->bOutOverwrite = false;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filter));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+        //回転
+        if (inputParam->vpp.transform.enable) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterTransform(m_dev->cl()));
+            shared_ptr<RGYFilterParamTransform> param(new RGYFilterParamTransform());
+            param->trans = inputParam->vpp.transform;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
             param->bOutOverwrite = false;
             auto sts = filter->init(param, m_pLog);
             if (sts != RGY_ERR_NONE) {

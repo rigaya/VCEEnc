@@ -1092,6 +1092,20 @@ unsharpフィルタ。輪郭・ディテール強調用のフィルタ。
 ```
 
 
+### --vpp-rotate &lt;int&gt;
+
+動画を回転させる。 90, 180, 270 度の回転のみに対応。
+
+
+### --vpp-transform [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+**パラメータ**
+- flip_x=&lt;bool&gt;
+
+- flip_y=&lt;bool&gt;
+
+- transpose=&lt;bool&gt;
+
 ### --vpp-tweak [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 
 **パラメータ**
