@@ -109,6 +109,35 @@ __kernel void kernel_copy_plane(
     }
 }
 
+__kernel void kernel_copy_plane_nv12(
+#if IMAGE_DST
+    __write_only image2d_t dst,
+#else
+    __global uchar *dst,
+#endif
+    int dstPitch,
+#if IMAGE_SRC
+    __read_only image2d_t src,
+#else
+    __global uchar *src,
+#endif
+    int srcPitch,
+    int uvWidth,
+    int uvHeight,
+    int cropX,
+    int cropY
+) {
+    const int uv_x = get_global_id(0);
+    const int uv_y = get_global_id(1);
+    if (uv_x < uvWidth && uv_y < uvHeight) {
+        TypeIn pixSrcU, pixSrcV;
+        LOAD_NV12_UV(src, pixSrcU, pixSrcV, uv_x, uv_y, cropX, cropY);
+        TypeOut pixDstU = BIT_DEPTH_CONV(pixSrcU);
+        TypeOut pixDstV = BIT_DEPTH_CONV(pixSrcV);
+        STORE_NV12_UV(dst, uv_x, uv_y, pixDstU, pixDstV);
+    }
+}
+
 __kernel void kernel_crop_nv12_yv12(
 #if IMAGE_DST
     __write_only image2d_t dstU,
