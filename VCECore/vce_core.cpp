@@ -685,10 +685,10 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     int resizeHeight = croppedHeight;
     m_encWidth = resizeWidth;
     m_encHeight = resizeHeight;
-    //if (inputParam->vpp.pad.enable) {
-    //    m_encWidth  += inputParam->vpp.pad.right + inputParam->vpp.pad.left;
-    //    m_encHeight += inputParam->vpp.pad.bottom + inputParam->vpp.pad.top;
-    //}
+    if (inputParam->vpp.pad.enable) {
+        m_encWidth  += inputParam->vpp.pad.right + inputParam->vpp.pad.left;
+        m_encHeight += inputParam->vpp.pad.bottom + inputParam->vpp.pad.top;
+    }
 
     //指定のリサイズがあればそのサイズに設定する
     if (inputParam->input.dstWidth > 0 && inputParam->input.dstHeight > 0) {
@@ -696,10 +696,10 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         m_encHeight = inputParam->input.dstHeight;
         resizeWidth = m_encWidth;
         resizeHeight = m_encHeight;
-        //if (inputParam->vpp.pad.enable) {
-        //    resizeWidth -= (inputParam->vpp.pad.right + inputParam->vpp.pad.left);
-        //    resizeHeight -= (inputParam->vpp.pad.bottom + inputParam->vpp.pad.top);
-        //}
+        if (inputParam->vpp.pad.enable) {
+            resizeWidth -= (inputParam->vpp.pad.right + inputParam->vpp.pad.left);
+            resizeHeight -= (inputParam->vpp.pad.bottom + inputParam->vpp.pad.top);
+        }
     }
     bool resizeRequired = false;
     if (croppedWidth != resizeWidth || croppedHeight != resizeHeight) {
@@ -726,6 +726,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     if (resizeRequired
         || cropRequired
         || inputParam->vpp.afs.enable
+        || inputParam->vpp.pad.enable
         || inputParam->vpp.knn.enable
         || inputParam->vpp.pmd.enable
         || inputParam->vpp.unsharp.enable
@@ -997,6 +998,30 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             param->deband = inputParam->vpp.deband;
             param->frameIn = inputFrame;
             param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
+            param->bOutOverwrite = false;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filter));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+        //padding
+        if (inputParam->vpp.pad.enable) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterPad(m_dev->cl()));
+            shared_ptr<RGYFilterParamPad> param(new RGYFilterParamPad());
+            param->pad = inputParam->vpp.pad;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->frameOut.width = m_encWidth;
+            param->frameOut.height = m_encHeight;
             param->baseFps = m_encFps;
             param->bOutOverwrite = false;
             auto sts = filter->init(param, m_pLog);

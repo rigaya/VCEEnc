@@ -186,10 +186,34 @@ protected:
     virtual void close() override;
 
     virtual RGY_ERR resizePlane(FrameInfo *pOutputPlane, const FrameInfo *pInputPlane, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
-    virtual RGY_ERR resizeFrame(FrameInfo *pOutputPlane, const FrameInfo *pInputPlane, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+    virtual RGY_ERR resizeFrame(FrameInfo *pOutputFrame, const FrameInfo *pInputFrame, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
 
     bool m_bInterlacedWarn;
     unique_ptr<RGYCLBuf> m_weightSpline;
     unique_ptr<RGYOpenCLProgram> m_resize;
     unique_ptr<RGYCLFrame> m_srcImage;
+};
+
+class RGYFilterParamPad : public RGYFilterParam {
+public:
+    VppPad pad;
+    RGYFilterParamPad() : pad() {};
+    virtual ~RGYFilterParamPad() {};
+    virtual tstring print() const override;
+};
+
+class RGYFilterPad : public RGYFilter {
+public:
+    RGYFilterPad(shared_ptr<RGYOpenCLContext> context);
+    virtual ~RGYFilterPad();
+    virtual RGY_ERR init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog> pPrintMes) override;
+protected:
+    virtual RGY_ERR run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) override;
+    virtual void close() override;
+
+    virtual RGY_ERR procPlane(FrameInfo *pOutputPlane, const FrameInfo *pInputPlane, int pad_color, const VppPad &pad, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+    virtual RGY_ERR procFrame(FrameInfo *pOutputFrame, const FrameInfo *pInputFrame, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+
+    unique_ptr<RGYOpenCLProgram> m_pad;
+    bool m_bInterlacedWarn;
 };

@@ -20,6 +20,7 @@ VCE_FILTER_DENOISE_PMD_CL EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_denoise_
 VCE_FILTER_UNSHARP_CL     EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_unsharp.cl"
 VCE_FILTER_EDGELEVEL_CL   EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_edgelevel.cl"
 VCE_FILTER_TWEAK_CL       EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_tweak.cl"
+VCE_FILTER_PAD_CL         EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_pad.cl"
 
 VCE_FILTER_DEBAND_CL                 EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_deband.cl"
 VCE_FILTER_DEBAND_GEN_RAND_CL        EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_deband_gen_rand.cl"

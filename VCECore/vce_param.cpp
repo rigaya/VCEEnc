@@ -259,6 +259,31 @@ tstring VppAfs::print() const {
 #undef ON_OFF
 }
 
+VppPad::VppPad() :
+    enable(false),
+    left(0),
+    top(0),
+    right(0),
+    bottom(0) {
+
+}
+
+bool VppPad::operator==(const VppPad& x) const {
+    return enable == x.enable
+        && left == x.left
+        && top == x.top
+        && right == x.right
+        && bottom == x.bottom;
+}
+bool VppPad::operator!=(const VppPad& x) const {
+    return !(*this == x);
+}
+
+tstring VppPad::print() const {
+    return strsprintf(_T("(right=%d, left=%d, top=%d, bottom=%d)"),
+        right, left, top, bottom);
+}
+
 VppKnn::VppKnn() :
     enable(false),
     radius(FILTER_DEFAULT_KNN_RADIUS),
@@ -431,6 +456,7 @@ tstring VppDeband::print() const {
 VCEVppParam::VCEVppParam() :
     resize(RGY_VPP_RESIZE_AUTO),
     afs(),
+    pad(),
     knn(),
     pmd(),
     unsharp(),

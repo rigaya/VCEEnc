@@ -270,6 +270,9 @@ tstring encoder_help() {
         FILTER_DEFAULT_AFS_TIMECODE ? _T("on") : _T("off"),
         FILTER_DEFAULT_AFS_LOG      ? _T("on") : _T("off"));
     str += print_list_options(_T("--vpp-resize <string>"), list_vpp_resize, 0);
+    str += strsprintf(_T("\n")
+        _T("   --vpp-pad <int>,<int>,<int>,<int>\n")
+        _T("     add padding to left,top,right,bottom (in pixels)\n"));
     str += strsprintf(_T("")
         _T("   --vpp-knn [<param1>=<value>][,<param2>=<value>][...]\n")
         _T("     enable denoise filter by K-nearest neighbor.\n")
@@ -1140,6 +1143,86 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
                     continue;
                 }
                 print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    if (IS_OPTION("vpp-pad")) {
+        pParams->vpp.pad.enable = true;
+        if (i+1 >= nArgNum || strInput[i+1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{ "r", "l", "t", "b" };
+
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos+1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.pad.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("r")) {
+                    try {
+                        pParams->vpp.pad.right = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("l")) {
+                    try {
+                        pParams->vpp.pad.left = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("t")) {
+                    try {
+                        pParams->vpp.pad.top = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("b")) {
+                    try {
+                        pParams->vpp.pad.bottom = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                int val[4] = { 0 };
+                if (   4 == _stscanf_s(strInput[i], _T("%d,%d,%d,%d"), &val[0], &val[1], &val[2], &val[3])
+                    || 4 == _stscanf_s(strInput[i], _T("%d:%d:%d:%d"), &val[0], &val[1], &val[2], &val[3])) {
+                    pParams->vpp.pad.left   = val[0];
+                    pParams->vpp.pad.top    = val[1];
+                    pParams->vpp.pad.right  = val[2];
+                    pParams->vpp.pad.bottom = val[3];
+                    continue;
+                }
+                print_cmd_error_invalid_value(option_name, strInput[i]);
                 return 1;
             }
         }
@@ -2037,6 +2120,23 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
             cmd << _T(" --vpp-afs ") << tmp.str().substr(1);
         } else if (pParams->vpp.afs.enable) {
             cmd << _T(" --vpp-afs");
+        }
+    }
+    if (pParams->vpp.pad != encPrmDefault.vpp.pad) {
+        tmp.str(tstring());
+        if (!pParams->vpp.pad.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (pParams->vpp.pad.enable || save_disabled_prm) {
+            ADD_NUM(_T("r"), vpp.pad.right);
+            ADD_NUM(_T("l"), vpp.pad.left);
+            ADD_NUM(_T("t"), vpp.pad.top);
+            ADD_NUM(_T("b"), vpp.pad.bottom);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-pad ") << tmp.str().substr(1);
+        } else if (pParams->vpp.pad.enable) {
+            cmd << _T(" --vpp-pad");
         }
     }
     if (pParams->vpp.knn != encPrmDefault.vpp.knn) {

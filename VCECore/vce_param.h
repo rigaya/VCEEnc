@@ -469,6 +469,16 @@ struct VppAfs {
     void check();
 };
 
+struct VppPad {
+    bool enable;
+    int left, top, right, bottom;
+
+    VppPad();
+    bool operator==(const VppPad &x) const;
+    bool operator!=(const VppPad &x) const;
+    tstring print() const;
+};
+
 struct VppKnn {
     bool  enable;
     int   radius;
@@ -557,6 +567,7 @@ struct VppDeband {
 struct VCEVppParam {
     RGY_VPP_RESIZE_ALGO resize;
     VppAfs afs;
+    VppPad pad;
     VppKnn knn;
     VppPmd pmd;
     VppUnsharp unsharp;

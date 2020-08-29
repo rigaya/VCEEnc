@@ -213,6 +213,9 @@
     <ClCompile Include="vce_filter_deband.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="vce_filter_pad.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu_info.h">
@@ -454,6 +457,9 @@
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="vce_filter_deband_gen_rand.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="vce_filter_pad.cl">
       <Filter>ソース ファイル</Filter>
     </None>
   </ItemGroup>
