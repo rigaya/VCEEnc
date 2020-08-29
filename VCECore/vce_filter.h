@@ -173,6 +173,7 @@ protected:
 class RGYFilterParamResize : public RGYFilterParam {
 public:
     RGY_VPP_RESIZE_ALGO interp;
+    RGYFilterParamResize() : interp(RGY_VPP_RESIZE_AUTO) {};
     virtual ~RGYFilterParamResize() {};
 };
 
