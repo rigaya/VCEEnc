@@ -589,6 +589,8 @@ protected:
     shared_ptr<RGYLog> m_pLog;
     unique_ptr<RGYOpenCLProgram> m_copyI2B;
     unique_ptr<RGYOpenCLProgram> m_copyB2I;
+    unique_ptr<RGYOpenCLProgram> m_copyB2B;
+    unique_ptr<RGYOpenCLProgram> m_copyI2I;
 };
 
 class RGYOpenCL {

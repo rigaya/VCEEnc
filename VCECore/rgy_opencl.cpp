@@ -486,12 +486,16 @@ RGYOpenCLContext::RGYOpenCLContext(shared_ptr<RGYOpenCLPlatform> platform, share
     m_queue(),
     m_pLog(pLog),
     m_copyI2B(),
-    m_copyB2I() {
+    m_copyB2I(),
+    m_copyB2B(),
+    m_copyI2I() {
 
 }
 
 RGYOpenCLContext::~RGYOpenCLContext() {
     LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closing CL Context...\n"));
+    m_copyI2I.reset();  LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closed CL copyI2I program.\n"));
+    m_copyB2B.reset();  LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closed CL copyB2B program.\n"));
     m_copyI2B.reset();  LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closed CL copyI2B program.\n"));
     m_copyB2I.reset();  LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closed CL copyB2I program.\n"));
     m_queue.clear();    LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closed CL Queue.\n"));
@@ -724,13 +728,36 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDst, const FrameInfo *planeS
     size_t region[3] = { (size_t)planeDst->width * pixel_size, (size_t)planeDst->height, 1 };
     if (planeSrc->mem_type == RGY_MEM_TYPE_GPU) {
         if (planeDst->mem_type == RGY_MEM_TYPE_GPU) {
-            err = clEnqueueCopyBufferRect(queue, (cl_mem)planeSrc->ptr[0], (cl_mem)planeDst->ptr[0], src_origin, dst_origin,
-                region, planeSrc->pitch[0], 0, planeDst->pitch[0], 0, wait_count, wait_list, event_ptr);
+            if (planeDst->csp == planeSrc->csp) {
+                err = clEnqueueCopyBufferRect(queue, (cl_mem)planeSrc->ptr[0], (cl_mem)planeDst->ptr[0], src_origin, dst_origin,
+                    region, planeSrc->pitch[0], 0, planeDst->pitch[0], 0, wait_count, wait_list, event_ptr);
+            } else {
+                if (!m_copyB2B) {
+                    const auto options = strsprintf("-D TypeIn=%s -D TypeOut=%s -D IMAGE_SRC=0 -D IMAGE_DST=0 -D in_bit_depth=%d -D out_bit_depth=%d",
+                        RGY_CSP_BIT_DEPTH[planeSrc->csp] > 8 ? "ushort" : "uchar",
+                        RGY_CSP_BIT_DEPTH[planeDst->csp] > 8 ? "ushort" : "uchar",
+                        RGY_CSP_BIT_DEPTH[planeSrc->csp],
+                        RGY_CSP_BIT_DEPTH[planeDst->csp]);
+                    m_copyB2B = buildResource(_T("VCE_FILTER_CL"), _T("EXE_DATA"), options.c_str());
+                    if (!m_copyB2B) {
+                        m_pLog->write(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_CL(m_copyB2B)\n"));
+                        return RGY_ERR_OPENCL_CRUSH;
+                    }
+                }
+                RGYWorkSize local(32, 8);
+                RGYWorkSize global(planeDst->width, planeDst->height);
+                auto rgy_err = m_copyB2B->kernel("kernel_copy_plane").config(queue, local, global, wait_events, event).launch(
+                    (cl_mem)planeDst->ptr[0], planeDst->pitch[0], (cl_mem)planeSrc->ptr[0], planeSrc->pitch[0], planeSrc->width, planeSrc->height,
+                    planeCrop->e.left, planeCrop->e.up);
+                err = err_rgy_to_cl(rgy_err);
+            }
         } else if (planeDst->mem_type == RGY_MEM_TYPE_GPU_IMAGE) {
             if (!m_copyB2I) {
                 const auto options = strsprintf("-D TypeIn=%s -D TypeOut=%s -D IMAGE_SRC=0 -D IMAGE_DST=1 -D in_bit_depth=%d -D out_bit_depth=%d",
-                    pixel_size >= 2 ? "ushort" : "uchar", pixel_size >= 2 ? "ushort" : "uchar",
-                    RGY_CSP_BIT_DEPTH[planeDst->csp], RGY_CSP_BIT_DEPTH[planeDst->csp]);
+                    RGY_CSP_BIT_DEPTH[planeSrc->csp] > 8 ? "ushort" : "uchar",
+                    RGY_CSP_BIT_DEPTH[planeDst->csp] > 8 ? "ushort" : "uchar",
+                    RGY_CSP_BIT_DEPTH[planeSrc->csp],
+                    RGY_CSP_BIT_DEPTH[planeDst->csp]);
                 m_copyB2I = buildResource(_T("VCE_FILTER_CL"), _T("EXE_DATA"), options.c_str());
                 if (!m_copyB2I) {
                     m_pLog->write(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_CL(m_copyB2I)\n"));
@@ -753,8 +780,10 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDst, const FrameInfo *planeS
         if (planeDst->mem_type == RGY_MEM_TYPE_GPU) {
             if (!m_copyI2B) {
                 const auto options = strsprintf("-D TypeIn=%s -D TypeOut=%s -D IMAGE_SRC=1 -D IMAGE_DST=0 -D in_bit_depth=%d -D out_bit_depth=%d",
-                    pixel_size >= 2 ? "ushort" : "uchar", pixel_size >= 2 ? "ushort" : "uchar",
-                    RGY_CSP_BIT_DEPTH[planeDst->csp], RGY_CSP_BIT_DEPTH[planeDst->csp]);
+                    RGY_CSP_BIT_DEPTH[planeSrc->csp] > 8 ? "ushort" : "uchar",
+                    RGY_CSP_BIT_DEPTH[planeDst->csp] > 8 ? "ushort" : "uchar",
+                    RGY_CSP_BIT_DEPTH[planeSrc->csp],
+                    RGY_CSP_BIT_DEPTH[planeDst->csp]);
                 m_copyI2B = buildResource(_T("VCE_FILTER_CL"), _T("EXE_DATA"), options.c_str());
                 if (!m_copyI2B) {
                     m_pLog->write(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_CL(m_copyI2B)\n"));
@@ -768,8 +797,29 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDst, const FrameInfo *planeS
                 planeCrop->e.left, planeCrop->e.up);
             err = err_rgy_to_cl(rgy_err);
         } else if (planeDst->mem_type == RGY_MEM_TYPE_GPU_IMAGE) {
-            clGetImageInfo((cl_mem)planeDst->ptr[0], CL_IMAGE_WIDTH, sizeof(region[0]), &region[0], nullptr);
-            err = clEnqueueCopyImage(queue, (cl_mem)planeSrc->ptr[0], (cl_mem)planeDst->ptr[0], src_origin, dst_origin, region, wait_count, wait_list, event_ptr);
+            if (planeDst->csp == planeSrc->csp) {
+                clGetImageInfo((cl_mem)planeDst->ptr[0], CL_IMAGE_WIDTH, sizeof(region[0]), &region[0], nullptr);
+                err = clEnqueueCopyImage(queue, (cl_mem)planeSrc->ptr[0], (cl_mem)planeDst->ptr[0], src_origin, dst_origin, region, wait_count, wait_list, event_ptr);
+            } else {
+                if (!m_copyI2I) {
+                    const auto options = strsprintf("-D TypeIn=%s -D TypeOut=%s -D IMAGE_SRC=1 -D IMAGE_DST=1 -D in_bit_depth=%d -D out_bit_depth=%d",
+                        RGY_CSP_BIT_DEPTH[planeSrc->csp] > 8 ? "ushort" : "uchar",
+                        RGY_CSP_BIT_DEPTH[planeDst->csp] > 8 ? "ushort" : "uchar",
+                        RGY_CSP_BIT_DEPTH[planeSrc->csp],
+                        RGY_CSP_BIT_DEPTH[planeDst->csp]);
+                    m_copyI2I = buildResource(_T("VCE_FILTER_CL"), _T("EXE_DATA"), options.c_str());
+                    if (!m_copyI2I) {
+                        m_pLog->write(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_CL(m_copyI2I)\n"));
+                        return RGY_ERR_OPENCL_CRUSH;
+                    }
+                }
+                RGYWorkSize local(32, 8);
+                RGYWorkSize global(planeDst->width, planeDst->height);
+                auto rgy_err = m_copyI2I->kernel("kernel_copy_plane").config(queue, local, global, wait_events, event).launch(
+                    (cl_mem)planeDst->ptr[0], planeDst->pitch[0], (cl_mem)planeSrc->ptr[0], planeSrc->pitch[0], planeSrc->width, planeSrc->height,
+                    planeCrop->e.left, planeCrop->e.up);
+                err = err_rgy_to_cl(rgy_err);
+            }
         } else if (planeDst->mem_type == RGY_MEM_TYPE_CPU) {
             clGetImageInfo((cl_mem)planeSrc->ptr[0], CL_IMAGE_WIDTH, sizeof(region[0]), &region[0], nullptr);
             err = clEnqueueReadImage(queue, (cl_mem)planeSrc->ptr[0], false, dst_origin,
