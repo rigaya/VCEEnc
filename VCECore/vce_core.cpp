@@ -2628,13 +2628,13 @@ tstring VCECore::GetEncoderParam() {
     const amf::AMFPropertyStorage *pProperty = m_pEncoder;
 
     auto GetPropertyStr = [pProperty](const wchar_t *pName) {
-        const wchar_t *pProp;
+        const wchar_t *pProp = L"";
         pProperty->GetPropertyWString(pName, &pProp);
         return wstring_to_string(pProp);
     };
 
     auto GetPropertyInt = [pProperty](const wchar_t *pName) {
-        int64_t value;
+        int64_t value = 0;
         pProperty->GetProperty(pName, &value);
         return (int)value;
     };
@@ -2652,7 +2652,7 @@ tstring VCECore::GetEncoderParam() {
     };
 
     auto GetPropertyBool = [pProperty](const wchar_t *pName) {
-        bool value;
+        bool value = false;
         pProperty->GetProperty(pName, &value);
         return value;
     };
