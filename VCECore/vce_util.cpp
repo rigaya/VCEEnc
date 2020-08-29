@@ -290,6 +290,7 @@ CodecCsp getHWDecCodecCsp() {
     for (int i = 0; i < _countof(HW_DECODE_LIST); i++) {
         codecCsp[HW_DECODE_LIST[i].rgy_codec] = supportedCsp;
     }
+    codecCsp[RGY_CODEC_HEVC].push_back(RGY_CSP_YV12_10);
     return codecCsp;
 #else
     return CodecCsp();

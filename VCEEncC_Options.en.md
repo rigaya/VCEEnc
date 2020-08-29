@@ -138,7 +138,7 @@ reader used will be selected depending on the extension of input file.
 | avi    |   ○   |  ○  |        |        |   ○  |   ○  |
 | avs    |   ◎   |  ○  |   ◎   |   ◎   |   ○  |   ○  |
 | vpy    |   ◎   |      |   ◎   |   ◎   |       |       |
-| avhw   |   ○   |      |        |   ○   |       |       |
+| avhw   |   □   |      |        |        |       |       |
 | avsw   |   ◎   |      |   ◎   |   ◎   |   ○  |   ○  |
 
 ◎ ... 8bit / 9bit / 10bit / 12bit / 14bit / 16bit supported  
