@@ -167,7 +167,8 @@ protected:
     RGY_ERR convertCspFromYUV444(FrameInfo *pOutputFrame, const FrameInfo *pInputFrame, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
     virtual void close() override;
 
-    unique_ptr<RGYOpenCLProgram> m_crop;
+    unique_ptr<RGYOpenCLProgram> m_cropY;
+    unique_ptr<RGYOpenCLProgram> m_cropUV;
 };
 
 class RGYFilterParamResize : public RGYFilterParam {
