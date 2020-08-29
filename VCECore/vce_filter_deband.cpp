@@ -36,9 +36,9 @@
 #pragma warning(push)
 #pragma warning(disable:4819) //ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。
 #pragma warning(disable:4201) //非標準の拡張機能が使用されています: 無名の構造体または共用体です。
+#pragma warning(disable:4244) //'return': 'double' から 'cl_float' への変換です。データが失われる可能性があります。
+#pragma warning(disable:4267) //'初期化中': 'size_t' から 'cl_uint' に変換しました。データが失われているかもしれません。
 #include <clRNG/mrg31k3p.h>
-#pragma warning(pop)
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -46,6 +46,7 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+#pragma warning(pop)
 
 using clrngStreams = clrngMrg31k3pStream;
 #define clrngCreateStreams clrngMrg31k3pCreateStreams
