@@ -305,6 +305,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="vce_filter_nnedi.cpp" />
     <ClCompile Include="vce_filter_pad.cpp" />
     <ClCompile Include="vce_filter_resize.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -395,6 +396,7 @@
     <ClInclude Include="vce_filter_denoise_knn.h" />
     <ClInclude Include="vce_filter_denoise_pmd.h" />
     <ClInclude Include="vce_filter_edgelevel.h" />
+    <ClInclude Include="vce_filter_nnedi.h" />
     <ClInclude Include="vce_filter_ssim.h" />
     <ClInclude Include="vce_filter_transform.h" />
     <ClInclude Include="vce_filter_tweak.h" />
@@ -541,6 +543,9 @@
     <None Include="vce_filter_denoise_knn.cl" />
     <None Include="vce_filter_denoise_pmd.cl" />
     <None Include="vce_filter_edgelevel.cl" />
+    <None Include="vce_filter_nnedi_common.cl" />
+    <None Include="vce_filter_nnedi_k0.cl" />
+    <None Include="vce_filter_nnedi_k1.cl" />
     <None Include="vce_filter_pad.cl" />
     <None Include="vce_filter_resize.cl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>

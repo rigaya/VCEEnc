@@ -52,6 +52,7 @@
 #include "vce_param.h"
 #include "vce_filter.h"
 #include "vce_filter_afs.h"
+#include "vce_filter_nnedi.h"
 #include "vce_filter_denoise_knn.h"
 #include "vce_filter_denoise_pmd.h"
 #include "vce_filter_unsharp.h"
@@ -716,7 +717,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     //インタレ解除の個数をチェック
     int deinterlacer = 0;
     if (inputParam->vpp.afs.enable) deinterlacer++;
-    //if (inputParam->vpp.nnedi.enable) deinterlacer++;
+    if (inputParam->vpp.nnedi.enable) deinterlacer++;
     //if (inputParam->vpp.yadif.enable) deinterlacer++;
     if (deinterlacer >= 2) {
         PrintMes(RGY_LOG_ERROR, _T("Activating 2 or more deinterlacer is not supported.\n"));
@@ -727,6 +728,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     if (resizeRequired
         || cropRequired
         || inputParam->vpp.afs.enable
+        || inputParam->vpp.nnedi.enable
         || inputParam->vpp.pad.enable
         || inputParam->vpp.knn.enable
         || inputParam->vpp.pmd.enable
@@ -845,6 +847,32 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             param->outTimebase = m_outputTimebase;
             param->baseFps = m_encFps;
             param->outFilename = inputParam->common.outputFilename;
+            param->bOutOverwrite = false;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filter));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+        //nnedi
+        if (inputParam->vpp.nnedi.enable) {
+            if ((inputParam->input.picstruct & (RGY_PICSTRUCT_TFF | RGY_PICSTRUCT_BFF)) == 0) {
+                PrintMes(RGY_LOG_ERROR, _T("Please set input interlace field order (--interlace tff/bff) for vpp-nnedi.\n"));
+                return RGY_ERR_INVALID_PARAM;
+            }
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterNnedi(m_dev->cl()));
+            shared_ptr<RGYFilterParamNnedi> param(new RGYFilterParamNnedi());
+            param->nnedi = inputParam->vpp.nnedi;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
             param->bOutOverwrite = false;
             auto sts = filter->init(param, m_pLog);
             if (sts != RGY_ERR_NONE) {
@@ -1673,7 +1701,8 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
             //インタレ保持のチェック
             const bool interlacedEncoding =
                 (prm->input.picstruct & RGY_PICSTRUCT_INTERLACED)
-                && !prm->vpp.afs.enable;
+                && !prm->vpp.afs.enable
+                && !prm->vpp.nnedi.enable;
             if (interlacedEncoding
                 && !outputCaps->IsInterlacedSupported()) {
                 message += strsprintf(_T("GPU #%d (%s) does not support %s interlaced encoding.\n"),

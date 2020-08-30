@@ -286,6 +286,150 @@ const CX_DESC list_vpp_resize[] = {
     { NULL, NULL }
 };
 
+enum VppFpPrecision {
+    VPP_FP_PRECISION_UNKNOWN = -1,
+
+    VPP_FP_PRECISION_AUTO = 0,
+    VPP_FP_PRECISION_FP32,
+    VPP_FP_PRECISION_FP16,
+
+    VPP_FP_PRECISION_MAX,
+};
+
+const CX_DESC list_vpp_fp_prec[] = {
+    { _T("auto"), VPP_FP_PRECISION_AUTO },
+    { _T("fp32"), VPP_FP_PRECISION_FP32 },
+    { _T("fp16"), VPP_FP_PRECISION_FP16 },
+    { NULL, 0 }
+};
+
+enum VppNnediField {
+    VPP_NNEDI_FIELD_UNKNOWN = 0,
+    VPP_NNEDI_FIELD_BOB_AUTO,
+    VPP_NNEDI_FIELD_USE_AUTO,
+    VPP_NNEDI_FIELD_USE_TOP,
+    VPP_NNEDI_FIELD_USE_BOTTOM,
+    VPP_NNEDI_FIELD_BOB_TOP_BOTTOM,
+    VPP_NNEDI_FIELD_BOB_BOTTOM_TOP,
+
+    VPP_NNEDI_FIELD_MAX,
+};
+
+const CX_DESC list_vpp_nnedi_field[] = {
+    { _T("bob"),     VPP_NNEDI_FIELD_BOB_AUTO },
+    { _T("auto"),    VPP_NNEDI_FIELD_USE_AUTO },
+    { _T("top"),     VPP_NNEDI_FIELD_USE_TOP },
+    { _T("bottom"),  VPP_NNEDI_FIELD_USE_BOTTOM },
+    { _T("bob_tff"), VPP_NNEDI_FIELD_BOB_TOP_BOTTOM },
+    { _T("bob_bff"), VPP_NNEDI_FIELD_BOB_BOTTOM_TOP },
+    { NULL, 0 }
+};
+
+const CX_DESC list_vpp_nnedi_nns[] = {
+    { _T("16"),   16 },
+    { _T("32"),   32 },
+    { _T("64"),   64 },
+    { _T("128"), 128 },
+    { _T("256"), 256 },
+    { NULL, 0 }
+};
+
+enum VppNnediNSize {
+    VPP_NNEDI_NSIZE_UNKNOWN = -1,
+
+    VPP_NNEDI_NSIZE_8x6 = 0,
+    VPP_NNEDI_NSIZE_16x6,
+    VPP_NNEDI_NSIZE_32x6,
+    VPP_NNEDI_NSIZE_48x6,
+    VPP_NNEDI_NSIZE_8x4,
+    VPP_NNEDI_NSIZE_16x4,
+    VPP_NNEDI_NSIZE_32x4,
+
+    VPP_NNEDI_NSIZE_MAX,
+};
+
+const CX_DESC list_vpp_nnedi_nsize[] = {
+    { _T("8x6"),  VPP_NNEDI_NSIZE_8x6  },
+    { _T("16x6"), VPP_NNEDI_NSIZE_16x6 },
+    { _T("32x6"), VPP_NNEDI_NSIZE_32x6 },
+    { _T("48x6"), VPP_NNEDI_NSIZE_48x6 },
+    { _T("8x4"),  VPP_NNEDI_NSIZE_8x4  },
+    { _T("16x4"), VPP_NNEDI_NSIZE_16x4 },
+    { _T("32x4"), VPP_NNEDI_NSIZE_32x4 },
+    { NULL, 0 }
+};
+
+enum VppNnediQuality {
+    VPP_NNEDI_QUALITY_UNKNOWN = 0,
+    VPP_NNEDI_QUALITY_FAST,
+    VPP_NNEDI_QUALITY_SLOW,
+
+    VPP_NNEDI_QUALITY_MAX,
+};
+
+const CX_DESC list_vpp_nnedi_quality[] = {
+    { _T("fast"), VPP_NNEDI_QUALITY_FAST },
+    { _T("slow"), VPP_NNEDI_QUALITY_SLOW },
+    { NULL, 0 }
+};
+
+enum VppNnediPreScreen : uint32_t {
+    VPP_NNEDI_PRE_SCREEN_NONE            = 0x00,
+    VPP_NNEDI_PRE_SCREEN_ORIGINAL        = 0x01,
+    VPP_NNEDI_PRE_SCREEN_NEW             = 0x02,
+    VPP_NNEDI_PRE_SCREEN_MODE            = 0x07,
+    VPP_NNEDI_PRE_SCREEN_BLOCK           = 0x10,
+    VPP_NNEDI_PRE_SCREEN_ONLY            = 0x20,
+    VPP_NNEDI_PRE_SCREEN_ORIGINAL_BLOCK  = VPP_NNEDI_PRE_SCREEN_ORIGINAL | VPP_NNEDI_PRE_SCREEN_BLOCK,
+    VPP_NNEDI_PRE_SCREEN_NEW_BLOCK       = VPP_NNEDI_PRE_SCREEN_NEW      | VPP_NNEDI_PRE_SCREEN_BLOCK,
+    VPP_NNEDI_PRE_SCREEN_ORIGINAL_ONLY   = VPP_NNEDI_PRE_SCREEN_ORIGINAL | VPP_NNEDI_PRE_SCREEN_ONLY,
+    VPP_NNEDI_PRE_SCREEN_NEW_ONLY        = VPP_NNEDI_PRE_SCREEN_NEW      | VPP_NNEDI_PRE_SCREEN_ONLY,
+
+    VPP_NNEDI_PRE_SCREEN_MAX,
+};
+
+static VppNnediPreScreen operator|(VppNnediPreScreen a, VppNnediPreScreen b) {
+    return (VppNnediPreScreen)((uint32_t)a | (uint32_t)b);
+}
+
+static VppNnediPreScreen operator|=(VppNnediPreScreen& a, VppNnediPreScreen b) {
+    a = a | b;
+    return a;
+}
+
+static VppNnediPreScreen operator&(VppNnediPreScreen a, VppNnediPreScreen b) {
+    return (VppNnediPreScreen)((uint32_t)a & (uint32_t)b);
+}
+
+static VppNnediPreScreen operator&=(VppNnediPreScreen& a, VppNnediPreScreen b) {
+    a = (VppNnediPreScreen)((uint32_t)a & (uint32_t)b);
+    return a;
+}
+
+const CX_DESC list_vpp_nnedi_pre_screen[] = {
+    { _T("none"),           VPP_NNEDI_PRE_SCREEN_NONE },
+    { _T("original"),       VPP_NNEDI_PRE_SCREEN_ORIGINAL },
+    { _T("new"),            VPP_NNEDI_PRE_SCREEN_NEW },
+    { _T("original_block"), VPP_NNEDI_PRE_SCREEN_ORIGINAL_BLOCK },
+    { _T("new_block"),      VPP_NNEDI_PRE_SCREEN_NEW_BLOCK },
+    { _T("original_only"),  VPP_NNEDI_PRE_SCREEN_ORIGINAL_ONLY },
+    { _T("new_only"),       VPP_NNEDI_PRE_SCREEN_NEW_ONLY },
+    { NULL, 0 }
+};
+
+enum VppNnediErrorType {
+    VPP_NNEDI_ETYPE_ABS = 0,
+    VPP_NNEDI_ETYPE_SQUARE,
+
+    VPP_NNEDI_ETYPE_MAX,
+};
+
+const CX_DESC list_vpp_nnedi_error_type[] = {
+    { _T("abs"),    VPP_NNEDI_ETYPE_ABS },
+    { _T("square"), VPP_NNEDI_ETYPE_SQUARE },
+    { NULL, 0 }
+};
+
 const CX_DESC list_vpp_deband[] = {
     { _T("0 - 1点参照"),  0 },
     { _T("1 - 2点参照"),  1 },
@@ -476,6 +620,24 @@ struct VppAfs {
     void check();
 };
 
+struct VppNnedi {
+    bool              enable;
+    VppNnediField     field;
+    int               nns;
+    VppNnediNSize     nsize;
+    VppNnediQuality   quality;
+    VppFpPrecision precision;
+    VppNnediPreScreen pre_screen;
+    VppNnediErrorType errortype;
+    tstring           weightfile;
+
+    bool isbob();
+    VppNnedi();
+    bool operator==(const VppNnedi &x) const;
+    bool operator!=(const VppNnedi &x) const;
+    tstring print() const;
+};
+
 struct VppPad {
     bool enable;
     int left, top, right, bottom;
@@ -588,6 +750,7 @@ struct VppDeband {
 struct VCEVppParam {
     RGY_VPP_RESIZE_ALGO resize;
     VppAfs afs;
+    VppNnedi nnedi;
     VppPad pad;
     VppKnn knn;
     VppPmd pmd;

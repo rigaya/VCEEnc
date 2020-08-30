@@ -88,24 +88,26 @@ __kernel void kernel_copy_plane(
     __global uchar *dst,
 #endif
     int dstPitch,
+    int dstOffsetX,
+    int dstOffsetY,
 #if IMAGE_SRC
     __read_only image2d_t src,
 #else
     __global uchar *src,
 #endif
     int srcPitch,
+    int srcOffsetX,
+    int srcOffsetY,
     int width,
-    int height,
-    int cropX,
-    int cropY
+    int height
 ) {
     const int x = get_global_id(0);
     const int y = get_global_id(1);
 
     if (x < width && y < height) {
-        TypeIn pixSrc = LOAD(src, x + cropX, y + cropY);
+        TypeIn pixSrc = LOAD(src, x + srcOffsetX, y + srcOffsetY);
         TypeOut out = BIT_DEPTH_CONV(pixSrc);
-        STORE(dst, x, y, out);
+        STORE(dst, x + dstOffsetX, y + dstOffsetY, out);
     }
 }
 
@@ -239,5 +241,49 @@ __kernel void kernel_merge_fields(
         TypeIn pixSrc1 = LOAD_BUF(src1, x, y);
         STORE_BUF(dst, x, y*2+0, pixSrc0);
         STORE_BUF(dst, x, y*2+1, pixSrc1);
+    }
+}
+
+__kernel void kernel_set_plane(
+#if IMAGE_DST
+    __write_only image2d_t dst,
+#else
+    __global uchar *dst,
+#endif
+    int dstPitch,
+    int width,
+    int height,
+    int cropX,
+    int cropY,
+    int value
+) {
+    const int x = get_global_id(0);
+    const int y = get_global_id(1);
+
+    if (x < width && y < height) {
+        STORE(dst, x + cropX, y + cropY, value);
+    }
+}
+
+__kernel void kernel_set_plane_nv12(
+#if IMAGE_DST
+    __write_only image2d_t dst,
+#else
+    __global uchar *dst,
+#endif
+    int dstPitch,
+    int uvWidth,
+    int uvHeight,
+    int cropX,
+    int cropY,
+    int valueU,
+    int valueV
+) {
+    const int uv_x = get_global_id(0);
+    const int uv_y = get_global_id(1);
+    if (uv_x < uvWidth && uv_y < uvHeight) {
+        TypeOut pixDstU = valueU;
+        TypeOut pixDstV = valueV;
+        STORE_NV12_UV(dst, uv_x + cropX, uv_y + cropY, pixDstU, pixDstV);
     }
 }

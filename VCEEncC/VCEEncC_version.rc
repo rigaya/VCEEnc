@@ -34,6 +34,11 @@ VCE_FILTER_AFS_MERGE_CL      EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_afs_m
 VCE_FILTER_AFS_ANALYZE_CL    EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_afs_analyze.cl"
 VCE_FILTER_AFS_SYNTHESIZE_CL EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_afs_synthesize.cl"
 
+VCE_FILTER_NNEDI_K0_CL     EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_nnedi_k0.cl"
+VCE_FILTER_NNEDI_K1_CL     EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_nnedi_k1.cl"
+VCE_FILTER_NNEDI_COMMON_CL EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_nnedi_common.cl"
+NNEDI_WEIGHTBIN            EXE_DATA DISCARDABLE "..\\resource\\nnedi3_weights.bin"
+
 VCE_FILTER_SSIM_CL EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_ssim.cl"
 
 VS_VERSION_INFO VERSIONINFO

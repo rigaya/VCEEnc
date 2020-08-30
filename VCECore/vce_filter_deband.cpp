@@ -182,7 +182,6 @@ RGYFilterDeband::~RGYFilterDeband() {
     close();
 }
 
-
 std::string RGYFilterDeband::getEmbeddedResourceStr(const tstring &name, const tstring &type) {
     std::string data_str;
     AddMessage(RGY_LOG_DEBUG, _T("Load resource type: %s, name: %s\n"), type.c_str(), name.c_str());

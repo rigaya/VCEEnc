@@ -549,6 +549,12 @@ protected:
     cl_device_id m_devid;
 };
 
+enum class RGYFrameCopyMode {
+    FRAME,
+    FIELD_TOP,
+    FIELD_BOTTOM
+};
+
 class RGYOpenCLContext {
 public:
     RGYOpenCLContext(shared_ptr<RGYOpenCLPlatform> platform, shared_ptr<RGYLog> pLog);
@@ -574,12 +580,22 @@ public:
     RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop);
     RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue);
     RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, RGYOpenCLEvent *event);
-    RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr);
+    RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr, RGYFrameCopyMode copyMode = RGYFrameCopyMode::FRAME);
     RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src);
     RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop);
     RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue);
     RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, RGYOpenCLEvent *event);
-    RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr);
+    RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr, RGYFrameCopyMode copyMode = RGYFrameCopyMode::FRAME);
+    RGY_ERR setPlane(int value, FrameInfo *dst);
+    RGY_ERR setPlane(int value, FrameInfo *dst, const sInputCrop *srcCrop);
+    RGY_ERR setPlane(int value, FrameInfo *dst, const sInputCrop *srcCrop, cl_command_queue queue);
+    RGY_ERR setPlane(int value, FrameInfo *dst, const sInputCrop *srcCrop, cl_command_queue queue, RGYOpenCLEvent *event);
+    RGY_ERR setPlane(int value, FrameInfo *dst, const sInputCrop *srcCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr);
+    RGY_ERR setFrame(int value, FrameInfo *dst);
+    RGY_ERR setFrame(int value, FrameInfo *dst, const sInputCrop *srcCrop);
+    RGY_ERR setFrame(int value, FrameInfo *dst, const sInputCrop *srcCrop, cl_command_queue queue);
+    RGY_ERR setFrame(int value, FrameInfo *dst, const sInputCrop *srcCrop, cl_command_queue queue, RGYOpenCLEvent *event);
+    RGY_ERR setFrame(int value, FrameInfo *dst, const sInputCrop *srcCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr);
 protected:
     unique_ptr<RGYOpenCLProgram> build(const char *data, const size_t size, const char *options);
 
@@ -591,6 +607,8 @@ protected:
     unique_ptr<RGYOpenCLProgram> m_copyB2I;
     unique_ptr<RGYOpenCLProgram> m_copyB2B;
     unique_ptr<RGYOpenCLProgram> m_copyI2I;
+    unique_ptr<RGYOpenCLProgram> m_setB;
+    unique_ptr<RGYOpenCLProgram> m_setI;
 };
 
 class RGYOpenCL {

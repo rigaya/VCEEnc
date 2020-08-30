@@ -259,6 +259,54 @@ tstring VppAfs::print() const {
 #undef ON_OFF
 }
 
+VppNnedi::VppNnedi() :
+    enable(false),
+    field(VPP_NNEDI_FIELD_USE_AUTO),
+    nns(32),
+    nsize(VPP_NNEDI_NSIZE_32x4),
+    quality(VPP_NNEDI_QUALITY_FAST),
+    precision(VPP_FP_PRECISION_AUTO),
+    pre_screen(VPP_NNEDI_PRE_SCREEN_NEW_BLOCK),
+    errortype(VPP_NNEDI_ETYPE_ABS),
+    weightfile(_T("")) {
+
+}
+
+bool VppNnedi::isbob() {
+    return field == VPP_NNEDI_FIELD_BOB_AUTO
+        || field == VPP_NNEDI_FIELD_BOB_BOTTOM_TOP
+        || field == VPP_NNEDI_FIELD_BOB_TOP_BOTTOM;
+}
+
+bool VppNnedi::operator==(const VppNnedi &x) const {
+    return enable == x.enable
+        && field == x.field
+        && nns == x.nns
+        && nsize == x.nsize
+        && quality == x.quality
+        && pre_screen == x.pre_screen
+        && errortype == x.errortype
+        && precision == x.precision
+        && weightfile == x.weightfile;
+}
+bool VppNnedi::operator!=(const VppNnedi &x) const {
+    return !(*this == x);
+}
+
+tstring VppNnedi::print() const {
+    return strsprintf(
+        _T("nnedi: field %s, nns %d, nsize %s, quality %s, prec %s\n")
+        _T("                       pre_screen %s, errortype %s, weight \"%s\""),
+        get_cx_desc(list_vpp_nnedi_field, field),
+        nns,
+        get_cx_desc(list_vpp_nnedi_nsize, nsize),
+        get_cx_desc(list_vpp_nnedi_quality, quality),
+        get_cx_desc(list_vpp_fp_prec, precision),
+        get_cx_desc(list_vpp_nnedi_pre_screen, pre_screen),
+        get_cx_desc(list_vpp_nnedi_error_type, errortype),
+        ((weightfile.length()) ? weightfile.c_str() : _T("internal")));
+}
+
 VppPad::VppPad() :
     enable(false),
     left(0),
@@ -518,6 +566,7 @@ tstring VppDeband::print() const {
 VCEVppParam::VCEVppParam() :
     resize(RGY_VPP_RESIZE_AUTO),
     afs(),
+    nnedi(),
     pad(),
     knn(),
     pmd(),
