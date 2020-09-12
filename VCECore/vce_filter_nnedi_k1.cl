@@ -85,6 +85,7 @@ void dot_product_frame1_fp16(
     const int thIdX, const int thIdY,
     const half2 weight_scale[thread_y_loop]
 ) {
+    const int laneid = get_sub_group_local_id();
     #pragma unroll
     for (int ithy = 0; ithy < thread_y_loop; ithy++) {
         #pragma unroll
@@ -117,7 +118,6 @@ void dot_product_frame1_fp16(
             //  |2----|---->|3----|---->|   <<< x1にかかる重み
             //まず、各スレッドでweight_loop*2分だけ重みをwにロードし、
             //これをshuffleで全スレッドにbroadcastして使用するようにする
-            const int laneid = get_sub_group_local_id();
             half2 w;
             if (laneid < weight_loop*2) { w = ptr_w[laneid]; };
             ptr_w += weight_loop*2;
@@ -198,6 +198,7 @@ void dot_product_frame1_fp32(
     const int thIdX, const int thIdY,
     const float mstd[thread_y_loop][4]
 ) {
+    const int laneid = get_sub_group_local_id();
     #pragma unroll
     for (int ithy = 0; ithy < thread_y_loop; ithy++) {
         #pragma unroll
@@ -217,7 +218,7 @@ void dot_product_frame1_fp32(
             for (int ithy = 0; ithy < thread_y_loop; ithy++) {
                 s0[ithy] = ptr_s[SSRC(0, ithy)];
             }
-#if 0 && ENABLE_DP1_SHUFFLE_OPT
+#if ENABLE_DP1_SHUFFLE_OPT
             //[nns/weight_loop][nnxy][weight_loop][2]
             //最後の2つには、nns方向の[i]と[i+nns]のものを配置している
             //   <---------------   nns  -------------------->
@@ -226,7 +227,6 @@ void dot_product_frame1_fp32(
             //  |0----|1--->|2----|3--->|
             //まず、各スレッドでweight_loop*2分だけ重みをwにロードし、
             //これをshuffleで全スレッドにbroadcastして使用するようにする
-            const int laneid = get_sub_group_local_id();
             TypeCalc w;
             if (laneid < weight_loop*2) { w = ptr_w[laneid]; };
             ptr_w += weight_loop*2;

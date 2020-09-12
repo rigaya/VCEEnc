@@ -141,6 +141,7 @@ void dot_product0(
     const int pix_x_per_thread,
     const float mstd[thread_y_loop][4]
 ) {
+    const int laneid = get_sub_group_local_id();
     #pragma unroll
     for (int ithy = 0; ithy < thread_y_loop; ithy++) {
         #pragma unroll
@@ -202,7 +203,7 @@ void dot_product0(
             //  |2----|---->|3----|---->|   <<< x1にかかる重み
             //     w4    w5    w6   w7
             half2 w;
-            if (thIdX < weight_loop*2) w = ptr_w[thIdX];
+            if (laneid < weight_loop*2) w = ptr_w[laneid];
             ptr_w += weight_loop*2;
             #pragma unroll
             for (int i = 0; i < weight_loop; i++) {

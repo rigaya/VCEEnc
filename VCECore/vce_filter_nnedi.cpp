@@ -45,7 +45,8 @@
 #define ENABLE_DP1_WEIGHT_ARRAY_OPT (1 && ENABLE_DP1_WEIGHT_LOOP_UNROLL)
 
 //shuffle命令を使ったweight係数の分配により高速化する
-#define ENABLE_DP1_SHUFFLE_OPT 1
+//現状、OpenCLでは正しく動作させられていないので、無効化
+#define ENABLE_DP1_SHUFFLE_OPT 0
 
 static const int THREAD_Y_LOOP_K0 = 2;
 static const int THREAD_Y_LOOP_K1 = 4;
@@ -635,6 +636,8 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
         if ((sts = initParams(prm)) != RGY_ERR_NONE) {
             return sts;
         }
+        const auto devInfo = RGYOpenCLDevice(m_cl->platform()->dev(0)).info();
+        const bool sub_group_ext_avail = ENABLE_DP1_SHUFFLE_OPT && devInfo.extensions.find("cl_khr_subgroups") != std::string::npos && (clGetKernelSubGroupInfoKHR != nullptr || clGetKernelSubGroupInfo != nullptr);
         const auto nnedi_common_cl = getEmbeddedResourceStr(_T("VCE_FILTER_NNEDI_COMMON_CL"), _T("EXE_DATA"));
         const int prescreen_new = ((prm->nnedi.pre_screen & VPP_NNEDI_PRE_SCREEN_MODE) == VPP_NNEDI_PRE_SCREEN_ORIGINAL) ? 0 : 1;
         const auto fields = make_array<NnediTargetField>(NNEDI_GEN_FIELD_TOP, NNEDI_GEN_FIELD_BOTTOM);
@@ -707,6 +710,17 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
             if (!m_nnedi_k1) {
                 AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_NNEDI_K1_CL(m_nnedi_k1)\n"));
                 return RGY_ERR_OPENCL_CRUSH;
+            }
+            if (sub_group_ext_avail) {
+                auto getKernelSubGroupInfo = clGetKernelSubGroupInfo != nullptr ? clGetKernelSubGroupInfo : clGetKernelSubGroupInfoKHR;
+                RGYWorkSize local(NNEDI_BLOCK_X, NNEDI_BLOCK_Y);
+                const char *kernel_name = "kernel_compute_network1";
+                size_t result;
+                auto err = getKernelSubGroupInfo(m_nnedi_k1->kernel(kernel_name).get(), m_cl->platform()->dev(0), CL_KERNEL_MAX_SUB_GROUP_SIZE_FOR_NDRANGE_KHR,
+                    sizeof(local.w[0]) * 2, &local.w[0], sizeof(result), &result, nullptr);
+                if (err_cl_to_rgy(err) != RGY_ERR_NONE) {
+                    ///////////<<<<< 未実装 >>>>>>>>>>>;
+                }
             }
         }
     }
