@@ -117,13 +117,14 @@ void dot_product_frame1_fp16(
             //  |2----|---->|3----|---->|   <<< x1にかかる重み
             //まず、各スレッドでweight_loop*2分だけ重みをwにロードし、
             //これをshuffleで全スレッドにbroadcastして使用するようにする
+            const int laneid = get_sub_group_local_id();
             half2 w;
-            if (thIdX < weight_loop*2) w = ptr_w[thIdX];
+            if (laneid < weight_loop*2) { w = ptr_w[laneid]; };
             ptr_w += weight_loop*2;
             #pragma unroll
             for (int i = 0; i < weight_loop; i++) {
-                half2 w0 = sub_group_broadcast(w,            +i); //x0にかかる重み
-                half2 w1 = sub_group_broadcast(w, weight_loop+i); //x1にかかる重み
+                const half2 w0 = sub_group_broadcast(w,            +i); //x0にかかる重み
+                const half2 w1 = sub_group_broadcast(w, weight_loop+i); //x1にかかる重み
                 #pragma unroll
                 for (int ithy = 0; ithy < thread_y_loop; ithy++) {
                     sum[ithy][i] += (half2)(s0[ithy].x) * w0;  //x0 * w([i], [i+nns])
@@ -216,7 +217,7 @@ void dot_product_frame1_fp32(
             for (int ithy = 0; ithy < thread_y_loop; ithy++) {
                 s0[ithy] = ptr_s[SSRC(0, ithy)];
             }
-#if ENABLE_DP1_SHUFFLE_OPT
+#if 0 && ENABLE_DP1_SHUFFLE_OPT
             //[nns/weight_loop][nnxy][weight_loop][2]
             //最後の2つには、nns方向の[i]と[i+nns]のものを配置している
             //   <---------------   nns  -------------------->
@@ -225,8 +226,9 @@ void dot_product_frame1_fp32(
             //  |0----|1--->|2----|3--->|
             //まず、各スレッドでweight_loop*2分だけ重みをwにロードし、
             //これをshuffleで全スレッドにbroadcastして使用するようにする
+            const int laneid = get_sub_group_local_id();
             TypeCalc w;
-            if (thIdX < weight_loop*2) w = ptr_w[thIdX];
+            if (laneid < weight_loop*2) { w = ptr_w[laneid]; };
             ptr_w += weight_loop*2;
             #pragma unroll
             for (int i = 0; i < weight_loop; i++) {
@@ -251,28 +253,28 @@ void dot_product_frame1_fp32(
             }
 #endif
         }
+    }
 #else
-        #pragma unroll (4)
-        for (int x = 0; x < nnx; x++, ptr_w++, ptr_s++) {
-            //このsharedメモリからロードしたpixelデータをレジスタ上で使いまわすのが重要
-            TypePixel s0[thread_y_loop];
+    #pragma unroll (4)
+    for (int x = 0; x < nnx; x++, ptr_w++, ptr_s++) {
+        //このsharedメモリからロードしたpixelデータをレジスタ上で使いまわすのが重要
+        TypePixel s0[thread_y_loop];
+        #pragma unroll
+        for (int ithy = 0; ithy < thread_y_loop; ithy++) {
+            s0[ithy] = ptr_s[SSRC(0, ithy*NNEDI_BLOCK_Y)];
+        }
+        #pragma unroll
+        for (int i = 0; i < weight_loop; i++) {
+            TypeCalc w0 = ptr_w[SWHT_IDX(0, i)];
+            TypeCalc w1 = ptr_w[SWHT_IDX(0, i+nns)];
             #pragma unroll
             for (int ithy = 0; ithy < thread_y_loop; ithy++) {
-                s0[ithy] = ptr_s[SSRC(0, ithy*NNEDI_BLOCK_Y)];
-            }
-            #pragma unroll
-            for (int i = 0; i < weight_loop; i++) {
-                TypeCalc w0 = ptr_w[SWHT_IDX(0, i)];
-                TypeCalc w1 = ptr_w[SWHT_IDX(0, i+nns)];
-                #pragma unroll
-                for (int ithy = 0; ithy < thread_y_loop; ithy++) {
-                    sum0[i][ithy] += s0[ithy] * w0;
-                    sum1[i][ithy] += s0[ithy] * w1;
-                }
+                sum0[i][ithy] += s0[ithy] * w0;
+                sum1[i][ithy] += s0[ithy] * w1;
             }
         }
-#endif
     }
+#endif
 #if ENABLE_DP1_WEIGHT_ARRAY_OPT
     #pragma unroll
     for (int i = 0; i < weight_loop; i++, weight_offset += 2) {
