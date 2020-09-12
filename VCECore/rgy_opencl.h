@@ -111,6 +111,9 @@ CL_EXTERN cl_int(CL_API_CALL *f_clGetEventProfilingInfo)(cl_event event, cl_prof
 CL_EXTERN cl_int(CL_API_CALL *f_clFlush)(cl_command_queue command_queue);
 CL_EXTERN cl_int(CL_API_CALL *f_clFinish)(cl_command_queue command_queue);
 
+CL_EXTERN cl_int(CL_API_CALL *f_clGetKernelSubGroupInfo)(cl_kernel kernel, cl_device_id device, cl_kernel_sub_group_info param_name, size_t input_value_size, const void *input_value, size_t param_value_size, void *param_value, size_t *param_value_size_ret);
+CL_EXTERN cl_int(CL_API_CALL *f_clGetKernelSubGroupInfoKHR)(cl_kernel kernel, cl_device_id device, cl_kernel_sub_group_info param_name, size_t input_value_size, const void *input_value, size_t param_value_size, void *param_value, size_t *param_value_size_ret);
+
 #define clGetExtensionFunctionAddressForPlatform f_clGetExtensionFunctionAddressForPlatform
 
 #define clGetPlatformIDs f_clGetPlatformIDs
@@ -169,6 +172,9 @@ CL_EXTERN cl_int(CL_API_CALL *f_clFinish)(cl_command_queue command_queue);
 
 #define clFlush f_clFlush
 #define clFinish f_clFinish
+
+#define clGetKernelSubGroupInfo f_clGetKernelSubGroupInfo
+#define clGetKernelSubGroupInfoKHR f_clGetKernelSubGroupInfoKHR
 
 MAP_PAIR_0_1_PROTO(err, rgy, RGY_ERR, cl, cl_int);
 
@@ -507,6 +513,7 @@ class RGYOpenCLKernel {
 public:
     RGYOpenCLKernel() : m_kernel(), m_kernelName(), m_pLog() {};
     RGYOpenCLKernel(cl_kernel kernel, std::string kernelName, shared_ptr<RGYLog> pLog);
+    cl_kernel get() const { return m_kernel; }
     virtual ~RGYOpenCLKernel();
     RGYOpenCLKernelLauncher config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global);
     RGYOpenCLKernelLauncher config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, RGYOpenCLEvent *event);

@@ -238,6 +238,8 @@ int initOpenCLGlobal() {
         RGYOpenCL::openCLHandle = nullptr; \
         return 1; \
     }
+#define LOAD_NO_CHECK(name) \
+    f_##name = (decltype(f_##name)) GetProcAddress(RGYOpenCL::openCLHandle, #name);
 
     LOAD(clGetExtensionFunctionAddressForPlatform);
     LOAD(clGetDeviceInfo);
@@ -294,6 +296,9 @@ int initOpenCLGlobal() {
 
     LOAD(clFlush);
     LOAD(clFinish);
+
+    LOAD_NO_CHECK(clGetKernelSubGroupInfo);
+    LOAD_NO_CHECK(clGetKernelSubGroupInfoKHR);
 
     return 0;
 }
