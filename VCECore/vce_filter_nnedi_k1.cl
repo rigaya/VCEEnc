@@ -370,8 +370,7 @@ __kernel void kernel_compute_network1(
     const __global TypeCalc *__restrict__ weight11,
     const int quals,
     const int targetField,
-    const int prescreen,
-    __local char *shared
+    const int prescreen
 ) {
     const int thIdX      = get_local_id(0); //(サイズ: NNEDI_BLOCK_X)
     const int thIdY      = get_local_id(1); //(サイズ: NNEDI_BLOCK_Y)
@@ -381,6 +380,10 @@ __kernel void kernel_compute_network1(
     //sharedメモリのサイズと使途
     //1.src: (NNEDI_BLOCK_X + nnx) * (NNEDI_BLOCK_Y * thread_y_loop + nny) * sizeof(ptr_src[0])
     //2.tmp: (nny + NNEDI_BLOCK_Y * thread_y_loop) * NNEDI_BLOCK_X * 2 * sizeof(ptr_temp[0])
+    __local char shared[
+        (NNEDI_BLOCK_X + nnx) * (NNEDI_BLOCK_Y * thread_y_loop + nny) * sizeof(TypeCalc) + //src 計算用
+        (nny + NNEDI_BLOCK_Y * thread_y_loop) * NNEDI_BLOCK_X * 2 * sizeof(TypeCalc) //tmp (計算結果の一時保管用)
+    ];
     __local TypeCalc *const ptr_src = (__local TypeCalc *)shared;
     const int ssrc_dim = NNEDI_BLOCK_X + nnx;
 

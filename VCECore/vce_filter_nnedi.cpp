@@ -144,13 +144,6 @@ RGY_ERR nnedi_compute_network_1(
         pOutputFrame->width,
         divCeil(pOutputFrame->height >> 1, THREAD_Y_LOOP_K1));
 
-    const int sizeofTypeCalc = precision == VPP_FP_PRECISION_FP32 ? 4 : 2;
-    const int nnx = RGYFilterNnedi::sizeNX[nsize];
-    const int nny = RGYFilterNnedi::sizeNY[nsize];
-    RGYOpenCLKernelDynamicLocal shared_mem_size(
-        (NNEDI_BLOCK_X + nnx) * (NNEDI_BLOCK_Y * THREAD_Y_LOOP_K1 + nny) * sizeofTypeCalc + //src
-        (NNEDI_BLOCK_Y * THREAD_Y_LOOP_K1 + nny) * NNEDI_BLOCK_X * 2 * sizeofTypeCalc); //temp
-
     const char *kernel_name = "kernel_compute_network1";
     auto err = nnedi_k1->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
         (cl_mem)pOutputFrame->ptr[0],
@@ -164,8 +157,7 @@ RGY_ERR nnedi_compute_network_1(
         pInputPlane->width,
         pInputPlane->height,
         weight10->mem(), weight11->mem(),
-        (int)quality, (int)targetField, (int)pre_screen,
-        shared_mem_size);
+        (int)quality, (int)targetField, (int)pre_screen);
     return err;
 }
 
