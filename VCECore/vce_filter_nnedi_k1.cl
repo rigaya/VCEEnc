@@ -245,8 +245,8 @@ void dot_product_frame1_fp32(
                 const TypeCalc w1 = ptr_w[1];
                 #pragma unroll
                 for (int ithy = 0; ithy < thread_y_loop; ithy++) {
-                    sum0[i][ithy] += s0[ithy] * w0;
-                    sum1[i][ithy] += s0[ithy] * w1;
+                    sum0[ithy][i] += s0[ithy] * w0;
+                    sum1[ithy][i] += s0[ithy] * w1;
                 }
             }
 #endif
