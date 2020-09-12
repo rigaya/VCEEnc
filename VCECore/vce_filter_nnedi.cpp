@@ -270,12 +270,6 @@ RGY_ERR RGYFilterNnedi::checkParam(const std::shared_ptr<RGYFilterParamNnedi> pr
         AddMessage(RGY_LOG_ERROR, _T("invalid value for param \"prec\": %d\n"), prm->nnedi.precision);
         return RGY_ERR_INVALID_PARAM;
     }
-#if !ENABLE_CUDA_FP16_HOST
-    if (prm->nnedi.precision == VPP_FP_PRECISION_FP16) {
-        AddMessage(RGY_LOG_WARN, _T("prec=fp16 not compiled in this build, switching to fp32.\n"));
-        prm->nnedi.precision = VPP_FP_PRECISION_FP32;
-    }
-#endif
     return RGY_ERR_NONE;
 }
 
