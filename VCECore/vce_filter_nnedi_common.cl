@@ -6,22 +6,15 @@
 
 #define NNEDI_GEN_FIELD_TOP    (0)
 #define NNEDI_GEN_FIELD_BOTTOM (1)
-#define VPP_NNEDI_PRE_SCREEN_MODE (0x07)
 
-float exp_(float val) {
-    return native_exp(clamp(val, -80.0f, 80.0f));
-}
+#define VPP_NNEDI_PRE_SCREEN_NONE            (0x00)
+#define VPP_NNEDI_PRE_SCREEN_ORIGINAL        (0x01)
+#define VPP_NNEDI_PRE_SCREEN_NEW             (0x02)
+#define VPP_NNEDI_PRE_SCREEN_MODE            (0x07)
+#define VPP_NNEDI_PRE_SCREEN_BLOCK           (0x10)
+#define VPP_NNEDI_PRE_SCREEN_ONLY            (0x20)
 
-//dot_product1で重み(nns)方向のループアンロールを行う
-//これにより、一度sharedメモリからレジスタにのせたpixel情報を使いまわすことができる
-#define ENABLE_DP1_WEIGHT_LOOP_UNROLL 1
-
-//ENABLE_DP1_WEIGHT_LOOP_UNROLLに対応して通常の重みの並び [nns*2][nnxy]を変更する
-//並びは[nns/WEIGHT_LOOP][nnxy][WEIGHT_LOOP][2]
-#define ENABLE_DP1_WEIGHT_ARRAY_OPT (1 && ENABLE_DP1_WEIGHT_LOOP_UNROLL)
-
-//shuffle命令を使ったweight係数の分配により高速化する
-#define ENABLE_DP1_SHUFFLE_OPT 1
+#define RGY_FLT_EPS (1e-6f)
 
 #define SSRC(x,y) ((y)*(ssrc_dim)+(x))
 #define SPIX(x,y) ((y)*(spix_dim)+(x))
@@ -30,6 +23,13 @@ float exp_(float val) {
 #ifndef clamp
 #define clamp(x, low, high) (((x) <= (high)) ? (((x) >= (low)) ? (x) : (low)) : (high))
 #endif
+#ifndef wrap
+#define wrap(x, low, high) (((x) < (low)) ? (((low)<<1)-(x)) : (((x) >= (high)) ? (((high)<<1) - (x)) : (x)))
+#endif
+
+float exp_(float val) {
+    return native_exp(clamp(val, -80.0f, 80.0f));
+}
 
 #if USE_FP16
 half2 elliott(half2 val) {
@@ -46,10 +46,10 @@ float load_pix(__global uchar *__restrict__ pIn,
     const int inWidth,
     const int inHeight,
     const int x, const int y) {
-    const int ix = clamp(x, 0, inWidth);
-    const int iy = clamp(y, 0, inHeight);
+    const int ix = wrap(x, 0, inWidth-1);
+    const int iy = wrap(y, 0, (inHeight>>1)-1); //高さは半分なので÷2
     TypePixel p = *(__global TypePixel*)(pIn + iy * inPitch + ix * sizeof(TypePixel));
-    return p * (1.0f / ((1<<(sizeof(TypePixel)*8))-1.0f));
+    return (float)p * (1.0f / ((float)(1<<(sizeof(TypePixel)*8))));
 }
 
 #if USE_FP16
@@ -67,8 +67,8 @@ void load_texSrc(
         // | 0, 1 | 1, 2 | 2, 3 | 3, 4 | 4, 5 | ...
         for (int y = 0; y + thIdY < NNEDI_BLOCK_Y * thread_y_loop + nny_load; y += NNEDI_BLOCK_Y) {
             for (int x = 0; x + thIdX < ssrc_dim; x += NNEDI_BLOCK_X) {
-                const float px = get_group_id(0) * NNEDI_BLOCK_X /*blockDim.x*/ + thIdX + x - nnx_2_m1 + 0.5f;
-                const float py = get_group_id(1) * NNEDI_BLOCK_Y /*blockDim.y*/ * thread_y_loop + thIdY + y - nny_2 + 0.5f;
+                const int px = get_group_id(0) * NNEDI_BLOCK_X /*blockDim.x*/ + thIdX + x - nnx_2_m1;
+                const int py = get_group_id(1) * NNEDI_BLOCK_Y /*blockDim.y*/ * thread_y_loop + thIdY + y - nny_2;
                 const float v0 = load_pix(pIn, inPitch, inWidth, inHeight, px+0, py);
                 const float v1 = load_pix(pIn, inPitch, inWidth, inHeight, px+1, py);
                 ptr_src[SSRC(x + thIdX, y + thIdY)] = (half2)(v0, v1); //half2のときはここでは256倍せず、0～1の範囲を使用する
@@ -83,8 +83,8 @@ void load_texSrc(
         for (int y = 0; y + thIdY < NNEDI_BLOCK_Y * thread_y_loop + nny_load; y += NNEDI_BLOCK_Y) {
             for (int x = 0; x + thIdX < ssrc_dim; x += NNEDI_BLOCK_X) {
                 const int load_x = (thIdX + x) * 2 - nnx_2_m1;
-                const float px = get_group_id(0) * NNEDI_BLOCK_X /*blockDim.x*/ * pix_x_per_thread + load_x + 0.5f;
-                const float py = get_group_id(1) * NNEDI_BLOCK_Y /*blockDim.y*/ * thread_y_loop + thIdY + y - nny_2 + 0.5f;
+                const int px = get_group_id(0) * NNEDI_BLOCK_X /*blockDim.x*/ * pix_x_per_thread + load_x;
+                const int py = get_group_id(1) * NNEDI_BLOCK_Y /*blockDim.y*/ * thread_y_loop + thIdY + y - nny_2;
                 const float v0 = load_pix(pIn, inPitch, inWidth, inHeight, px+0, py);
                 const float v1 = load_pix(pIn, inPitch, inWidth, inHeight, px+1, py);
                 ptr_src[SSRC(x + thIdX, y + thIdY)] = (half2)(v0, v1); //half2のときはここでは256倍せず、0～1の範囲を使用する
@@ -110,8 +110,8 @@ void load_texSrc(
     const int thIdX, const int thIdY) {
     for (int y = 0; y + thIdY < NNEDI_BLOCK_Y * thread_y_loop + nny_load; y += NNEDI_BLOCK_Y) {
         for (int x = 0; x + thIdX < ssrc_dim; x += NNEDI_BLOCK_X) {
-            const float px = get_group_id(0) * NNEDI_BLOCK_X /*blockDim.x*/ * pix_x_per_thread + thIdX + x - nnx_2_m1 + 0.5f;
-            const float py = get_group_id(1) * NNEDI_BLOCK_Y /*blockDim.y*/ * thread_y_loop + thIdY + y - nny_2 + 0.5f;
+            const int px = get_group_id(0) * NNEDI_BLOCK_X /*blockDim.x*/ * pix_x_per_thread + thIdX + x - nnx_2_m1;
+            const int py = get_group_id(1) * NNEDI_BLOCK_Y /*blockDim.y*/ * thread_y_loop + thIdY + y - nny_2;
             const float value = load_pix(pIn, inPitch, inWidth, inHeight, px, py);
             ptr_src[SSRC(x + thIdX, y + thIdY)] = value * 256.0f; //floatのときはここで256倍して8bit相当に戻す
             if (load_for_interp && 0 <= thIdX + x - nnx_2_m1 && thIdX + x - nnx_2_m1 < spix_dim) {

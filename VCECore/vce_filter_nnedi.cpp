@@ -36,7 +36,16 @@
 #include <cmath>
 #include "vce_filter_nnedi.h"
 
-#define ENABLE_CUDA_FP16_HOST 1
+//dot_product1で重み(nns)方向のループアンロールを行う
+//これにより、一度sharedメモリからレジスタにのせたpixel情報を使いまわすことができる
+#define ENABLE_DP1_WEIGHT_LOOP_UNROLL 1
+
+//ENABLE_DP1_WEIGHT_LOOP_UNROLLに対応して通常の重みの並び [nns*2][nnxy]を変更する
+//並びは[nns/WEIGHT_LOOP][nnxy][WEIGHT_LOOP][2]
+#define ENABLE_DP1_WEIGHT_ARRAY_OPT (1 && ENABLE_DP1_WEIGHT_LOOP_UNROLL)
+
+//shuffle命令を使ったweight係数の分配により高速化する
+#define ENABLE_DP1_SHUFFLE_OPT 1
 
 static const int THREAD_Y_LOOP_K0 = 2;
 static const int THREAD_Y_LOOP_K1 = 4;
@@ -72,14 +81,14 @@ RGY_ERR nnedi_compute_network_0(FrameInfo *pOutputPlane,
             pOutputPlane->pitch[0] * (targetField == NNEDI_GEN_FIELD_TOP ? 0 : 1), //生成するほうのフィールドを選択
             pOutputPlane->pitch[0] * 2,  //1行おきなので通常の2倍
             pOutputPlane->width,
-            pOutputPlane->height >> 1,
+            pOutputPlane->height,
             (cl_mem)pInputPlane->ptr[0],  //有効フィールド
             pInputPlane->pitch[0] * (targetField == NNEDI_GEN_FIELD_TOP ? 1 : 0), //元となるほうのフィールドを選択
             pInputPlane->pitch[0] * 2,  //1行おきなので通常の2倍
             pInputPlane->width,
-            pInputPlane->height >> 1,
+            pInputPlane->height,
             weight0->mem(),
-            targetField);
+            (int)targetField);
     } else if ((pre_screen & VPP_NNEDI_PRE_SCREEN_MODE) >= VPP_NNEDI_PRE_SCREEN_NEW) {
         RGYWorkSize global(
             divCeil(pOutputPlane->width, 4 /*4ピクセル分一度に処理する*/),
@@ -90,14 +99,14 @@ RGY_ERR nnedi_compute_network_0(FrameInfo *pOutputPlane,
             pOutputPlane->pitch[0] * (targetField == NNEDI_GEN_FIELD_TOP ? 0 : 1), //生成するほうのフィールドを選択
             pOutputPlane->pitch[0] * 2,  //1行おきなので通常の2倍
             pOutputPlane->width,
-            pOutputPlane->height >> 1,
+            pOutputPlane->height,
             (cl_mem)pInputPlane->ptr[0],  //有効フィールド
             pInputPlane->pitch[0] * (targetField == NNEDI_GEN_FIELD_TOP ? 1 : 0), //元となるほうのフィールドを選択
             pInputPlane->pitch[0] * 2,  //1行おきなので通常の2倍
             pInputPlane->width,
-            pInputPlane->height >> 1,
+            pInputPlane->height,
             weight0->mem(),
-            targetField);
+            (int)targetField);
     } else {
         auto outputField = *pOutputPlane;
         outputField.pitch[0] <<= 1;
@@ -120,6 +129,7 @@ RGY_ERR nnedi_compute_network_1(
     const int nns,
     const VppNnediQuality quality,
     const VppNnediPreScreen pre_screen,
+    const VppFpPrecision precision,
     RGYOpenCLQueue &queue,
     RGYOpenCLProgram *nnedi_k1,
     const std::vector<RGYOpenCLEvent> &wait_events,
@@ -134,12 +144,12 @@ RGY_ERR nnedi_compute_network_1(
         pOutputFrame->width,
         divCeil(pOutputFrame->height >> 1, THREAD_Y_LOOP_K1));
 
-    const int pix_size = RGY_CSP_BIT_DEPTH[pOutputFrame->csp] > 8 ? 2 : 1;
+    const int sizeofTypeCalc = precision == VPP_FP_PRECISION_FP32 ? 4 : 2;
     const int nnx = RGYFilterNnedi::sizeNX[nsize];
     const int nny = RGYFilterNnedi::sizeNY[nsize];
-    const size_t shared_mem_size =
-        (NNEDI_BLOCK_X + nnx) * (NNEDI_BLOCK_Y * THREAD_Y_LOOP_K1 + nny) * pix_size + //src
-        (NNEDI_BLOCK_Y * THREAD_Y_LOOP_K1 + nny) * NNEDI_BLOCK_X * 2 * pix_size; //temp
+    RGYOpenCLKernelDynamicLocal shared_mem_size(
+        (NNEDI_BLOCK_X + nnx) * (NNEDI_BLOCK_Y * THREAD_Y_LOOP_K1 + nny) * sizeofTypeCalc + //src
+        (NNEDI_BLOCK_Y * THREAD_Y_LOOP_K1 + nny) * NNEDI_BLOCK_X * 2 * sizeofTypeCalc); //temp
 
     const char *kernel_name = "kernel_compute_network1";
     auto err = nnedi_k1->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
@@ -147,14 +157,14 @@ RGY_ERR nnedi_compute_network_1(
         pOutputFrame->pitch[0] * ((targetField == NNEDI_GEN_FIELD_TOP) ? 0 : 1), //生成するほうのフィールドを選択
         pOutputFrame->pitch[0] * 2, //1行おきなので通常の2倍
         pOutputFrame->width,
-        pOutputFrame->height >> 1,
+        pOutputFrame->height,
         (cl_mem)pInputPlane->ptr[0],  //有効フィールド
         pInputPlane->pitch[0] * (targetField == NNEDI_GEN_FIELD_TOP ? 1 : 0), //元となるほうのフィールドを選択
         pInputPlane->pitch[0] * 2,  //1行おきなので通常の2倍
         pInputPlane->width,
-        pInputPlane->height >> 1,
+        pInputPlane->height,
         weight10->mem(), weight11->mem(),
-        nns, (int)quality, targetField, pre_screen,
+        (int)quality, (int)targetField, (int)pre_screen,
         shared_mem_size);
     return err;
 }
@@ -198,6 +208,7 @@ RGY_ERR RGYFilterNnedi::procPlane(
             prm->nnedi.nns,
             prm->nnedi.quality,
             (prm->nnedi.pre_screen & (VPP_NNEDI_PRE_SCREEN_MODE | VPP_NNEDI_PRE_SCREEN_BLOCK)),
+            prm->nnedi.precision,
             queue, m_nnedi_k1.get(), {}, event);
         if (err != RGY_ERR_NONE) {
             return err;
@@ -218,7 +229,7 @@ RGY_ERR RGYFilterNnedi::procFrame(FrameInfo *pOutputFrame, const FrameInfo *pInp
         RGYOpenCLEvent *plane_event = (i == RGY_CSP_PLANES[pOutputFrame->csp] - 1) ? event : nullptr;
         auto err = procPlane(&planeDst, &planeSrc, targetField, queue, plane_wait_event, plane_event);
         if (err != RGY_ERR_NONE) {
-            m_pLog->write(RGY_LOG_ERROR, _T("Failed to denoise(nnedi) frame(%d) %s: %s\n"), i, cl_errmes(err));
+            m_pLog->write(RGY_LOG_ERROR, _T("Failed to nnedi frame(%d) %s: %s\n"), i, cl_errmes(err));
             return err_cl_to_rgy(err);
         }
     }
@@ -647,9 +658,11 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
             const int nnxy = nnx * nny;
             const int nns = 4 / wstep; //half2の場合、nns方向を2つ格納できる
             nnedi_k0_cl = str_replace(nnedi_k0_cl, "#include \"vce_filter_nnedi_common.cl\"", nnedi_common_cl);
-            const auto options = strsprintf("-D TypePixel=%s -D TypePixel2=%s -D TypePixel4=%s -D bit_depth=%d -D TypeCalc=%s -D USE_FP16=%d "
+            const auto options = strsprintf("-cl-std=CL2.0 " //sub_group_broadcastに必要
+                "-D TypePixel=%s -D TypePixel2=%s -D TypePixel4=%s -D bit_depth=%d -D TypeCalc=%s -D USE_FP16=%d "
                 "-D nnx=%d -D nny=%d -D nnxy=%d -D nns=%d "
-                "-D thread_y_loop=%d -D weight_loop=%d -D prescreen_new=%d",
+                "-D thread_y_loop=%d -D weight_loop=%d -D prescreen_new=%d "
+                "-D ENABLE_DP1_WEIGHT_LOOP_UNROLL=%d -D ENABLE_DP1_WEIGHT_ARRAY_OPT=%d -D ENABLE_DP1_SHUFFLE_OPT=%d",
                 RGY_CSP_BIT_DEPTH[prm->frameOut.csp] > 8 ? "ushort" : "uchar",
                 RGY_CSP_BIT_DEPTH[prm->frameOut.csp] > 8 ? "ushort2" : "uchar2",
                 RGY_CSP_BIT_DEPTH[prm->frameOut.csp] > 8 ? "ushort4" : "uchar4",
@@ -659,7 +672,10 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
                 nnx, nny, nnx * nny, nns,
                 THREAD_Y_LOOP_K0,
                 weight_loop_0,
-                prescreen_new
+                prescreen_new,
+                ENABLE_DP1_WEIGHT_LOOP_UNROLL ? 1 : 0,
+                ENABLE_DP1_WEIGHT_ARRAY_OPT ? 1 : 0,
+                ENABLE_DP1_SHUFFLE_OPT ? 1 : 0
                 );
             m_nnedi_k0 = m_cl->build(nnedi_k0_cl, options.c_str());
             if (!m_nnedi_k0) {
@@ -675,9 +691,11 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
                 return RGY_ERR_UNKNOWN;
             }
             nnedi_k1_cl = str_replace(nnedi_k1_cl, "#include \"vce_filter_nnedi_common.cl\"", nnedi_common_cl);
-            const auto options = strsprintf("-D TypePixel=%s -D TypePixel2=%s -D TypePixel4=%s -D bit_depth=%d -D TypeCalc=%s -D USE_FP16=%d "
-                "-D nnx=%d -D nny=%d -D=nnxy=%d -D nns=%d "
-                "-D thread_y_loop=%d -D weight_loop=%d -D prescreen_new=%d ",
+            const auto options = strsprintf("-cl-std=CL2.0 " //sub_group_broadcastに必要
+                "-D TypePixel=%s -D TypePixel2=%s -D TypePixel4=%s -D bit_depth=%d -D TypeCalc=%s -D USE_FP16=%d "
+                "-D nnx=%d -D nny=%d -D nnxy=%d -D nns=%d "
+                "-D thread_y_loop=%d -D weight_loop=%d -D prescreen_new=%d "
+                "-D ENABLE_DP1_WEIGHT_LOOP_UNROLL=%d -D ENABLE_DP1_WEIGHT_ARRAY_OPT=%d -D ENABLE_DP1_SHUFFLE_OPT=%d",
                 RGY_CSP_BIT_DEPTH[prm->frameOut.csp] > 8 ? "ushort"  : "uchar",
                 RGY_CSP_BIT_DEPTH[prm->frameOut.csp] > 8 ? "ushort2" : "uchar2",
                 RGY_CSP_BIT_DEPTH[prm->frameOut.csp] > 8 ? "ushort4" : "uchar4",
@@ -687,7 +705,10 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
                 sizeNX[prm->nnedi.nsize], sizeNY[prm->nnedi.nsize], sizeNX[prm->nnedi.nsize] * sizeNY[prm->nnedi.nsize], prm->nnedi.nns,
                 THREAD_Y_LOOP_K1,
                 weight_loop_1,
-                prescreen_new
+                prescreen_new,
+                ENABLE_DP1_WEIGHT_LOOP_UNROLL ? 1 : 0,
+                ENABLE_DP1_WEIGHT_ARRAY_OPT ? 1 : 0,
+                ENABLE_DP1_SHUFFLE_OPT ? 1 : 0
                 );
             m_nnedi_k1 = m_cl->build(nnedi_k1_cl, options.c_str());
             if (!m_nnedi_k1) {

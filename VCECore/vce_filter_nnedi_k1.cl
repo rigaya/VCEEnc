@@ -28,10 +28,8 @@ void kernel_comute_network1_calc_scale(
     float mstd[thread_y_loop][4],
     __local TypeCalc *__restrict__ const ptr_temp,
     const __local TypeCalc *__restrict__ const ptr_src, const int ssrc_dim,
-    const int nnx, const int nny, const int nnxy,
-    const int thIdX, const int thIdY,
-    const int thread_y_loop) {
-    const int step = kernel_comute_network1_calc_scale_step_TypeCalc;
+    const int thIdX, const int thIdY) {
+    const int step = kernel_comute_network1_calc_scale_step_TypeCalc();
 #define TMP_IDX(x,y,i) ((((i)*(nny + NNEDI_BLOCK_Y * thread_y_loop)+(y))*NNEDI_BLOCK_X)+(x))
     for (int y = 0; y + thIdY < nny + NNEDI_BLOCK_Y * thread_y_loop; y += NNEDI_BLOCK_Y) {
         TypeCalc sum = (TypeCalc)(0.0f), sumsq = (TypeCalc)(0.0f);
@@ -48,7 +46,7 @@ void kernel_comute_network1_calc_scale(
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    const float inv_nnxy = native_recip(nnxy);
+    const float inv_nnxy = 1.0f / nnxy;
 
     //次にy方向の総和をとる
     #pragma unroll
@@ -84,7 +82,7 @@ void dot_product_frame1_fp16(
     __local half2 *__restrict__ const ptr_src, const int ssrc_dim,
     const __global half2 *__restrict__ const ptr_weight, const int sweight_dim,
     const __global half2 *__restrict__ weight_offset,
-    const int nnx, const int nny, const int nns, const int thIdX, const int thIdY,
+    const int thIdX, const int thIdY,
     const half2 weight_scale[thread_y_loop]
 ) {
     #pragma unroll
@@ -150,7 +148,6 @@ void kernel_comute_network1_dot_product(
     half2 *const ptr_src, const int ssrc_dim,
     const half2 *const weight,
     float mstd[thread_y_loop][4],
-    const int nnx, const int nny, const int nnxy, const int nns,
     const int thIdX, const int thIdY) {
     //未実装
     assert(false);
@@ -162,7 +159,6 @@ void kernel_comute_network1_dot_product_opt(
     __local half2 *const ptr_src, const int ssrc_dim,
     const __global half2 *const weight,
     float mstd[thread_y_loop][4],
-    const int nnx, const int nny, const int nnxy, const int nns,
     const int thIdX, const int thIdY) {
     //[iw]と[iw+nns]の重みが隣り合って_half2に入るので、half2としてはnnxyのまま
     const int sweight_dim = nnxy;
@@ -177,7 +173,7 @@ void kernel_comute_network1_dot_product_opt(
             weight_scale[ithy] = (half2)(mstd[ithy][2]);
         }
         dot_product_frame1_fp16(
-            sum, ptr_src, ssrc_dim, weight+iw*sweight_dim, sweight_dim, weight + nns*nnxy + iw, nnx, nny, nns, thIdX, thIdY, weight_scale);
+            sum, ptr_src, ssrc_dim, weight+iw*sweight_dim, sweight_dim, weight + nns*nnxy + iw, thIdX, thIdY, weight_scale);
         #pragma unroll
         for (int ithy = 0; ithy < thread_y_loop; ithy++) {
             #pragma unroll
@@ -198,7 +194,7 @@ void dot_product_frame1_fp32(
     __local TypeCalc *__restrict__ const ptr_src, const int ssrc_dim,
     const __global TypeCalc *__restrict__ const ptr_weight, const int sweight_dim,
     const __global TypeCalc *__restrict__ weight_offset,
-    const int nnx, const int nny, const int nns, const int thIdX, const int thIdY,
+    const int thIdX, const int thIdY,
     const float mstd[thread_y_loop][4]
 ) {
     #pragma unroll
@@ -255,28 +251,28 @@ void dot_product_frame1_fp32(
             }
 #endif
         }
-    }
 #else
-    #pragma unroll (4)
-    for (int x = 0; x < nnx; x++, ptr_w++, ptr_s++) {
-        //このsharedメモリからロードしたpixelデータをレジスタ上で使いまわすのが重要
-        TypePixel s0[thread_y_loop];
-        #pragma unroll
-        for (int ithy = 0; ithy < thread_y_loop; ithy++) {
-            s0[ithy] = ptr_s[SSRC(0, ithy*NNEDI_BLOCK_Y)];
-        }
-        #pragma unroll
-        for (int i = 0; i < weight_loop; i++) {
-            TypeCalc w0 = ptr_w[SWHT_IDX(0, i)];
-            TypeCalc w1 = ptr_w[SWHT_IDX(0, i+nns)];
+        #pragma unroll (4)
+        for (int x = 0; x < nnx; x++, ptr_w++, ptr_s++) {
+            //このsharedメモリからロードしたpixelデータをレジスタ上で使いまわすのが重要
+            TypePixel s0[thread_y_loop];
             #pragma unroll
             for (int ithy = 0; ithy < thread_y_loop; ithy++) {
-                sum0[i][ithy] += s0[ithy] * w0;
-                sum1[i][ithy] += s0[ithy] * w1;
+                s0[ithy] = ptr_s[SSRC(0, ithy*NNEDI_BLOCK_Y)];
+            }
+            #pragma unroll
+            for (int i = 0; i < weight_loop; i++) {
+                TypeCalc w0 = ptr_w[SWHT_IDX(0, i)];
+                TypeCalc w1 = ptr_w[SWHT_IDX(0, i+nns)];
+                #pragma unroll
+                for (int ithy = 0; ithy < thread_y_loop; ithy++) {
+                    sum0[i][ithy] += s0[ithy] * w0;
+                    sum1[i][ithy] += s0[ithy] * w1;
+                }
             }
         }
-    }
 #endif
+    }
 #if ENABLE_DP1_WEIGHT_ARRAY_OPT
     #pragma unroll
     for (int i = 0; i < weight_loop; i++, weight_offset += 2) {
@@ -305,7 +301,6 @@ void kernel_comute_network1_dot_product(
     __local float *const ptr_src, const int ssrc_dim,
     const __global float *const weight,
     float mstd[thread_y_loop][4],
-    const int nnx, const int nny, const int nnxy, const int nns,
     const int thIdX, const int thIdY) {
     const int sweight_dim = (ENABLE_DP1_WEIGHT_ARRAY_OPT) ? 2 * nnxy : nnxy;
     for (int iw = 0; iw < nns; iw += weight_loop) {
@@ -322,7 +317,7 @@ void kernel_comute_network1_dot_product(
                 float ret0 = exp_(sum0[ithy][ithw]);
                 float ret1 = sum1[ithy][ithw];
                 wsum[ithy] += ret0;
-                vsum[ithy] += ret0 * (ret1 * native_recip(1.0f + abs(ret1)));
+                vsum[ithy] += ret0 * (ret1 * native_recip(1.0f + fabs(ret1)));
             }
         }
     }
@@ -334,7 +329,6 @@ void kernel_comute_network1_dot_product_opt(
     __local float *const ptr_src, const int ssrc_dim,
     const __global float *const weight,
     float mstd[thread_y_loop][4],
-    const int nnx, const int nny, const int nnxy, const int nns,
     const int thIdX, const int thIdY) {
     //ENABLE_DP1_WEIGHT_ARRAY_OPTが有効の場合、
     //[iw]と[iw+nns]の重みが隣り合って並んでいるので、sweight_dimは2倍
@@ -346,7 +340,7 @@ void kernel_comute_network1_dot_product_opt(
         // sum0[i] <- iw     - iw+weight_loop
         // sum1[i] <- iw+nns - iw+weight_loop+nns
         dot_product_frame1_fp32(
-            sum0, sum1, ptr_src, ssrc_dim, weight+iw*sweight_dim, sweight_dim, weight + (nns*2)*nnxy + iw*2, nnx, nny, nns, thIdX, thIdY, mstd);
+            sum0, sum1, ptr_src, ssrc_dim, weight+iw*sweight_dim, sweight_dim, weight + (nns*2)*nnxy + iw*2, thIdX, thIdY, mstd);
         #pragma unroll
         for (int ithy = 0; ithy < thread_y_loop; ithy++) {
             #pragma unroll
@@ -354,14 +348,14 @@ void kernel_comute_network1_dot_product_opt(
                 float ret0 = exp_(sum0[ithy][ithw]); // iw     - iw+weight_loop     の計算結果
                 float ret1 = sum1[ithy][ithw];       // iw+nns - iw+weight_loop+nns の計算結果
                 wsum[ithy] += ret0;
-                vsum[ithy] += ret0 * (ret1 * native_recip(1.0f + abs(ret1)));
+                vsum[ithy] += ret0 * (ret1 * native_recip(1.0f + fabs(ret1)));
             }
         }
     }
 }
 #endif //#if USE_FP16
 
-__kernel void kernel_comute_network1(
+__kernel void kernel_compute_network1(
     __global uchar *__restrict__ pDst, //top field / bottom field は考慮済みとする
     const int dstOffset,
     const int dstPitch, //1行おきなので通常の2倍の値が入っている
@@ -374,7 +368,6 @@ __kernel void kernel_comute_network1(
     const int inHeight,
     const __global TypeCalc *__restrict__ weight10,
     const __global TypeCalc *__restrict__ weight11,
-    const int nns,  // len = nns*2
     const int quals,
     const int targetField,
     const int prescreen,
@@ -399,14 +392,14 @@ __kernel void kernel_comute_network1(
     //範囲外の折り返し等はtextureでやってくれるのでここでは無視
     const int nnx_2_m1 = nnx / 2 - 1;
     const int nny_2 = nny / 2 - (targetField == NNEDI_GEN_FIELD_BOTTOM ? 1 : 0);
-    load_texSrc(1, false, ptr_src, ssrc_dim, nullptr, 0, pIn, inPitch, inWidth, inHeight, nnx, nny, nnx_2_m1, nny_2, thIdX, thIdY);
+    load_texSrc(1, false, ptr_src, ssrc_dim, NULL, 0, pIn, inPitch, inWidth, inHeight, nnx, nny, nnx_2_m1, nny_2, thIdX, thIdY);
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    __local TypeCalc *const ptr_temp = (__local TypeCalc *)((char *)shared
+    __local TypeCalc *const ptr_temp = (__local TypeCalc *)((__local char *)shared
         + (NNEDI_BLOCK_X + nnx) * (NNEDI_BLOCK_Y * thread_y_loop + nny) * sizeof(ptr_src[0]));
 
     float mstd[thread_y_loop][4];
-    kernel_comute_network1_calc_scale(mstd, ptr_temp, ptr_src, ssrc_dim, nnx, nny, nnxy, thIdX, thIdY, thread_y_loop);
+    kernel_comute_network1_calc_scale(mstd, ptr_temp, ptr_src, ssrc_dim, thIdX, thIdY);
 
     __global uchar *const ptr_dst_base = (__global uchar *)pDst + gIdY * dstPitch + gIdX * sizeof(TypePixel);
     uint flag_sum = 0xffffffff; //処理するかどうかのフラグ
@@ -466,10 +459,10 @@ NNEDI_BLOCK_X   |                  |  |    | <-- 各スレッドはこの出力�
             }
             if (ENABLE_DP1_WEIGHT_LOOP_UNROLL) {
                 kernel_comute_network1_dot_product_opt(
-                    wsum, vsum, ptr_src, ssrc_dim, weight, mstd, nnx, nny, nnxy, nns, thIdX, thIdY);
+                    wsum, vsum, ptr_src, ssrc_dim, weight, mstd, thIdX, thIdY);
             } else {
                 kernel_comute_network1_dot_product(
-                    wsum, vsum, ptr_src, ssrc_dim, weight, mstd, nnx, nny, nnxy, nns, thIdX, thIdY);
+                    wsum, vsum, ptr_src, ssrc_dim, weight, mstd, thIdX, thIdY);
             }
 
             const float min_weight_sum = 1e-10f;

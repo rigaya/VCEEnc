@@ -573,13 +573,23 @@ RGYOpenCLKernelLauncher::RGYOpenCLKernelLauncher(cl_kernel kernel, std::string k
     m_kernel(kernel), m_kernelName(kernelName), m_queue(queue), m_local(local), m_global(global), m_pLog(pLog), m_wait_events(toVec(wait_events)), m_event(event) {
 }
 
-RGY_ERR RGYOpenCLKernelLauncher::launch(std::vector<void *> arg_ptrs, std::vector<size_t> arg_size) {
+RGY_ERR RGYOpenCLKernelLauncher::launch(std::vector<void *> arg_ptrs, std::vector<size_t> arg_size, std::vector<std::type_index> arg_type) {
     assert(arg_ptrs.size() == arg_size.size());
+    assert(arg_ptrs.size() == arg_type.size());
     for (int i = 0; i < (int)arg_ptrs.size(); i++) {
-        auto err = err_cl_to_rgy(clSetKernelArg(m_kernel, i, arg_size[i], arg_ptrs[i]));
-        if (err != CL_SUCCESS) {
-            m_pLog->write(RGY_LOG_ERROR, _T("Error: Failed to set #%d arg to kernel \"%s\": %s\n"), i, char_to_tstring(m_kernelName).c_str(), cl_errmes(err));
-            return err;
+        if (arg_type[i] == typeid(RGYOpenCLKernelDynamicLocal)) {
+            auto ptr = reinterpret_cast<RGYOpenCLKernelDynamicLocal *>(arg_ptrs[i]);
+            auto err = err_cl_to_rgy(clSetKernelArg(m_kernel, i, ptr->size(), nullptr));
+            if (err != CL_SUCCESS) {
+                m_pLog->write(RGY_LOG_ERROR, _T("Error: Failed to set #%d arg (local array size: %d) to kernel \"%s\": %s\n"), i, ptr->size(), char_to_tstring(m_kernelName).c_str(), cl_errmes(err));
+                return err;
+            }
+        } else {
+            auto err = err_cl_to_rgy(clSetKernelArg(m_kernel, i, arg_size[i], arg_ptrs[i]));
+            if (err != CL_SUCCESS) {
+                m_pLog->write(RGY_LOG_ERROR, _T("Error: Failed to set #%d arg to kernel \"%s\": %s\n"), i, char_to_tstring(m_kernelName).c_str(), cl_errmes(err));
+                return err;
+            }
         }
     }
     auto globalCeiled = m_global.ceilGlobal(m_local);
@@ -732,6 +742,8 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDstOrg, const FrameInfo *pla
     if (copyMode != RGYFrameCopyMode::FRAME) {
         planeDst.pitch[0] <<= 1;
         planeDst.height >>= 1;
+        planeSrc.pitch[0] <<= 1;
+        planeSrc.height >>= 1;
     }
     size_t dst_origin[3] = { (copyMode == RGYFrameCopyMode::FIELD_BOTTOM) ? (size_t)planeDstOrg->pitch[0] : 0, 0, 0 };
     size_t src_origin[3] = { (copyMode == RGYFrameCopyMode::FIELD_BOTTOM) ? (size_t)planeSrcOrg->pitch[0] : 0, 0, 0 };

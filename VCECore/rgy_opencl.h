@@ -41,6 +41,7 @@
 #include <vector>
 #include <array>
 #include <memory>
+#include <typeindex>
 #include "rgy_osdep.h"
 #include "rgy_log.h"
 #include "rgy_util.h"
@@ -463,12 +464,21 @@ struct RGYWorkSize {
     }
 };
 
+class RGYOpenCLKernelDynamicLocal {
+protected:
+    size_t size_;
+public:
+    RGYOpenCLKernelDynamicLocal(size_t size) : size_(size) {};
+    ~RGYOpenCLKernelDynamicLocal() {};
+    size_t size() const { return size_; }
+};
+
 class RGYOpenCLKernelLauncher {
 public:
     RGYOpenCLKernelLauncher(cl_kernel kernel, std::string kernelName, cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, shared_ptr<RGYLog> pLog, const std::vector<RGYOpenCLEvent>& wait_events, RGYOpenCLEvent *event);
     virtual ~RGYOpenCLKernelLauncher() {};
 
-    RGY_ERR launch(std::vector<void *> arg_ptrs = std::vector<void *>(), std::vector<size_t> arg_size = std::vector<size_t>());
+    RGY_ERR launch(std::vector<void *> arg_ptrs = std::vector<void *>(), std::vector<size_t> arg_size = std::vector<size_t>(), std::vector<std::type_index> = std::vector<std::type_index>());
 
     template <typename... ArgTypes>
     RGY_ERR operator()(ArgTypes... args) {
@@ -478,7 +488,8 @@ public:
     RGY_ERR launch(ArgTypes... args) {
         return this->launch(
             std::vector<void *>({ (void *)&args... }),
-            std::vector<size_t>({ sizeof(args)... })
+            std::vector<size_t>({ sizeof(args)... }),
+            std::vector<std::type_index>({ typeid(args)... })
         );
     }
 protected:

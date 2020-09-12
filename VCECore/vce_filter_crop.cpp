@@ -164,7 +164,7 @@ RGY_ERR RGYFilterCspCrop::convertCspFromYV12(FrameInfo *pOutputFrame, const Fram
         && std::find(supportedCspYV12.begin(), supportedCspYV12.end(), pCropParam->frameOut.csp) != supportedCspYV12.end()) {
         auto err = m_cl->copyFrame(pOutputFrame, pInputFrame, &pCropParam->crop, queue.get(), wait_events, event);
         if (err != RGY_ERR_NONE) {
-            AddMessage(RGY_LOG_ERROR, _T("error at copyFrame (convertCspFromNV12(%s -> %s)): %s.\n"),
+            AddMessage(RGY_LOG_ERROR, _T("error at copyFrame (convertCspFromYV12(%s -> %s)): %s.\n"),
                 RGY_CSP_NAMES[pInputFrame->csp], RGY_CSP_NAMES[pOutputFrame->csp], get_err_mes(err));
             return err;
         }
@@ -175,7 +175,7 @@ RGY_ERR RGYFilterCspCrop::convertCspFromYV12(FrameInfo *pOutputFrame, const Fram
         auto planeSrc = getPlane(pInputFrame, RGY_PLANE_Y);
         auto err = m_cl->copyPlane(&planeDst, &planeSrc, &pCropParam->crop, queue.get(), wait_events);
         if (err != RGY_ERR_NONE) {
-            AddMessage(RGY_LOG_ERROR, _T("error at copyPlane(Y) (convertCspFromNV12(%s -> %s)): %s.\n"),
+            AddMessage(RGY_LOG_ERROR, _T("error at copyPlane(Y) (convertCspFromYV12(%s -> %s)): %s.\n"),
                 RGY_CSP_NAMES[pInputFrame->csp], RGY_CSP_NAMES[pOutputFrame->csp], get_err_mes(err));
             return err;
         }
