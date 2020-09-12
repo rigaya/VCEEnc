@@ -655,6 +655,27 @@ RGYOpenCLKernel RGYOpenCLProgram::kernel(const char *kernelName) {
     return RGYOpenCLKernel(kernel, kernelName, m_pLog);
 }
 
+std::vector<uint8_t> RGYOpenCLProgram::getBinary() {
+    std::vector<uint8_t> binary;
+    if (!m_program) return binary;
+
+    size_t binary_size = 0;
+    cl_int err = clGetProgramInfo(m_program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binary_size, nullptr);
+    if (err != CL_SUCCESS) {
+        m_pLog->write(RGY_LOG_ERROR, _T("Failed to get program binary size: %s\n"), cl_errmes(err));
+        return binary;
+    }
+
+    binary.resize(binary_size + 1, 0);
+    err = clGetProgramInfo(m_program, CL_PROGRAM_BINARIES, binary_size, binary.data(), &binary_size);
+    if (err != CL_SUCCESS) {
+        m_pLog->write(RGY_LOG_ERROR, _T("Failed to get program binary: %s\n"), cl_errmes(err));
+        binary.clear();
+    }
+    binary.resize(binary_size);
+    return binary;
+}
+
 RGY_ERR RGYCLBufMap::map(cl_map_flags map_flags, size_t size, cl_command_queue queue) {
     return map(map_flags, size, queue, {});
 }

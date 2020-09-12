@@ -530,6 +530,7 @@ public:
     virtual ~RGYOpenCLProgram();
 
     RGYOpenCLKernel kernel(const char *kernelName);
+    std::vector<uint8_t> getBinary();
 protected:
     cl_program m_program;
     shared_ptr<RGYLog> m_pLog;
