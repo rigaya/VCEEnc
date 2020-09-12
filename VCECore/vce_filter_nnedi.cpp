@@ -633,6 +633,9 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
     if (!m_nnedi_k0
         || !m_nnedi_k1
         || std::dynamic_pointer_cast<RGYFilterParamNnedi>(m_param)->nnedi != prm->nnedi) {
+        if ((sts = checkParam(prm)) != RGY_ERR_NONE) {
+            return sts;
+        }
         if ((sts = initParams(prm)) != RGY_ERR_NONE) {
             return sts;
         }
@@ -687,7 +690,7 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
                 return RGY_ERR_UNKNOWN;
             }
             nnedi_k1_cl = str_replace(nnedi_k1_cl, "#include \"vce_filter_nnedi_common.cl\"", nnedi_common_cl);
-            const auto options = strsprintf("-cl-std=CL2.0 " //sub_group_broadcastに必要
+            auto options = strsprintf("-cl-std=CL2.0  " //sub_group_broadcastに必要
                 "-D TypePixel=%s -D TypePixel2=%s -D TypePixel4=%s -D bit_depth=%d -D TypeCalc=%s -D USE_FP16=%d "
                 "-D nnx=%d -D nny=%d -D nnxy=%d -D nns=%d "
                 "-D thread_y_loop=%d -D weight_loop=%d -D prescreen_new=%d "
@@ -706,6 +709,7 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
                 ENABLE_DP1_WEIGHT_ARRAY_OPT ? 1 : 0,
                 ENABLE_DP1_SHUFFLE_OPT ? 1 : 0
                 );
+            //options += "-fbin-exe -save-temps=F:\\temp\\nnedi_";
             m_nnedi_k1 = m_cl->build(nnedi_k1_cl, options.c_str());
             if (!m_nnedi_k1) {
                 AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_NNEDI_K1_CL(m_nnedi_k1)\n"));
