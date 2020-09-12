@@ -24,10 +24,10 @@
     return (max(ret[ithy][1].x, ret[ithy][1].y) <= max(ret[ithy][0].x, ret[ithy][0].y));
 }
  void compute_kernel0_get_flags_new(bool flags[4], const half2 ret[thread_y_loop][nns], int ithy) {
-    flags[0] = ret[ithy][0].x > half(0.0f);
-    flags[1] = ret[ithy][0].y > half(0.0f);
-    flags[2] = ret[ithy][1].x > half(0.0f);
-    flags[3] = ret[ithy][1].y > half(0.0f);
+    flags[0] = ret[ithy][0].x > (half)(0.0f);
+    flags[1] = ret[ithy][0].y > (half)(0.0f);
+    flags[2] = ret[ithy][1].x > (half)(0.0f);
+    flags[3] = ret[ithy][1].y > (half)(0.0f);
 }
 #else //#if USE_FP16
  bool compute_kernel0_get_flag_original(const float ret[thread_y_loop][nns], int ithy) {

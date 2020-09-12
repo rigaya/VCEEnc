@@ -33,7 +33,7 @@ float exp_(float val) {
 
 #if USE_FP16
 half2 elliott(half2 val) {
-    return val * native_recip((half2))(1.0f) + fabs(val));
+    return val / ((half2)(1.0f) + fabs(val));
 }
 #else
 float elliott(float val) {
@@ -188,7 +188,7 @@ void dot_product0(
             for (int ithy = 0; ithy < thread_y_loop; ithy++) {
                 s0[ithy] = ptr_s[(src_is_frame) ? (SSRC(0, ithy)) : (SSRC(0, ithy * NNEDI_BLOCK_X))];
             }
-
+#if ENABLE_DP1_SHUFFLE_OPT
             //kernel_comute_network0ではhalf2の場合 nns_k0= 4 / 2
             //なので、weight_loopが2より大きいとおかしなことになる
             static_assert(weight_loop <= 2, "weight_loop <= 2");
@@ -216,6 +216,20 @@ void dot_product0(
                     sum[ithy][i] += (half2)(s0[ithy].y) * w1; //x1 * (w4, w5)
                 }
             }
+#else
+            #pragma unroll
+            for (int i = 0; i < weight_loop; i++, ptr_w++) {
+                const half2 w0 = ptr_w[0];
+                const half2 w1 = ptr_w[weight_loop];
+                #pragma unroll
+                for (int ithy = 0; ithy < thread_y_loop; ithy++) {
+                    //nns方向の計算をhalf2内で同時に行っていくイメージ
+                    sum[ithy][i] += (half2)(s0[ithy].x) * w0;  //x0 * (w0, w1)
+                    sum[ithy][i] += (half2)(s0[ithy].y) * w1;  //x1 * (w4, w5)
+                }
+            }
+            ptr_w += weight_loop;
+#endif
         }
     }
 

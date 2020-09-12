@@ -108,6 +108,7 @@ void dot_product_frame1_fp16(
             for (int ithy = 0; ithy < thread_y_loop; ithy++) {
                 s0[ithy] = ptr_s[SSRC(0, ithy)];
             }
+#if ENABLE_DP1_SHUFFLE_OPT
             //[nns/weight_loop][nnxy][weight_loop][2]
             //最後の2つには、nns方向の[i]と[i+nns]のものを配置しているので、これがセットでhalf2に乗る
             //   <---------------   nns  -------------------->
@@ -131,6 +132,20 @@ void dot_product_frame1_fp16(
                     sum[ithy][i] += (half2)(s0[ithy].y) * w1;  //x1 * w([i], [i+nns])
                 }
             }
+#else
+            #pragma unroll
+            for (int i = 0; i < weight_loop; i++, ptr_w++) {
+                const half2 w0 = ptr_w[0];
+                const half2 w1 = ptr_w[weight_loop];
+                #pragma unroll
+                for (int ithy = 0; ithy < thread_y_loop; ithy++) {
+                    //nns方向の計算をhalf2内で同時に行っていくイメージ
+                    sum[ithy][i] += (half2)(s0[ithy].x) * w0;  //x0 * (w0, w1)
+                    sum[ithy][i] += (half2)(s0[ithy].y) * w1;  //x1 * (w4, w5)
+                }
+            }
+            ptr_w += weight_loop;
+#endif
         }
     }
     #pragma unroll
@@ -151,7 +166,6 @@ void kernel_comute_network1_dot_product(
     float mstd[thread_y_loop][4],
     const int thIdX, const int thIdY) {
     //未実装
-    assert(false);
 }
 
 void kernel_comute_network1_dot_product_opt(
