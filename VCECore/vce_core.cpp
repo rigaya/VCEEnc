@@ -339,8 +339,15 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
     }
 #endif
 
+    //--input-cspの値 (raw読み込み用の入力色空間)
+    //この後上書きするので、ここで保存する
+    const auto inputCspOfRawReader = inputParam->input.csp;
+
+    //入力モジュールが、エンコーダに返すべき色空間をセット
+    inputParam->input.csp = RGY_CSP_NV12;
+
     const bool vpp_rff = false; // inputParam->vpp.rff;
-    auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input,
+    auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, inputCspOfRawReader,
         m_pStatus, &inputParam->common, &inputParam->ctrl, HWDecCodecCsp, subburnTrackId,
         inputParam->vpp.afs.enable, vpp_rff, nullptr, m_pPerfMonitor.get(), m_pLog);
     if (err != RGY_ERR_NONE) {
@@ -1943,7 +1950,6 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     m_pPerfMonitor = std::make_unique<CPerfMonitor>();
     m_pPerfMonitor->runCounterThread();
 
-    prm->input.csp = RGY_CSP_NV12;
     m_nAVSyncMode = prm->common.AVSyncMode;
 
     if (RGY_ERR_NONE != (ret = initInput(prm))) {
