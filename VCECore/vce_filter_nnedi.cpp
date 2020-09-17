@@ -810,7 +810,7 @@ RGY_ERR RGYFilterNnedi::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppO
 
     if (prm->nnedi.isbob()) {
         targetField = (targetField == NNEDI_GEN_FIELD_BOTTOM) ? NNEDI_GEN_FIELD_TOP : NNEDI_GEN_FIELD_BOTTOM;
-        err = procFrame(ppOutputFrames[0], pInputFrame, targetField, queue, wait_events, event);
+        err = procFrame(ppOutputFrames[1], pInputFrame, targetField, queue, wait_events, event);
         if (err != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("error at procFrame(1): %s.\n"), get_err_mes(err));
             return err;
