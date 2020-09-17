@@ -126,11 +126,8 @@ RGY_ERR nnedi_compute_network_1(
     const RGYCLBuf *weight10,
     const RGYCLBuf *weight11,
     const NnediTargetField targetField,
-    const VppNnediNSize nsize,
-    const int nns,
     const VppNnediQuality quality,
     const VppNnediPreScreen pre_screen,
-    const VppFpPrecision precision,
     RGYOpenCLQueue &queue,
     RGYOpenCLProgram *nnedi_k1,
     const std::vector<RGYOpenCLEvent> &wait_events,
@@ -197,11 +194,8 @@ RGY_ERR RGYFilterNnedi::procPlane(
             m_weight1[0].get(),
             m_weight1[1].get(),
             targetField,
-            prm->nnedi.nsize,
-            prm->nnedi.nns,
             prm->nnedi.quality,
             (prm->nnedi.pre_screen & (VPP_NNEDI_PRE_SCREEN_MODE | VPP_NNEDI_PRE_SCREEN_BLOCK)),
-            prm->nnedi.precision,
             queue, m_nnedi_k1.get(), {}, event);
         if (err != RGY_ERR_NONE) {
             return err;
@@ -816,7 +810,7 @@ RGY_ERR RGYFilterNnedi::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppO
 
     if (prm->nnedi.isbob()) {
         targetField = (targetField == NNEDI_GEN_FIELD_BOTTOM) ? NNEDI_GEN_FIELD_TOP : NNEDI_GEN_FIELD_BOTTOM;
-        auto err = procFrame(ppOutputFrames[0], pInputFrame, targetField, queue, wait_events, event);
+        err = procFrame(ppOutputFrames[0], pInputFrame, targetField, queue, wait_events, event);
         if (err != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("error at procFrame(1): %s.\n"), get_err_mes(err));
             return err;
