@@ -748,6 +748,14 @@ System::Void frmConfig::InitComboBox() {
     setComboBox(fcgCXVppResizeAlg,   list_vpp_resize);
     setComboBox(fcgCXVppDeinterlace, list_vpp_deinterlacer);
     setComboBox(fcgCXVppAfsAnalyze,  list_vpp_afs_analyze);
+    setComboBox(fcgCXVppAfsAnalyze,     list_vpp_afs_analyze);
+    setComboBox(fcgCXVppNnediNsize,     list_vpp_nnedi_nsize);
+    setComboBox(fcgCXVppNnediNns,       list_vpp_nnedi_nns);
+    setComboBox(fcgCXVppNnediQual,      list_vpp_nnedi_quality);
+    setComboBox(fcgCXVppNnediPrec,      list_vpp_fp_prec);
+    setComboBox(fcgCXVppNnediPrescreen, list_vpp_nnedi_pre_screen_gui);
+    setComboBox(fcgCXVppNnediErrorType, list_vpp_nnedi_error_type);
+    setComboBox(fcgCXVppYadifMode,      list_vpp_yadif_mode_gui);
     setComboBox(fcgCXVppDebandSample, list_vpp_deband);
 
     setComboBox(fcgCXAudioEncTiming, audio_enc_timing_desc);
@@ -831,6 +839,9 @@ System::Void frmConfig::fcgChangeEnabled(System::Object^  sender, System::EventA
     fcgPNVppDenoiseSmooth->Visible = false; // (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("smooth")));
     fcgPNVppUnsharp->Visible = (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("unsharp")));
     fcgPNVppEdgelevel->Visible = (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("edgelevel")));
+    fcgPNVppAfs->Visible = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"自動フィールドシフト"));
+    fcgPNVppNnedi->Visible = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"nnedi"));
+    fcgPNVppYadif->Visible = false; // (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"yadif"));
     fcggroupBoxVppDeband->Enabled = fcgCBVppDebandEnable->Checked;
 
     this->ResumeLayout();
@@ -1031,8 +1042,10 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
         int deinterlacer_idx = 0;
         if (vce.vpp.afs.enable) {
             deinterlacer_idx = get_cx_index(list_vpp_deinterlacer, L"自動フィールドシフト");
-        }// else if (vce.vpp.nnedi.enable) {
-        //    deinterlacer_idx = get_cx_index(list_vpp_deinterlacer, L"nnedi");
+        } else if (vce.vpp.nnedi.enable) {
+            deinterlacer_idx = get_cx_index(list_vpp_deinterlacer, L"nnedi");
+        }// else if (vce.vpp.yadif.enable) {
+         //   deinterlacer_idx = get_cx_index(list_vpp_deinterlacer, L"yadif");
         //}
         SetCXIndex(fcgCXVppDeinterlace,          deinterlacer_idx);
 
@@ -1078,6 +1091,13 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
         fcgCBVppAfsSmooth->Checked             = vce.vpp.afs.smooth != 0;
         fcgCBVppAfs24fps->Checked              = vce.vpp.afs.force24 != 0;
         fcgCBVppAfsTune->Checked               = vce.vpp.afs.tune != 0;
+        SetCXIndex(fcgCXVppNnediNsize,           get_cx_index(list_vpp_nnedi_nsize, vce.vpp.nnedi.nsize));
+        SetCXIndex(fcgCXVppNnediNns,             get_cx_index(list_vpp_nnedi_nns, vce.vpp.nnedi.nns));
+        SetCXIndex(fcgCXVppNnediPrec,            get_cx_index(list_vpp_fp_prec, vce.vpp.nnedi.precision));
+        SetCXIndex(fcgCXVppNnediPrescreen,       get_cx_index(list_vpp_nnedi_pre_screen_gui, vce.vpp.nnedi.pre_screen));
+        SetCXIndex(fcgCXVppNnediQual,            get_cx_index(list_vpp_nnedi_quality, vce.vpp.nnedi.quality));
+        SetCXIndex(fcgCXVppNnediErrorType,       get_cx_index(list_vpp_nnedi_error_type, vce.vpp.nnedi.errortype));
+        //SetCXIndex(fcgCXVppYadifMode,            get_cx_index(list_vpp_yadif_mode_gui, vce.vpp.yadif.mode));
 
         fcgCBSSIM->Checked                     = vce.ssim;
         fcgCBPSNR->Checked                     = vce.psnr;
@@ -1240,6 +1260,17 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.vpp.afs.smooth             = fcgCBVppAfsSmooth->Checked;
     vce.vpp.afs.force24            = fcgCBVppAfs24fps->Checked;
     vce.vpp.afs.tune               = fcgCBVppAfsTune->Checked;
+
+    vce.vpp.nnedi.enable           = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"nnedi"));
+    vce.vpp.nnedi.nsize            = (VppNnediNSize)list_vpp_nnedi_nsize[fcgCXVppNnediNsize->SelectedIndex].value;
+    vce.vpp.nnedi.nns              = list_vpp_nnedi_nns[fcgCXVppNnediNns->SelectedIndex].value;
+    vce.vpp.nnedi.quality          = (VppNnediQuality)list_vpp_nnedi_quality[fcgCXVppNnediQual->SelectedIndex].value;
+    vce.vpp.nnedi.precision        = (VppFpPrecision)list_vpp_fp_prec[fcgCXVppNnediPrec->SelectedIndex].value;
+    vce.vpp.nnedi.pre_screen       = (VppNnediPreScreen)list_vpp_nnedi_pre_screen_gui[fcgCXVppNnediPrescreen->SelectedIndex].value;
+    vce.vpp.nnedi.errortype        = (VppNnediErrorType)list_vpp_nnedi_error_type[fcgCXVppNnediErrorType->SelectedIndex].value;
+
+    //vce.vpp.yadif.enable = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"yadif"));
+    //vce.vpp.yadif.mode = (VppYadifMode)list_vpp_yadif_mode_gui[fcgCXVppYadifMode->SelectedIndex].value;
 
     vce.ssim                       = fcgCBSSIM->Checked;
     vce.psnr                       = fcgCBPSNR->Checked;

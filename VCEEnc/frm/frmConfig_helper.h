@@ -139,6 +139,7 @@ const CX_DESC list_log_level_jp[] ={
 static const wchar_t *const list_vpp_deinterlacer[] = {
     L"なし",
     L"自動フィールドシフト",
+    L"nnedi",
     NULL
 };
 
@@ -151,6 +152,20 @@ static const wchar_t *const list_vpp_afs_analyze[] = {
     NULL
 };
 
+const CX_DESC list_vpp_nnedi_pre_screen_gui[] = {
+    { _T("none"),           VPP_NNEDI_PRE_SCREEN_NONE },
+    { _T("original"),       VPP_NNEDI_PRE_SCREEN_ORIGINAL },
+    { _T("new"),            VPP_NNEDI_PRE_SCREEN_NEW },
+    { _T("original_block"), VPP_NNEDI_PRE_SCREEN_ORIGINAL_BLOCK },
+    { _T("new_block"),      VPP_NNEDI_PRE_SCREEN_NEW_BLOCK },
+    { NULL, NULL }
+};
+
+const CX_DESC list_vpp_yadif_mode_gui[] = {
+    //{ _T("normal"),        VPP_YADIF_MODE_AUTO },
+    //{ _T("bob"),           VPP_YADIF_MODE_BOB_AUTO },
+    { NULL, NULL }
+};
 
 static const wchar_t *const list_vce_rc_method_auo[] = {
     L"CQP - 固定量子化量",
