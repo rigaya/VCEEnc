@@ -624,7 +624,7 @@ VCEParam::VCEParam() :
     nBframes(VCE_DEFAULT_BFRAMES),
     bBPyramid(false),
     nMotionEst(VCE_MOTION_EST_QUATER | VCE_MOTION_EST_HALF),
-    bEnforceHRD(true),
+    bEnforceHRD(false),
     nIDRPeriod(1),
     nGOPLen(0),
     nRefFrames(VCE_DEFAULT_REF_FRAMES),
