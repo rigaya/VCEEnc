@@ -2688,14 +2688,12 @@ tstring VCECore::GetEncoderParam() {
 
     auto GetPropertyStr = [pProperty](const wchar_t *pName) {
         const wchar_t *pProp = L"";
-        pProperty->GetPropertyWString(pName, &pProp);
-        return wstring_to_string(pProp);
+        return (pProperty->GetPropertyWString(pName, &pProp) == AMF_OK) ? wstring_to_string(pProp) : "";
     };
 
     auto GetPropertyInt = [pProperty](const wchar_t *pName) {
         int64_t value = 0;
-        pProperty->GetProperty(pName, &value);
-        return (int)value;
+        return (pProperty->GetProperty(pName, &value) == AMF_OK) ? value : 0;
     };
 
     auto GetPropertyRatio = [pProperty](const wchar_t *pName) {
@@ -2712,12 +2710,15 @@ tstring VCECore::GetEncoderParam() {
 
     auto GetPropertyBool = [pProperty](const wchar_t *pName) {
         bool value = false;
-        pProperty->GetProperty(pName, &value);
-        return value;
+        return (pProperty->GetProperty(pName, &value) == AMF_OK) ? value : false;
     };
 
     auto getPropertyDesc = [pProperty, GetPropertyInt](const wchar_t *pName, const CX_DESC *list) {
-        auto ptr = get_cx_desc(list, GetPropertyInt(pName));
+        int64_t value = 0;
+        if (pProperty->GetProperty(pName, &value) != AMF_OK) {
+            return tstring(_T(""));
+        }
+        auto ptr = get_cx_desc(list, value);
         return (ptr) ? tstring(ptr) : _T("");
     };
 
