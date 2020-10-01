@@ -310,7 +310,7 @@ RGY_ERR VCECore::initPerfMonitor(VCEParam *prm) {
 }
 
 RGY_CSP VCECore::GetEncoderCSP(const VCEParam *inputParam) {
-    const bool highBitDepth = false;
+    const bool highBitDepth = inputParam->outputDepth > 8;
     const bool yuv444 = false;
     if (highBitDepth) {
         return (yuv444) ? RGY_CSP_YUV444_16 : RGY_CSP_P010;
@@ -344,7 +344,7 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
     const auto inputCspOfRawReader = inputParam->input.csp;
 
     //入力モジュールが、エンコーダに返すべき色空間をセット
-    inputParam->input.csp = RGY_CSP_NV12;
+    inputParam->input.csp = GetEncoderCSP(inputParam);
 
     const bool vpp_rff = false; // inputParam->vpp.rff;
     auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, inputCspOfRawReader,
@@ -535,6 +535,12 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
         prm->bBPyramid = 0;
         prm->nDeltaQPBFrame = 0;
         prm->nDeltaQPBFrameRef = 0;
+    }
+    if (prm->codec == RGY_CODEC_H264) {
+        if (prm->outputDepth != 8) {
+            PrintMes(RGY_LOG_WARN, _T("Only 8 bitdepth is supported in H.264 encoding.\n"));
+            prm->outputDepth = 8;
+        }
     }
     prm->nQPMax = clamp(prm->nQPMax, 0, 51);
     prm->nQPMin = clamp(prm->nQPMin, 0, 51);
@@ -1164,7 +1170,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     }
 
     m_encCodec = prm->codec;
-    const amf::AMF_SURFACE_FORMAT formatIn = amf::AMF_SURFACE_NV12;
+    const amf::AMF_SURFACE_FORMAT formatIn = csp_rgy_to_enc(GetEncoderCSP(prm));
     if (AMF_OK != (res = m_pFactory->CreateComponent(m_dev->context(), codec_rgy_to_enc(prm->codec), &m_pEncoder))) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to AMFCreateComponent: %s.\n"), AMFRetString(res));
         return err_to_rgy(res);
@@ -1240,7 +1246,6 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
                 prm->nDeltaQPBFrame = 0;
                 prm->nDeltaQPBFrameRef = 0;
             }
-
         } else if (prm->codec == RGY_CODEC_HEVC) {
             //いまはなにもなし
         }
@@ -1509,6 +1514,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         //m_params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), prm->preAnalysis);
 
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_TIER,                            (amf_int64)prm->codecParam[prm->codec].nTier);
+        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_COLOR_BIT_DEPTH,                 (amf_int64)prm->outputDepth);
 
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_I,                        (amf_int64)prm->nQPMin);
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_I,                        (amf_int64)prm->nQPMax);
@@ -1597,7 +1603,7 @@ std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3
 }
 
 RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm) {
-    const amf::AMF_SURFACE_FORMAT formatIn = amf::AMF_SURFACE_NV12;
+    const amf::AMF_SURFACE_FORMAT formatIn = csp_rgy_to_enc(GetEncoderCSP(prm));
     //エンコーダの対応をチェック
     tstring message; //GPUチェックのメッセージ
     for (auto gpu = gpuList.begin(); gpu != gpuList.end(); ) {

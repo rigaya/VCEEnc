@@ -601,6 +601,7 @@ VCEParam::VCEParam() :
     deviceID(-1),
     interopD3d9(false),
     interopD3d11(true),
+    outputDepth(8),
     par(),
     usage(AMF_VIDEO_ENCODER_USAGE_TRANSCONDING),
     rateControl(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP),

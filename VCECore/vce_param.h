@@ -791,6 +791,8 @@ struct VCEParam {
     bool    interopD3d9;
     bool    interopD3d11;
 
+    int     outputDepth;
+
     int     par[2];
 
     int     usage;
