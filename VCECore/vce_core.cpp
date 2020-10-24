@@ -322,7 +322,7 @@ RGY_CSP VCECore::GetEncoderCSP(const VCEParam *inputParam) {
 RGY_ERR VCECore::initInput(VCEParam *inputParam) {
 #if ENABLE_RAW_READER
     DeviceCodecCsp HWDecCodecCsp;
-    HWDecCodecCsp.push_back(std::make_pair(0, getHWDecCodecCsp()));
+    HWDecCodecCsp.push_back(std::make_pair(0, getHWDecCodecCsp(inputParam->ctrl.skipHWDecodeCheck)));
     m_pStatus.reset(new EncodeStatus());
 
     int subburnTrackId = 0;

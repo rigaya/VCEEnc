@@ -534,7 +534,7 @@ VideoInfo videooutputinfo(
 
 int64_t rational_rescale(int64_t v, rgy_rational<int> from, rgy_rational<int> to);
 
-CodecCsp getHWDecCodecCsp();
+CodecCsp getHWDecCodecCsp(const bool skipHWDecodeCheck);
 
 tstring AccelTypeToString(amf::AMF_ACCELERATION_TYPE accelType);
 
