@@ -67,6 +67,15 @@ static const bool  FILTER_DEFAULT_AFS_RFF = false;
 static const bool  FILTER_DEFAULT_AFS_TIMECODE = false;
 static const bool  FILTER_DEFAULT_AFS_LOG = false;
 
+static const int   FILTER_DEFAULT_DECIMATE_CYCLE = 5;
+static const float FILTER_DEFAULT_DECIMATE_THRE_DUP = 1.1f;
+static const float FILTER_DEFAULT_DECIMATE_THRE_SC = 15.0f;
+static const int   FILTER_DEFAULT_DECIMATE_BLOCK_X = 32;
+static const int   FILTER_DEFAULT_DECIMATE_BLOCK_Y = 32;
+static const bool  FILTER_DEFAULT_DECIMATE_PREPROCESSED = false;
+static const bool  FILTER_DEFAULT_DECIMATE_CHROMA = true;
+static const bool  FILTER_DEFAULT_DECIMATE_LOG = false;
+
 static const int   FILTER_DEFAULT_KNN_RADIUS = 3;
 static const float FILTER_DEFAULT_KNN_STRENGTH = 0.08f;
 static const float FILTER_DEFAULT_KNN_LERPC = 0.20f;
@@ -77,6 +86,14 @@ static const float FILTER_DEFAULT_PMD_STRENGTH = 100.0f;
 static const float FILTER_DEFAULT_PMD_THRESHOLD = 100.0f;
 static const int   FILTER_DEFAULT_PMD_APPLY_COUNT = 2;
 static const bool  FILTER_DEFAULT_PMD_USE_EXP = true;
+
+static const int   FILTER_DEFAULT_SMOOTH_QUALITY = 3;
+static const int   FILTER_DEFAULT_SMOOTH_QP = 12;
+static const float FILTER_DEFAULT_SMOOTH_STRENGTH = 0.0f;
+static const float FILTER_DEFAULT_SMOOTH_THRESHOLD = 0.0f;
+static const int   FILTER_DEFAULT_SMOOTH_MODE = 0;
+static const float FILTER_DEFAULT_SMOOTH_B_RATIO = 0.5f;
+static const int   FILTER_DEFAULT_SMOOTH_MAX_QPTABLE_ERR = 10;
 
 static const float FILTER_DEFAULT_TWEAK_BRIGHTNESS = 0.0f;
 static const float FILTER_DEFAULT_TWEAK_CONTRAST = 1.0f;
@@ -638,6 +655,32 @@ struct VppNnedi {
     tstring print() const;
 };
 
+const CX_DESC list_vpp_decimate_block[] = {
+    { _T("4"),    4 },
+    { _T("8"),    8 },
+    { _T("16"),  16 },
+    { _T("32"),  32 },
+    { _T("64"),  64 },
+    { NULL, 0 }
+};
+
+struct VppDecimate {
+    bool enable;
+    int cycle;
+    float threDuplicate;
+    float threSceneChange;
+    int blockX;
+    int blockY;
+    bool preProcessed;
+    bool chroma;
+    bool log;
+
+    VppDecimate();
+    bool operator==(const VppDecimate &x) const;
+    bool operator!=(const VppDecimate &x) const;
+    tstring print() const;
+};
+
 struct VppPad {
     bool enable;
     int left, top, right, bottom;
@@ -672,6 +715,22 @@ struct VppPmd {
     VppPmd();
     bool operator==(const VppPmd &x) const;
     bool operator!=(const VppPmd &x) const;
+    tstring print() const;
+};
+
+struct VppSmooth {
+    bool enable;
+    int quality;
+    int qp;
+    VppFpPrecision prec;
+    bool useQPTable;
+    float strength;
+    float threshold;
+    float bratio;
+    int maxQPTableErrCount;
+    VppSmooth();
+    bool operator==(const VppSmooth &x) const;
+    bool operator!=(const VppSmooth &x) const;
     tstring print() const;
 };
 
@@ -751,9 +810,11 @@ struct VCEVppParam {
     RGY_VPP_RESIZE_ALGO resize;
     VppAfs afs;
     VppNnedi nnedi;
+    VppDecimate decimate;
     VppPad pad;
     VppKnn knn;
     VppPmd pmd;
+    VppSmooth smooth;
     VppUnsharp unsharp;
     VppEdgelevel edgelevel;
     VppTweak tweak;

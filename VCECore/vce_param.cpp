@@ -307,6 +307,45 @@ tstring VppNnedi::print() const {
         ((weightfile.length()) ? weightfile.c_str() : _T("internal")));
 }
 
+VppDecimate::VppDecimate() :
+    enable(false),
+    cycle(FILTER_DEFAULT_DECIMATE_CYCLE),
+    threDuplicate(FILTER_DEFAULT_DECIMATE_THRE_DUP),
+    threSceneChange(FILTER_DEFAULT_DECIMATE_THRE_SC),
+    blockX(FILTER_DEFAULT_DECIMATE_BLOCK_X),
+    blockY(FILTER_DEFAULT_DECIMATE_BLOCK_Y),
+    preProcessed(FILTER_DEFAULT_DECIMATE_PREPROCESSED),
+    chroma(FILTER_DEFAULT_DECIMATE_CHROMA),
+    log(FILTER_DEFAULT_DECIMATE_LOG) {
+
+}
+
+bool VppDecimate::operator==(const VppDecimate &x) const {
+    return enable == x.enable
+        && cycle == x.cycle
+        && threDuplicate == x.threDuplicate
+        && threSceneChange == x.threSceneChange
+        && blockX == x.blockX
+        && blockY == x.blockY
+        && preProcessed == x.preProcessed
+        && chroma == x.chroma
+        && log == x.log;
+}
+bool VppDecimate::operator!=(const VppDecimate &x) const {
+    return !(*this == x);
+}
+
+tstring VppDecimate::print() const {
+    return strsprintf(_T("decimate: cycle %d, threDup %.2f, threSC %.2f\n")
+        _T("                         block %dx%d, chroma %s, log %s"),
+        cycle,
+        threDuplicate, threSceneChange,
+        blockX, blockY,
+        /*preProcessed ? _T("on") : _T("off"),*/
+        chroma ? _T("on") : _T("off"),
+        log ? _T("on") : _T("off"));
+}
+
 VppPad::VppPad() :
     enable(false),
     left(0),
@@ -384,6 +423,43 @@ bool VppPmd::operator!=(const VppPmd& x) const {
 tstring VppPmd::print() const {
     return strsprintf(_T("denoise(pmd): strength %d, threshold %d, apply %d, exp %d"),
         (int)strength, (int)threshold, applyCount, useExp);
+}
+
+VppSmooth::VppSmooth() :
+    enable(false),
+    quality(FILTER_DEFAULT_SMOOTH_QUALITY),
+    qp(FILTER_DEFAULT_SMOOTH_QP),
+    prec(VPP_FP_PRECISION_AUTO),
+    useQPTable(false),
+    strength(FILTER_DEFAULT_SMOOTH_STRENGTH),
+    threshold(FILTER_DEFAULT_SMOOTH_THRESHOLD),
+    bratio(FILTER_DEFAULT_SMOOTH_B_RATIO),
+    maxQPTableErrCount(FILTER_DEFAULT_SMOOTH_MAX_QPTABLE_ERR) {
+
+}
+
+bool VppSmooth::operator==(const VppSmooth &x) const {
+    return enable == x.enable
+        && quality == x.quality
+        && qp == x.qp
+        && prec == x.prec
+        && useQPTable == x.useQPTable
+        && strength == x.strength
+        && threshold == x.threshold
+        && bratio == x.bratio
+        && maxQPTableErrCount == x.maxQPTableErrCount;
+}
+bool VppSmooth::operator!=(const VppSmooth &x) const {
+    return !(*this == x);
+}
+
+tstring VppSmooth::print() const {
+    //return strsprintf(_T("smooth: quality %d, qp %d, threshold %.1f, strength %.1f, mode %d, use_bframe_qp %s"), quality, qp, threshold, strength, mode, use_bframe_qp ? _T("yes") : _T("no"));
+    tstring str = strsprintf(_T("smooth: quality %d, qp %d, prec %s"), quality, qp, get_cx_desc(list_vpp_fp_prec, prec));
+    if (useQPTable) {
+        str += strsprintf(_T(", use QP table on"));
+    }
+    return str;
 }
 
 VppUnsharp::VppUnsharp() :
@@ -567,9 +643,11 @@ VCEVppParam::VCEVppParam() :
     resize(RGY_VPP_RESIZE_AUTO),
     afs(),
     nnedi(),
+    decimate(),
     pad(),
     knn(),
     pmd(),
+    smooth(),
     unsharp(),
     edgelevel(),
     tweak(),
