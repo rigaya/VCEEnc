@@ -1132,6 +1132,15 @@ nnediによるインタレ解除を行う。基本的には片方フィールド
 --vpp-pmd apply_count=2,strength=90,threshold=120
 ```
 
+### --vpp-smooth [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+**パラメータ**
+- quality=&lt;int&gt;  (default=3, 1-6)  
+  処理の品質。値が大きいほど高精度だが遅くなる。
+
+- qp=&lt;int&gt;  (default=12, 1 - 63)    
+  フィルタの強さ。
+
 ### --vpp-unsharp [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 unsharpフィルタ。輪郭・ディテール強調用のフィルタ。
 

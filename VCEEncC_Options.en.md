@@ -1094,6 +1094,15 @@ Example: Slightly weak than default
 --vpp-pmd apply_count=2,strength=90,threshold=120
 ```
 
+### --vpp-smooth [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+**parameters**
+- quality=&lt;int&gt;  (default=3, 1-6)  
+  Quality of the filter. Larger value should result in higher quality but with lower speed.
+
+- qp=&lt;int&gt;  (default=12, 1 - 63)    
+  Strength of the filter.
+
 ### --vpp-unsharp [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 unsharp filter, for edge and detail enhancement.
 
