@@ -172,7 +172,7 @@ RGY_ERR RGYFilterSmooth::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
             return options;
         };
 
-        bool usefp16 = false && prm->smooth.prec == VPP_FP_PRECISION_FP16;
+        bool usefp16 = prm->smooth.prec == VPP_FP_PRECISION_FP16;
         m_smooth = m_cl->buildResource(_T("VCE_FILTER_SMOOTH_CL"), _T("EXE_DATA"), gen_options(usefp16).c_str());
         if (!m_smooth) {
             AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_SMOOTH_CL(m_smooth)\n"));
@@ -185,7 +185,7 @@ RGY_ERR RGYFilterSmooth::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
             if (subGroupSize == 0) {
                 AddMessage(RGY_LOG_WARN, _T("Could not get subGroupSize for kernel, fp16 disabled.\n"));
                 prm->smooth.prec = VPP_FP_PRECISION_FP32;
-            } else if ((subGroupSize & (subGroupSize - 1)) == 0) {
+            } else if ((subGroupSize & (subGroupSize - 1)) != 0) {
                 AddMessage(RGY_LOG_WARN, _T("subGroupSize(%d) is not pow2, fp16 disabled.\n"), subGroupSize);
                 prm->smooth.prec = VPP_FP_PRECISION_FP32;
             } else if (subGroupSize < 32) {

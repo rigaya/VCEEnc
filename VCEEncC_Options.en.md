@@ -1102,6 +1102,17 @@ Example: Slightly weak than default
 
 - qp=&lt;int&gt;  (default=12, 1 - 63)    
   Strength of the filter.
+  
+- prec  
+  Select precision.
+  - auto (default)  
+    Currently same as fp32.
+  
+  - fp32  
+    Use fp32 in core calculation.
+  
+  - fp16  
+    Use fp16 in core calculation.
 
 ### --vpp-unsharp [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 unsharp filter, for edge and detail enhancement.
