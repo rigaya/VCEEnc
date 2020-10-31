@@ -120,18 +120,7 @@ void threshold8x8(__local TypeDct shared_tmp[8][9], int thWorker, const TypeDct 
         if (y > 0 || thWorker > 0) {
             __local TypeDct *ptr = &shared_tmp[y][thWorker];
             TypeDct val = ptr[0];
-            #if usefp16
-                if (fabs(val.x) <= threshold.x) {
-                    ptr[0].x = 0.0f;
-                }
-                if (fabs(val.y) <= threshold.y) {
-                    ptr[0].y = 0.0f;
-                }
-            #else
-                if (fabs(val) <= threshold) {
-                    ptr[0] = 0.0f;
-                }
-            #endif
+            ptr[0] = (fabs(val) <= threshold) ? (TypeDct)0.0f : val;
         }
     }
 }
