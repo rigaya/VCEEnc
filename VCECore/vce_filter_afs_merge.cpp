@@ -54,7 +54,7 @@ template<typename Type>
 RGY_ERR run_merge_scan(uint8_t *dst,
     uint8_t *sp0, uint8_t *sp1,
     const int srcWidth, const int srcPitch, const int srcHeight,
-    unique_ptr<RGYCLBuf> &count_stripe, const VppAfs *pAfsPrm, cl_command_queue queue, std::vector<RGYOpenCLEvent> &wait_event, RGYOpenCLEvent &event,
+    unique_ptr<RGYCLBuf> &count_stripe, const VppAfs *pAfsPrm, RGYOpenCLQueue &queue, std::vector<RGYOpenCLEvent> &wait_event, RGYOpenCLEvent &event,
     RGYOpenCLProgram *mergeScan, RGYOpenCLContext *cl) {
     const RGYWorkSize local(MERGE_BLOCK_INT_X, MERGE_BLOCK_Y);
     const RGYWorkSize global(divCeil<int>(srcWidth, sizeof(Type)), divCeil<int>(srcHeight, MERGE_BLOCK_LOOP_Y));
@@ -78,7 +78,7 @@ RGY_ERR run_merge_scan(uint8_t *dst,
     );
 }
 
-RGY_ERR RGYFilterAfs::merge_scan(AFS_STRIPE_DATA *sp, AFS_SCAN_DATA *sp0, AFS_SCAN_DATA *sp1, unique_ptr<RGYCLBuf> &count_stripe, const RGYFilterParamAfs *pAfsParam, cl_command_queue queue, std::vector<RGYOpenCLEvent> wait_event, RGYOpenCLEvent &event) {
+RGY_ERR RGYFilterAfs::merge_scan(AFS_STRIPE_DATA *sp, AFS_SCAN_DATA *sp0, AFS_SCAN_DATA *sp1, unique_ptr<RGYCLBuf> &count_stripe, const RGYFilterParamAfs *pAfsParam, RGYOpenCLQueue &queue, std::vector<RGYOpenCLEvent> wait_event, RGYOpenCLEvent &event) {
     auto err = run_merge_scan<uint32_t>(
         sp->map->frame.ptr[0], sp0->map->frame.ptr[0], sp1->map->frame.ptr[0],
         sp1->map->frame.width, sp1->map->frame.pitch[0], sp1->map->frame.height,

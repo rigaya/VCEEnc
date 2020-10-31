@@ -47,7 +47,7 @@ RGY_ERR RGYFilterDenoisePmd::runGaussPlane(FrameInfo *pGaussPlane, const FrameIn
     RGYWorkSize local(32, 8);
     RGYWorkSize global(pInputPlane->width, pInputPlane->height);
     const char *kernel_name = "kernel_denoise_pmd_gauss";
-    auto err = m_pmd->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
+    auto err = m_pmd->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
         (cl_mem)pGaussPlane->ptr[0], pGaussPlane->pitch[0], pGaussPlane->width, pGaussPlane->height,
         (cl_mem)pInputPlane->ptr[0]);
     if (err != RGY_ERR_NONE) {
@@ -88,7 +88,7 @@ RGY_ERR RGYFilterDenoisePmd::runPmdPlane(FrameInfo *pOutputPlane, const FrameInf
     RGYWorkSize local(32, 8);
     RGYWorkSize global(pInputPlane->width, pInputPlane->height);
     const char *kernel_name = "kernel_denoise_pmd";
-    auto err = m_pmd->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
+    auto err = m_pmd->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
         (cl_mem)pOutputPlane->ptr[0], pOutputPlane->pitch[0], pOutputPlane->width, pOutputPlane->height,
         (cl_mem)pInputPlane->ptr[0], (cl_mem)pGaussPlane->ptr[0],
         strength2, inv_threshold2);

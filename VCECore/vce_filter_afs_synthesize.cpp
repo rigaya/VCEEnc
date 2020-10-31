@@ -57,7 +57,7 @@ static RGY_ERR run_synthesize(uint8_t **dst,
     const int *dstPitch, const int sipPitch,
     const int tb_order, const uint8_t status, const RGY_CSP csp,
     int mode,
-    cl_command_queue queue, RGYOpenCLProgram *synthesize, RGYOpenCLContext *cl) {
+    RGYOpenCLQueue &queue, RGYOpenCLProgram *synthesize, RGYOpenCLContext *cl) {
     auto err = RGY_ERR_NONE;
 
     if (mode < 0) {
@@ -136,7 +136,7 @@ static RGY_ERR run_synthesize(uint8_t **dst,
     return err;
 }
 
-RGY_ERR RGYFilterAfs::synthesize(int iframe, RGYCLFrame *pOut, afsSourceCacheFrame *p0, afsSourceCacheFrame *p1, AFS_STRIPE_DATA *sip, const RGYFilterParamAfs *pAfsPrm, cl_command_queue queue) {
+RGY_ERR RGYFilterAfs::synthesize(int iframe, RGYCLFrame *pOut, afsSourceCacheFrame *p0, afsSourceCacheFrame *p1, AFS_STRIPE_DATA *sip, const RGYFilterParamAfs *pAfsPrm, RGYOpenCLQueue &queue) {
     int mode = pAfsPrm->afs.analyze;
     if (pAfsPrm->afs.tune) {
         mode = -1;

@@ -51,7 +51,7 @@ RGY_ERR RGYFilterTransform::procPlane(FrameInfo *pOutputPlane, const FrameInfo *
         RGYWorkSize global(
             divCeil(pOutputPlane->width,  TRASNPOSE_TILE_DIM / TRASNPOSE_BLOCK_DIM),
             divCeil(pOutputPlane->height, TRASNPOSE_TILE_DIM / TRASNPOSE_BLOCK_DIM));
-        auto err = m_transform->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
+        auto err = m_transform->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
             (cl_mem)pOutputPlane->ptr[0],
             pOutputPlane->pitch[0],
             pOutputPlane->width,  // = srcHeight
@@ -67,7 +67,7 @@ RGY_ERR RGYFilterTransform::procPlane(FrameInfo *pOutputPlane, const FrameInfo *
         const char *kernel_name = "kernel_flip_plane";
         RGYWorkSize local(FLIP_BLOCK_DIM, FLIP_BLOCK_DIM);
         RGYWorkSize global(divCeil(pOutputPlane->width, 4), pOutputPlane->height);
-        auto err = m_transform->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
+        auto err = m_transform->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
             (cl_mem)pOutputPlane->ptr[0],
             pOutputPlane->pitch[0],
             pOutputPlane->width,

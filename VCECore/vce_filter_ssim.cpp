@@ -401,7 +401,7 @@ RGY_ERR RGYFilterSsim::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOu
             return sts_filter;
         }
     } else {
-        m_cl->copyFrame(&copyFrame->frame, pInputFrame, nullptr, queue.get(), wait_events, event);
+        m_cl->copyFrame(&copyFrame->frame, pInputFrame, nullptr, queue, wait_events, event);
     }
 
     //フレームをm_unusedからm_inputに移す
@@ -576,7 +576,7 @@ RGY_ERR RGYFilterSsim::calc_ssim_plane(const FrameInfo *p0, const FrameInfo *p1,
     if (!tmp || tmp->size() < grid_count * sizeof(float)) {
         tmp = m_cl->createBuffer(grid_count * sizeof(float));
     }
-    auto err = m_kernel->kernel("kernel_ssim").config(queue->get(), local, global, wait_events).launch(
+    auto err = m_kernel->kernel("kernel_ssim").config(*queue, local, global, wait_events).launch(
         (cl_mem)p0->ptr[0], p0->pitch[0], (cl_mem)p1->ptr[0], p1->pitch[0],
         p0->width, p0->height,
         tmp->mem()
@@ -615,7 +615,7 @@ RGY_ERR RGYFilterSsim::calc_psnr_plane(const FrameInfo *p0, const FrameInfo *p1,
     if (!tmp || tmp->size() < grid_count * sizeof(float)) {
         tmp = m_cl->createBuffer(grid_count * sizeof(float));
     }
-    auto err = m_kernel->kernel("kernel_psnr").config(queue->get(), local, global, wait_events).launch(
+    auto err = m_kernel->kernel("kernel_psnr").config(*queue, local, global, wait_events).launch(
         (cl_mem)p0->ptr[0], p0->pitch[0], (cl_mem)p1->ptr[0], p1->pitch[0],
         p0->width, p0->height,
         tmp->mem()

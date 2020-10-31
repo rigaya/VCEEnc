@@ -40,7 +40,7 @@ RGY_ERR RGYFilterPad::procPlane(FrameInfo *pOutputPlane, const FrameInfo *pInput
         const char *kernel_name = "kernel_pad";
         RGYWorkSize local(32, 8);
         RGYWorkSize global(pOutputPlane->width, pOutputPlane->height);
-        auto err = m_pad->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
+        auto err = m_pad->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
             (cl_mem)pOutputPlane->ptr[0], pOutputPlane->pitch[0], pOutputPlane->width, pOutputPlane->height,
             (cl_mem)pInputPlane->ptr[0], pInputPlane->pitch[0], pInputPlane->width, pInputPlane->height,
             pad.left, pad.top, pad_color);

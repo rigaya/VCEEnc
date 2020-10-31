@@ -85,7 +85,7 @@ RGY_ERR afsSourceCache::alloc(const FrameInfo& frameInfo) {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR afsSourceCache::add(const FrameInfo *pInputFrame, cl_command_queue queue_main, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent &event) {
+RGY_ERR afsSourceCache::add(const FrameInfo *pInputFrame, RGYOpenCLQueue &queue_main, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent &event) {
     const int iframe = m_nFramesInput++;
     auto pDstFrame = get(iframe);
     pDstFrame->y->frame.flags        = pInputFrame->flags;
@@ -132,7 +132,7 @@ RGY_ERR afsSourceCache::add(const FrameInfo *pInputFrame, cl_command_queue queue
     return ret;
 }
 
-RGY_ERR afsSourceCache::copyFrame(RGYCLFrame *pOut, int srcFrame, cl_command_queue queue, RGYOpenCLEvent *event) {
+RGY_ERR afsSourceCache::copyFrame(RGYCLFrame *pOut, int srcFrame, RGYOpenCLQueue &queue, RGYOpenCLEvent *event) {
     afsSourceCacheFrame *pSrc = get(srcFrame);
     if (RGY_CSP_CHROMA_FORMAT[m_csp] == RGY_CHROMAFMT_YUV444) {
         return m_cl->copyFrame(&pOut->frame, &pSrc->y->frame, nullptr, queue, event);
@@ -274,7 +274,7 @@ RGY_ERR afsStripeCache::alloc(const FrameInfo& frameInfo) {
     return RGY_ERR_NONE;
 }
 
-AFS_STRIPE_DATA *afsStripeCache::filter(int iframe, int analyze, cl_command_queue queue, RGY_ERR *pErr) {
+AFS_STRIPE_DATA *afsStripeCache::filter(int iframe, int analyze, RGYOpenCLQueue &queue, RGY_ERR *pErr) {
     auto sip = get(iframe);
     if (analyze > 1) {
         auto sip_dst = getFiltered();
@@ -707,7 +707,7 @@ bool RGYFilterAfs::scan_frame_result_cached(int frame, const VppAfs *pAfsPrm) {
         (mode == 1 && sp->mode == 1 && sp->thre_deint == pAfsPrm->thre_deint && sp->thre_Ymotion == pAfsPrm->thre_Ymotion && sp->thre_Cmotion == pAfsPrm->thre_Cmotion));
 }
 
-RGY_ERR RGYFilterAfs::scan_frame(int iframe, int force, const RGYFilterParamAfs *pAfsPrm, cl_command_queue queue, std::vector<RGYOpenCLEvent> wait_event) {
+RGY_ERR RGYFilterAfs::scan_frame(int iframe, int force, const RGYFilterParamAfs *pAfsPrm, RGYOpenCLQueue &queue, std::vector<RGYOpenCLEvent> wait_event) {
     if (!force && scan_frame_result_cached(iframe, &pAfsPrm->afs)) {
         return RGY_ERR_NONE;
     }
@@ -746,14 +746,14 @@ RGY_ERR RGYFilterAfs::scan_frame(int iframe, int force, const RGYFilterParamAfs 
     return err;
 }
 
-RGY_ERR RGYFilterAfs::count_motion(AFS_SCAN_DATA *sp, const AFS_SCAN_CLIP *clip, cl_command_queue queue) {
+RGY_ERR RGYFilterAfs::count_motion(AFS_SCAN_DATA *sp, const AFS_SCAN_CLIP *clip, RGYOpenCLQueue &queue) {
     sp->clip = *clip;
 
     auto err = RGY_ERR_NONE;
     if (STREAM_OPT) {
         sp->event.wait();
     } else {
-        err = m_count_motion->queueMapBuffer(queue, CL_MAP_READ, {});
+        err = m_count_motion->queueMapBuffer(queue.get(), CL_MAP_READ, {});
         if (err != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("failed m_count_motion.queueMapBuffer: %s.\n"), get_err_mes(err));
             return err;
@@ -796,7 +796,7 @@ RGY_ERR RGYFilterAfs::count_motion(AFS_SCAN_DATA *sp, const AFS_SCAN_CLIP *clip,
     return err;
 }
 
-RGY_ERR RGYFilterAfs::get_stripe_info(cl_command_queue queue, int iframe, int mode, const RGYFilterParamAfs *pAfsPrm) {
+RGY_ERR RGYFilterAfs::get_stripe_info(RGYOpenCLQueue &queue, int iframe, int mode, const RGYFilterParamAfs *pAfsPrm) {
     AFS_STRIPE_DATA *sp = m_stripe.get(iframe);
     if (sp->status > mode && sp->status < 4 && sp->frame == iframe) {
         if (sp->status == 2) {
@@ -812,7 +812,7 @@ RGY_ERR RGYFilterAfs::get_stripe_info(cl_command_queue queue, int iframe, int mo
 
     AFS_SCAN_DATA *sp0 = m_scan.get(iframe);
     AFS_SCAN_DATA *sp1 = m_scan.get(iframe + 1);
-    auto err = merge_scan(sp, sp0, sp1, sp->buf_count_stripe, pAfsPrm, (STREAM_OPT) ? m_queueAnalyze() : queue, {}, m_eventMergeScan);
+    auto err = merge_scan(sp, sp0, sp1, sp->buf_count_stripe, pAfsPrm, (STREAM_OPT) ? m_queueAnalyze : queue, {}, m_eventMergeScan);
     if (err != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("failed merge_scan: %s.\n"), get_err_mes(err));
         return err;
@@ -837,12 +837,12 @@ RGY_ERR RGYFilterAfs::get_stripe_info(cl_command_queue queue, int iframe, int mo
     return err;
 }
 
-RGY_ERR RGYFilterAfs::count_stripe(cl_command_queue queue, AFS_STRIPE_DATA *sp, const AFS_SCAN_CLIP *clip, int tb_order) {
+RGY_ERR RGYFilterAfs::count_stripe(RGYOpenCLQueue &queue, AFS_STRIPE_DATA *sp, const AFS_SCAN_CLIP *clip, int tb_order) {
     auto err = RGY_ERR_NONE;
     if (STREAM_OPT) {
         sp->event.wait();
     } else {
-        err = sp->buf_count_stripe->queueMapBuffer(queue, CL_MAP_READ, {});
+        err = sp->buf_count_stripe->queueMapBuffer(queue.get(), CL_MAP_READ, {});
         if (err != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("failed m_count_stripe.queueMapBuffer: %s.\n"), get_err_mes(err));
             return err;
@@ -915,7 +915,7 @@ int RGYFilterAfs::detect_telecine_cross(int iframe, int coeff_shift) {
     return shift;
 }
 
-RGY_ERR RGYFilterAfs::analyze_frame(cl_command_queue queue, int iframe, const RGYFilterParamAfs *pAfsPrm, int reverse[4], int assume_shift[4], int result_stat[4]) {
+RGY_ERR RGYFilterAfs::analyze_frame(RGYOpenCLQueue &queue, int iframe, const RGYFilterParamAfs *pAfsPrm, int reverse[4], int assume_shift[4], int result_stat[4]) {
     for (int i = 0; i < 4; i++) {
         assume_shift[i] = detect_telecine_cross(iframe + i, pAfsPrm->afs.coeff_shift);
     }
@@ -1008,19 +1008,19 @@ RGY_ERR RGYFilterAfs::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOut
             return RGY_ERR_INVALID_PARAM;
         }
         //sourceキャッシュにコピー
-        auto err = m_source.add(pInputFrame, queue_main.get(), wait_events, m_eventSrcAdd);
+        auto err = m_source.add(pInputFrame, queue_main, wait_events, m_eventSrcAdd);
         if (err != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("failed to add frame to sorce buffer: %s.\n"), get_err_mes(err));
             return RGY_ERR_CUDA;
         }
         if (iframe == 0) {
             // scan_frame(p1 = -2, p0 = -1)のscan_frameも必要
-            if (RGY_ERR_NONE != (err = scan_frame(iframe-1, false, pAfsParam.get(), queue_main.get(), {}))) {
+            if (RGY_ERR_NONE != (err = scan_frame(iframe-1, false, pAfsParam.get(), queue_main, {}))) {
                 AddMessage(RGY_LOG_ERROR, _T("failed on scan_frame(iframe-1=%d): %s.\n"), iframe-1, get_err_mes(err));
                 return RGY_ERR_CUDA;
             }
         }
-        if (RGY_ERR_NONE != (err = scan_frame(iframe, false, pAfsParam.get(), (STREAM_OPT) ? m_queueAnalyze() : queue_main.get(), { m_eventSrcAdd }))) {
+        if (RGY_ERR_NONE != (err = scan_frame(iframe, false, pAfsParam.get(), (STREAM_OPT) ? m_queueAnalyze : queue_main, { m_eventSrcAdd }))) {
             AddMessage(RGY_LOG_ERROR, _T("failed on scan_frame(iframe=%d): %s.\n"), iframe, get_err_mes(err));
             return RGY_ERR_CUDA;
         }
@@ -1028,7 +1028,7 @@ RGY_ERR RGYFilterAfs::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOut
 
     if (iframe >= 5) {
         int reverse[4] = { 0 }, assume_shift[4] = { 0 }, result_stat[4] = { 0 };
-        auto err = analyze_frame(queue_main.get(), iframe - 5, pAfsParam.get(), reverse, assume_shift, result_stat);
+        auto err = analyze_frame(queue_main, iframe - 5, pAfsParam.get(), reverse, assume_shift, result_stat);
         if (err != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("failed on scan_frame(iframe=%d): %s.\n"), iframe - 5, get_err_mes(err));
             return RGY_ERR_CUDA;
@@ -1043,7 +1043,7 @@ RGY_ERR RGYFilterAfs::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOut
         //そのため、analyze_frameを使って、3フレーム先までstatusを計算しておく
         for (int i = preread_len; i >= 0; i--) {
             //ここでは、これまで発行したanalyze_frameの結果からstatusの更新を行う(analyze_frameの内部で行われる)
-            auto err = analyze_frame(queue_main.get(), m_nFrame + i, pAfsParam.get(), reverse, assume_shift, result_stat);
+            auto err = analyze_frame(queue_main, m_nFrame + i, pAfsParam.get(), reverse, assume_shift, result_stat);
             if (err != RGY_ERR_NONE) {
                 AddMessage(RGY_LOG_ERROR, _T("error on analyze_frame(m_nFrame=%d, iframe=%d): %s.\n"),
                     m_nFrame, m_nFrame + i, iframe, get_err_mes(err));
@@ -1104,18 +1104,18 @@ RGY_ERR RGYFilterAfs::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOut
             m_nPts += pOutFrame->frame.duration;
 
             //出力するフレームを作成
-            get_stripe_info(queue_main.get(), m_nFrame, 1, pAfsParam.get());
+            get_stripe_info(queue_main, m_nFrame, 1, pAfsParam.get());
             RGY_ERR err = RGY_ERR_NONE;
-            auto sip_filtered = m_stripe.filter(m_nFrame, pAfsParam->afs.analyze, queue_main.get(), &err);
+            auto sip_filtered = m_stripe.filter(m_nFrame, pAfsParam->afs.analyze, queue_main, &err);
             if (sip_filtered == nullptr || err != RGY_ERR_NONE) {
                 AddMessage(RGY_LOG_ERROR, _T("failed m_stripe.filter(m_nFrame=%d, iframe=%d): %s.\n"), m_nFrame, iframe - (5+preread_len), get_err_mes(err));
                 return RGY_ERR_INVALID_CALL;
             }
 
             if (interlaced(m_source.get(m_nFrame)->frameinfo()) || pAfsParam->afs.tune) {
-                err = synthesize(m_nFrame, pOutFrame, m_source.get(m_nFrame), m_source.get(m_nFrame-1), sip_filtered, pAfsParam.get(), queue_main.get());
+                err = synthesize(m_nFrame, pOutFrame, m_source.get(m_nFrame), m_source.get(m_nFrame-1), sip_filtered, pAfsParam.get(), queue_main);
             } else {
-                err = m_source.copyFrame(pOutFrame, m_nFrame, queue_main.get(), event);
+                err = m_source.copyFrame(pOutFrame, m_nFrame, queue_main, event);
             }
             if (err != RGY_ERR_NONE) {
                 AddMessage(RGY_LOG_ERROR, _T("error on synthesize(m_nFrame=%d, iframe=%d): %s.\n"), m_nFrame, iframe - (5+preread_len), get_err_mes(err));

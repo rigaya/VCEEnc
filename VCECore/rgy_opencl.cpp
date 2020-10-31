@@ -574,8 +574,31 @@ RGYOpenCLQueue RGYOpenCLContext::createQueue(cl_device_id devid) {
     return std::move(queue);
 }
 
-RGYOpenCLKernelLauncher::RGYOpenCLKernelLauncher(cl_kernel kernel, std::string kernelName, cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, shared_ptr<RGYLog> pLog, const std::vector<RGYOpenCLEvent>& wait_events, RGYOpenCLEvent *event) :
+RGYOpenCLKernelLauncher::RGYOpenCLKernelLauncher(cl_kernel kernel, std::string kernelName, RGYOpenCLQueue &queue, const RGYWorkSize &local, const RGYWorkSize &global, shared_ptr<RGYLog> pLog, const std::vector<RGYOpenCLEvent>& wait_events, RGYOpenCLEvent *event) :
     m_kernel(kernel), m_kernelName(kernelName), m_queue(queue), m_local(local), m_global(global), m_pLog(pLog), m_wait_events(toVec(wait_events)), m_event(event) {
+}
+
+size_t RGYOpenCLKernelLauncher::subGroupSize() const {
+    auto clFunc = (clGetKernelSubGroupInfo) ? clGetKernelSubGroupInfo : clGetKernelSubGroupInfoKHR;
+    if (clFunc == nullptr) return 0;
+    size_t subGroupSize = 0;
+    auto err = clFunc(m_kernel, m_queue.devid(), CL_KERNEL_MAX_SUB_GROUP_SIZE_FOR_NDRANGE, sizeof(RGYWorkSize::w), m_local(), sizeof(subGroupSize), &subGroupSize, nullptr);
+    if (err != CL_SUCCESS) {
+        m_pLog->write(RGY_LOG_ERROR, _T("Error: Failed to get subGroupSize of kernel \"%s\": %s\n"), char_to_tstring(m_kernelName).c_str(), cl_errmes(err));
+        return 0;
+    }
+    return subGroupSize;
+}
+size_t RGYOpenCLKernelLauncher::subGroupCount() const {
+    auto clFunc = (clGetKernelSubGroupInfo) ? clGetKernelSubGroupInfo : clGetKernelSubGroupInfoKHR;
+    if (clFunc == nullptr) return 0;
+    size_t subGroupCount = 0;
+    auto err = clFunc(m_kernel, m_queue.devid(), CL_KERNEL_SUB_GROUP_COUNT_FOR_NDRANGE, sizeof(RGYWorkSize::w), m_local(), sizeof(subGroupCount), &subGroupCount, nullptr);
+    if (err != CL_SUCCESS) {
+        m_pLog->write(RGY_LOG_ERROR, _T("Error: Failed to get subGroupCount of kernel \"%s\": %s\n"), char_to_tstring(m_kernelName).c_str(), cl_errmes(err));
+        return 0;
+    }
+    return subGroupCount;
 }
 
 RGY_ERR RGYOpenCLKernelLauncher::launch(std::vector<void *> arg_ptrs, std::vector<size_t> arg_size, std::vector<std::type_index> arg_type) {
@@ -598,7 +621,7 @@ RGY_ERR RGYOpenCLKernelLauncher::launch(std::vector<void *> arg_ptrs, std::vecto
         }
     }
     auto globalCeiled = m_global.ceilGlobal(m_local);
-    auto err = err_cl_to_rgy(clEnqueueNDRangeKernel(m_queue, m_kernel, 3, NULL, globalCeiled(), m_local(),
+    auto err = err_cl_to_rgy(clEnqueueNDRangeKernel(m_queue.get(), m_kernel, 3, NULL, globalCeiled(), m_local(),
         (int)m_wait_events.size(),
         (m_wait_events.size() > 0) ? m_wait_events.data() : nullptr,
         (m_event) ? m_event->reset_ptr() : nullptr));
@@ -634,15 +657,15 @@ RGYOpenCLProgram::~RGYOpenCLProgram() {
     }
 };
 
-RGYOpenCLKernelLauncher RGYOpenCLKernel::config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global) {
+RGYOpenCLKernelLauncher RGYOpenCLKernel::config(RGYOpenCLQueue &queue, const RGYWorkSize &local, const RGYWorkSize &global) {
     return RGYOpenCLKernelLauncher(m_kernel, m_kernelName, queue, local, global, m_pLog, {}, nullptr);
 }
 
-RGYOpenCLKernelLauncher RGYOpenCLKernel::config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, RGYOpenCLEvent *event) {
+RGYOpenCLKernelLauncher RGYOpenCLKernel::config(RGYOpenCLQueue &queue, const RGYWorkSize &local, const RGYWorkSize &global, RGYOpenCLEvent *event) {
     return RGYOpenCLKernelLauncher(m_kernel, m_kernelName, queue, local, global, m_pLog, {}, event);
 }
 
-RGYOpenCLKernelLauncher RGYOpenCLKernel::config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+RGYOpenCLKernelLauncher RGYOpenCLKernel::config(RGYOpenCLQueue &queue, const RGYWorkSize &local, const RGYWorkSize &global, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     return RGYOpenCLKernelLauncher(m_kernel, m_kernelName, queue, local, global, m_pLog, wait_events, event);
 }
 
@@ -745,18 +768,17 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *dst, const FrameInfo *src) {
     return copyPlane(dst, src, nullptr);
 }
 RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop) {
-    return copyPlane(dst, src, srcCrop, RGYDefaultQueue);
+    return copyPlane(dst, src, srcCrop, m_queue[0]);
 }
-RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue) {
+RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, RGYOpenCLQueue &queue) {
     return copyPlane(dst, src, srcCrop, queue, {}, nullptr);
 }
-RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, RGYOpenCLEvent *event) {
+RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, RGYOpenCLQueue &queue, RGYOpenCLEvent *event) {
     return copyPlane(dst, src, srcCrop, queue, {}, event);
 }
 
-RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDstOrg, const FrameInfo *planeSrcOrg, const sInputCrop *planeCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event, RGYFrameCopyMode copyMode) {
+RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDstOrg, const FrameInfo *planeSrcOrg, const sInputCrop *planeCrop, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event, RGYFrameCopyMode copyMode) {
     cl_int err = CL_SUCCESS;
-    queue = (queue != RGYDefaultQueue) ? queue : m_queue[0].get();
     const std::vector<cl_event> v_wait_list = toVec(wait_events);
     const int wait_count = (int)v_wait_list.size();
     const cl_event *wait_list = (wait_count > 0) ? v_wait_list.data() : nullptr;
@@ -781,7 +803,7 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDstOrg, const FrameInfo *pla
     if (planeSrc.mem_type == RGY_MEM_TYPE_GPU) {
         if (planeDst.mem_type == RGY_MEM_TYPE_GPU) {
             if (planeDst.csp == planeSrc.csp) {
-                err = clEnqueueCopyBufferRect(queue, (cl_mem)planeSrc.ptr[0], (cl_mem)planeDst.ptr[0], src_origin, dst_origin,
+                err = clEnqueueCopyBufferRect(queue.get(), (cl_mem)planeSrc.ptr[0], (cl_mem)planeDst.ptr[0], src_origin, dst_origin,
                     region, planeSrc.pitch[0], 0, planeDst.pitch[0], 0, wait_count, wait_list, event_ptr);
             } else {
                 if (!m_copyB2B) {
@@ -825,7 +847,7 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDstOrg, const FrameInfo *pla
                 planeSrc.width, planeSrc.height);
             err = err_rgy_to_cl(rgy_err);
         } else if (planeDst.mem_type == RGY_MEM_TYPE_CPU) {
-            err = clEnqueueReadBufferRect(queue, (cl_mem)planeSrc.ptr[0], false, src_origin, dst_origin,
+            err = clEnqueueReadBufferRect(queue.get(), (cl_mem)planeSrc.ptr[0], false, src_origin, dst_origin,
                 region, planeSrc.pitch[0], 0, planeDst.pitch[0], 0, planeDst.ptr[0], wait_count, wait_list, event_ptr);
         } else {
             return RGY_ERR_UNSUPPORTED;
@@ -854,7 +876,7 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDstOrg, const FrameInfo *pla
         } else if (planeDst.mem_type == RGY_MEM_TYPE_GPU_IMAGE) {
             if (planeDst.csp == planeSrc.csp) {
                 clGetImageInfo((cl_mem)planeDst.ptr[0], CL_IMAGE_WIDTH, sizeof(region[0]), &region[0], nullptr);
-                err = clEnqueueCopyImage(queue, (cl_mem)planeSrc.ptr[0], (cl_mem)planeDst.ptr[0], src_origin, dst_origin, region, wait_count, wait_list, event_ptr);
+                err = clEnqueueCopyImage(queue.get(), (cl_mem)planeSrc.ptr[0], (cl_mem)planeDst.ptr[0], src_origin, dst_origin, region, wait_count, wait_list, event_ptr);
             } else {
                 if (!m_copyI2I) {
                     const auto options = strsprintf("-D TypeIn=%s -D TypeOut=%s -D IMAGE_SRC=1 -D IMAGE_DST=1 -D in_bit_depth=%d -D out_bit_depth=%d",
@@ -878,18 +900,18 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDstOrg, const FrameInfo *pla
             }
         } else if (planeDst.mem_type == RGY_MEM_TYPE_CPU) {
             clGetImageInfo((cl_mem)planeSrc.ptr[0], CL_IMAGE_WIDTH, sizeof(region[0]), &region[0], nullptr);
-            err = clEnqueueReadImage(queue, (cl_mem)planeSrc.ptr[0], false, dst_origin,
+            err = clEnqueueReadImage(queue.get(), (cl_mem)planeSrc.ptr[0], false, dst_origin,
                 region, planeDst.pitch[0], 0, planeDst.ptr[0], wait_count, wait_list, event_ptr);
         } else {
             return RGY_ERR_UNSUPPORTED;
         }
     } else if (planeSrc.mem_type == RGY_MEM_TYPE_CPU) {
         if (planeDst.mem_type == RGY_MEM_TYPE_GPU) {
-            err = clEnqueueWriteBufferRect(queue, (cl_mem)planeDst.ptr[0], false, dst_origin, src_origin,
+            err = clEnqueueWriteBufferRect(queue.get(), (cl_mem)planeDst.ptr[0], false, dst_origin, src_origin,
                 region, planeDst.pitch[0], 0, planeSrc.pitch[0], 0, planeSrc.ptr[0], wait_count, wait_list, event_ptr);
         } else if (planeDst.mem_type == RGY_MEM_TYPE_GPU_IMAGE) {
             clGetImageInfo((cl_mem)planeDst.ptr[0], CL_IMAGE_WIDTH, sizeof(region[0]), &region[0], nullptr);
-            err = clEnqueueWriteImage(queue, (cl_mem)planeDst.ptr[0], false, src_origin,
+            err = clEnqueueWriteImage(queue.get(), (cl_mem)planeDst.ptr[0], false, src_origin,
                 region, planeSrc.pitch[0], 0, (void *)planeSrc.ptr[0], wait_count, wait_list, event_ptr);
         } else if (planeDst.mem_type == RGY_MEM_TYPE_CPU) {
             for (int y = 0; y < planeDst.height; y++) {
@@ -909,16 +931,16 @@ RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src) {
     return copyFrame(dst, src, nullptr);
 }
 RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop) {
-    return copyFrame(dst, src, srcCrop, RGYDefaultQueue);
+    return copyFrame(dst, src, srcCrop, m_queue[0]);
 }
-RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue) {
+RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, RGYOpenCLQueue &queue) {
     return copyFrame(dst, src, srcCrop, queue, {}, nullptr);
 }
-RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, RGYOpenCLEvent *event) {
+RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, RGYOpenCLQueue &queue, RGYOpenCLEvent *event) {
     return copyFrame(dst, src, srcCrop, queue, {}, event);
 }
 
-RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event, RGYFrameCopyMode copyMode) {
+RGY_ERR RGYOpenCLContext::copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event, RGYFrameCopyMode copyMode) {
     if (dst->csp != src->csp) {
         m_pLog->write(RGY_LOG_ERROR, _T("in/out csp should be same in copyFrame.\n"));
         return RGY_ERR_INVALID_CALL;
@@ -954,15 +976,15 @@ RGY_ERR RGYOpenCLContext::setPlane(int value, FrameInfo *dst) {
     return setPlane(value, dst, nullptr);
 }
 RGY_ERR RGYOpenCLContext::setPlane(int value, FrameInfo *dst, const sInputCrop *dstOffset) {
-    return setPlane(value, dst, dstOffset, RGYDefaultQueue);
+    return setPlane(value, dst, dstOffset, m_queue[0]);
 }
-RGY_ERR RGYOpenCLContext::setPlane(int value, FrameInfo *dst, const sInputCrop *dstOffset, cl_command_queue queue) {
+RGY_ERR RGYOpenCLContext::setPlane(int value, FrameInfo *dst, const sInputCrop *dstOffset, RGYOpenCLQueue &queue) {
     return setPlane(value, dst, dstOffset, queue, {}, nullptr);
 }
-RGY_ERR RGYOpenCLContext::setPlane(int value, FrameInfo *dst, const sInputCrop *dstOffset, cl_command_queue queue, RGYOpenCLEvent *event) {
+RGY_ERR RGYOpenCLContext::setPlane(int value, FrameInfo *dst, const sInputCrop *dstOffset, RGYOpenCLQueue &queue, RGYOpenCLEvent *event) {
     return setPlane(value, dst, dstOffset, queue, {}, event);
 }
-RGY_ERR RGYOpenCLContext::setPlane(int value, FrameInfo *planeDst, const sInputCrop *dstOffset, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+RGY_ERR RGYOpenCLContext::setPlane(int value, FrameInfo *planeDst, const sInputCrop *dstOffset, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     const int pixel_size = RGY_CSP_BIT_DEPTH[planeDst->csp] > 8 ? 2 : 1;
     if (planeDst->mem_type == RGY_MEM_TYPE_CPU) {
         if (RGY_CSP_BIT_DEPTH[planeDst->csp] > 8) {
@@ -1011,15 +1033,15 @@ RGY_ERR RGYOpenCLContext::setFrame(int value, FrameInfo *dst) {
     return setFrame(value, dst, nullptr);
 }
 RGY_ERR RGYOpenCLContext::setFrame(int value, FrameInfo *dst, const sInputCrop *dstOffset) {
-    return setFrame(value, dst, dstOffset, RGYDefaultQueue);
+    return setFrame(value, dst, dstOffset, m_queue[0]);
 }
-RGY_ERR RGYOpenCLContext::setFrame(int value, FrameInfo *dst, const sInputCrop *dstOffset, cl_command_queue queue) {
+RGY_ERR RGYOpenCLContext::setFrame(int value, FrameInfo *dst, const sInputCrop *dstOffset, RGYOpenCLQueue &queue) {
     return setFrame(value, dst, dstOffset, queue, {}, nullptr);
 }
-RGY_ERR RGYOpenCLContext::setFrame(int value, FrameInfo *dst, const sInputCrop *dstOffset, cl_command_queue queue, RGYOpenCLEvent *event) {
+RGY_ERR RGYOpenCLContext::setFrame(int value, FrameInfo *dst, const sInputCrop *dstOffset, RGYOpenCLQueue &queue, RGYOpenCLEvent *event) {
     return setFrame(value, dst, dstOffset, queue, {}, event);
 }
-RGY_ERR RGYOpenCLContext::setFrame(int value, FrameInfo *dst, const sInputCrop *dstOffset, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+RGY_ERR RGYOpenCLContext::setFrame(int value, FrameInfo *dst, const sInputCrop *dstOffset, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     const int pixel_size = RGY_CSP_BIT_DEPTH[dst->csp] > 8 ? 2 : 1;
 
     RGY_ERR err = RGY_ERR_NONE;

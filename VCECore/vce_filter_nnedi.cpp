@@ -77,7 +77,7 @@ RGY_ERR nnedi_compute_network_0(FrameInfo *pOutputPlane,
             pOutputPlane->width,
             divCeil(pOutputPlane->height >> 1, THREAD_Y_LOOP_K0));
 
-        err = nnedi_k0->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
+        err = nnedi_k0->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
             (cl_mem)pOutputPlane->ptr[0],
             pOutputPlane->pitch[0] * (targetField == NNEDI_GEN_FIELD_TOP ? 0 : 1), //生成するほうのフィールドを選択
             pOutputPlane->pitch[0] * 2,  //1行おきなので通常の2倍
@@ -95,7 +95,7 @@ RGY_ERR nnedi_compute_network_0(FrameInfo *pOutputPlane,
             divCeil(pOutputPlane->width, 4 /*4ピクセル分一度に処理する*/),
             divCeil(pOutputPlane->height >> 1, THREAD_Y_LOOP_K0));
 
-        err = nnedi_k0->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
+        err = nnedi_k0->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
             (cl_mem)pOutputPlane->ptr[0],
             pOutputPlane->pitch[0] * (targetField == NNEDI_GEN_FIELD_TOP ? 0 : 1), //生成するほうのフィールドを選択
             pOutputPlane->pitch[0] * 2,  //1行おきなので通常の2倍
@@ -115,7 +115,7 @@ RGY_ERR nnedi_compute_network_0(FrameInfo *pOutputPlane,
         sInputCrop dstOffset = initCrop();
         dstOffset.e.up = pOutputPlane->pitch[0] * (targetField == NNEDI_GEN_FIELD_TOP ? 0 : 1); //生成するほうのフィールドを選択
 
-        err = cl->setPlane(-1, pOutputPlane, &dstOffset, queue.get());
+        err = cl->setPlane(-1, pOutputPlane, &dstOffset, queue);
     }
     return err;
 }
@@ -143,7 +143,7 @@ RGY_ERR nnedi_compute_network_1(
         divCeil(pOutputFrame->height >> 1, THREAD_Y_LOOP_K1));
 
     const char *kernel_name = "kernel_compute_network1";
-    auto err = nnedi_k1->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
+    auto err = nnedi_k1->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
         (cl_mem)pOutputFrame->ptr[0],
         pOutputFrame->pitch[0] * ((targetField == NNEDI_GEN_FIELD_TOP) ? 0 : 1), //生成するほうのフィールドを選択
         pOutputFrame->pitch[0] * 2, //1行おきなので通常の2倍
@@ -170,7 +170,7 @@ RGY_ERR RGYFilterNnedi::procPlane(
     }
     {
         sInputCrop planeCrop = initCrop();
-        auto err = m_cl->copyPlane(pOutputPlane, pInputPlane, &planeCrop, queue.get(), wait_events, nullptr, targetField == NNEDI_GEN_FIELD_TOP ? RGYFrameCopyMode::FIELD_BOTTOM : RGYFrameCopyMode::FIELD_TOP);
+        auto err = m_cl->copyPlane(pOutputPlane, pInputPlane, &planeCrop, queue, wait_events, nullptr, targetField == NNEDI_GEN_FIELD_TOP ? RGYFrameCopyMode::FIELD_BOTTOM : RGYFrameCopyMode::FIELD_TOP);
         if (err != RGY_ERR_NONE) {
             m_pLog->write(RGY_LOG_ERROR, _T("Failed to copyPlaneField: %s\n"), get_err_mes(err));
             return err;

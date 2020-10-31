@@ -33,7 +33,7 @@
 
 #if ENABLE_OPENCL
 
-#define CL_TARGET_OPENCL_VERSION 200
+#define CL_TARGET_OPENCL_VERSION 210
 #include <CL/opencl.h>
 #include <CL/cl_dx9_media_sharing.h>
 #include <CL/cl_d3d11.h>
@@ -479,11 +479,15 @@ public:
     size_t size() const { return size_; }
 };
 
+class RGYOpenCLQueue;
+
 class RGYOpenCLKernelLauncher {
 public:
-    RGYOpenCLKernelLauncher(cl_kernel kernel, std::string kernelName, cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, shared_ptr<RGYLog> pLog, const std::vector<RGYOpenCLEvent>& wait_events, RGYOpenCLEvent *event);
+    RGYOpenCLKernelLauncher(cl_kernel kernel, std::string kernelName, RGYOpenCLQueue &queue, const RGYWorkSize &local, const RGYWorkSize &global, shared_ptr<RGYLog> pLog, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
     virtual ~RGYOpenCLKernelLauncher() {};
 
+    size_t subGroupSize() const;
+    size_t subGroupCount() const;
     RGY_ERR launch(std::vector<void *> arg_ptrs = std::vector<void *>(), std::vector<size_t> arg_size = std::vector<size_t>(), std::vector<std::type_index> = std::vector<std::type_index>());
 
     template <typename... ArgTypes>
@@ -501,7 +505,7 @@ public:
 protected:
     cl_kernel m_kernel;
     std::string m_kernelName;
-    cl_command_queue m_queue;
+    RGYOpenCLQueue &m_queue;
     RGYWorkSize m_local;
     RGYWorkSize m_global;
     shared_ptr<RGYLog> m_pLog;
@@ -515,9 +519,9 @@ public:
     RGYOpenCLKernel(cl_kernel kernel, std::string kernelName, shared_ptr<RGYLog> pLog);
     cl_kernel get() const { return m_kernel; }
     virtual ~RGYOpenCLKernel();
-    RGYOpenCLKernelLauncher config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global);
-    RGYOpenCLKernelLauncher config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, RGYOpenCLEvent *event);
-    RGYOpenCLKernelLauncher config(cl_command_queue queue, const RGYWorkSize &local, const RGYWorkSize &global, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr);
+    RGYOpenCLKernelLauncher config(RGYOpenCLQueue &queue, const RGYWorkSize &local, const RGYWorkSize &global);
+    RGYOpenCLKernelLauncher config(RGYOpenCLQueue &queue, const RGYWorkSize &local, const RGYWorkSize &global, RGYOpenCLEvent *event);
+    RGYOpenCLKernelLauncher config(RGYOpenCLQueue &queue, const RGYWorkSize &local, const RGYWorkSize &global, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr);
 protected:
     cl_kernel m_kernel;
     std::string m_kernelName;
@@ -597,24 +601,24 @@ public:
     unique_ptr<RGYCLFrame> createFrameBuffer(const FrameInfo &frame, cl_mem_flags flags = CL_MEM_READ_WRITE);
     RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src);
     RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop);
-    RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue);
-    RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, RGYOpenCLEvent *event);
-    RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr, RGYFrameCopyMode copyMode = RGYFrameCopyMode::FRAME);
+    RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, RGYOpenCLQueue &queue);
+    RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, RGYOpenCLQueue &queue, RGYOpenCLEvent *event);
+    RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr, RGYFrameCopyMode copyMode = RGYFrameCopyMode::FRAME);
     RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src);
     RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop);
-    RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue);
-    RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, RGYOpenCLEvent *event);
-    RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr, RGYFrameCopyMode copyMode = RGYFrameCopyMode::FRAME);
+    RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, RGYOpenCLQueue &queue);
+    RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, RGYOpenCLQueue &queue, RGYOpenCLEvent *event);
+    RGY_ERR copyPlane(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr, RGYFrameCopyMode copyMode = RGYFrameCopyMode::FRAME);
     RGY_ERR setPlane(int value, FrameInfo *dst);
     RGY_ERR setPlane(int value, FrameInfo *dst, const sInputCrop *srcCrop);
-    RGY_ERR setPlane(int value, FrameInfo *dst, const sInputCrop *srcCrop, cl_command_queue queue);
-    RGY_ERR setPlane(int value, FrameInfo *dst, const sInputCrop *srcCrop, cl_command_queue queue, RGYOpenCLEvent *event);
-    RGY_ERR setPlane(int value, FrameInfo *dst, const sInputCrop *srcCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr);
+    RGY_ERR setPlane(int value, FrameInfo *dst, const sInputCrop *srcCrop, RGYOpenCLQueue &queue);
+    RGY_ERR setPlane(int value, FrameInfo *dst, const sInputCrop *srcCrop, RGYOpenCLQueue &queue, RGYOpenCLEvent *event);
+    RGY_ERR setPlane(int value, FrameInfo *dst, const sInputCrop *srcCrop, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr);
     RGY_ERR setFrame(int value, FrameInfo *dst);
     RGY_ERR setFrame(int value, FrameInfo *dst, const sInputCrop *srcCrop);
-    RGY_ERR setFrame(int value, FrameInfo *dst, const sInputCrop *srcCrop, cl_command_queue queue);
-    RGY_ERR setFrame(int value, FrameInfo *dst, const sInputCrop *srcCrop, cl_command_queue queue, RGYOpenCLEvent *event);
-    RGY_ERR setFrame(int value, FrameInfo *dst, const sInputCrop *srcCrop, cl_command_queue queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr);
+    RGY_ERR setFrame(int value, FrameInfo *dst, const sInputCrop *srcCrop, RGYOpenCLQueue &queue);
+    RGY_ERR setFrame(int value, FrameInfo *dst, const sInputCrop *srcCrop, RGYOpenCLQueue &queue, RGYOpenCLEvent *event);
+    RGY_ERR setFrame(int value, FrameInfo *dst, const sInputCrop *srcCrop, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr);
 protected:
     unique_ptr<RGYOpenCLProgram> build(const char *data, const size_t size, const char *options);
 
