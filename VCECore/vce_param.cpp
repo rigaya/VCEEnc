@@ -796,6 +796,7 @@ RGY_ERR AMFParams::SetParamTypeAVC() {
 #pragma warning(pop)
     SetParamType(AMF_VIDEO_ENCODER_ASPECT_RATIO, AMF_PARAM_STATIC, L"Controls aspect ratio, defulat (1,1)");
     SetParamType(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR, AMF_PARAM_STATIC, L"Inidicates that YUV input is (0,255) (bool, default = false)");
+    SetParamType(AMF_VIDEO_ENCODER_LOWLATENCY_MODE, AMF_PARAM_STATIC, L"bool; default = false, enables low latency mode");
 
     // ------------- Encoder params dynamic ---------------
     //SetParamType(AMF_VIDEO_ENCODER_WIDTH, AMF_PARAM_DYNAMIC, L"Frame width (integer, default = 0)");
