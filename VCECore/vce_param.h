@@ -461,6 +461,12 @@ const CX_DESC list_vpp_rotate[] = {
     { NULL, 0 }
 };
 
+const CX_DESC list_vpp_ass_shaping[] = {
+    { _T("simple"),  0 },
+    { _T("complex"), 1 },
+    { NULL, 0 }
+};
+
 const CX_DESC list_vce_quality_preset_h264[] = {
     { _T("balanced"), AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED },
     { _T("fast"),     AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED },
@@ -734,6 +740,25 @@ struct VppSmooth {
     tstring print() const;
 };
 
+struct VppSubburn {
+    bool  enable;
+    tstring filename;
+    std::string charcode;
+    int trackId;
+    int assShaping;
+    float scale;
+    float transparency_offset;
+    float brightness;
+    float contrast;
+    double ts_offset;
+    bool vid_ts_offset;
+
+    VppSubburn();
+    bool operator==(const VppSubburn &x) const;
+    bool operator!=(const VppSubburn &x) const;
+    tstring print() const;
+};
+
 struct VppUnsharp {
     bool  enable;
     int   radius;
@@ -815,6 +840,7 @@ struct VCEVppParam {
     VppKnn knn;
     VppPmd pmd;
     VppSmooth smooth;
+    std::vector<VppSubburn> subburn;
     VppUnsharp unsharp;
     VppEdgelevel edgelevel;
     VppTweak tweak;

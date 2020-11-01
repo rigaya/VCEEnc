@@ -352,6 +352,26 @@ tstring encoder_help() {
         _T("                              auto (default), fp16, fp32\n"),
         FILTER_DEFAULT_SMOOTH_QUALITY, FILTER_DEFAULT_SMOOTH_QP);
     str += strsprintf(_T("\n")
+        _T("   --vpp-subburn [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     Burn in specified subtitle to the video.\n")
+        _T("    params\n")
+        _T("      track=<int>               subtitle track of the input file to burn in.\n")
+        _T("      filename=<string>         subtitle file path to burn in.\n")
+        _T("      charcode=<string>         subtitle charcter code.\n")
+        _T("      shaping=<string>          rendering quality of text.\n")
+        _T("      scale=<float>             scaling multiplizer for bitmap subtitles.\n")
+        _T("      transparency=<float>      adds additional transparency.\n")
+        _T("                                  (default=0.0, 0.0 - 1.0)\n")
+        _T("      brightness=<float>        modifies brightness of the subtitle.\n")
+        _T("                                  (default=%.1f, -1.0 - 1.0)\n")
+        _T("      contrast=<float>          modifies contrast of the subtitle.\n")
+        _T("                                  (default=%.1f, -2.0 - 2.0)\n")
+        _T("      vid_ts_offset=<bool>      add timestamp offset to match the first timestamp of\n")
+        _T("                                  the video file (default: on)\n")
+        _T("                                  (when \"track\" is used this options is always on)\n")
+        _T("      ts_offset=<float>         add offset in seconds to subtitle timestamps.\n"),
+        FILTER_DEFAULT_TWEAK_BRIGHTNESS, FILTER_DEFAULT_TWEAK_CONTRAST);
+    str += strsprintf(_T("\n")
         _T("   --vpp-unsharp [<param1>=<value>][,<param2>=<value>][...]\n")
         _T("     enable unsharp filter.\n")
         _T("    params\n")
@@ -1783,6 +1803,145 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+
+
+    if (IS_OPTION("vpp-subburn")) {
+        VppSubburn subburn;
+        subburn.enable = true;
+        if (i+1 >= nArgNum || strInput[i+1][0] == _T('-')) {
+            pParams->vpp.subburn.push_back(subburn);
+            return 0;
+        }
+        i++;
+        vector<tstring> param_list;
+        bool flag_comma = false;
+        const TCHAR *pstr = strInput[i];
+        const TCHAR *qstr = strInput[i];
+        for (; *pstr; pstr++) {
+            if (*pstr == _T('\"')) {
+                flag_comma ^= true;
+            }
+            if (!flag_comma && *pstr == _T(',')) {
+                param_list.push_back(tstring(qstr, pstr - qstr));
+                qstr = pstr+1;
+            }
+        }
+        param_list.push_back(tstring(qstr, pstr - qstr));
+
+        const auto paramList = std::vector<std::string>{ "track", "filename", "charcode", "shaping", "scale", "transparency", "brightness", "contrast", "vid_ts_offset", "ts_offset" };
+
+        for (const auto &param : param_list) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos+1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        subburn.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("track")) {
+                    try {
+                        subburn.trackId = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("filename")) {
+                    subburn.filename = trim(param_val, _T("\""));
+                    continue;
+                }
+                if (param_arg == _T("charcode")) {
+                    subburn.charcode = trim(tchar_to_string(param_val), "\"");
+                    continue;
+                }
+                if (param_arg == _T("shaping")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_ass_shaping, param_val.c_str(), &value)) {
+                        subburn.assShaping = value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_ass_shaping);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("scale")) {
+                    try {
+                        subburn.scale = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("transparency")) {
+                    try {
+                        subburn.transparency_offset = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("brightness")) {
+                    try {
+                        subburn.brightness = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("contrast")) {
+                    try {
+                        subburn.contrast = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("vid_ts_offset")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        subburn.vid_ts_offset = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("ts_offset")) {
+                    try {
+                        subburn.ts_offset = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            } else {
+                try {
+                    subburn.trackId = std::stoi(param);
+                } catch (...) {
+                    subburn.filename = param;
+                }
+            }
+        }
+        pParams->vpp.subburn.push_back(subburn);
+        return 0;
+    }
+
     if (IS_OPTION("vpp-unsharp")) {
         pParams->vpp.unsharp.enable = true;
         if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
@@ -2722,6 +2881,31 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
             cmd << _T(" --vpp-smooth ") << tmp.str().substr(1);
         } else if (pParams->vpp.smooth.enable) {
             cmd << _T(" --vpp-smooth");
+        }
+    }
+    for (size_t i = 0; i < pParams->vpp.subburn.size(); i++) {
+        if (pParams->vpp.subburn[i] != VppSubburn()) {
+            tmp.str(tstring());
+            if (!pParams->vpp.subburn[i].enable && save_disabled_prm) {
+                tmp << _T(",enable=false");
+            }
+            if (pParams->vpp.subburn[i].enable || save_disabled_prm) {
+                ADD_NUM(_T("track"), vpp.subburn[i].trackId);
+                ADD_PATH(_T("filename"), vpp.subburn[i].filename.c_str());
+                ADD_STR(_T("charcode"), vpp.subburn[i].charcode);
+                ADD_LST(_T("shaping"), vpp.subburn[i].assShaping, list_vpp_ass_shaping);
+                ADD_FLOAT(_T("scale"), vpp.subburn[i].scale, 4);
+                ADD_FLOAT(_T("transparency"), vpp.subburn[i].transparency_offset, 4);
+                ADD_FLOAT(_T("brightness"), vpp.subburn[i].brightness, 4);
+                ADD_FLOAT(_T("contrast"), vpp.subburn[i].contrast, 4);
+                ADD_BOOL(_T("vid_ts_offset"), vpp.subburn[i].vid_ts_offset);
+                ADD_FLOAT(_T("ts_offset"), vpp.subburn[i].ts_offset, 4);
+            }
+            if (!tmp.str().empty()) {
+                cmd << _T(" --vpp-subburn ") << tmp.str().substr(1);
+            } else if (pParams->vpp.subburn[i].enable) {
+                cmd << _T(" --vpp-subburn");
+            }
         }
     }
     if (pParams->vpp.unsharp != encPrmDefault.vpp.unsharp) {

@@ -56,6 +56,7 @@
 #include "vce_filter_denoise_knn.h"
 #include "vce_filter_denoise_pmd.h"
 #include "vce_filter_smooth.h"
+#include "vce_filter_subburn.h"
 #include "vce_filter_unsharp.h"
 #include "vce_filter_edgelevel.h"
 #include "vce_filter_tweak.h"
@@ -327,18 +328,12 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
     m_pStatus.reset(new EncodeStatus());
 
     int subburnTrackId = 0;
-#if ENCODER_NVENC
-    if (inputParam->common.nSubtitleSelectCount > 0 && inputParam->vpp.subburn.size() > 0) {
-        PrintMes(RGY_LOG_ERROR, _T("--sub-copy and --vpp-subburn should not be set at the same time.\n"));
-        return RGY_ERR_INVALID_PARAM;
-    }
     for (const auto &subburn : inputParam->vpp.subburn) {
         if (subburn.trackId > 0) {
             subburnTrackId = subburn.trackId;
             break;
         }
     }
-#endif
 
     //--input-cspの値 (raw読み込み用の入力色空間)
     //この後上書きするので、ここで保存する
@@ -562,14 +557,12 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
 
 
     int subburnTrackId = 0;
-#if ENCODER_NVENC
     for (const auto &subburn : inputParams->vpp.subburn) {
         if (subburn.trackId > 0) {
             subburnTrackId = subburn.trackId;
             break;
         }
     }
-#endif
 
     auto err = initWriters(m_pFileWriter, m_pFileWriterListAudio, m_pFileReader, m_AudioReaders,
         &inputParams->common, &inputParams->input, &inputParams->ctrl, outputVideoInfo,
@@ -741,6 +734,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         || inputParam->vpp.knn.enable
         || inputParam->vpp.pmd.enable
         || inputParam->vpp.smooth.enable
+        || inputParam->vpp.subburn.size() > 0
         || inputParam->vpp.unsharp.enable
         || inputParam->vpp.edgelevel.enable
         || inputParam->vpp.tweak.enable
@@ -983,6 +977,58 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             //入力フレーム情報を更新
             inputFrame = param->frameOut;
             m_encFps = param->baseFps;
+        }
+        //字幕焼きこみ
+        for (const auto& subburn : inputParam->vpp.subburn) {
+            if (!subburn.enable)
+#if ENABLE_AVSW_READER
+            if (subburn.filename.length() > 0
+                && m_trimParam.list.size() > 0) {
+                PrintMes(RGY_LOG_ERROR, _T("--vpp-subburn with input as file cannot be used with --trim.\n"));
+                return RGY_ERR_UNSUPPORTED;
+            }
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterSubburn(m_dev->cl()));
+            shared_ptr<RGYFilterParamSubburn> param(new RGYFilterParamSubburn());
+            param->subburn = subburn;
+            auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
+            if (pAVCodecReader != nullptr) {
+                param->videoInputStream = pAVCodecReader->GetInputVideoStream();
+                param->videoInputFirstKeyPts = pAVCodecReader->GetVideoFirstKeyPts();
+                for (const auto &stream : pAVCodecReader->GetInputStreamInfo()) {
+                    if (stream.trackId == trackFullID(AVMEDIA_TYPE_SUBTITLE, param->subburn.trackId)) {
+                        param->streamIn = stream;
+                        break;
+                    }
+                }
+            }
+            param->videoInfo = m_pFileReader->GetInputFrameInfo();
+            if (param->subburn.trackId != 0 && param->streamIn.stream == nullptr) {
+                PrintMes(RGY_LOG_WARN, _T("Could not find subtitle track #%d, vpp-subburn for track #%d will be disabled.\n"),
+                    param->subburn.trackId, param->subburn.trackId);
+            } else {
+                param->bOutOverwrite = true;
+                param->videoOutTimebase = av_make_q(m_outputTimebase);
+                param->frameIn = inputFrame;
+                param->frameOut = inputFrame;
+                param->baseFps = m_encFps;
+                param->crop = inputParam->input.crop;
+                auto sts = filter->init(param, m_pLog);
+                if (sts != RGY_ERR_NONE) {
+                    return sts;
+                }
+                //フィルタチェーンに追加
+                m_vpFilters.push_back(std::move(filter));
+                //パラメータ情報を更新
+                m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+                //入力フレーム情報を更新
+                inputFrame = param->frameOut;
+                m_encFps = param->baseFps;
+            }
+#else
+            PrintMes(RGY_LOG_ERROR, _T("--vpp-subburn not supported in this build.\n"));
+            return RGY_ERR_UNSUPPORTED;
+#endif
         }
         //リサイズ
         if (resizeRequired) {
@@ -2168,6 +2214,15 @@ RGY_ERR VCECore::run() {
             }
         }
     }
+
+    //streamのtrackIdからパケットを送信するvppフィルタへのポインタを返すテーブルを作成
+    std::map<int, RGYFilter *> pFilterForStreams;
+    for (uint32_t ifilter = 0; ifilter < m_vpFilters.size(); ifilter++) {
+        const auto targetTrackId = m_vpFilters[ifilter]->targetTrackIdx();
+        if (targetTrackId != 0) {
+            pFilterForStreams[targetTrackId] = m_vpFilters[ifilter].get();
+        }
+    }
     if (m_pDecoder != nullptr) {
         auto res = run_decode();
         if (res != RGY_ERR_NONE) {
@@ -2198,7 +2253,7 @@ RGY_ERR VCECore::run() {
         m_pPerfMonitor->SetThreadHandles((HANDLE)(m_thDecoder.native_handle()), thInput, thOutput, thAudProc, thAudEnc);
     }
 
-    auto run_send_streams = [this, &pWriterForAudioStreams](int inputFrames) {
+    auto run_send_streams = [this, &pWriterForAudioStreams, &pFilterForStreams](int inputFrames) {
         RGYInputSM *pReaderSM = dynamic_cast<RGYInputSM *>(m_pFileReader.get());
         const int droppedInAviutl = (pReaderSM != nullptr) ? pReaderSM->droppedFrames() : 0;
 
@@ -2211,18 +2266,35 @@ RGY_ERR VCECore::run() {
         //パケットを各Writerに分配する
         for (uint32_t i = 0; i < packetList.size(); i++) {
             const int nTrackId = packetList[i].flags >> 16;
-            if (pWriterForAudioStreams.count(nTrackId)) {
+            const bool sendToFilter = pFilterForStreams.count(nTrackId) > 0;
+            const bool sendToWriter = pWriterForAudioStreams.count(nTrackId) > 0;
+            AVPacket *pkt = &packetList[i];
+            if (sendToFilter) {
+                AVPacket *pktToFilter = nullptr;
+                if (sendToWriter) {
+                    pktToFilter = av_packet_clone(pkt);
+                } else {
+                    std::swap(pktToFilter, pkt);
+                }
+                auto err = pFilterForStreams[nTrackId]->addStreamPacket(pktToFilter);
+                if (err != RGY_ERR_NONE) {
+                    return err;
+                }
+            }
+            if (sendToWriter) {
                 auto pWriter = pWriterForAudioStreams[nTrackId];
                 if (pWriter == nullptr) {
-                    PrintMes(RGY_LOG_ERROR, _T("Invalid writer found for track %d\n"), nTrackId);
-                    return RGY_ERR_NULL_PTR;
+                    PrintMes(RGY_LOG_ERROR, _T("Invalid writer found for %s track #%d\n"), char_to_tstring(trackMediaTypeStr(nTrackId)).c_str(), trackID(nTrackId));
+                    return RGY_ERR_NOT_FOUND;
                 }
-                auto ret = pWriter->WriteNextPacket(&packetList[i]);
-                if (ret != RGY_ERR_NONE) {
-                    return ret;
+                auto err = pWriter->WriteNextPacket(pkt);
+                if (err != RGY_ERR_NONE) {
+                    return err;
                 }
-            } else {
-                PrintMes(RGY_LOG_ERROR, _T("Failed to find writer for track %d\n"), nTrackId);
+                pkt = nullptr;
+            }
+            if (pkt != nullptr) {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to find writer for %s track #%d\n"), char_to_tstring(trackMediaTypeStr(nTrackId)).c_str(), trackID(nTrackId));
                 return RGY_ERR_NOT_FOUND;
             }
         }

@@ -462,6 +462,61 @@ tstring VppSmooth::print() const {
     return str;
 }
 
+VppSubburn::VppSubburn() :
+    enable(false),
+    filename(),
+    charcode(),
+    trackId(0),
+    assShaping(1),
+    scale(0.0),
+    transparency_offset(0.0),
+    brightness(FILTER_DEFAULT_TWEAK_BRIGHTNESS),
+    contrast(FILTER_DEFAULT_TWEAK_CONTRAST),
+    ts_offset(0.0),
+    vid_ts_offset(true) {
+}
+
+bool VppSubburn::operator==(const VppSubburn &x) const {
+    return enable == x.enable
+        && filename == x.filename
+        && charcode == x.charcode
+        && trackId == x.trackId
+        && assShaping == x.assShaping
+        && scale == x.scale
+        && transparency_offset == x.transparency_offset
+        && brightness == x.brightness
+        && contrast == x.contrast
+        && ts_offset == x.ts_offset
+        && vid_ts_offset == x.vid_ts_offset;
+}
+bool VppSubburn::operator!=(const VppSubburn &x) const {
+    return !(*this == x);
+}
+
+tstring VppSubburn::print() const {
+    tstring str = strsprintf(_T("subburn: %s, scale x%.2f"),
+        (filename.length() > 0)
+        ? filename.c_str()
+        : strsprintf(_T("track #%d"), trackId).c_str(),
+        scale);
+    if (transparency_offset != 0.0) {
+        str += strsprintf(_T(", transparency %.2f"), transparency_offset);
+    }
+    if (brightness != FILTER_DEFAULT_TWEAK_BRIGHTNESS) {
+        str += strsprintf(_T(", brightness %.2f"), brightness);
+    }
+    if (contrast != FILTER_DEFAULT_TWEAK_CONTRAST) {
+        str += strsprintf(_T(", contrast %.2f"), contrast);
+    }
+    if (ts_offset != 0.0) {
+        str += strsprintf(_T(", ts_offset %.2f"), ts_offset);
+    }
+    if (!vid_ts_offset) {
+        str += _T(", vid_ts_offset off");
+    }
+    return str;
+}
+
 VppUnsharp::VppUnsharp() :
     enable(false),
     radius(FILTER_DEFAULT_UNSHARP_RADIUS),
@@ -648,6 +703,7 @@ VCEVppParam::VCEVppParam() :
     knn(),
     pmd(),
     smooth(),
+    subburn(),
     unsharp(),
     edgelevel(),
     tweak(),

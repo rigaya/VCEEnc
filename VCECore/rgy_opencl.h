@@ -178,6 +178,8 @@ CL_EXTERN cl_int(CL_API_CALL *f_clGetKernelSubGroupInfoKHR)(cl_kernel kernel, cl
 
 MAP_PAIR_0_1_PROTO(err, rgy, RGY_ERR, cl, cl_int);
 
+class RGYOpenCLQueue;
+
 typedef std::unique_ptr<std::remove_pointer<cl_context>::type, decltype(clReleaseContext)> unique_context;
 typedef std::unique_ptr<std::remove_pointer<cl_command_queue>::type, decltype(clReleaseCommandQueue)> unique_queue;
 
@@ -318,16 +320,46 @@ protected:
     RGYCLBufMap m_mapped;
 };
 
+class RGYCLFrameMap {
+public:
+    RGYCLFrameMap(FrameInfo dev, RGYOpenCLQueue &queue) : m_dev(dev), m_queue(queue), m_host(), m_eventMap() {};
+    ~RGYCLFrameMap() {
+        unmap();
+    }
+    RGY_ERR map(cl_map_flags map_flags, RGYOpenCLQueue &queue);
+    RGY_ERR map(cl_map_flags map_flags, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events);
+    RGY_ERR unmap();
+    RGY_ERR unmap(RGYOpenCLQueue &queue);
+    RGY_ERR unmap(RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events);
+
+    const RGYOpenCLEvent &event() const { return m_eventMap; }
+    RGYOpenCLEvent &event() { return m_eventMap; }
+    const FrameInfo& host() const { return m_host; }
+protected:
+    RGYCLFrameMap(const RGYCLFrameMap &) = delete;
+    void operator =(const RGYCLFrameMap &) = delete;
+    FrameInfo m_dev;
+    RGYOpenCLQueue &m_queue;
+    FrameInfo m_host;
+    RGYOpenCLEvent m_eventMap;
+};
+
 struct RGYCLFrame {
 public:
     FrameInfo frame;
     cl_mem_flags flags;
+    std::unique_ptr<RGYCLFrameMap> m_mapped;
     RGYCLFrame()
-        : frame(), flags(0) {
+        : frame(), flags(0), m_mapped() {
     };
     RGYCLFrame(const FrameInfo &info_, cl_mem_flags flags_ = CL_MEM_READ_WRITE)
-        : frame(info_), flags(flags_) {
+        : frame(info_), flags(flags_), m_mapped() {
     };
+    RGY_ERR queueMapBuffer(RGYOpenCLQueue &queue, cl_map_flags map_flags, const std::vector<RGYOpenCLEvent> &wait_events = {});
+    RGY_ERR unmapBuffer();
+    RGY_ERR unmapBuffer(RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events = {});
+    const RGYOpenCLEvent &mapEvent() const { return m_mapped->event(); }
+    const FrameInfo &mappedHost() const { return m_mapped->host(); }
 protected:
     RGYCLFrame(const RGYCLFrame &) = delete;
     void operator =(const RGYCLFrame &) = delete;
@@ -336,6 +368,7 @@ public:
         return (cl_mem&)frame.ptr[i];
     }
     void clear() {
+        m_mapped.reset();
         for (int i = 0; i < _countof(frame.ptr); i++) {
             if (mem(i)) {
                 clReleaseMemObject(mem(i));
@@ -345,6 +378,7 @@ public:
         }
     }
     ~RGYCLFrame() {
+        m_mapped.reset();
         clear();
     }
 };
@@ -479,8 +513,6 @@ public:
     size_t size() const { return size_; }
 };
 
-class RGYOpenCLQueue;
-
 class RGYOpenCLKernelLauncher {
 public:
     RGYOpenCLKernelLauncher(cl_kernel kernel, std::string kernelName, RGYOpenCLQueue &queue, const RGYWorkSize &local, const RGYWorkSize &global, shared_ptr<RGYLog> pLog, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
@@ -598,6 +630,7 @@ public:
     unique_ptr<RGYCLBuf> copyDataToBuffer(const void *host_ptr, size_t size, cl_mem_flags flags = CL_MEM_READ_WRITE, cl_command_queue queue = 0);
     RGY_ERR createImageFromPlane(cl_mem& image, cl_mem buffer, int bit_depth, int channel_order, bool normalized, int pitch, int width, int height, cl_mem_flags flags);
     unique_ptr<RGYCLFrame> createImageFromFrameBuffer(const FrameInfo &frame, bool normalized, cl_mem_flags flags);
+    unique_ptr<RGYCLFrame> createFrameBuffer(int width, int height, RGY_CSP csp, cl_mem_flags flags = CL_MEM_READ_WRITE);
     unique_ptr<RGYCLFrame> createFrameBuffer(const FrameInfo &frame, cl_mem_flags flags = CL_MEM_READ_WRITE);
     RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src);
     RGY_ERR copyFrame(FrameInfo *dst, const FrameInfo *src, const sInputCrop *srcCrop);
