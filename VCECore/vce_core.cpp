@@ -2745,6 +2745,12 @@ RGY_ERR VCECore::run() {
     while (ar == AMF_INPUT_FULL) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         ar = m_pEncoder->Drain();
+        // 出力スレッドが生存していないと、いつまでもこのループを抜けることはない
+        // 出力スレッドが生存していない場合はあきらめる
+        auto thsts = m_thOutput.wait_for(std::chrono::seconds(0));
+        if (thsts == std::future_status::ready) {
+            break;
+        }
     }
     if (ar != AMF_OK) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to drain encoder: %s\n"), get_err_mes(err_to_rgy(ar)));
