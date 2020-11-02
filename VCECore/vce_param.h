@@ -1010,6 +1010,13 @@ static const wchar_t *AMF_PARAM_MAX_QP(RGY_CODEC codec) {
     default:             return AMF_VIDEO_ENCODER_MAX_QP;
     }
 }
+static int64_t get_encoder_usage(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_HEVC: return (int64_t)AMF_VIDEO_ENCODER_HEVC_USAGE_TRANSCONDING;
+    case RGY_CODEC_H264:
+    default:             return (int64_t)AMF_VIDEO_ENCODER_USAGE_TRANSCONDING;
+    }
+}
 
 
 enum AMFParamType {
