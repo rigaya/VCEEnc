@@ -106,38 +106,38 @@ RGY_ERR RGYFilterSubburn::procFrame(FrameInfo *pFrame,
     auto planeSubA = getPlane(pSubImg, RGY_PLANE_A);
 
     const int pixSize = RGY_CSP_BIT_DEPTH[pFrame->csp] > 8 ? 2 : 1;
-    const int frameOffsetByte = (pos_y & ~1) * pFrame->pitch[0] + (pos_x & ~1) * pixSize;
+    const int subPosX_Y = (pos_x & ~1);
+    const int subPosY_Y = (pos_y & ~1);
+    const int subPosX_UV = (RGY_CSP_CHROMA_FORMAT[pFrame->csp] == RGY_CHROMAFMT_YUV420) ? (pos_x >> 1) : (pos_x & ~1);
+    const int subPosY_UV = (RGY_CSP_CHROMA_FORMAT[pFrame->csp] == RGY_CHROMAFMT_YUV420) ? (pos_y >> 1) : (pos_y & ~1);
+    const int frameOffsetByteY = subPosY_Y  * planeFrameY.pitch[0] + subPosX_Y  * pixSize;
+    const int frameOffsetByteU = subPosY_UV * planeFrameU.pitch[0] + subPosX_UV * pixSize;
+    const int frameOffsetByteV = subPosY_UV * planeFrameV.pitch[0] + subPosX_UV * pixSize;
+
+    if (   planeSubY.pitch[0] != planeSubU.pitch[0]
+        || planeSubY.pitch[0] != planeSubV.pitch[0]
+        || planeSubY.pitch[0] != planeSubA.pitch[0]) {
+        AddMessage(RGY_LOG_ERROR, _T("plane pitch error!\n"));
+        return RGY_ERR_UNKNOWN;
+    }
 
     const char *kernel_name = "kernel_subburn";
-    if (RGY_CSP_CHROMA_FORMAT[pFrame->csp] == RGY_CHROMAFMT_YUV420) {
-        const int frameOffsetByteUV = (pos_y >> 1) * pFrame->pitch[0] + (pos_x >> 1) * pixSize;
-        auto err = m_subburn->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
-            planeFrameY.ptr[0],
-            planeFrameU.ptr[0],
-            planeFrameV.ptr[0],
-            frameOffsetByte, frameOffsetByteUV,
-            planeFrameY.pitch[0],
-            planeSubY.ptr[0], planeSubU.ptr[0], planeSubV.ptr[0], planeSubA.ptr[0], planeSubY.pitch[0],
-            burnWidth, burnHeight, interlaced(*pFrame) ? 1 : 0, transparency_offset, brightness, contrast);
-        if (err != RGY_ERR_NONE) {
-            AddMessage(RGY_LOG_ERROR, _T("error at %s (procFrame(%s)): %s.\n"),
-                char_to_tstring(kernel_name).c_str(), RGY_CSP_NAMES[pFrame->csp], get_err_mes(err));
-            return err;
-        }
-    } else {
-        auto err = m_subburn->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
-            planeFrameY.ptr[0],
-            planeFrameU.ptr[0],
-            planeFrameV.ptr[0],
-            frameOffsetByte, frameOffsetByte,
-            planeFrameY.pitch[0],
-            planeSubY.ptr[0], planeSubU.ptr[0], planeSubV.ptr[0], planeSubA.ptr[0], planeSubY.pitch[0],
-            burnWidth, burnHeight, interlaced(*pFrame) ? 1 : 0, transparency_offset, brightness, contrast);
-        if (err != RGY_ERR_NONE) {
-            AddMessage(RGY_LOG_ERROR, _T("error at %s (procFrame(%s)): %s.\n"),
-                char_to_tstring(kernel_name).c_str(), RGY_CSP_NAMES[pFrame->csp], get_err_mes(err));
-            return err;
-        }
+    auto err = m_subburn->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
+        planeFrameY.ptr[0],
+        planeFrameU.ptr[0],
+        planeFrameV.ptr[0],
+        planeFrameY.pitch[0],
+        planeFrameU.pitch[0],
+        planeFrameV.pitch[0],
+        frameOffsetByteY,
+        frameOffsetByteU,
+        frameOffsetByteV,
+        planeSubY.ptr[0], planeSubU.ptr[0], planeSubV.ptr[0], planeSubA.ptr[0], planeSubY.pitch[0],
+        burnWidth, burnHeight, interlaced(*pFrame) ? 1 : 0, transparency_offset, brightness, contrast);
+    if (err != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("error at %s (procFrame(%s)): %s.\n"),
+            char_to_tstring(kernel_name).c_str(), RGY_CSP_NAMES[pFrame->csp], get_err_mes(err));
+        return err;
     }
     return RGY_ERR_NONE;
 }

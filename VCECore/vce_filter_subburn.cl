@@ -32,9 +32,12 @@ __kernel void kernel_subburn(
     __global uchar *pPlaneY,
     __global uchar *pPlaneU,
     __global uchar *pPlaneV,
-    const int frameOffsetByte,
-    const int frameOffsetByteUV,
-    const int pitchFrame,
+    const int pitchFrameY,
+    const int pitchFrameU,
+    const int pitchFrameV,
+    const int frameOffsetByteY,
+    const int frameOffsetByteU,
+    const int frameOffsetByteV,
     const __global uchar *pSubY,
     const __global uchar *pSubU,
     const __global uchar *pSubV,
@@ -46,23 +49,23 @@ __kernel void kernel_subburn(
     const int ix = get_global_id(0) * 2;
     const int iy = get_global_id(1) * 2;
 
-    pPlaneY += frameOffsetByte;
-    pPlaneU += frameOffsetByteUV;
-    pPlaneV += frameOffsetByteUV;
+    pPlaneY += frameOffsetByteY;
+    pPlaneU += frameOffsetByteU;
+    pPlaneV += frameOffsetByteV;
 
     if (ix < width && iy < height) {
-        pPlaneY += iy * pitchFrame + ix * sizeof(TypePixel);
+        pPlaneY += iy * pitchFrameY + ix * sizeof(TypePixel);
         pSubY += iy * pitchSub + ix;
         pSubU += iy * pitchSub + ix;
         pSubV += iy * pitchSub + ix;
         pSubA += iy * pitchSub + ix;
 
         blend2(pPlaneY, pSubA, pSubY, transparency_offset, brightness, contrast);
-        blend2(pPlaneY + pitchFrame, pSubA + pitchSub, pSubY + pitchSub, transparency_offset, brightness, contrast);
+        blend2(pPlaneY + pitchFrameY, pSubA + pitchSub, pSubY + pitchSub, transparency_offset, brightness, contrast);
 
         if (yuv420) {
-            pPlaneU += (iy >> 1) * pitchFrame + (ix >> 1) * sizeof(TypePixel);
-            pPlaneV += (iy >> 1) * pitchFrame + (ix >> 1) * sizeof(TypePixel);
+            pPlaneU += (iy >> 1) * pitchFrameU + (ix >> 1) * sizeof(TypePixel);
+            pPlaneV += (iy >> 1) * pitchFrameV + (ix >> 1) * sizeof(TypePixel);
             uchar subU, subV, subA;
             if (interlaced) {
                 if (((iy >> 1) & 1) == 0) {
@@ -83,12 +86,12 @@ __kernel void kernel_subburn(
             *(__global TypePixel *)pPlaneU = blend(*(__global TypePixel *)pPlaneU, subA, subU, transparency_offset, 0.0f, 1.0f);
             *(__global TypePixel *)pPlaneV = blend(*(__global TypePixel *)pPlaneV, subA, subV, transparency_offset, 0.0f, 1.0f);
         } else {
-            pPlaneU += iy * pitchFrame + ix * sizeof(TypePixel);
-            pPlaneV += iy * pitchFrame + ix * sizeof(TypePixel);
+            pPlaneU += iy * pitchFrameU + ix * sizeof(TypePixel);
+            pPlaneV += iy * pitchFrameV + ix * sizeof(TypePixel);
             blend2(pPlaneU, pSubA, pSubU, transparency_offset, 0.0f, 1.0f);
-            blend2(pPlaneU + pitchFrame, pSubA + pitchSub, pSubU + pitchSub, transparency_offset, 0.0f, 1.0f);
+            blend2(pPlaneU + pitchFrameU, pSubA + pitchSub, pSubU + pitchSub, transparency_offset, 0.0f, 1.0f);
             blend2(pPlaneV, pSubA, pSubV, transparency_offset, 0.0f, 1.0f);
-            blend2(pPlaneV + pitchFrame, pSubA + pitchSub, pSubV + pitchSub, transparency_offset, 0.0f, 1.0f);
+            blend2(pPlaneV + pitchFrameV, pSubA + pitchSub, pSubV + pitchSub, transparency_offset, 0.0f, 1.0f);
         }
     }
 }
