@@ -2747,9 +2747,11 @@ RGY_ERR VCECore::run() {
         ar = m_pEncoder->Drain();
         // 出力スレッドが生存していないと、いつまでもこのループを抜けることはない
         // 出力スレッドが生存していない場合はあきらめる
-        auto thsts = m_thOutput.wait_for(std::chrono::seconds(0));
-        if (thsts == std::future_status::ready) {
-            break;
+        if (m_thOutput.valid()) {
+            auto thsts = m_thOutput.wait_for(std::chrono::seconds(0));
+            if (thsts == std::future_status::ready) {
+                break;
+            }
         }
     }
     if (ar != AMF_OK) {
