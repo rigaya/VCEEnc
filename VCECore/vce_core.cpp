@@ -245,7 +245,7 @@ RGY_ERR VCECore::readChapterFile(tstring chapfile) {
 #endif //#if ENABLE_AVSW_READER
 }
 
-RGY_ERR VCECore::InitChapters(VCEParam *prm) {
+RGY_ERR VCECore::initChapters(VCEParam *prm) {
 #if ENABLE_AVSW_READER
     m_Chapters.clear();
     if (prm->common.chapterFile.length() > 0) {
@@ -2056,6 +2056,10 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     }
 
     if (RGY_ERR_NONE != (ret = initEncoder(prm))) {
+        return ret;
+    }
+
+    if (RGY_ERR_NONE != (ret = initChapters(prm))) {
         return ret;
     }
 
