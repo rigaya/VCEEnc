@@ -1282,7 +1282,7 @@ std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(int width, int h
 
 std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const FrameInfo& frame, cl_mem_flags flags) {
     cl_int err = CL_SUCCESS;
-    int pixsize = RGY_CSP_BIT_DEPTH[frame.csp] > 8 ? 2 : 1;
+    int pixsize = (RGY_CSP_BIT_DEPTH[frame.csp] + 7) / 8;
     switch (frame.csp) {
     case RGY_CSP_RGB24R:
     case RGY_CSP_RGB24:
