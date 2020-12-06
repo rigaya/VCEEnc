@@ -17,11 +17,32 @@ const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_NONE | CLK_F
 #define uchar unsigned char
 #endif
 
-#define BIT_DEPTH_CONV(x) (TypeOut)((out_bit_depth == in_bit_depth) \
-    ? (x) \
-    : ((out_bit_depth > in_bit_depth) \
-        ? ((int)(x) << (out_bit_depth - in_bit_depth)) \
-        : ((int)(x) >> (in_bit_depth - out_bit_depth))))
+inline int conv_bit_depth_lsft(const int in_bit_depth, const int out_bit_depth, const int shift_offset) {
+    const int lsft = out_bit_depth - (in_bit_depth + shift_offset);
+    return lsft < 0 ? 0 : lsft;
+}
+
+inline int conv_bit_depth_rsft(const int in_bit_depth, const int out_bit_depth, const int shift_offset) {
+    const int rsft = in_bit_depth + shift_offset - out_bit_depth;
+    return rsft < 0 ? 0 : rsft;
+}
+
+inline int conv_bit_depth_rsft_add(const int in_bit_depth, const int out_bit_depth, const int shift_offset) {
+    const int rsft = conv_bit_depth_rsft(in_bit_depth, out_bit_depth, shift_offset);
+    return (rsft - 1 >= 0) ? 1 << (rsft - 1) : 0;
+}
+
+inline int conv_bit_depth(const int c, const int in_bit_depth, const int out_bit_depth, const int shift_offset) {
+    if (out_bit_depth > in_bit_depth + shift_offset) {
+        return c << conv_bit_depth_lsft(in_bit_depth, out_bit_depth, shift_offset);
+    } else if (out_bit_depth < in_bit_depth + shift_offset) {
+        return (c + conv_bit_depth_rsft_add(in_bit_depth, out_bit_depth, shift_offset)) >> conv_bit_depth_rsft(in_bit_depth, out_bit_depth, shift_offset);
+    } else {
+        return c;
+    }
+}
+
+#define BIT_DEPTH_CONV(x) (TypeOut)conv_bit_depth((x), in_bit_depth, out_bit_depth, 0)
 
 #define BIT_DEPTH_CONV_FLOAT(x) (TypeOut)((out_bit_depth == in_bit_depth) \
     ? (x) \
@@ -29,17 +50,9 @@ const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_NONE | CLK_F
         ? ((x) * (float)(1 << (out_bit_depth - in_bit_depth))) \
         : ((x) * (float)(1.0f / (1 << (in_bit_depth - out_bit_depth))))))
 
-#define BIT_DEPTH_CONV_AVG(a, b) (TypeOut)((out_bit_depth == in_bit_depth + 1) \
-    ? ((int)(a) + (int)(b) + 1) \
-    : ((out_bit_depth > in_bit_depth + 1) \
-        ? (((int)(a) + (int)(b) + 1) << (out_bit_depth - in_bit_depth - 1)) \
-        : (((int)(a) + (int)(b) + (1 << (in_bit_depth - out_bit_depth))) >> (in_bit_depth + 1 - out_bit_depth))))
+#define BIT_DEPTH_CONV_AVG(a, b) (TypeOut)conv_bit_depth((a)+(b), in_bit_depth, out_bit_depth, 1)
 
-#define BIT_DEPTH_CONV_3x1_AVG(a, b) (TypeOut)((out_bit_depth == in_bit_depth + 2) \
-    ? ((int)(a) * 3 + (int)(b) + 2) \
-    : ((out_bit_depth > in_bit_depth + 2) \
-        ? (((int)(a) * 3 + (int)(b) + 2) << (out_bit_depth - in_bit_depth - 2)) \
-        : (((int)(a) * 3 + (int)(b) + (2 << (in_bit_depth - out_bit_depth))) >> (in_bit_depth + 2 - out_bit_depth))))
+#define BIT_DEPTH_CONV_3x1_AVG(a, b) (TypeOut)conv_bit_depth((a)*3+(b), in_bit_depth, out_bit_depth, 2)
 
 #define LOAD_IMG(src, ix, iy) (TypeIn)(read_imageui((src), sampler, (int2)((ix), (iy))).x)
 #define LOAD_IMG_NV12_UV(src, src_u, src_v, ix, iy, cropX, cropY) { \
