@@ -670,8 +670,8 @@ RGY_ERR RGYFilterAfs::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog>
         pAfsParam->baseFps *= rgy_rational<int>(4, 5);
     }
 
-    if (pAfsParam->afs.timecode) {
-        const tstring tc_filename = PathRemoveExtensionS(pAfsParam->outFilename) + _T(".timecode.txt");
+    if (pAfsParam->afs.timecode != 0) {
+        const tstring tc_filename = PathRemoveExtensionS(pAfsParam->outFilename) + ((pAfsParam->afs.timecode == 2) ? _T(".timecode.afs.txt") : _T(".timecode.txt"));
         if (open_timecode(tc_filename)) {
             errno_t error = errno;
             AddMessage(RGY_LOG_ERROR, _T("failed to open timecode file \"%s\": %s.\n"), tc_filename.c_str(), _tcserror(error));

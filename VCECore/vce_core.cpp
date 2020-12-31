@@ -66,6 +66,7 @@
 #include "rgy_bitstream.h"
 #include "rgy_chapter.h"
 #include "rgy_codepage.h"
+#include "rgy_timecode.h"
 #include "cpu_info.h"
 #include "gpu_info.h"
 
@@ -105,6 +106,7 @@ VCECore::VCECore() :
     m_keyFile(),
     m_Chapters(),
 #endif
+    m_timecode(),
     m_hdr10plus(),
     m_hdrsei(),
     m_trimParam(),
@@ -187,6 +189,7 @@ void VCECore::Terminate() {
     m_vpFilters.clear();
     m_pLastFilterParam.reset();
     m_dev.reset();
+    m_timecode.reset();
 
     m_pFileWriterListAudio.clear();
     m_pFileWriter.reset();
@@ -562,6 +565,15 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
         PrintMes(RGY_LOG_ERROR, _T("failed to initialize file reader(s).\n"));
         return err;
     }
+    if (inputParams->common.timecode) {
+        m_timecode = std::make_unique<RGYTimecode>();
+        const auto tcfilename = (inputParams->common.timecodeFile.length() > 0) ? inputParams->common.timecodeFile : PathRemoveExtensionS(inputParams->common.outputFilename) + _T(".timecode.txt");
+        auto err = m_timecode->init(tcfilename);
+        if (err != RGY_ERR_NONE) {
+            PrintMes(RGY_LOG_ERROR, _T("failed to open timecode file: \"%s\".\n"), tcfilename.c_str());
+            return RGY_ERR_FILE_OPEN;
+        }
+    }
     return RGY_ERR_NONE;
 }
 
@@ -834,6 +846,9 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             shared_ptr<RGYFilterParamAfs> param(new RGYFilterParamAfs());
             param->afs = inputParam->vpp.afs;
             param->afs.tb_order = (inputParam->input.picstruct & RGY_PICSTRUCT_TFF) != 0;
+            if (inputParam->common.timecode && param->afs.timecode) {
+                param->afs.timecode = 2;
+            }
             param->frameIn = inputFrame;
             param->frameOut = inputFrame;
             param->inFps = m_inputFps;
@@ -2539,6 +2554,10 @@ RGY_ERR VCECore::run() {
 
         pSurface->SetProperty(RGY_PROP_TIMESTAMP, pts);
         pSurface->SetProperty(RGY_PROP_DURATION, duration);
+
+        if (m_timecode) {
+            m_timecode->write(pts, m_outputTimebase);
+        }
 
         auto ar = AMF_OK;
         do {

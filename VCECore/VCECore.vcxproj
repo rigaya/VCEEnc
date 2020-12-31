@@ -223,6 +223,7 @@
     <ClCompile Include="rgy_prm.cpp" />
     <ClCompile Include="rgy_simd.cpp" />
     <ClCompile Include="rgy_status.cpp" />
+    <ClCompile Include="rgy_timecode.cpp" />
     <ClCompile Include="rgy_util.cpp" />
     <ClCompile Include="rgy_version.cpp" />
     <ClCompile Include="vce_cmd.cpp" />
@@ -412,6 +413,7 @@
     <ClInclude Include="rgy_status.h" />
     <ClInclude Include="rgy_tchar.h" />
     <ClInclude Include="rgy_thread.h" />
+    <ClInclude Include="rgy_timecode.h" />
     <ClInclude Include="rgy_util.h" />
     <ClInclude Include="vce_cmd.h" />
     <ClInclude Include="vce_core.h" />
