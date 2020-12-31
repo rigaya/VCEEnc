@@ -172,6 +172,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="rgy_language.cpp" />
     <ClCompile Include="rgy_log.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -398,6 +399,7 @@
     <ClInclude Include="rgy_input_raw.h" />
     <ClInclude Include="rgy_input_sm.h" />
     <ClInclude Include="rgy_input_vpy.h" />
+    <ClInclude Include="rgy_language.h" />
     <ClInclude Include="rgy_log.h" />
     <ClInclude Include="rgy_opencl.h" />
     <ClInclude Include="rgy_osdep.h" />
