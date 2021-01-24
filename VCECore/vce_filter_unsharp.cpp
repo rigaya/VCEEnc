@@ -44,7 +44,7 @@ RGY_ERR RGYFilterUnsharp::procPlane(FrameInfo *pOutputPlane, const FrameInfo *pI
         const char *kernel_name = "kernel_unsharp";
         RGYWorkSize local(32, 8);
         RGYWorkSize global(pOutputPlane->width, pOutputPlane->height);
-        auto err = m_unsharp->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
+        auto err = m_unsharp->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
             (cl_mem)pOutputPlane->ptr[0], pOutputPlane->pitch[0], pOutputPlane->width, pOutputPlane->height,
             (cl_mem)pInputPlane->ptr[0],
             gaussWeightBuf->mem(),

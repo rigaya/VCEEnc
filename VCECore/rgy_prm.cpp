@@ -50,6 +50,7 @@ AudioSelect::AudioSelect() :
     streamChannelOut(),
     bsf(),
     disposition(),
+    lang(),
     metadata() {
     memset(streamChannelSelect, 0, sizeof(streamChannelSelect));
     memset(streamChannelOut, 0, sizeof(streamChannelOut));
@@ -69,6 +70,7 @@ SubtitleSelect::SubtitleSelect() :
     asdata(false),
     bsf(),
     disposition(),
+    lang(),
     metadata() {
 
 }
@@ -82,6 +84,7 @@ SubSource::SubSource() :
 DataSelect::DataSelect() :
     trackID(0),
     disposition(),
+    lang(),
     metadata() {
 
 }
@@ -106,6 +109,7 @@ RGYParamCommon::RGYParamCommon() :
     inputOpt(),
     maxCll(),
     masterDisplay(),
+    atcSei(RGY_TRANSFER_UNKNOWN),
     hdr10plusMetadataCopy(false),
     dynamicHdr10plusJson(),
     videoCodecTag(),
@@ -139,6 +143,8 @@ RGYParamCommon::RGYParamCommon() :
     chapterFile(),
     AVInputFormat(nullptr),
     AVSyncMode(RGY_AVSYNC_ASSUME_CFR),     //avsyncの方法 (RGY_AVSYNC_xxx)
+    timecode(false),
+    timecodeFile(),
     outputBufSizeMB(8) {
 
 }
@@ -162,6 +168,7 @@ RGYParamControl::RGYParamControl() :
     parentProcessID(0),
     lowLatency(false),
     gpuSelect(),
+    skipHWDecodeCheck(false),
     avsdll() {
 
 }

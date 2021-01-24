@@ -55,6 +55,8 @@
 #include "vce_filter_nnedi.h"
 #include "vce_filter_denoise_knn.h"
 #include "vce_filter_denoise_pmd.h"
+#include "vce_filter_smooth.h"
+#include "vce_filter_subburn.h"
 #include "vce_filter_unsharp.h"
 #include "vce_filter_edgelevel.h"
 #include "vce_filter_tweak.h"
@@ -64,6 +66,7 @@
 #include "rgy_bitstream.h"
 #include "rgy_chapter.h"
 #include "rgy_codepage.h"
+#include "rgy_timecode.h"
 #include "cpu_info.h"
 #include "gpu_info.h"
 
@@ -103,6 +106,7 @@ VCECore::VCECore() :
     m_keyFile(),
     m_Chapters(),
 #endif
+    m_timecode(),
     m_hdr10plus(),
     m_hdrsei(),
     m_trimParam(),
@@ -185,6 +189,7 @@ void VCECore::Terminate() {
     m_vpFilters.clear();
     m_pLastFilterParam.reset();
     m_dev.reset();
+    m_timecode.reset();
 
     m_pFileWriterListAudio.clear();
     m_pFileWriter.reset();
@@ -243,7 +248,7 @@ RGY_ERR VCECore::readChapterFile(tstring chapfile) {
 #endif //#if ENABLE_AVSW_READER
 }
 
-RGY_ERR VCECore::InitChapters(VCEParam *prm) {
+RGY_ERR VCECore::initChapters(VCEParam *prm) {
 #if ENABLE_AVSW_READER
     m_Chapters.clear();
     if (prm->common.chapterFile.length() > 0) {
@@ -322,22 +327,16 @@ RGY_CSP VCECore::GetEncoderCSP(const VCEParam *inputParam) {
 RGY_ERR VCECore::initInput(VCEParam *inputParam) {
 #if ENABLE_RAW_READER
     DeviceCodecCsp HWDecCodecCsp;
-    HWDecCodecCsp.push_back(std::make_pair(0, getHWDecCodecCsp()));
+    HWDecCodecCsp.push_back(std::make_pair(0, getHWDecCodecCsp(inputParam->ctrl.skipHWDecodeCheck)));
     m_pStatus.reset(new EncodeStatus());
 
     int subburnTrackId = 0;
-#if ENCODER_NVENC
-    if (inputParam->common.nSubtitleSelectCount > 0 && inputParam->vpp.subburn.size() > 0) {
-        PrintMes(RGY_LOG_ERROR, _T("--sub-copy and --vpp-subburn should not be set at the same time.\n"));
-        return RGY_ERR_INVALID_PARAM;
-    }
     for (const auto &subburn : inputParam->vpp.subburn) {
         if (subburn.trackId > 0) {
             subburnTrackId = subburn.trackId;
             break;
         }
     }
-#endif
 
     //--input-cspの値 (raw読み込み用の入力色空間)
     //この後上書きするので、ここで保存する
@@ -552,7 +551,7 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
 }
 
 RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
-    m_hdrsei = createHEVCHDRSei(inputParams->common.maxCll, inputParams->common.masterDisplay, m_pFileReader.get());
+    m_hdrsei = createHEVCHDRSei(inputParams->common.maxCll, inputParams->common.masterDisplay, inputParams->common.atcSei, m_pFileReader.get());
     if (!m_hdrsei) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to parse HEVC HDR10 metadata.\n"));
         return RGY_ERR_INVALID_PARAM;
@@ -565,23 +564,21 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
         m_encVUI
     );
 
-
-    int subburnTrackId = 0;
-#if ENCODER_NVENC
-    for (const auto &subburn : inputParams->vpp.subburn) {
-        if (subburn.trackId > 0) {
-            subburnTrackId = subburn.trackId;
-            break;
-        }
-    }
-#endif
-
     auto err = initWriters(m_pFileWriter, m_pFileWriterListAudio, m_pFileReader, m_AudioReaders,
         &inputParams->common, &inputParams->input, &inputParams->ctrl, outputVideoInfo,
-        m_trimParam, m_outputTimebase, m_Chapters, m_hdrsei.get(), subburnTrackId, false, false, m_pStatus, m_pPerfMonitor, m_pLog);
+        m_trimParam, m_outputTimebase, m_Chapters, m_hdrsei.get(), false, false, m_pStatus, m_pPerfMonitor, m_pLog);
     if (err != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("failed to initialize file reader(s).\n"));
         return err;
+    }
+    if (inputParams->common.timecode) {
+        m_timecode = std::make_unique<RGYTimecode>();
+        const auto tcfilename = (inputParams->common.timecodeFile.length() > 0) ? inputParams->common.timecodeFile : PathRemoveExtensionS(inputParams->common.outputFilename) + _T(".timecode.txt");
+        auto err = m_timecode->init(tcfilename);
+        if (err != RGY_ERR_NONE) {
+            PrintMes(RGY_LOG_ERROR, _T("failed to open timecode file: \"%s\".\n"), tcfilename.c_str());
+            return RGY_ERR_FILE_OPEN;
+        }
     }
     return RGY_ERR_NONE;
 }
@@ -745,6 +742,8 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         || inputParam->vpp.pad.enable
         || inputParam->vpp.knn.enable
         || inputParam->vpp.pmd.enable
+        || inputParam->vpp.smooth.enable
+        || inputParam->vpp.subburn.size() > 0
         || inputParam->vpp.unsharp.enable
         || inputParam->vpp.edgelevel.enable
         || inputParam->vpp.tweak.enable
@@ -853,6 +852,9 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             shared_ptr<RGYFilterParamAfs> param(new RGYFilterParamAfs());
             param->afs = inputParam->vpp.afs;
             param->afs.tb_order = (inputParam->input.picstruct & RGY_PICSTRUCT_TFF) != 0;
+            if (inputParam->common.timecode && param->afs.timecode) {
+                param->afs.timecode = 2;
+            }
             param->frameIn = inputFrame;
             param->frameOut = inputFrame;
             param->inFps = m_inputFps;
@@ -964,6 +966,81 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             //入力フレーム情報を更新
             inputFrame = param->frameOut;
             m_encFps = param->baseFps;
+        }
+        //smooth
+        if (inputParam->vpp.smooth.enable) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterSmooth(m_dev->cl()));
+            shared_ptr<RGYFilterParamSmooth> param(new RGYFilterParamSmooth());
+            param->smooth = inputParam->vpp.smooth;
+            param->qpTableRef = nullptr;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
+            param->bOutOverwrite = false;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filter));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+        //字幕焼きこみ
+        for (const auto& subburn : inputParam->vpp.subburn) {
+            if (!subburn.enable)
+#if ENABLE_AVSW_READER
+            if (subburn.filename.length() > 0
+                && m_trimParam.list.size() > 0) {
+                PrintMes(RGY_LOG_ERROR, _T("--vpp-subburn with input as file cannot be used with --trim.\n"));
+                return RGY_ERR_UNSUPPORTED;
+            }
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterSubburn(m_dev->cl()));
+            shared_ptr<RGYFilterParamSubburn> param(new RGYFilterParamSubburn());
+            param->subburn = subburn;
+            auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
+            if (pAVCodecReader != nullptr) {
+                param->videoInputStream = pAVCodecReader->GetInputVideoStream();
+                param->videoInputFirstKeyPts = pAVCodecReader->GetVideoFirstKeyPts();
+                for (const auto &stream : pAVCodecReader->GetInputStreamInfo()) {
+                    if (stream.trackId == trackFullID(AVMEDIA_TYPE_SUBTITLE, param->subburn.trackId)) {
+                        param->streamIn = stream;
+                        break;
+                    }
+                }
+            }
+            param->videoInfo = m_pFileReader->GetInputFrameInfo();
+            if (param->subburn.trackId != 0 && param->streamIn.stream == nullptr) {
+                PrintMes(RGY_LOG_WARN, _T("Could not find subtitle track #%d, vpp-subburn for track #%d will be disabled.\n"),
+                    param->subburn.trackId, param->subburn.trackId);
+            } else {
+                param->bOutOverwrite = true;
+                param->videoOutTimebase = av_make_q(m_outputTimebase);
+                param->frameIn = inputFrame;
+                param->frameOut = inputFrame;
+                param->baseFps = m_encFps;
+                param->crop = inputParam->input.crop;
+                auto sts = filter->init(param, m_pLog);
+                if (sts != RGY_ERR_NONE) {
+                    return sts;
+                }
+                //フィルタチェーンに追加
+                m_vpFilters.push_back(std::move(filter));
+                //パラメータ情報を更新
+                m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+                //入力フレーム情報を更新
+                inputFrame = param->frameOut;
+                m_encFps = param->baseFps;
+            }
+#else
+            PrintMes(RGY_LOG_ERROR, _T("--vpp-subburn not supported in this build.\n"));
+            return RGY_ERR_UNSUPPORTED;
+#endif
         }
         //リサイズ
         if (resizeRequired) {
@@ -1433,7 +1510,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     if (m_sar.is_valid()) {
         m_params.SetParam(AMF_PARAM_ASPECT_RATIO(prm->codec), AMFConstructRatio(m_sar.n(), m_sar.d()));
     }
-    m_params.SetParam(AMF_PARAM_USAGE(prm->codec),          (amf_int64)((prm->codec == RGY_CODEC_HEVC) ? AMF_VIDEO_ENCODER_HEVC_USAGE_TRANSCONDING : AMF_VIDEO_ENCODER_USAGE_TRANSCONDING));
+    m_params.SetParam(AMF_PARAM_USAGE(prm->codec),          (amf_int64)get_encoder_usage(prm->codec));
     m_params.SetParam(AMF_PARAM_PROFILE(prm->codec),        (amf_int64)prm->codecParam[prm->codec].nProfile);
     m_params.SetParam(AMF_PARAM_PROFILE_LEVEL(prm->codec),  (amf_int64)prm->codecParam[prm->codec].nLevel);
     m_params.SetParam(AMF_PARAM_QUALITY_PRESET(prm->codec), (amf_int64)prm->qualityPreset);
@@ -1994,6 +2071,10 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
+    if (RGY_ERR_NONE != (ret = initChapters(prm))) {
+        return ret;
+    }
+
     if (RGY_ERR_NONE != (ret = initPerfMonitor(prm))) {
         return ret;
     }
@@ -2149,6 +2230,15 @@ RGY_ERR VCECore::run() {
             }
         }
     }
+
+    //streamのtrackIdからパケットを送信するvppフィルタへのポインタを返すテーブルを作成
+    std::map<int, RGYFilter *> pFilterForStreams;
+    for (uint32_t ifilter = 0; ifilter < m_vpFilters.size(); ifilter++) {
+        const auto targetTrackId = m_vpFilters[ifilter]->targetTrackIdx();
+        if (targetTrackId != 0) {
+            pFilterForStreams[targetTrackId] = m_vpFilters[ifilter].get();
+        }
+    }
     if (m_pDecoder != nullptr) {
         auto res = run_decode();
         if (res != RGY_ERR_NONE) {
@@ -2179,7 +2269,7 @@ RGY_ERR VCECore::run() {
         m_pPerfMonitor->SetThreadHandles((HANDLE)(m_thDecoder.native_handle()), thInput, thOutput, thAudProc, thAudEnc);
     }
 
-    auto run_send_streams = [this, &pWriterForAudioStreams](int inputFrames) {
+    auto run_send_streams = [this, &pWriterForAudioStreams, &pFilterForStreams](int inputFrames) {
         RGYInputSM *pReaderSM = dynamic_cast<RGYInputSM *>(m_pFileReader.get());
         const int droppedInAviutl = (pReaderSM != nullptr) ? pReaderSM->droppedFrames() : 0;
 
@@ -2192,18 +2282,35 @@ RGY_ERR VCECore::run() {
         //パケットを各Writerに分配する
         for (uint32_t i = 0; i < packetList.size(); i++) {
             const int nTrackId = packetList[i].flags >> 16;
-            if (pWriterForAudioStreams.count(nTrackId)) {
+            const bool sendToFilter = pFilterForStreams.count(nTrackId) > 0;
+            const bool sendToWriter = pWriterForAudioStreams.count(nTrackId) > 0;
+            AVPacket *pkt = &packetList[i];
+            if (sendToFilter) {
+                AVPacket *pktToFilter = nullptr;
+                if (sendToWriter) {
+                    pktToFilter = av_packet_clone(pkt);
+                } else {
+                    std::swap(pktToFilter, pkt);
+                }
+                auto err = pFilterForStreams[nTrackId]->addStreamPacket(pktToFilter);
+                if (err != RGY_ERR_NONE) {
+                    return err;
+                }
+            }
+            if (sendToWriter) {
                 auto pWriter = pWriterForAudioStreams[nTrackId];
                 if (pWriter == nullptr) {
-                    PrintMes(RGY_LOG_ERROR, _T("Invalid writer found for track %d\n"), nTrackId);
-                    return RGY_ERR_NULL_PTR;
+                    PrintMes(RGY_LOG_ERROR, _T("Invalid writer found for %s track #%d\n"), char_to_tstring(trackMediaTypeStr(nTrackId)).c_str(), trackID(nTrackId));
+                    return RGY_ERR_NOT_FOUND;
                 }
-                auto ret = pWriter->WriteNextPacket(&packetList[i]);
-                if (ret != RGY_ERR_NONE) {
-                    return ret;
+                auto err = pWriter->WriteNextPacket(pkt);
+                if (err != RGY_ERR_NONE) {
+                    return err;
                 }
-            } else {
-                PrintMes(RGY_LOG_ERROR, _T("Failed to find writer for track %d\n"), nTrackId);
+                pkt = nullptr;
+            }
+            if (pkt != nullptr) {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to find writer for %s track #%d\n"), char_to_tstring(trackMediaTypeStr(nTrackId)).c_str(), trackID(nTrackId));
                 return RGY_ERR_NOT_FOUND;
             }
         }
@@ -2454,6 +2561,10 @@ RGY_ERR VCECore::run() {
         pSurface->SetProperty(RGY_PROP_TIMESTAMP, pts);
         pSurface->SetProperty(RGY_PROP_DURATION, duration);
 
+        if (m_timecode) {
+            m_timecode->write(pts, m_outputTimebase);
+        }
+
         auto ar = AMF_OK;
         do {
             try {
@@ -2654,6 +2765,14 @@ RGY_ERR VCECore::run() {
     while (ar == AMF_INPUT_FULL) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         ar = m_pEncoder->Drain();
+        // 出力スレッドが生存していないと、いつまでもこのループを抜けることはない
+        // 出力スレッドが生存していない場合はあきらめる
+        if (m_thOutput.valid()) {
+            auto thsts = m_thOutput.wait_for(std::chrono::seconds(0));
+            if (thsts == std::future_status::ready) {
+                break;
+            }
+        }
     }
     if (ar != AMF_OK) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to drain encoder: %s\n"), get_err_mes(err_to_rgy(ar)));

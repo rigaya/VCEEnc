@@ -50,6 +50,7 @@ extern "C" {
 #include <libavutil/display.h>
 #include <libavutil/mastering_display_metadata.h>
 #include <libavformat/avformat.h>
+#include <libavformat/avio.h>
 #include <libavcodec/avcodec.h>
 #include <libswresample/swresample.h>
 #include <libavfilter/avfilter.h>
@@ -90,6 +91,7 @@ static const CodecMap HW_DECODE_LIST[] = {
     { AV_CODEC_ID_VC1,        RGY_CODEC_VC1   },
     { AV_CODEC_ID_MPEG1VIDEO, RGY_CODEC_MPEG1 },
     { AV_CODEC_ID_MPEG4,      RGY_CODEC_MPEG4 },
+    { AV_CODEC_ID_AV1,        RGY_CODEC_AV1 },
 #endif
     //{ AV_CODEC_ID_WMV3,       RGY_CODEC_VC1   },
 };
@@ -191,6 +193,9 @@ tstring qsv_av_err2str(int ret);
 //コーデックの種類を表示
 tstring get_media_type_string(AVCodecID codecId);
 
+// trackの言語を取得
+std::string getTrackLang(const AVStream *stream);
+
 //必要なavcodecのdllがそろっているかを確認
 bool check_avcodec_dll();
 
@@ -234,7 +239,7 @@ vector<std::string> getAVProtocolList(int bOutput);
 tstring getAVProtocols();
 
 //protocolを使用
-bool usingAVProtocols(std::string filename, int bOutput);
+bool usingAVProtocols(const std::string& filename, int bOutput);
 
 //バージョン情報の取得
 tstring getAVVersions();

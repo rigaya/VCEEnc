@@ -97,8 +97,8 @@ public:
 
     RGY_ERR alloc(const FrameInfo& frameInfo);
 
-    RGY_ERR add(const FrameInfo *pInputFrame, cl_command_queue queue_main, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent& event);
-    RGY_ERR copyFrame(RGYCLFrame *pOut, int srcFrame, cl_command_queue queue, RGYOpenCLEvent *event);
+    RGY_ERR add(const FrameInfo *pInputFrame, RGYOpenCLQueue &queue_main, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent& event);
+    RGY_ERR copyFrame(RGYCLFrame *pOut, int srcFrame, RGYOpenCLQueue &queue, RGYOpenCLEvent *event);
 
     afsSourceCacheFrame *get(int iframe) {
         iframe = clamp(iframe, 0, m_nFramesInput-1);
@@ -166,11 +166,11 @@ public:
     AFS_STRIPE_DATA *get(int iframe) {
         return &m_stripeArray[iframe & (AFS_STRIPE_CACHE_NUM-1)];
     }
-    AFS_STRIPE_DATA *filter(int iframe, int analyze, cl_command_queue queue, RGY_ERR *pErr);
+    AFS_STRIPE_DATA *filter(int iframe, int analyze, RGYOpenCLQueue &queue, RGY_ERR *pErr);
 
     void clear();
 protected:
-    RGY_ERR map_filter(AFS_STRIPE_DATA *dst, AFS_STRIPE_DATA *sp, cl_command_queue queue);
+    RGY_ERR map_filter(AFS_STRIPE_DATA *dst, AFS_STRIPE_DATA *sp, RGYOpenCLQueue &queue);
 
     AFS_STRIPE_DATA *getFiltered() {
         return &m_stripeArray[AFS_STRIPE_CACHE_NUM];
@@ -252,22 +252,22 @@ protected:
     RGY_ERR check_param(shared_ptr<RGYFilterParamAfs> pAfsParam);
 
     RGY_ERR build_analyze(const RGY_CSP csp, const bool tb_order);
-    RGY_ERR analyze_stripe(afsSourceCacheFrame *p0, afsSourceCacheFrame *p1, AFS_SCAN_DATA *sp, unique_ptr<RGYCLBuf>& count_motion, const RGYFilterParamAfs *pAfsPrm, cl_command_queue queue, std::vector<RGYOpenCLEvent> wait_event, RGYOpenCLEvent &event);
+    RGY_ERR analyze_stripe(afsSourceCacheFrame *p0, afsSourceCacheFrame *p1, AFS_SCAN_DATA *sp, unique_ptr<RGYCLBuf>& count_motion, const RGYFilterParamAfs *pAfsPrm, RGYOpenCLQueue &queue, std::vector<RGYOpenCLEvent> wait_event, RGYOpenCLEvent &event);
     bool scan_frame_result_cached(int iframe, const VppAfs *pAfsPrm);
-    RGY_ERR scan_frame(int iframe, int force, const RGYFilterParamAfs *pAfsPrm, cl_command_queue queue, std::vector<RGYOpenCLEvent> wait_event);
-    RGY_ERR count_motion(AFS_SCAN_DATA *sp, const AFS_SCAN_CLIP *clip, cl_command_queue queue_main);
+    RGY_ERR scan_frame(int iframe, int force, const RGYFilterParamAfs *pAfsPrm, RGYOpenCLQueue &queue, std::vector<RGYOpenCLEvent> wait_event);
+    RGY_ERR count_motion(AFS_SCAN_DATA *sp, const AFS_SCAN_CLIP *clip, RGYOpenCLQueue &queue_main);
 
     RGY_ERR build_merge_scan();
-    RGY_ERR merge_scan(AFS_STRIPE_DATA *sp, AFS_SCAN_DATA *sp0, AFS_SCAN_DATA *sp1, unique_ptr<RGYCLBuf>& count_stripe, const RGYFilterParamAfs *pAfsPrm, cl_command_queue queue, std::vector<RGYOpenCLEvent> wait_event, RGYOpenCLEvent &event);
-    RGY_ERR count_stripe(cl_command_queue queue, AFS_STRIPE_DATA *sp, const AFS_SCAN_CLIP *clip, int tb_order);
+    RGY_ERR merge_scan(AFS_STRIPE_DATA *sp, AFS_SCAN_DATA *sp0, AFS_SCAN_DATA *sp1, unique_ptr<RGYCLBuf>& count_stripe, const RGYFilterParamAfs *pAfsPrm, RGYOpenCLQueue &queue, std::vector<RGYOpenCLEvent> wait_event, RGYOpenCLEvent &event);
+    RGY_ERR count_stripe(RGYOpenCLQueue &queue, AFS_STRIPE_DATA *sp, const AFS_SCAN_CLIP *clip, int tb_order);
 
-    RGY_ERR get_stripe_info(cl_command_queue queue, int frame, int mode, const RGYFilterParamAfs *pAfsPrm);
+    RGY_ERR get_stripe_info(RGYOpenCLQueue &queue, int frame, int mode, const RGYFilterParamAfs *pAfsPrm);
     int detect_telecine_cross(int iframe, int coeff_shift);
-    RGY_ERR analyze_frame(cl_command_queue queue, int iframe, const RGYFilterParamAfs *pAfsPrm, int reverse[4], int assume_shift[4], int result_stat[4]);
+    RGY_ERR analyze_frame(RGYOpenCLQueue &queue, int iframe, const RGYFilterParamAfs *pAfsPrm, int reverse[4], int assume_shift[4], int result_stat[4]);
 
     RGY_ERR build_synthesize(const RGY_CSP csp, const int mode);
-    RGY_ERR synthesize(int iframe, RGYCLFrame *pOut, afsSourceCacheFrame *p0, afsSourceCacheFrame *p1, AFS_STRIPE_DATA *sip, const RGYFilterParamAfs *pAfsPrm, cl_command_queue queue);
-    RGY_ERR copy_frame(RGYCLFrame *pOut, afsSourceCacheFrame *p0, cl_command_queue queue);
+    RGY_ERR synthesize(int iframe, RGYCLFrame *pOut, afsSourceCacheFrame *p0, afsSourceCacheFrame *p1, AFS_STRIPE_DATA *sip, const RGYFilterParamAfs *pAfsPrm, RGYOpenCLQueue &queue);
+    RGY_ERR copy_frame(RGYCLFrame *pOut, afsSourceCacheFrame *p0, RGYOpenCLQueue &queue);
 
     int open_timecode(tstring tc_filename);
     void write_timecode(int64_t pts, const rgy_rational<int>& timebase);

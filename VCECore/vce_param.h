@@ -67,6 +67,15 @@ static const bool  FILTER_DEFAULT_AFS_RFF = false;
 static const bool  FILTER_DEFAULT_AFS_TIMECODE = false;
 static const bool  FILTER_DEFAULT_AFS_LOG = false;
 
+static const int   FILTER_DEFAULT_DECIMATE_CYCLE = 5;
+static const float FILTER_DEFAULT_DECIMATE_THRE_DUP = 1.1f;
+static const float FILTER_DEFAULT_DECIMATE_THRE_SC = 15.0f;
+static const int   FILTER_DEFAULT_DECIMATE_BLOCK_X = 32;
+static const int   FILTER_DEFAULT_DECIMATE_BLOCK_Y = 32;
+static const bool  FILTER_DEFAULT_DECIMATE_PREPROCESSED = false;
+static const bool  FILTER_DEFAULT_DECIMATE_CHROMA = true;
+static const bool  FILTER_DEFAULT_DECIMATE_LOG = false;
+
 static const int   FILTER_DEFAULT_KNN_RADIUS = 3;
 static const float FILTER_DEFAULT_KNN_STRENGTH = 0.08f;
 static const float FILTER_DEFAULT_KNN_LERPC = 0.20f;
@@ -77,6 +86,14 @@ static const float FILTER_DEFAULT_PMD_STRENGTH = 100.0f;
 static const float FILTER_DEFAULT_PMD_THRESHOLD = 100.0f;
 static const int   FILTER_DEFAULT_PMD_APPLY_COUNT = 2;
 static const bool  FILTER_DEFAULT_PMD_USE_EXP = true;
+
+static const int   FILTER_DEFAULT_SMOOTH_QUALITY = 3;
+static const int   FILTER_DEFAULT_SMOOTH_QP = 12;
+static const float FILTER_DEFAULT_SMOOTH_STRENGTH = 0.0f;
+static const float FILTER_DEFAULT_SMOOTH_THRESHOLD = 0.0f;
+static const int   FILTER_DEFAULT_SMOOTH_MODE = 0;
+static const float FILTER_DEFAULT_SMOOTH_B_RATIO = 0.5f;
+static const int   FILTER_DEFAULT_SMOOTH_MAX_QPTABLE_ERR = 10;
 
 static const float FILTER_DEFAULT_TWEAK_BRIGHTNESS = 0.0f;
 static const float FILTER_DEFAULT_TWEAK_CONTRAST = 1.0f;
@@ -253,7 +270,7 @@ const CX_DESC list_vpp_denoise[] = {
     { _T("none"),   0 },
     { _T("knn"),    1 },
     { _T("pmd"),    2 },
-    //{ _T("smooth"), 3 },
+    { _T("smooth"), 3 },
     { NULL, 0 }
 };
 
@@ -441,6 +458,12 @@ const CX_DESC list_vpp_rotate[] = {
     { _T("90"),   90 },
     { _T("180"), 180 },
     { _T("270"), 270 },
+    { NULL, 0 }
+};
+
+const CX_DESC list_vpp_ass_shaping[] = {
+    { _T("simple"),  0 },
+    { _T("complex"), 1 },
     { NULL, 0 }
 };
 
@@ -638,6 +661,32 @@ struct VppNnedi {
     tstring print() const;
 };
 
+const CX_DESC list_vpp_decimate_block[] = {
+    { _T("4"),    4 },
+    { _T("8"),    8 },
+    { _T("16"),  16 },
+    { _T("32"),  32 },
+    { _T("64"),  64 },
+    { NULL, 0 }
+};
+
+struct VppDecimate {
+    bool enable;
+    int cycle;
+    float threDuplicate;
+    float threSceneChange;
+    int blockX;
+    int blockY;
+    bool preProcessed;
+    bool chroma;
+    bool log;
+
+    VppDecimate();
+    bool operator==(const VppDecimate &x) const;
+    bool operator!=(const VppDecimate &x) const;
+    tstring print() const;
+};
+
 struct VppPad {
     bool enable;
     int left, top, right, bottom;
@@ -672,6 +721,41 @@ struct VppPmd {
     VppPmd();
     bool operator==(const VppPmd &x) const;
     bool operator!=(const VppPmd &x) const;
+    tstring print() const;
+};
+
+struct VppSmooth {
+    bool enable;
+    int quality;
+    int qp;
+    VppFpPrecision prec;
+    bool useQPTable;
+    float strength;
+    float threshold;
+    float bratio;
+    int maxQPTableErrCount;
+    VppSmooth();
+    bool operator==(const VppSmooth &x) const;
+    bool operator!=(const VppSmooth &x) const;
+    tstring print() const;
+};
+
+struct VppSubburn {
+    bool  enable;
+    tstring filename;
+    std::string charcode;
+    int trackId;
+    int assShaping;
+    float scale;
+    float transparency_offset;
+    float brightness;
+    float contrast;
+    double ts_offset;
+    bool vid_ts_offset;
+
+    VppSubburn();
+    bool operator==(const VppSubburn &x) const;
+    bool operator!=(const VppSubburn &x) const;
     tstring print() const;
 };
 
@@ -751,9 +835,12 @@ struct VCEVppParam {
     RGY_VPP_RESIZE_ALGO resize;
     VppAfs afs;
     VppNnedi nnedi;
+    VppDecimate decimate;
     VppPad pad;
     VppKnn knn;
     VppPmd pmd;
+    VppSmooth smooth;
+    std::vector<VppSubburn> subburn;
     VppUnsharp unsharp;
     VppEdgelevel edgelevel;
     VppTweak tweak;
@@ -923,6 +1010,13 @@ static const wchar_t *AMF_PARAM_MAX_QP(RGY_CODEC codec) {
     case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_MAX_QP_I;
     case RGY_CODEC_H264:
     default:             return AMF_VIDEO_ENCODER_MAX_QP;
+    }
+}
+static int64_t get_encoder_usage(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_HEVC: return (int64_t)AMF_VIDEO_ENCODER_HEVC_USAGE_TRANSCONDING;
+    case RGY_CODEC_H264:
+    default:             return (int64_t)AMF_VIDEO_ENCODER_USAGE_TRANSCONDING;
     }
 }
 

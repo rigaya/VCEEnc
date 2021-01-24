@@ -205,7 +205,7 @@ protected:
 #endif //#if ENABLE_AVSW_READER
 };
 
-std::unique_ptr<HEVCHDRSei> createHEVCHDRSei(const std::string &maxCll, const std::string &masterDisplay, const RGYInput *reader);
+std::unique_ptr<HEVCHDRSei> createHEVCHDRSei(const std::string &maxCll, const std::string &masterDisplay, CspTransfer atcSei, const RGYInput *reader);
 
 RGY_ERR initWriters(
     shared_ptr<RGYOutput> &pFileWriter,
@@ -222,7 +222,6 @@ RGY_ERR initWriters(
     const vector<unique_ptr<AVChapter>> &chapters,
 #endif //#if ENABLE_AVSW_READER
     const HEVCHDRSei *hedrsei,
-    const int subburnTrackId,
     const bool videoDtsUnavailable,
     const bool benchmark,
     shared_ptr<EncodeStatus> pStatus,

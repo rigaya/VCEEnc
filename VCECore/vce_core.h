@@ -58,6 +58,7 @@ const TCHAR *AMFRetString(AMF_RESULT ret);
 #if ENABLE_AVSW_READER
 struct AVChapter;
 #endif //#if ENABLE_AVSW_READER
+class RGYTimecode;
 
 class RGYPipelineFrame {
     RGYPipelineFrame(amf::AMFSurfacePtr surf) : surface(surf), frame() {};
@@ -134,7 +135,7 @@ protected:
     virtual RGY_ERR initDecoder(VCEParam *prm);
     virtual RGY_ERR initFilters(VCEParam *prm);
     virtual RGY_ERR initConverter(VCEParam *prm);
-    virtual RGY_ERR InitChapters(VCEParam *prm);
+    virtual RGY_ERR initChapters(VCEParam *prm);
     virtual RGY_ERR initEncoder(VCEParam *prm);
     virtual RGY_ERR initSSIMCalc(VCEParam *prm);
 
@@ -149,6 +150,7 @@ protected:
     vector<int>                   m_keyFile;             //キーフレームの指定
     vector<unique_ptr<AVChapter>> m_Chapters;            //ファイルから読み込んだチャプター
 #endif //#if ENABLE_AVSW_READER
+    unique_ptr<RGYTimecode>       m_timecode;
     unique_ptr<RGYHDR10Plus>      m_hdr10plus;
     unique_ptr<HEVCHDRSei>        m_hdrsei;
 

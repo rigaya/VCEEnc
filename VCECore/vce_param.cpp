@@ -307,6 +307,45 @@ tstring VppNnedi::print() const {
         ((weightfile.length()) ? weightfile.c_str() : _T("internal")));
 }
 
+VppDecimate::VppDecimate() :
+    enable(false),
+    cycle(FILTER_DEFAULT_DECIMATE_CYCLE),
+    threDuplicate(FILTER_DEFAULT_DECIMATE_THRE_DUP),
+    threSceneChange(FILTER_DEFAULT_DECIMATE_THRE_SC),
+    blockX(FILTER_DEFAULT_DECIMATE_BLOCK_X),
+    blockY(FILTER_DEFAULT_DECIMATE_BLOCK_Y),
+    preProcessed(FILTER_DEFAULT_DECIMATE_PREPROCESSED),
+    chroma(FILTER_DEFAULT_DECIMATE_CHROMA),
+    log(FILTER_DEFAULT_DECIMATE_LOG) {
+
+}
+
+bool VppDecimate::operator==(const VppDecimate &x) const {
+    return enable == x.enable
+        && cycle == x.cycle
+        && threDuplicate == x.threDuplicate
+        && threSceneChange == x.threSceneChange
+        && blockX == x.blockX
+        && blockY == x.blockY
+        && preProcessed == x.preProcessed
+        && chroma == x.chroma
+        && log == x.log;
+}
+bool VppDecimate::operator!=(const VppDecimate &x) const {
+    return !(*this == x);
+}
+
+tstring VppDecimate::print() const {
+    return strsprintf(_T("decimate: cycle %d, threDup %.2f, threSC %.2f\n")
+        _T("                         block %dx%d, chroma %s, log %s"),
+        cycle,
+        threDuplicate, threSceneChange,
+        blockX, blockY,
+        /*preProcessed ? _T("on") : _T("off"),*/
+        chroma ? _T("on") : _T("off"),
+        log ? _T("on") : _T("off"));
+}
+
 VppPad::VppPad() :
     enable(false),
     left(0),
@@ -384,6 +423,98 @@ bool VppPmd::operator!=(const VppPmd& x) const {
 tstring VppPmd::print() const {
     return strsprintf(_T("denoise(pmd): strength %d, threshold %d, apply %d, exp %d"),
         (int)strength, (int)threshold, applyCount, useExp);
+}
+
+VppSmooth::VppSmooth() :
+    enable(false),
+    quality(FILTER_DEFAULT_SMOOTH_QUALITY),
+    qp(FILTER_DEFAULT_SMOOTH_QP),
+    prec(VPP_FP_PRECISION_AUTO),
+    useQPTable(false),
+    strength(FILTER_DEFAULT_SMOOTH_STRENGTH),
+    threshold(FILTER_DEFAULT_SMOOTH_THRESHOLD),
+    bratio(FILTER_DEFAULT_SMOOTH_B_RATIO),
+    maxQPTableErrCount(FILTER_DEFAULT_SMOOTH_MAX_QPTABLE_ERR) {
+
+}
+
+bool VppSmooth::operator==(const VppSmooth &x) const {
+    return enable == x.enable
+        && quality == x.quality
+        && qp == x.qp
+        && prec == x.prec
+        && useQPTable == x.useQPTable
+        && strength == x.strength
+        && threshold == x.threshold
+        && bratio == x.bratio
+        && maxQPTableErrCount == x.maxQPTableErrCount;
+}
+bool VppSmooth::operator!=(const VppSmooth &x) const {
+    return !(*this == x);
+}
+
+tstring VppSmooth::print() const {
+    //return strsprintf(_T("smooth: quality %d, qp %d, threshold %.1f, strength %.1f, mode %d, use_bframe_qp %s"), quality, qp, threshold, strength, mode, use_bframe_qp ? _T("yes") : _T("no"));
+    tstring str = strsprintf(_T("smooth: quality %d, qp %d, prec %s"), quality, qp, get_cx_desc(list_vpp_fp_prec, prec));
+    if (useQPTable) {
+        str += strsprintf(_T(", use QP table on"));
+    }
+    return str;
+}
+
+VppSubburn::VppSubburn() :
+    enable(false),
+    filename(),
+    charcode(),
+    trackId(0),
+    assShaping(1),
+    scale(0.0),
+    transparency_offset(0.0),
+    brightness(FILTER_DEFAULT_TWEAK_BRIGHTNESS),
+    contrast(FILTER_DEFAULT_TWEAK_CONTRAST),
+    ts_offset(0.0),
+    vid_ts_offset(true) {
+}
+
+bool VppSubburn::operator==(const VppSubburn &x) const {
+    return enable == x.enable
+        && filename == x.filename
+        && charcode == x.charcode
+        && trackId == x.trackId
+        && assShaping == x.assShaping
+        && scale == x.scale
+        && transparency_offset == x.transparency_offset
+        && brightness == x.brightness
+        && contrast == x.contrast
+        && ts_offset == x.ts_offset
+        && vid_ts_offset == x.vid_ts_offset;
+}
+bool VppSubburn::operator!=(const VppSubburn &x) const {
+    return !(*this == x);
+}
+
+tstring VppSubburn::print() const {
+    tstring str = strsprintf(_T("subburn: %s, scale x%.2f"),
+        (filename.length() > 0)
+        ? filename.c_str()
+        : strsprintf(_T("track #%d"), trackId).c_str(),
+        scale);
+    if (transparency_offset != 0.0) {
+        str += strsprintf(_T(", transparency %.2f"), transparency_offset);
+    }
+    if (brightness != FILTER_DEFAULT_TWEAK_BRIGHTNESS) {
+        str += strsprintf(_T(", brightness %.2f"), brightness);
+    }
+    if (contrast != FILTER_DEFAULT_TWEAK_CONTRAST) {
+        str += strsprintf(_T(", contrast %.2f"), contrast);
+    }
+    if (ts_offset != 0.0) {
+        str += strsprintf(_T(", ts_offset %.2f"), ts_offset);
+    }
+    if (!vid_ts_offset) {
+        str += _T(", vid_ts_offset off");
+    }
+    return str;
 }
 
 VppUnsharp::VppUnsharp() :
@@ -567,9 +698,12 @@ VCEVppParam::VCEVppParam() :
     resize(RGY_VPP_RESIZE_AUTO),
     afs(),
     nnedi(),
+    decimate(),
     pad(),
     knn(),
     pmd(),
+    smooth(),
+    subburn(),
     unsharp(),
     edgelevel(),
     tweak(),
@@ -719,6 +853,7 @@ RGY_ERR AMFParams::SetParamTypeAVC() {
 #pragma warning(pop)
     SetParamType(AMF_VIDEO_ENCODER_ASPECT_RATIO, AMF_PARAM_STATIC, L"Controls aspect ratio, defulat (1,1)");
     SetParamType(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR, AMF_PARAM_STATIC, L"Inidicates that YUV input is (0,255) (bool, default = false)");
+    SetParamType(AMF_VIDEO_ENCODER_LOWLATENCY_MODE, AMF_PARAM_STATIC, L"bool; default = false, enables low latency mode");
 
     // ------------- Encoder params dynamic ---------------
     //SetParamType(AMF_VIDEO_ENCODER_WIDTH, AMF_PARAM_DYNAMIC, L"Frame width (integer, default = 0)");

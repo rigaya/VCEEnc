@@ -27,6 +27,7 @@
 
 #include "rgy_output.h"
 #include "rgy_bitstream.h"
+#include "rgy_language.h"
 #include <smmintrin.h>
 
 #if ENCODER_QSV
@@ -339,6 +340,7 @@ RGY_ERR RGYOutputRaw::WriteNextFrame(RGYBitstream *pBitstream) {
                 }
                 memmove(pBitstream->data() + next_nal_new_offset, pBitstream->data() + next_nal_orig_offset, stream_orig_length - next_nal_orig_offset);
                 memcpy(pBitstream->data() + sps_nal_offset, pkt.data, pkt.size);
+                pBitstream->setSize(new_data_size);
                 av_packet_unref(&pkt);
             }
         }
@@ -566,7 +568,7 @@ RGY_ERR RGYOutFrame::WriteNextFrame(RGYFrame *pSurface) {
 #include "rgy_input_avcodec.h"
 #include "rgy_output_avcodec.h"
 
-std::unique_ptr<HEVCHDRSei> createHEVCHDRSei(const std::string& maxCll, const std::string &masterDisplay, const RGYInput *reader) {
+std::unique_ptr<HEVCHDRSei> createHEVCHDRSei(const std::string& maxCll, const std::string &masterDisplay, CspTransfer atcSei, const RGYInput *reader) {
     auto hedrsei = std::make_unique<HEVCHDRSei>();
     const AVMasteringDisplayMetadata *masteringDisplaySrc = nullptr;
     const AVContentLightMetadata *contentLightSrc = nullptr;
@@ -602,11 +604,42 @@ std::unique_ptr<HEVCHDRSei> createHEVCHDRSei(const std::string& maxCll, const st
     } else {
         ret = hedrsei->parse_masterdisplay(masterDisplay);
     }
+    if (atcSei != RGY_TRANSFER_UNKNOWN) {
+        hedrsei->set_atcsei(atcSei);
+    }
     if (ret) {
         hedrsei.reset();
     }
     return hedrsei;
 }
+
+static bool audioSelected(const AudioSelect *sel, const AVDemuxStream *stream) {
+    if (sel->trackID == trackID(stream->trackId)) {
+        return true;
+    }
+    if (sel->trackID == TRACK_SELECT_BY_LANG && rgy_lang_equal(sel->lang, stream->lang)) {
+        return true;
+    }
+    return false;
+};
+static bool subSelected(const SubtitleSelect *sel, const AVDemuxStream *stream) {
+    if (sel->trackID == trackID(stream->trackId)) {
+        return true;
+    }
+    if (sel->trackID == TRACK_SELECT_BY_LANG && rgy_lang_equal(sel->lang, stream->lang)) {
+        return true;
+    }
+    return false;
+};
+static bool dataSelected(const DataSelect *sel, const AVDemuxStream *stream) {
+    if (sel->trackID == trackID(stream->trackId)) {
+        return true;
+    }
+    if (sel->trackID == TRACK_SELECT_BY_LANG && rgy_lang_equal(sel->lang, stream->lang)) {
+        return true;
+    }
+    return false;
+};
 
 RGY_ERR initWriters(
     shared_ptr<RGYOutput> &pFileWriter,
@@ -623,7 +656,6 @@ RGY_ERR initWriters(
     const vector<unique_ptr<AVChapter>>& chapters,
 #endif //#if ENABLE_AVSW_READER
     const HEVCHDRSei *hedrsei,
-    const int subburnTrackId,
     const bool videoDtsUnavailable,
     const bool benchmark,
     shared_ptr<EncodeStatus> pStatus,
@@ -720,7 +752,7 @@ RGY_ERR initWriters(
                 //audio-fileで別ファイルとして抽出するものは除く
                 bool usedInAudioFile = false;
                 for (int i = 0; i < (int)common->nAudioSelectCount; i++) {
-                    if (trackID(stream.trackId) == common->ppAudioSelectList[i]->trackID
+                    if (audioSelected(common->ppAudioSelectList[i], &stream)
                         && common->ppAudioSelectList[i]->extractFilename.length() > 0) {
                         usedInAudioFile = true;
                     }
@@ -731,7 +763,7 @@ RGY_ERR initWriters(
                 const AudioSelect *pAudioSelect = nullptr;
                 if (streamMediaType == AVMEDIA_TYPE_AUDIO) {
                     for (int i = 0; i < (int)common->nAudioSelectCount; i++) {
-                        if (trackID(stream.trackId) == common->ppAudioSelectList[i]->trackID
+                        if (audioSelected(common->ppAudioSelectList[i], &stream)
                             && common->ppAudioSelectList[i]->extractFilename.length() == 0) {
                             pAudioSelect = common->ppAudioSelectList[i];
                             break;
@@ -751,7 +783,7 @@ RGY_ERR initWriters(
                 const SubtitleSelect *pSubtitleSelect = nullptr;
                 if (streamMediaType == AVMEDIA_TYPE_SUBTITLE) {
                     for (int i = 0; i < common->nSubtitleSelectCount; i++) {
-                        if (trackID(stream.trackId) == common->ppSubtitleSelectList[i]->trackID) {
+                        if (subSelected(common->ppSubtitleSelectList[i], &stream)) {
                             pSubtitleSelect = common->ppSubtitleSelectList[i];
                             break;
                         }
@@ -769,7 +801,7 @@ RGY_ERR initWriters(
                 const DataSelect *pDataSelect = nullptr;
                 if (streamMediaType == AVMEDIA_TYPE_DATA) {
                     for (int i = 0; i < common->nDataSelectCount; i++) {
-                        if (trackID(stream.trackId) == common->ppDataSelectList[i]->trackID) {
+                        if (dataSelected(common->ppDataSelectList[i], &stream)) {
                             pDataSelect = common->ppDataSelectList[i];
                         }
                     }
@@ -785,7 +817,7 @@ RGY_ERR initWriters(
                 }
                 if (pAudioSelect != nullptr || audioCopyAll || streamMediaType != AVMEDIA_TYPE_AUDIO) {
                     streamTrackUsed.push_back(stream.trackId);
-                    if (streamMediaType == AVMEDIA_TYPE_SUBTITLE && subburnTrackId > 0) {
+                    if (pSubtitleSelect == nullptr && streamMediaType == AVMEDIA_TYPE_SUBTITLE) {
                         continue;
                     }
                     AVOutputStreamPrm prm;
@@ -846,7 +878,7 @@ RGY_ERR initWriters(
                 bool usedInAudioFile = false;
                 for (const auto &audsrc : common->audioSource) {
                     for (const auto &audsel : audsrc.select) {
-                        if (trackID(stream.trackId) == audsel.first
+                        if (audioSelected(&audsel.second, &stream)
                             && audsel.second.extractFilename.length() > 0) {
                             usedInAudioFile = true;
                         }
@@ -859,7 +891,7 @@ RGY_ERR initWriters(
                 if (streamMediaType == AVMEDIA_TYPE_AUDIO) {
                     for (const auto &audsrc : common->audioSource) {
                         for (const auto &audsel : audsrc.select) {
-                            if (audsel.first == trackID(stream.trackId)) {
+                            if (audioSelected(&audsel.second, &stream)) {
                                 pAudioSelect = &audsel.second;
                                 break;
                             }
@@ -881,7 +913,7 @@ RGY_ERR initWriters(
                 if (streamMediaType == AVMEDIA_TYPE_SUBTITLE) {
                     for (const auto &subSrc : common->subSource) {
                         for (const auto &subsel : subSrc.select) {
-                            if (subsel.first == trackID(stream.trackId)) {
+                            if (subSelected(&subsel.second, &stream)) {
                                 pSubtitleSelect = &subsel.second;
                                 break;
                             }
@@ -1005,7 +1037,7 @@ RGY_ERR initWriters(
                 }
                 const AudioSelect *pAudioSelect = nullptr;
                 for (int i = 0; i < (int)common->nAudioSelectCount; i++) {
-                    if (trackID(audioTrack.trackId) == common->ppAudioSelectList[i]->trackID
+                    if (audioSelected(common->ppAudioSelectList[i], &audioTrack)
                         && common->ppAudioSelectList[i]->extractFilename.length() > 0) {
                         pAudioSelect = common->ppAudioSelectList[i];
                     }

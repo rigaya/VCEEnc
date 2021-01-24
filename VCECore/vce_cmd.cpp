@@ -298,6 +298,25 @@ tstring encoder_help() {
         _T("                              auto (default), fp16, fp32\n")
         _T("      weightfile=<string>   Set path of weight file. By default (not specified),\n")
         _T("                              internal weight params will be used.\n"));
+    str += strsprintf(_T("\n")
+        _T("   --vpp-decimate [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     drop duplicated frame.\n")
+        _T("    params\n")
+        _T("      cycle=<int>               num of frame from which a frame will be droppped.\n")
+        _T("                                  (default=%d)\n")
+        _T("      thredup=<float>           duplicate threshold. (default=%.1f, 0 - 100)\n")
+        _T("      thresc=<float>            scene change threshold. (default=%.1f, 0 - 100)\n")
+        _T("      blockx=<int>              block size of x direction (default=%d).\n")
+        _T("      blocky=<int>              block size of y direction (default=%d).\n")
+        _T("                                  block size could be 4, 8, 16, 32, 64.\n")
+        _T("      chroma=<bool>             consdier chroma (default: %s)\n")
+        _T("      log=<bool>                output log file (default: %s).\n"),
+        FILTER_DEFAULT_DECIMATE_CYCLE,
+        FILTER_DEFAULT_DECIMATE_THRE_DUP, FILTER_DEFAULT_DECIMATE_THRE_SC,
+        FILTER_DEFAULT_DECIMATE_BLOCK_X, FILTER_DEFAULT_DECIMATE_BLOCK_Y,
+        FILTER_DEFAULT_DECIMATE_PREPROCESSED ? _T("on") : _T("off"),
+        FILTER_DEFAULT_DECIMATE_CHROMA ? _T("on") : _T("off"),
+        FILTER_DEFAULT_DECIMATE_LOG ? _T("on") : _T("off"));
     str += print_list_options(_T("--vpp-resize <string>"), list_vpp_resize, 0);
     str += strsprintf(_T("\n")
         _T("   --vpp-pad <int>,<int>,<int>,<int>\n")
@@ -323,6 +342,36 @@ tstring encoder_help() {
         _T("      threshold=<float>         threshold of pmd (default=%.2f, 0.0-255.0)\n")
         _T("                                  lower value will preserve edge.\n"),
         FILTER_DEFAULT_PMD_APPLY_COUNT, FILTER_DEFAULT_PMD_STRENGTH, FILTER_DEFAULT_PMD_THRESHOLD);
+    str += strsprintf(_T("\n")
+        _T("   --vpp-smooth [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     enable smooth filter.\n")
+        _T("    params\n")
+        _T("      quality=<int>         quality of filter (high=higher quality but slow)\n")
+        _T("                             (default=%d, 1-6)\n")
+        _T("      qp=<float>            strength of filter (default=%.2f, 0.0-100.0)\n")
+        _T("      prec=<string>         Select calculation precision.\n")
+        _T("                              auto (default), fp16, fp32\n"),
+        FILTER_DEFAULT_SMOOTH_QUALITY, FILTER_DEFAULT_SMOOTH_QP);
+    str += strsprintf(_T("\n")
+        _T("   --vpp-subburn [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     Burn in specified subtitle to the video.\n")
+        _T("    params\n")
+        _T("      track=<int>               subtitle track of the input file to burn in.\n")
+        _T("      filename=<string>         subtitle file path to burn in.\n")
+        _T("      charcode=<string>         subtitle charcter code.\n")
+        _T("      shaping=<string>          rendering quality of text.\n")
+        _T("      scale=<float>             scaling multiplizer for bitmap subtitles.\n")
+        _T("      transparency=<float>      adds additional transparency.\n")
+        _T("                                  (default=0.0, 0.0 - 1.0)\n")
+        _T("      brightness=<float>        modifies brightness of the subtitle.\n")
+        _T("                                  (default=%.1f, -1.0 - 1.0)\n")
+        _T("      contrast=<float>          modifies contrast of the subtitle.\n")
+        _T("                                  (default=%.1f, -2.0 - 2.0)\n")
+        _T("      vid_ts_offset=<bool>      add timestamp offset to match the first timestamp of\n")
+        _T("                                  the video file (default: on)\n")
+        _T("                                  (when \"track\" is used this options is always on)\n")
+        _T("      ts_offset=<float>         add offset in seconds to subtitle timestamps.\n"),
+        FILTER_DEFAULT_TWEAK_BRIGHTNESS, FILTER_DEFAULT_TWEAK_CONTRAST);
     str += strsprintf(_T("\n")
         _T("   --vpp-unsharp [<param1>=<value>][,<param2>=<value>][...]\n")
         _T("     enable unsharp filter.\n")
@@ -1309,6 +1358,124 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+    if (IS_OPTION("vpp-decimate")) {
+        pParams->vpp.decimate.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+        const auto paramList = std::vector<std::string>{ "cycle", "thresc", "thredup", "blockx", "blocky", "chroma", "log" /*, "pp"*/ };
+
+        for (const auto &param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos + 1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.decimate.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("cycle")) {
+                    try {
+                        pParams->vpp.decimate.cycle = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thresc")) {
+                    try {
+                        pParams->vpp.decimate.threSceneChange = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thredup")) {
+                    try {
+                        pParams->vpp.decimate.threDuplicate = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("blockx")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_decimate_block, param_val.c_str(), &value)) {
+                        pParams->vpp.decimate.blockX = value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_decimate_block);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("blocky")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_decimate_block, param_val.c_str(), &value)) {
+                        pParams->vpp.decimate.blockY = value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_decimate_block);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("pp")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.decimate.preProcessed = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("chroma")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.decimate.chroma = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("log")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->vpp.decimate.log = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                if (param == _T("log")) {
+                    pParams->vpp.decimate.log = true;
+                    continue;
+                }
+                if (param == _T("chroma")) {
+                    pParams->vpp.decimate.chroma = true;
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
     if (IS_OPTION("vpp-pad")) {
         pParams->vpp.pad.enable = true;
         if (i+1 >= nArgNum || strInput[i+1][0] == _T('-')) {
@@ -1548,6 +1715,247 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+    if (IS_OPTION("vpp-smooth")) {
+        pParams->vpp.smooth.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+        const auto paramList = std::vector<std::string>{
+            "quality", "qp", "use_qp_table" /*, "strength", "threshold", "bratio", "prec", "max_error"*/ };
+        for (const auto &param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos + 1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    if (param_val == _T("true")) {
+                        pParams->vpp.smooth.enable = true;
+                    } else if (param_val == _T("false")) {
+                        pParams->vpp.smooth.enable = false;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("quality")) {
+                    try {
+                        pParams->vpp.smooth.quality = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("qp")) {
+                    try {
+                        pParams->vpp.smooth.qp = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("use_qp_table")) {
+                    pParams->vpp.smooth.useQPTable = (param_val == _T("on") || param_val == _T("true"));
+                    continue;
+                }
+                if (param_arg == _T("strength")) {
+                    try {
+                        pParams->vpp.smooth.strength = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("threshold")) {
+                    try {
+                        pParams->vpp.smooth.threshold = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("bratio")) {
+                    try {
+                        pParams->vpp.smooth.bratio = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("prec")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_fp_prec, param_val.c_str(), &value)) {
+                        pParams->vpp.smooth.prec = (VppFpPrecision)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_fp_prec);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("max_error")) {
+                    try {
+                        pParams->vpp.smooth.maxQPTableErrCount = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+
+    if (IS_OPTION("vpp-subburn")) {
+        VppSubburn subburn;
+        subburn.enable = true;
+        if (i+1 >= nArgNum || strInput[i+1][0] == _T('-')) {
+            pParams->vpp.subburn.push_back(subburn);
+            return 0;
+        }
+        i++;
+        vector<tstring> param_list;
+        bool flag_comma = false;
+        const TCHAR *pstr = strInput[i];
+        const TCHAR *qstr = strInput[i];
+        for (; *pstr; pstr++) {
+            if (*pstr == _T('\"')) {
+                flag_comma ^= true;
+            }
+            if (!flag_comma && *pstr == _T(',')) {
+                param_list.push_back(tstring(qstr, pstr - qstr));
+                qstr = pstr+1;
+            }
+        }
+        param_list.push_back(tstring(qstr, pstr - qstr));
+
+        const auto paramList = std::vector<std::string>{ "track", "filename", "charcode", "shaping", "scale", "transparency", "brightness", "contrast", "vid_ts_offset", "ts_offset" };
+
+        for (const auto &param : param_list) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos+1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        subburn.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("track")) {
+                    try {
+                        subburn.trackId = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("filename")) {
+                    subburn.filename = trim(param_val, _T("\""));
+                    continue;
+                }
+                if (param_arg == _T("charcode")) {
+                    subburn.charcode = trim(tchar_to_string(param_val), "\"");
+                    continue;
+                }
+                if (param_arg == _T("shaping")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_ass_shaping, param_val.c_str(), &value)) {
+                        subburn.assShaping = value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_ass_shaping);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("scale")) {
+                    try {
+                        subburn.scale = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("transparency")) {
+                    try {
+                        subburn.transparency_offset = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("brightness")) {
+                    try {
+                        subburn.brightness = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("contrast")) {
+                    try {
+                        subburn.contrast = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("vid_ts_offset")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        subburn.vid_ts_offset = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("ts_offset")) {
+                    try {
+                        subburn.ts_offset = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            } else {
+                try {
+                    subburn.trackId = std::stoi(param);
+                } catch (...) {
+                    subburn.filename = param;
+                }
+            }
+        }
+        pParams->vpp.subburn.push_back(subburn);
+        return 0;
+    }
+
     if (IS_OPTION("vpp-unsharp")) {
         pParams->vpp.unsharp.enable = true;
         if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
@@ -2398,6 +2806,25 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
             cmd << _T(" --vpp-nnedi");
         }
     }
+    if (pParams->vpp.decimate != encPrmDefault.vpp.decimate) {
+        tmp.str(tstring());
+        if (!pParams->vpp.decimate.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (pParams->vpp.decimate.enable || save_disabled_prm) {
+            ADD_NUM(_T("cycle"), vpp.decimate.cycle);
+            ADD_FLOAT(_T("thredup"), vpp.decimate.threDuplicate, 3);
+            ADD_FLOAT(_T("thresc"), vpp.decimate.threSceneChange, 2);
+            ADD_LST(_T("blockx"), vpp.decimate.blockX, list_vpp_decimate_block);
+            ADD_LST(_T("blocky"), vpp.decimate.blockY, list_vpp_decimate_block);
+            ADD_BOOL(_T("pp"), vpp.decimate.preProcessed);
+            ADD_BOOL(_T("chroma"), vpp.decimate.chroma);
+            ADD_BOOL(_T("log"), vpp.decimate.log);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-decimate ") << tmp.str().substr(1);
+        }
+    }
     if (pParams->vpp.pad != encPrmDefault.vpp.pad) {
         tmp.str(tstring());
         if (!pParams->vpp.pad.enable && save_disabled_prm) {
@@ -2448,6 +2875,52 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
             cmd << _T(" --vpp-pmd ") << tmp.str().substr(1);
         } else if (pParams->vpp.pmd.enable) {
             cmd << _T(" --vpp-pmd");
+        }
+    }
+    if (pParams->vpp.smooth != encPrmDefault.vpp.smooth) {
+        tmp.str(tstring());
+        if (!pParams->vpp.smooth.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (pParams->vpp.smooth.enable || save_disabled_prm) {
+            ADD_NUM(_T("quality"), vpp.smooth.quality);
+            ADD_NUM(_T("qp"), vpp.smooth.qp);
+            ADD_LST(_T("prec"), vpp.smooth.prec, list_vpp_fp_prec);
+            ADD_BOOL(_T("use_qp_table"), vpp.smooth.useQPTable);
+            ADD_FLOAT(_T("strength"), vpp.smooth.strength, 3);
+            ADD_FLOAT(_T("threshold"), vpp.smooth.threshold, 3);
+            ADD_FLOAT(_T("bratio"), vpp.smooth.bratio, 3);
+            ADD_NUM(_T("max_error"), vpp.smooth.maxQPTableErrCount);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-smooth ") << tmp.str().substr(1);
+        } else if (pParams->vpp.smooth.enable) {
+            cmd << _T(" --vpp-smooth");
+        }
+    }
+    for (size_t i = 0; i < pParams->vpp.subburn.size(); i++) {
+        if (pParams->vpp.subburn[i] != VppSubburn()) {
+            tmp.str(tstring());
+            if (!pParams->vpp.subburn[i].enable && save_disabled_prm) {
+                tmp << _T(",enable=false");
+            }
+            if (pParams->vpp.subburn[i].enable || save_disabled_prm) {
+                ADD_NUM(_T("track"), vpp.subburn[i].trackId);
+                ADD_PATH(_T("filename"), vpp.subburn[i].filename.c_str());
+                ADD_STR(_T("charcode"), vpp.subburn[i].charcode);
+                ADD_LST(_T("shaping"), vpp.subburn[i].assShaping, list_vpp_ass_shaping);
+                ADD_FLOAT(_T("scale"), vpp.subburn[i].scale, 4);
+                ADD_FLOAT(_T("transparency"), vpp.subburn[i].transparency_offset, 4);
+                ADD_FLOAT(_T("brightness"), vpp.subburn[i].brightness, 4);
+                ADD_FLOAT(_T("contrast"), vpp.subburn[i].contrast, 4);
+                ADD_BOOL(_T("vid_ts_offset"), vpp.subburn[i].vid_ts_offset);
+                ADD_FLOAT(_T("ts_offset"), vpp.subburn[i].ts_offset, 4);
+            }
+            if (!tmp.str().empty()) {
+                cmd << _T(" --vpp-subburn ") << tmp.str().substr(1);
+            } else if (pParams->vpp.subburn[i].enable) {
+                cmd << _T(" --vpp-subburn");
+            }
         }
     }
     if (pParams->vpp.unsharp != encPrmDefault.vpp.unsharp) {

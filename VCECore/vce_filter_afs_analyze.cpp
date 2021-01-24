@@ -61,7 +61,7 @@ RGY_ERR run_analyze_stripe(uint8_t *dst,
     afsSourceCacheFrame *p0, afsSourceCacheFrame *p1, const int bit_depth,
     const int dstPitch,
     unique_ptr<RGYCLBuf> &count_motion,
-    const VppAfs *pAfsPrm, cl_command_queue queue,
+    const VppAfs *pAfsPrm, RGYOpenCLQueue &queue,
     std::vector<RGYOpenCLEvent> &wait_event, RGYOpenCLEvent &event,
     RGYOpenCLProgram *analyze, RGYOpenCLContext *cl) {
     auto err = RGY_ERR_NONE;
@@ -170,7 +170,7 @@ decltype(run_analyze_stripe<uint8_t, true>) *analyze_func::func[2][2] = {
     { run_analyze_stripe<uint16_t, false>, run_analyze_stripe<uint16_t, true> }
 };
 
-RGY_ERR RGYFilterAfs::analyze_stripe(afsSourceCacheFrame *p0, afsSourceCacheFrame *p1, AFS_SCAN_DATA *sp, unique_ptr<RGYCLBuf> &count_motion, const RGYFilterParamAfs *pAfsPrm, cl_command_queue queue, std::vector<RGYOpenCLEvent> wait_event, RGYOpenCLEvent &event) {
+RGY_ERR RGYFilterAfs::analyze_stripe(afsSourceCacheFrame *p0, afsSourceCacheFrame *p1, AFS_SCAN_DATA *sp, unique_ptr<RGYCLBuf> &count_motion, const RGYFilterParamAfs *pAfsPrm, RGYOpenCLQueue &queue, std::vector<RGYOpenCLEvent> wait_event, RGYOpenCLEvent &event) {
     if (   RGY_CSP_CHROMA_FORMAT[m_source.csp()] != RGY_CHROMAFMT_YUV420
         && RGY_CSP_CHROMA_FORMAT[m_source.csp()] != RGY_CHROMAFMT_YUV444) {
         AddMessage(RGY_LOG_ERROR, _T("Invalid color format for afs synthesize: %s.\n"), RGY_CSP_NAMES[m_source.csp()]);

@@ -283,7 +283,7 @@ VideoInfo videooutputinfo(
 }
 
 //TODO: ちゃんと動的にチェックする
-CodecCsp getHWDecCodecCsp() {
+CodecCsp getHWDecCodecCsp(const bool skipHWDecodeCheck) {
 #if ENABLE_AVSW_READER
     std::vector<RGY_CSP> supportedCsp = { RGY_CSP_NV12, RGY_CSP_YV12 };
     CodecCsp codecCsp;
@@ -291,6 +291,7 @@ CodecCsp getHWDecCodecCsp() {
         codecCsp[HW_DECODE_LIST[i].rgy_codec] = supportedCsp;
     }
     codecCsp[RGY_CODEC_HEVC].push_back(RGY_CSP_YV12_10);
+    codecCsp[RGY_CODEC_HEVC].push_back(RGY_CSP_YV12_12);
     return codecCsp;
 #else
     return CodecCsp();

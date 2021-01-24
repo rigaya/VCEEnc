@@ -118,6 +118,12 @@ tstring get_media_type_string(AVCodecID codecId) {
     return char_to_tstring(av_get_media_type_string(avcodec_get_type(codecId))).c_str();
 }
 
+// trackの言語を取得
+std::string getTrackLang(const AVStream *stream) {
+    auto language_data = av_dict_get(stream->metadata, "language", NULL, AV_DICT_MATCH_CASE);
+    return (language_data) ? language_data->value : "";
+}
+
 //avqsvでサポートされている動画コーデックを表示
 tstring getHWDecSupportedCodecList() {
     tstring codecs;
@@ -456,16 +462,14 @@ tstring getAVProtocols() {
     return char_to_tstring(mes);
 }
 
-bool usingAVProtocols(std::string filename, int bOutput) {
+bool usingAVProtocols(const std::string& filename, int bOutput) {
     if (!check_avcodec_dll()) {
         return false;
     }
-    const auto protocolList = getAVProtocolList(bOutput);
-    const auto pos = filename.find_first_of(':');
-    if (pos != std::string::npos) {
-        std::string check = filename.substr(0, pos);
-        check = tolowercase(check);
-        if (std::find(protocolList.begin(), protocolList.end(), check) != protocolList.end()) {
+    auto protocol_name = avio_find_protocol_name(filename.c_str());
+    if (protocol_name != nullptr) {
+        const auto protocolList = getAVProtocolList(bOutput);
+        if (std::find(protocolList.begin(), protocolList.end(), protocol_name) != protocolList.end()) {
             return true;
         }
     }

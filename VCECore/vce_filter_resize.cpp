@@ -54,7 +54,7 @@ RGY_ERR RGYFilterResize::resizePlane(FrameInfo *pOutputPlane, const FrameInfo *p
         switch (pResizeParam->interp) {
         case RGY_VPP_RESIZE_BILINEAR:
             kernel_name = "kernel_resize_texture_bilinear";
-            err = m_resize->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
+            err = m_resize->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
                 (cl_mem)pOutputPlane->ptr[0], pOutputPlane->pitch[0], pOutputPlane->width, pOutputPlane->height,
                 (cl_mem)pInputPlane->ptr[0],
                 ratioX, ratioY
@@ -64,7 +64,7 @@ RGY_ERR RGYFilterResize::resizePlane(FrameInfo *pOutputPlane, const FrameInfo *p
         case RGY_VPP_RESIZE_LANCZOS3:
         case RGY_VPP_RESIZE_LANCZOS4:
             kernel_name = "kernel_resize_lanczos";
-            err = m_resize->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
+            err = m_resize->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
                 (cl_mem)pOutputPlane->ptr[0], pOutputPlane->pitch[0], pOutputPlane->width, pOutputPlane->height,
                 (cl_mem)pInputPlane->ptr[0],
                 ratioX, ratioY, ratioDistX, ratioDistY);
@@ -75,7 +75,7 @@ RGY_ERR RGYFilterResize::resizePlane(FrameInfo *pOutputPlane, const FrameInfo *p
         case RGY_VPP_RESIZE_AUTO:
         default:
             kernel_name = "kernel_resize_spline";
-            err = m_resize->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
+            err = m_resize->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
                 (cl_mem)pOutputPlane->ptr[0], pOutputPlane->pitch[0], pOutputPlane->width, pOutputPlane->height,
                 (cl_mem)pInputPlane->ptr[0],
                 ratioX, ratioY, ratioDistX, ratioDistY,

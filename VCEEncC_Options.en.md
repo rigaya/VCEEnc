@@ -474,12 +474,12 @@ Example3: set metadata
 --video-metadata 1?title="video title" --video-metadata 1?language=jpn
 ```
 
-### --audio-copy [&lt;int&gt;[,&lt;int&gt;]...]
+### --audio-copy [{&lt;int&gt;or&lt;string&gt;};[,{&lt;int&gt;or&lt;string&gt;}]...]
 Copy audio track into output file. Available only when avhw / avsw reader is used.
 
 If it does not work well, try encoding with [--audio-codec](#--audio-codec-intstring), which is more stable.
 
-You can also specify the audio track (1, 2, ...) to extract.
+You can also specify the audio track (1, 2, ...) to extract with [&lt;int&gt;], or select audio track to copy by language with [&lt;string&gt;].
 
 ```
 Example: Copy all audio tracks
@@ -487,12 +487,15 @@ Example: Copy all audio tracks
 
 Example: Extract track numbers #1 and #2
 --audio-copy 1,2
+
+例: Extract audio tracks marked as English and Japanese
+--audio-copy eng,jpn
 ```
 
-### --audio-codec [[&lt;int&gt;?]&lt;string&gt;[:&lt;string&gt;=&lt;string&gt;][,&lt;string&gt;=&lt;string&gt;],...]
+### --audio-codec [[{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;[:&lt;string&gt;=&lt;string&gt;][,&lt;string&gt;=&lt;string&gt;],...]
 Encode audio track with the codec specified. If codec is not set, most suitable codec will be selected automatically. Codecs available could be checked with [--check-encoders](#--check-codecs---check-decoders---check-encoders).
 
-You can also specify the audio track (1, 2, ...) to extract.
+You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
 
 Also, you can specify params for audio encoder.
 ```
@@ -502,23 +505,29 @@ Example 1: encode all audio tracks to mp3
 Example 2: encode the 2nd track of audio to aac
 --audio-codec 2?aac
 
-Example 3: set param "aac_coder" to "twoloop" which will improve quality at low bitrate for aac encoder
+Example 3: encode the English audio track to aac
+--audio-codec eng?aac
+
+Example 4: encode the English audio track and Japanese audio track to aac
+--audio-codec eng?aac --audio-codec jpn?aac
+
+Example 5: set param "aac_coder" to "twoloop" which will improve quality at low bitrate for aac encoder
 --audio-codec aac:aac_coder=twoloop
 ```
 
-### --audio-bitrate [&lt;int&gt;?]&lt;int&gt;
+### --audio-bitrate [{&lt;int&gt;or&lt;string&gt;}?]&lt;int&gt;
 Specify the bitrate in kbps when encoding audio.
 
-You can also specify the audio track (1, 2, ...) to extract.
+You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
 ```
 Example 1: --audio-bitrate 192 (set bitrate of audio track to 192 kbps)
 Example 2: --audio-bitrate 2?256 (set bitrate of 2nd audio track to to 256 kbps)
 ```
 
-### --audio-profile [&lt;int&gt;?]&lt;string&gt;
-Specify audio codec profile when encoding audio.
+### --audio-profile [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;
+Specify audio codec profile when encoding audio.You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
 
-### --audio-stream [&lt;int&gt;?][&lt;string1&gt;][:&lt;string2&gt;]
+### --audio-stream [{&lt;int&gt;or&lt;string&gt;}?][&lt;string1&gt;][:&lt;string2&gt;]
 Separate or merge audio channels.
 Audio tracks specified with this option will always be encoded. (no copying available)
 
@@ -570,9 +579,9 @@ hexagonal  = FL + FR + FC + BL + BR + BC
 7.1(wide)  = FL + FR + FC + LFE + FLC + FRC + SL + SR
 ```
 
-### --audio-samplerate [&lt;int&gt;?]&lt;int&gt;
+### --audio-samplerate [{&lt;int&gt;or&lt;string&gt;}?]&lt;int&gt;
 Specify the sampling frequency of the sound in Hz.
-You can also specify the audio track (1, 2, ...) to extract.
+You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt].
 ```
 Example 1: --audio-bitrate 44100 (converting sound to 44100 Hz)
 Example 2: --audio-bitrate 2?22050 (Convert the second track of voice to 22050 Hz)
@@ -583,8 +592,8 @@ Specify the engine used for mixing audio channels and sampling frequency convers
 - swr ... swresampler (default)
 - soxr ... sox resampler (libsoxr)
 
-### --audio-delay [&lt;int&gt;?]&lt;int&gt;
-Specify audio delay in milli seconds.
+### --audio-delay [{&lt;int&gt;or&lt;string&gt;}?]&lt;int&gt;
+Specify audio delay in milli seconds.　You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
 
 ### --audio-file [&lt;int&gt;?][&lt;string&gt;]&lt;string&gt;
 Extract audio track to the specified path. The output format is determined automatically from the output extension. Available only when avhw / avsw reader is used.
@@ -601,7 +610,7 @@ Example: Output in adts format without extension
 --audio-file 2?adts:"test_out2"  
 ```
 
-### --audio-filter [&lt;int&gt;?]&lt;string&gt;
+### --audio-filter [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;
 Apply filters to audio track. Filters could be slected from [link](https://ffmpeg.org/ffmpeg-filters.html#Audio-Filters).
 
 You can also specify the audio track (1, 2, ...) to filter.
@@ -611,8 +620,9 @@ Example 1: --audio-filter volume=0.2  (lowering the volume)
 Example 2: --audio-filter 2?volume=-4db (lowering the volume of the 2nd track)
 ```
 
-### --audio-disposition [&lt;int&gt;?]&lt;string&gt;[,&lt;string&gt;][]...
-音声のdispositionを指定する。
+### --audio-disposition [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;[,&lt;string&gt;][]...
+set disposition for the specified audio track.
+You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
 
 ```
  default
@@ -729,7 +739,7 @@ apple format (should be in utf-8)
 </TextStream>
 ```
 
-matroska形式 (hould be in utf-8)  
+matroska format (hould be in utf-8)  
 [Other Samples&gt;&gt;](https://github.com/nmaier/mkvtoolnix/blob/master/examples/example-chapters-1.xml)
 ```
 <?xml version="1.0" encoding="UTF-8"?>
@@ -777,18 +787,24 @@ There should be one frame ID per line.
 ### --sub-source &lt;string&gt;
 Read subtitle from the specified file and mux into the output file.
 
-### --sub-copy [&lt;int&gt;[,&lt;int&gt;]...]
+### --sub-copy [{&lt;int&gt;or&lt;string&gt;};[,{&lt;int&gt;or&lt;string&gt;}]...]
 Copy subtitle tracks from input file. Available only when avhw / avsw reader is used.
-It is also possible to specify subtitle tracks (1, 2, ...) to extract with [&lt;int&gt;].
+It is also possible to specify subtitle tracks (1, 2, ...) to extract with [&lt;int&gt;], or select subtitle tracks to copy by language with [&lt;string&gt;].
 
 Supported subtitles are PGS / srt / txt / ttxt.
 
 ```
+Example: Copy all subtitle tracks
+--sub-copy
+
 Example: Copy subtitle track #1 and #2
 --sub-copy 1,2
+
+Example: Copy subtitle tracks marked as English and Japanese
+--sub-copy eng,jpn
 ```
 
-### --sub-disposition [&lt;int&gt;?]&lt;string&gt;
+### --sub-disposition [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;
 set disposition for the specified subtitle track.
 
 ```
@@ -878,6 +894,9 @@ Example3: set metadata
 
   - vfr  
     Honor source timestamp and enable vfr output. Only available for avsw/avhw reader.
+    
+### --timecode [&lt;string&gt;]  
+  Write timecode file to the specified path. If the path is not set, it will be written to "&lt;output file path&gt;.timecode.txt".
 
 ## Vpp Options
 
@@ -1092,6 +1111,75 @@ Rather weak noise reduction by modified pmd method, aimed to preserve edge while
 ```
 Example: Slightly weak than default
 --vpp-pmd apply_count=2,strength=90,threshold=120
+```
+
+### --vpp-smooth [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+**parameters**
+- quality=&lt;int&gt;  (default=3, 1-6)  
+  Quality of the filter. Larger value should result in higher quality but with lower speed.
+
+- qp=&lt;int&gt;  (default=12, 1 - 63)    
+  Strength of the filter.
+  
+- prec  
+  Select precision.
+  - auto (default)  
+    Currently same as fp32.
+  
+  - fp32  
+    Use fp32 in core calculation.
+  
+  - fp16  
+    Use fp16 in core calculation.
+
+### --vpp-subburn [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+"Burn in" specified subtitle to the video. Text type subtitles will be rendered by [libass](https://github.com/libass/libass).
+
+**Parameters**
+- track=&lt;int&gt;  
+  Select subtitle track of the input file to burn in, track count starting from 1. 
+  Available when --avhw or --avsw is used.
+  
+- filename=&lt;string&gt;  
+  Select subtitle file path to burn in.
+
+- charcode=&lt;string&gt;  
+  Specify subtitle charcter code to burn in, for text type sub.
+
+- shaping=&lt;string&gt;  
+  Rendering quality of text, for text type sub.  
+  - simple
+  - complex (default)
+
+- scale=&lt;float&gt; (default=0.0 (auto))
+  scaling multiplizer for bitmap fonts.  
+
+- transparency=&lt;float&gt; (default=0.0, 0.0 - 1.0)
+  adds additional transparency for subtitle.  
+
+- brightness=&lt;float&gt; (default=0.0, -1.0 - 1.0)
+  modifies brightness of the subtitle.  
+
+- contrast=&lt;float&gt; (default=1.0, -2.0 - 2.0)
+  modifies contrast of the subtitle.  
+  
+- vid_ts_offset=&lt;bool&gt;  
+  add timestamp offset to match the first timestamp of the video file (default on)　　
+  Please note that when \"track\" is used, this options is always on.
+
+- ts_offset=&lt;float&gt; (default=0.0)
+  add offset in seconds to the subtitle timestamps (for debug perpose).  
+
+```
+Example1: burn in subtitle from the track of the input file
+--vpp-subburn track=1
+
+Example2: burn in PGS subtitle from file
+--vpp-subburn filename="subtitle.sup"
+
+Example3: burn in ASS subtitle from file which charcter code is Shift-JIS
+--vpp-subburn filename="subtitle.sjis.ass",charcode=sjis,shaping=complex
 ```
 
 ### --vpp-unsharp [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...

@@ -87,6 +87,7 @@ enum RGY_CSP {
     RGY_CSP_YUV444_12,
     RGY_CSP_YUV444_14,
     RGY_CSP_YUV444_16,
+    RGY_CSP_YUV444_32,
     RGY_CSP_YUVA444,
     RGY_CSP_YUVA444_16,
     RGY_CSP_RGB24R, //packed
@@ -129,6 +130,7 @@ static const TCHAR *RGY_CSP_NAMES[] = {
     _T("yuv444(12bit)"),
     _T("yuv444(14bit)"),
     _T("yuv444(16bit)"),
+    _T("yuv444(32bit)"),
     _T("yuva444"),
     _T("yuva444(16bit)"),
     _T("rgb24r"),
@@ -171,6 +173,7 @@ static const uint8_t RGY_CSP_BIT_DEPTH[] = {
     12,
     14,
     16, //RGY_CSP_YUV444_16
+    32, //RGY_CSP_YUV444_32
      8, //RGY_CSP_YUVA444
     16, //RGY_CSP_YUVA444_16
      8, //RGY_CSP_RGB24R
@@ -213,6 +216,7 @@ static const uint8_t RGY_CSP_PLANES[] = {
      3,
      3,
      3, //RGY_CSP_YUV444_16
+     3, //RGY_CSP_YUV444_32
      4, //RGY_CSP_YUVA444
      4, //RGY_CSP_YUVA444_16
      1, //RGY_CSP_RGB24R
@@ -266,6 +270,7 @@ static const RGY_CHROMAFMT RGY_CSP_CHROMA_FORMAT[] = {
     RGY_CHROMAFMT_YUV444,
     RGY_CHROMAFMT_YUV444,
     RGY_CHROMAFMT_YUV444, //RGY_CSP_YUV444_16
+    RGY_CHROMAFMT_YUV444, //RGY_CSP_YUV444_32
     RGY_CHROMAFMT_YUVA444, //RGY_CSP_YUVA444
     RGY_CHROMAFMT_YUVA444, //RGY_CSP_YUVA444_16
     RGY_CHROMAFMT_RGB_PACKED,
@@ -308,6 +313,7 @@ static const uint8_t RGY_CSP_BIT_PER_PIXEL[] = {
     48,
     48,
     48, //RGY_CSP_YUV444_16
+    96, //RGY_CSP_YUV444_32
     32, //RGY_CSP_YUVA444
     64, //RGY_CSP_YUVA444_16
     24, //RGY_CSP_RGB24R
@@ -562,6 +568,50 @@ static bool cmpFrameInfoCspResolution(const FrameInfo *pA, const FrameInfo *pB) 
 
 static bool interlaced(const FrameInfo& FrameInfo) {
     return (FrameInfo.picstruct & RGY_PICSTRUCT_INTERLACED) != 0;
+}
+
+#ifdef __CUDACC__
+#define CU_DEV_HOST_CODE __device__ __host__
+#elif defined(_MSC_VER)
+#define CU_DEV_HOST_CODE __forceinline
+#else
+#define CU_DEV_HOST_CODE inline
+#endif
+
+template<int in_bit_depth, int out_bit_depth, int shift_offset>
+CU_DEV_HOST_CODE
+static int conv_bit_depth_lsft() {
+    const int lsft = out_bit_depth - (in_bit_depth + shift_offset);
+    return lsft < 0 ? 0 : lsft;
+}
+
+template<int in_bit_depth, int out_bit_depth, int shift_offset>
+CU_DEV_HOST_CODE
+static int conv_bit_depth_rsft() {
+    const int rsft = in_bit_depth + shift_offset - out_bit_depth;
+    return rsft < 0 ? 0 : rsft;
+}
+
+template<int in_bit_depth, int out_bit_depth, int shift_offset>
+CU_DEV_HOST_CODE
+static int conv_bit_depth_rsft_add() {
+    const int rsft = conv_bit_depth_rsft<in_bit_depth, out_bit_depth, shift_offset>();
+    return (rsft - 1 >= 0) ? 1 << (rsft - 1) : 0;
+}
+
+template<int in_bit_depth, int out_bit_depth, int shift_offset>
+CU_DEV_HOST_CODE
+static int conv_bit_depth(int c) {
+    if (out_bit_depth > in_bit_depth + shift_offset) {
+        return c << conv_bit_depth_lsft<in_bit_depth, out_bit_depth, shift_offset>();
+    } else if (out_bit_depth < in_bit_depth + shift_offset) {
+        const int x = (c + conv_bit_depth_rsft_add<in_bit_depth, out_bit_depth, shift_offset>()) >> conv_bit_depth_rsft<in_bit_depth, out_bit_depth, shift_offset>();
+        const int low = 0;
+        const int high = (1 << out_bit_depth) - 1;
+        return (((x) <= (high)) ? (((x) >= (low)) ? (x) : (low)) : (high));
+    } else {
+        return c;
+    }
 }
 
 #endif //_CONVERT_CSP_H_

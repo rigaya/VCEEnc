@@ -75,7 +75,7 @@ RGY_ERR RGYFilterDeband::procPlane(FrameInfo *pOutputPlane, const FrameInfo *pIn
             divCeil(pOutputPlane->width,  DEBAND_BLOCK_LOOP_X_OUTER * DEBAND_BLOCK_LOOP_X_INNER),
             divCeil(pOutputPlane->height, DEBAND_BLOCK_LOOP_Y_OUTER * DEBAND_BLOCK_LOOP_Y_INNER));
 
-        auto err = m_deband->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
+        auto err = m_deband->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
             (cl_mem)pOutputPlane->ptr[0], pOutputPlane->pitch[0], pOutputPlane->width, pOutputPlane->height,
             (cl_mem)pRandPlane->ptr[0], pRandPlane->pitch[0],
             (cl_mem)pInputPlane->ptr[0],
@@ -161,7 +161,7 @@ RGY_ERR RGYFilterDeband::genRand(RGYOpenCLQueue &queue, const std::vector<RGYOpe
     RGYWorkSize local(DEBAND_BLOCK_THREAD_X, DEBAND_BLOCK_THREAD_Y, 1);
     RGYWorkSize global(divCeil(m_randBufY->frame.width, 2), divCeil(m_randBufY->frame.height, 2 * GEN_RAND_BLOCK_LOOP_Y), 1);
 
-    auto err = m_debandGenRand->kernel(kernel_name).config(queue.get(), local, global, wait_events, event).launch(
+    auto err = m_debandGenRand->kernel(kernel_name).config(queue, local, global, wait_events, event).launch(
         (cl_mem)m_randBufY->frame.ptr[0], (cl_mem)m_randBufUV->frame.ptr[0],
         m_randBufY->frame.pitch[0], m_randBufUV->frame.pitch[0],
         m_randBufY->frame.width, m_randBufY->frame.height,

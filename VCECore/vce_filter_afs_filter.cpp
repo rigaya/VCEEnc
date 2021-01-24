@@ -49,7 +49,7 @@ RGY_ERR afsStripeCache::init(std::shared_ptr<RGYLog> log) {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR afsStripeCache::map_filter(AFS_STRIPE_DATA *dst, AFS_STRIPE_DATA *sp, cl_command_queue queue) {
+RGY_ERR afsStripeCache::map_filter(AFS_STRIPE_DATA *dst, AFS_STRIPE_DATA *sp, RGYOpenCLQueue &queue) {
     dst->count0 = sp->count0;
     dst->count1 = sp->count1;
     dst->frame  = sp->frame;

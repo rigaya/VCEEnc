@@ -222,6 +222,18 @@
     <ClCompile Include="vce_filter_nnedi.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="vce_filter_smooth.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="vce_filter_subburn.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="rgy_timecode.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="rgy_language.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu_info.h">
@@ -413,6 +425,18 @@
     <ClInclude Include="vce_filter_nnedi.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="vce_filter_smooth.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="vce_filter_subburn.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="rgy_timecode.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="rgy_language.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="ram_speed_x64.asm">
@@ -484,6 +508,12 @@
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="vce_filter_nnedi_k0.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="vce_filter_smooth.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="vce_filter_subburn.cl">
       <Filter>ソース ファイル</Filter>
     </None>
   </ItemGroup>

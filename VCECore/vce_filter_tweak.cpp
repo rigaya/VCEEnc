@@ -60,7 +60,7 @@ RGY_ERR RGYFilterTweak::procFrame(FrameInfo *pFrame, RGYOpenCLQueue &queue, cons
         RGYWorkSize local(TWEAK_BLOCK_X, TWEAK_BLOCK_Y);
         RGYWorkSize global(divCeil(planeInputY.width, 4), planeInputY.height);
         const char *kernel_name = "kernel_tweak_y";
-        auto err = m_tweak->kernel(kernel_name).config(queue.get(), local, global, wait_events_copy, event).launch(
+        auto err = m_tweak->kernel(kernel_name).config(queue, local, global, wait_events_copy, event).launch(
             (cl_mem)planeInputY.ptr[0], planeInputY.pitch[0], planeInputY.width, planeInputY.height,
             contrast, brightness, 1.0f / gamma);
         if (err != RGY_ERR_NONE) {
@@ -83,7 +83,7 @@ RGY_ERR RGYFilterTweak::procFrame(FrameInfo *pFrame, RGYOpenCLQueue &queue, cons
         RGYWorkSize global(divCeil(planeInputU.width, 4), planeInputU.height);
         const float hue = hue_degree * (float)M_PI / 180.0f;
         const char *kernel_name = "kernel_tweak_uv";
-        auto err = m_tweak->kernel(kernel_name).config(queue.get(), local, global, wait_events_copy, event).launch(
+        auto err = m_tweak->kernel(kernel_name).config(queue, local, global, wait_events_copy, event).launch(
             (cl_mem)planeInputU.ptr[0], (cl_mem)planeInputV.ptr[0], planeInputU.pitch[0], planeInputU.width, planeInputU.height,
             saturation, std::sin(hue) * saturation, std::cos(hue) * saturation);
         if (err != RGY_ERR_NONE) {
