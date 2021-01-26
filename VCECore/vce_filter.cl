@@ -17,28 +17,28 @@ const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_NONE | CLK_F
 #define uchar unsigned char
 #endif
 
-inline int conv_bit_depth_lsft(const int in_bit_depth, const int out_bit_depth, const int shift_offset) {
-    const int lsft = out_bit_depth - (in_bit_depth + shift_offset);
+inline int conv_bit_depth_lsft(const int bit_depth_in, const int bit_depth_out, const int shift_offset) {
+    const int lsft = bit_depth_out - (bit_depth_in + shift_offset);
     return lsft < 0 ? 0 : lsft;
 }
 
-inline int conv_bit_depth_rsft(const int in_bit_depth, const int out_bit_depth, const int shift_offset) {
-    const int rsft = in_bit_depth + shift_offset - out_bit_depth;
+inline int conv_bit_depth_rsft(const int bit_depth_in, const int bit_depth_out, const int shift_offset) {
+    const int rsft = bit_depth_in + shift_offset - bit_depth_out;
     return rsft < 0 ? 0 : rsft;
 }
 
-inline int conv_bit_depth_rsft_add(const int in_bit_depth, const int out_bit_depth, const int shift_offset) {
-    const int rsft = conv_bit_depth_rsft(in_bit_depth, out_bit_depth, shift_offset);
+inline int conv_bit_depth_rsft_add(const int bit_depth_in, const int bit_depth_out, const int shift_offset) {
+    const int rsft = conv_bit_depth_rsft(bit_depth_in, bit_depth_out, shift_offset);
     return (rsft - 1 >= 0) ? 1 << (rsft - 1) : 0;
 }
 
-inline int conv_bit_depth(const int c, const int in_bit_depth, const int out_bit_depth, const int shift_offset) {
-    if (out_bit_depth > in_bit_depth + shift_offset) {
-        return c << conv_bit_depth_lsft(in_bit_depth, out_bit_depth, shift_offset);
-    } else if (out_bit_depth < in_bit_depth + shift_offset) {
-        const int x = (c + conv_bit_depth_rsft_add(in_bit_depth, out_bit_depth, shift_offset)) >> conv_bit_depth_rsft(in_bit_depth, out_bit_depth, shift_offset);
+inline int conv_bit_depth(const int c, const int bit_depth_in, const int bit_depth_out, const int shift_offset) {
+    if (bit_depth_out > bit_depth_in + shift_offset) {
+        return c << conv_bit_depth_lsft(bit_depth_in, bit_depth_out, shift_offset);
+    } else if (bit_depth_out < bit_depth_in + shift_offset) {
+        const int x = (c + conv_bit_depth_rsft_add(bit_depth_in, bit_depth_out, shift_offset)) >> conv_bit_depth_rsft(bit_depth_in, bit_depth_out, shift_offset);
         const int low = 0;
-        const int high = (1 << out_bit_depth) - 1;
+        const int high = (1 << bit_depth_out) - 1;
         return (((x) <= (high)) ? (((x) >= (low)) ? (x) : (low)) : (high));
     } else {
         return c;
