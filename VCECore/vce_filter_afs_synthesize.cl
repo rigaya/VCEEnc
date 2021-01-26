@@ -58,6 +58,7 @@ typedef ushort4       DATA4;
 typedef ushort8       DATA8;
 #define CONVERT_DATA8 convert_ushort8
 #define CONVERT_DATA4 convert_ushort4
+#define CONVERT_FLAG4_SAT convert_uchar4_sat
 #define AS_DATA4      as_ushort4
 #else
 typedef uchar         DATA;
@@ -66,6 +67,7 @@ typedef uchar4        DATA4;
 typedef uchar8        DATA8;
 #define CONVERT_DATA8 convert_uchar8
 #define CONVERT_DATA4 convert_uchar4
+#define CONVERT_FLAG4_SAT
 #define AS_DATA4      as_uchar4
 #endif
 
@@ -90,7 +92,7 @@ DATA8 deint8(DATA8 src1, DATA8 src3, DATA8 src4, DATA8 src5, DATA8 src7, Flag8 f
     const int8 tmp2 = convert_int8(src1) + convert_int8(src7);
     const int8 tmp3 = convert_int8(src3) + convert_int8(src5);
     const DATA8 tmp = CONVERT_DATA8((tmp3 - ((tmp2 - tmp3) >> 3) + (int8)1) >> 1);
-    return (((flag & (Flag8)mask) == (Flag8)0) ? tmp : src4);
+    return (CONVERT_DATA8((flag & (Flag8)mask) == (Flag8)0) ? tmp : src4);
 }
 
 float deintf(float src1, float src3, float src4, float src5, float src7, Flag flag, Flag mask) {
@@ -103,7 +105,7 @@ float deintf(float src1, float src3, float src4, float src5, float src7, Flag fl
 
 DATA8 blend8(DATA8 src1, DATA8 src2, DATA8 src3, Flag8 flag, Flag mask) {
     DATA8 tmp = CONVERT_DATA8((convert_int8(src1) + convert_int8(src3) + convert_int8(src2) + convert_int8(src2) + (int8)2) >> 2);
-    return (((flag & (Flag8)mask) == (Flag8)0) ? tmp : src2);
+    return (CONVERT_DATA8((flag & (Flag8)mask) == (Flag8)0) ? tmp : src2);
 }
 
 float blendf(float src1, float src2, float src3, Flag flag, Flag mask) {

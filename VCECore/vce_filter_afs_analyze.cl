@@ -51,11 +51,13 @@ __constant sampler_t sampler_c = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP
 typedef ushort         DATA;
 typedef ushort4        DATA4;
 #define CONVERT_DATA4 convert_ushort4
+#define CONVERT_FLAG4_SAT convert_uchar4_sat
 #define AS_DATA4      as_ushort4
 #else
 typedef uchar         DATA;
 typedef uchar4        DATA4;
 #define CONVERT_DATA4 convert_uchar4
+#define CONVERT_FLAG4_SAT
 #define AS_DATA4      as_uchar4
 #endif
 
@@ -80,8 +82,8 @@ typedef uchar4        Flag4;
 
 Flag4 analyze_motion(DATA4 p0, DATA4 p1, DATA thre_motion, DATA thre_shift) {
     DATA4 absdata = CONVERT_DATA4(abs(convert_int4(p1) - convert_int4(p0)));
-    Flag4 mask_motion = ((DATA4)thre_motion > absdata) ? (Flag4)motion_flag  : (Flag4)0;
-    Flag4 mask_shift  = ((DATA4)thre_shift  > absdata) ? (Flag4)motion_shift : (Flag4)0;
+    Flag4 mask_motion = CONVERT_FLAG4_SAT((DATA4)thre_motion > absdata) ? (Flag4)motion_flag  : (Flag4)0;
+    Flag4 mask_shift  = CONVERT_FLAG4_SAT((DATA4)thre_shift  > absdata) ? (Flag4)motion_shift : (Flag4)0;
     return mask_motion | mask_shift;
 }
 
@@ -94,9 +96,9 @@ Flag4 analyze_motionf(float p0, float p1, const float thre_motionf, const float 
 
 Flag4 analyze_stripe(DATA4 p0, DATA4 p1, Flag flag_sign, Flag flag_deint, Flag flag_shift, const DATA thre_deint, const DATA thre_shift) {
     DATA4 absdata = CONVERT_DATA4(abs(convert_int4(p1) - convert_int4(p0)));
-    Flag4 new_sign = (p0 >= p1) ? (Flag4)flag_sign : (Flag4)0;
-    Flag4 mask_deint = (absdata > (DATA4)thre_deint) ? (Flag4)flag_deint : (Flag4)0;
-    Flag4 mask_shift = (absdata > (DATA4)thre_shift) ? (Flag4)flag_shift : (Flag4)0;
+    Flag4 new_sign   = CONVERT_FLAG4_SAT(p0 >= p1) ? (Flag4)flag_sign : (Flag4)0;
+    Flag4 mask_deint = CONVERT_FLAG4_SAT(absdata > (DATA4)thre_deint) ? (Flag4)flag_deint : (Flag4)0;
+    Flag4 mask_shift = CONVERT_FLAG4_SAT(absdata > (DATA4)thre_shift) ? (Flag4)flag_shift : (Flag4)0;
     return new_sign | mask_deint | mask_shift;
 }
 
