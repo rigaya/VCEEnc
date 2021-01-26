@@ -11,6 +11,10 @@
 // SPP_SHARED_BLOCK_NUM_Y
 // SPP_LOOP_COUNT_BLOCK
 
+#if usefp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
+
 #ifndef clamp
 #define clamp(x, low, high) (((x) <= (high)) ? (((x) >= (low)) ? (x) : (low)) : (high))
 #endif
