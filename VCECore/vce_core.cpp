@@ -1994,6 +1994,11 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
+    // VCE関連の初期化前にカウンターを起動しないと、COM周りのエラーで正常に取得できなくなる場合がある
+    // そのため、AMF関係の初期化前にperf counterを初期化する
+    m_pPerfMonitor = std::make_unique<CPerfMonitor>();
+    m_pPerfMonitor->runCounterThread();
+
     ret = initAMFFactory();
     if (ret != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to initalize VCE factory: %s"), get_err_mes(ret));
@@ -2029,9 +2034,6 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     if (!m_pStatus) {
         m_pStatus = std::make_shared<EncodeStatus>();
     }
-
-    m_pPerfMonitor = std::make_unique<CPerfMonitor>();
-    m_pPerfMonitor->runCounterThread();
 
     m_nAVSyncMode = prm->common.AVSyncMode;
 
