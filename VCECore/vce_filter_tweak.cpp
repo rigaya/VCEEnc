@@ -74,9 +74,9 @@ RGY_ERR RGYFilterTweak::procFrame(FrameInfo *pFrame, RGYOpenCLQueue &queue, cons
     //UV
     if (   saturation != 1.0f
         || hue_degree != 0.0f) {
-        if (   planeInputU.width  != planeInputV.width
-            || planeInputU.height != planeInputV.height
-            || planeInputU.pitch  != planeInputV.pitch) {
+        if (   planeInputU.width    != planeInputV.width
+            || planeInputU.height   != planeInputV.height
+            || planeInputU.pitch[0] != planeInputV.pitch[0]) {
             return RGY_ERR_INVALID_CALL;
         }
         RGYWorkSize local(TWEAK_BLOCK_X, TWEAK_BLOCK_Y);
@@ -186,7 +186,7 @@ RGY_ERR RGYFilterTweak::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppO
 
     sts = procFrame(ppOutputFrames[0], queue, wait_events, event);
     if (sts != RGY_ERR_NONE) {
-        AddMessage(RGY_LOG_ERROR, _T("error at denoiseFrame (%s): %s.\n"),
+        AddMessage(RGY_LOG_ERROR, _T("error at procFrame (%s): %s.\n"),
             RGY_CSP_NAMES[pInputFrame->csp], get_err_mes(sts));
         return sts;
     }
