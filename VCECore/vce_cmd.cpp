@@ -152,7 +152,7 @@ tstring encoder_help() {
     str += strsprintf(_T("\n")
         _T("-c,--codec <string>             set encode codec\n")
         _T("                                 - h264(default), hevc\n")
-        _T("-u,--quality <string>           set quality preset\n")
+        _T("-u,--preset <string>            set quality preset\n")
         _T("                                 balanced(default), fast, slow\n")
         _T("   --cqp <int> or               encode in Constant QP, default %d:%d:%d\n")
         _T("         <int>:<int>:<int>      set qp value for i:p:b frame\n")
@@ -458,7 +458,7 @@ const TCHAR *cmd_short_opt_to_long(TCHAR short_opt) {
         option_name = _T("format");
         break;
     case _T('u'):
-        option_name = _T("quality");
+        option_name = _T("preset");
         break;
     case _T('i'):
         option_name = _T("input");
@@ -525,7 +525,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->interopD3d11 = false;
         return 0;
     }
-    if (IS_OPTION("quality")) {
+    if (IS_OPTION("preset") || IS_OPTION("quality")) {
         i++;
         int value = AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED;
         if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_vce_quality_preset_h264, strInput[i]))) {
@@ -2667,7 +2667,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
             OPT_QP(_T("--cqp"), nQPI, nQPP, nQPB, true, true);
         }
     }
-    cmd << _T(" --quality ") << get_chr_from_value(get_quality_preset(pParams->codec), (pParams->qualityPreset));
+    cmd << _T(" --preset ") << get_chr_from_value(get_quality_preset(pParams->codec), (pParams->qualityPreset));
     if (pParams->rateControl == get_codec_cbr(pParams->codec)) {
         cmd << _T(" --cbr ") << pParams->nBitrate;
     } else if (pParams->rateControl == get_codec_vbr(pParams->codec)
