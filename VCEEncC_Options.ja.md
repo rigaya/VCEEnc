@@ -251,6 +251,12 @@ CQP(固定量子化量)でエンコードを行う。&lt;Iフレーム&gt;:&lt;P
 - fast
 - slow
 
+### --output-depth &lt;int&gt;
+出力ビット深度を設定。
+- 8 ... 8bit (デフォルト)
+- 10 ... 10bit
+
+
 ### --max-bitrate &lt;int&gt;
 最大ビットレート(kbps単位)。
 

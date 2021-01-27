@@ -250,6 +250,11 @@ Encode qulaity preset.
 - fast
 - slow
 
+### --output-depth &lt;int&gt;
+Set output bit depth.
+- 8  ... 8 bits (default)
+- 10 ... 10 bits
+
 ### --max-bitrate &lt;int&gt;
 Maximum bitrate (in kbps).
 
