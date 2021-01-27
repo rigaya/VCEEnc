@@ -79,8 +79,6 @@
 #include "h264_level.h"
 #include "hevc_level.h"
 
-static const amf::AMF_SURFACE_FORMAT formatOut = amf::AMF_SURFACE_NV12;
-
 void VCECore::PrintMes(int log_level, const TCHAR *format, ...) {
     if (m_pLog.get() == nullptr || log_level < m_pLog->getLogLevel()) {
         return;
@@ -558,7 +556,7 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
     }
     const auto outputVideoInfo = videooutputinfo(
         inputParams->codec,
-        formatOut,
+        csp_rgy_to_enc(GetEncoderCSP(inputParams)),
         m_params,
         m_picStruct,
         m_encVUI
@@ -574,7 +572,7 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
     if (inputParams->common.timecode) {
         m_timecode = std::make_unique<RGYTimecode>();
         const auto tcfilename = (inputParams->common.timecodeFile.length() > 0) ? inputParams->common.timecodeFile : PathRemoveExtensionS(inputParams->common.outputFilename) + _T(".timecode.txt");
-        auto err = m_timecode->init(tcfilename);
+        err = m_timecode->init(tcfilename);
         if (err != RGY_ERR_NONE) {
             PrintMes(RGY_LOG_ERROR, _T("failed to open timecode file: \"%s\".\n"), tcfilename.c_str());
             return RGY_ERR_FILE_OPEN;
@@ -642,6 +640,7 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
 #pragma warning(pop)
 
 RGY_ERR VCECore::initConverter(VCEParam *prm) {
+    const auto formatOut = csp_rgy_to_enc(GetEncoderCSP(prm));
     if (prm->input.dstWidth == prm->input.srcWidth
         && prm->input.dstHeight == prm->input.srcHeight
         && csp_rgy_to_enc(prm->input.csp) == formatOut) {
@@ -1680,7 +1679,8 @@ std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3
 }
 
 RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm) {
-    const amf::AMF_SURFACE_FORMAT formatIn = csp_rgy_to_enc(GetEncoderCSP(prm));
+    const auto formatIn = csp_rgy_to_enc(GetEncoderCSP(prm));
+    const auto formatOut = formatIn;
     //エンコーダの対応をチェック
     tstring message; //GPUチェックのメッセージ
     for (auto gpu = gpuList.begin(); gpu != gpuList.end(); ) {
@@ -1908,7 +1908,9 @@ RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList,
     std::map<int, double> gpuscore;
     for (const auto &gpu : gpuList) {
         auto counters = RGYGPUCounterWinEntries(entries).filter_luid(gpu->luid()).get();
-        auto ve_utilization = RGYGPUCounterWinEntries(counters).filter_type(L"encode").sum();
+        auto ve_utilization = std::max(
+            RGYGPUCounterWinEntries(counters).filter_type(L"codec").sum(), //vce
+            RGYGPUCounterWinEntries(counters).filter_type(L"encode").sum());
         auto gpu_utilization = std::max(std::max(std::max(
             RGYGPUCounterWinEntries(counters).filter_type(L"cuda").sum(), //nvenc
             RGYGPUCounterWinEntries(counters).filter_type(L"compute").sum()), //vce-opencl
@@ -1954,6 +1956,7 @@ RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, in
 
 RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
     if (prm->ssim || prm->psnr) {
+        const auto formatOut = csp_rgy_to_enc(GetEncoderCSP(prm));
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
         unique_ptr<RGYFilterSsim> filterSsim(new RGYFilterSsim(m_dev->cl()));
         shared_ptr<RGYFilterParamSsim> param(new RGYFilterParamSsim());
@@ -2845,7 +2848,7 @@ tstring VCECore::GetEncoderParam() {
         if (pProperty->GetProperty(pName, &value) != AMF_OK) {
             return tstring(_T(""));
         }
-        auto ptr = get_cx_desc(list, value);
+        auto ptr = get_cx_desc(list, (int)value);
         return (ptr) ? tstring(ptr) : _T("");
     };
 
