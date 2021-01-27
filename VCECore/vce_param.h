@@ -203,6 +203,11 @@ const CX_DESC list_hevc_level[] = {
     { _T("6.2"),  AMF_LEVEL_6_2 },
     { NULL, NULL }
 };
+const CX_DESC list_hevc_bitdepth[] = {
+    { _T("8bit"),   8   },
+    { _T("10bit"), 10  },
+    { NULL, NULL }
+};
 
 const CX_DESC list_mv_presicion[] = {
     { _T("full-pel"), VCE_MOTION_EST_FULL   },

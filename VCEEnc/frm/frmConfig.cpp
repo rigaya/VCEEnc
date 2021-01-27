@@ -732,6 +732,7 @@ System::Void frmConfig::InitComboBox() {
     setComboBox(fcgCXHEVCLevel,     list_hevc_level);
     setComboBox(fcgCXHEVCProfile,   list_hevc_profile);
     setComboBox(fcgCXInterlaced,    list_interlaced);
+    setComboBox(fcgCXBitdepth,      list_hevc_bitdepth);
     setComboBox(fcgCXAspectRatio,   list_aspect_ratio);
     setComboBox(fcgCXMotionEst,     list_mv_presicion);
     setComboBox(fcgCXColorMatrix,   list_colormatrix, "auto");
@@ -857,6 +858,18 @@ System::Void frmConfig::fcgCXCodec_SelectedIndexChanged(System::Object^  sender,
     fcgPNBframes->Visible = bBframes;
     fcgLBQPB->Visible = bBframes;
     fcgNUQPB->Visible = bBframes;
+
+    const int last_bitdepth = fcgCXBitdepth->SelectedIndex;
+    fcgCXBitdepth->Enabled = true;
+    fcgCXBitdepth->Items->Clear();
+    if (nCodecId == RGY_CODEC_HEVC) {
+        setComboBox(fcgCXBitdepth, list_hevc_bitdepth);
+        SetCXIndex(fcgCXBitdepth, last_bitdepth);
+    } else if (nCodecId == RGY_CODEC_H264) {
+        setComboBox(fcgCXBitdepth, list_hevc_bitdepth, 1);
+        SetCXIndex(fcgCXBitdepth, 0);
+        fcgCXBitdepth->Enabled = false;
+    }
 
     this->ResumeLayout();
     this->PerformLayout();
@@ -993,6 +1006,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetCXIndex(fcgCXInterlaced,        get_cx_index(list_interlaced, vce.input.picstruct));
     if (vce.par[0] * vce.par[1] <= 0)
         vce.par[0] = vce.par[1] = 0;
+    SetCXIndex(fcgCXBitdepth,          get_cx_index(list_hevc_bitdepth, vce.outputDepth));
     SetCXIndex(fcgCXAspectRatio, (vce.par[0] < 0));
     SetNUValue(fcgNUAspectRatioX, abs(vce.par[0]));
     SetNUValue(fcgNUAspectRatioY, abs(vce.par[1]));
@@ -1170,6 +1184,7 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.codecParam[RGY_CODEC_H264].nLevel       = list_avc_level[fcgCXCodecLevel->SelectedIndex].value;
     vce.codecParam[RGY_CODEC_HEVC].nProfile     = list_hevc_profile[fcgCXHEVCProfile->SelectedIndex].value;
     vce.codecParam[RGY_CODEC_HEVC].nLevel       = list_hevc_level[fcgCXHEVCLevel->SelectedIndex].value;
+    vce.outputDepth                             = list_hevc_bitdepth[fcgCXBitdepth->SelectedIndex].value;
     vce.nBitrate                                = (int)fcgNUBitrate->Value;
     vce.nMaxBitrate                             = (int)fcgNUMaxkbps->Value;
     vce.nVBVBufferSize                          = (int)fcgNUVBVBufSize->Value;

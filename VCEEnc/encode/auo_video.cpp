@@ -88,14 +88,14 @@ int get_aviutl_color_format(int use_highbit, RGY_CSP csp) {
 void get_csp_and_bitdepth(bool& use_highbit, RGY_CSP& csp, const CONF_GUIEX *conf) {
     VCEParam enc_prm;
     parse_cmd(&enc_prm, conf->vce.cmd);
-    //use_highbit = enc_prm.codec == NV_ENC_HEVC && enc_prm.encConfig.encodeCodecConfig.hevcConfig.pixelBitDepthMinus8 > 0;
-    //if (use_highbit) {
-    //    csp = (enc_prm.yuv444) ? RGY_CSP_YUV444_16 : RGY_CSP_P010;
-    //} else {
-    //    csp = (enc_prm.yuv444) ? RGY_CSP_YUV444 : RGY_CSP_NV12;
-    //}
-    use_highbit = false;
-    csp = RGY_CSP_NV12;
+    use_highbit = enc_prm.outputDepth > 8;
+    if (use_highbit) {
+        //csp = (enc_prm.yuv444) ? RGY_CSP_YUV444_16 : RGY_CSP_P010;
+        csp = RGY_CSP_P010;
+    } else {
+        //csp = (enc_prm.yuv444) ? RGY_CSP_YUV444 : RGY_CSP_NV12;
+        csp = RGY_CSP_NV12;
+    }
 }
 
 static int calc_input_frame_size(int width, int height, int color_format, int& buf_size) {
@@ -518,8 +518,6 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
     PathGetDirectory(exe_dir, _countof(exe_dir), sys_dat->exstg->s_vid.fullpath);
 
     //output csp
-    //const int output_csp = (enc_prm.yuv444) ? OUT_CSP_YUV444 : OUT_CSP_NV12;
-    const int output_csp = OUT_CSP_NV12;
     RGY_CSP rgy_output_csp;
     bool output_highbit_depth;
     get_csp_and_bitdepth(output_highbit_depth, rgy_output_csp, conf);
