@@ -131,7 +131,7 @@ RGY_ERR RGYFilterSsim::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog
             return sts;
         }
         m_cropDec = std::move(filterCrop);
-        AddMessage(RGY_LOG_DEBUG, _T("created %s.\n"), m_cropOrg->GetInputMessage().c_str());
+        AddMessage(RGY_LOG_DEBUG, _T("created %s.\n"), m_cropDec->GetInputMessage().c_str());
         pParam->frameOut = paramCrop->frameOut;
     }
     AddMessage(RGY_LOG_DEBUG, _T("ssim original format %s -> %s.\n"), RGY_CSP_NAMES[pParam->frameIn.csp], RGY_CSP_NAMES[pParam->frameOut.csp]);
