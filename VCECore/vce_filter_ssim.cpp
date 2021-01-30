@@ -100,6 +100,20 @@ RGY_ERR RGYFilterSsim::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog
     m_cropDec.reset();
     if (pParam->frameOut.csp == RGY_CSP_NV12) {
         pParam->frameOut.csp = RGY_CSP_YV12;
+    } else if (pParam->frameOut.csp == RGY_CSP_P010) {
+        if (prm->bitDepth <= 8) {
+            AddMessage(RGY_LOG_ERROR, _T("Invalid bit depth.\n"));
+            return RGY_ERR_INVALID_PARAM;
+        }
+        switch (prm->bitDepth) {
+        case 10: pParam->frameOut.csp = RGY_CSP_YV12_10; break;
+        case 12: pParam->frameOut.csp = RGY_CSP_YV12_12; break;
+        case 14: pParam->frameOut.csp = RGY_CSP_YV12_14; break;
+        case 16: pParam->frameOut.csp = RGY_CSP_YV12_16; break;
+        default:
+            AddMessage(RGY_LOG_ERROR, _T("Invalid bit depth.\n"));
+            return RGY_ERR_INVALID_PARAM;
+        }
     }
     if (pParam->frameIn.csp != pParam->frameOut.csp) {
         unique_ptr<RGYFilterCspCrop> filterCrop(new RGYFilterCspCrop(m_cl));

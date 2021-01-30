@@ -1972,6 +1972,7 @@ RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
         param->context = m_dev->context();
         param->input.srcWidth = m_encWidth;
         param->input.srcHeight = m_encHeight;
+        param->bitDepth = prm->outputDepth;
         param->frameIn = m_pLastFilterParam->frameOut;
         param->frameOut = param->frameIn;
         param->frameOut.csp = param->input.csp;

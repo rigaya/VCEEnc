@@ -43,13 +43,14 @@ public:
     bool ssim;
     bool psnr;
     int deviceId;
+    int bitDepth;
     VideoInfo input;
     rgy_rational<int> streamtimebase;
     amf::AMFFactory *factory;
     amf::AMFTrace *trace;
     amf::AMFContextPtr context;
 
-    RGYFilterParamSsim() : ssim(true), psnr(false), deviceId(0), input(), streamtimebase(), factory(nullptr), trace(nullptr), context() {
+    RGYFilterParamSsim() : ssim(true), psnr(false), deviceId(0), bitDepth(8), input(), streamtimebase(), factory(nullptr), trace(nullptr), context() {
 
     };
     virtual ~RGYFilterParamSsim() {};
