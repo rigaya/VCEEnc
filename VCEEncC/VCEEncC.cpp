@@ -78,7 +78,7 @@ static void show_vce_features(int deviceid) {
 }
 
 static void show_environment_info() {
-    _ftprintf(stderr, _T("%s\n"), getEnviromentInfo(false).c_str());
+    _ftprintf(stderr, _T("%s\n"), getEnviromentInfo().c_str());
 }
 
 static void show_option_list() {
