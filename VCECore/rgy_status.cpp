@@ -169,7 +169,7 @@ RGY_ERR EncodeStatus::UpdateDisplay(double progressPercent) {
             if (!qsv_metric) { //QSVではMETRIC_FRAMEWORKを優先
                 gpuencoder_usage = std::max(
                     RGYGPUCounterWinEntries(counters).filter_type(L"encode").sum(),
-                    RGYGPUCounterWinEntries(counters).filter_type(L"codec").sum());
+                    RGYGPUCounterWinEntries(counters).filter_type(L"codec").sum()); //vce rx5xxx
                 bVideoEngineUsage = !ENCODER_QSV || gpuencoder_usage > 0.0; //QSVのMFX使用率はこれでは取れない
             }
             gpuusage = std::max(std::max(std::max(
