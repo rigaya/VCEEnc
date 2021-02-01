@@ -45,7 +45,7 @@ MAP_PAIR_0_1(codec, rgy, RGY_CODEC, enc, const wchar_t *, RGY_CODEC_TO_VCE, RGY_
 static const auto VCE_CODEC_UVD_NAME = make_array<std::pair<RGY_CODEC, const wchar_t *>>(
     std::make_pair(RGY_CODEC_H264,  AMFVideoDecoderUVD_H264_AVC ),
     std::make_pair(RGY_CODEC_HEVC,  AMFVideoDecoderHW_H265_HEVC ),
-    //std::make_pair( RGY_CODEC_VC1,   AMFVideoDecoderUVD_VC1 ),
+    std::make_pair(RGY_CODEC_VC1,   AMFVideoDecoderUVD_VC1 ),
     //std::make_pair( RGY_CODEC_WMV3,  AMFVideoDecoderUVD_WMV3 ),
     std::make_pair(RGY_CODEC_VP9,   AMFVideoDecoderHW_VP9),
     std::make_pair(RGY_CODEC_MPEG2, AMFVideoDecoderUVD_MPEG2 )
