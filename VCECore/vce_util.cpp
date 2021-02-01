@@ -47,6 +47,7 @@ static const auto VCE_CODEC_UVD_NAME = make_array<std::pair<RGY_CODEC, const wch
     std::make_pair(RGY_CODEC_HEVC,  AMFVideoDecoderHW_H265_HEVC ),
     //std::make_pair( RGY_CODEC_VC1,   AMFVideoDecoderUVD_VC1 ),
     //std::make_pair( RGY_CODEC_WMV3,  AMFVideoDecoderUVD_WMV3 ),
+    std::make_pair(RGY_CODEC_VP9,   AMFVideoDecoderHW_VP9),
     std::make_pair(RGY_CODEC_MPEG2, AMFVideoDecoderUVD_MPEG2 )
 );
 
@@ -292,6 +293,8 @@ CodecCsp getHWDecCodecCsp(const bool skipHWDecodeCheck) {
     }
     codecCsp[RGY_CODEC_HEVC].push_back(RGY_CSP_YV12_10);
     codecCsp[RGY_CODEC_HEVC].push_back(RGY_CSP_YV12_12);
+    codecCsp[RGY_CODEC_VP9].push_back(RGY_CSP_YV12_10);
+    codecCsp[RGY_CODEC_VP9].push_back(RGY_CSP_YV12_12);
     return codecCsp;
 #else
     return CodecCsp();

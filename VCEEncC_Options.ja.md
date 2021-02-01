@@ -190,7 +190,7 @@ avformat + hw decoderを使用して読み込む。
 | H.264/AVC  | ○ |
 | H.265/HEVC | ○ |
 | VP8        | × |
-| VP9        | × |
+| VP9        | ○ |
 | VC-1       | ○ |
 | WMV3/WMV9  | × |
 

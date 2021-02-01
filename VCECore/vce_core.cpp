@@ -595,8 +595,14 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
         PrintMes(RGY_LOG_ERROR, _T("Input codec \"%s\" not supported.\n"), CodecToStr(inputCodec).c_str());
         return RGY_ERR_UNSUPPORTED;
     }
-    if (inputCodec == RGY_CODEC_HEVC && prm->input.csp == RGY_CSP_P010) {
-        codec_uvd_name = AMFVideoDecoderHW_H265_MAIN10;
+    if (prm->input.csp == RGY_CSP_P010) {
+        switch (inputCodec) {
+        case RGY_CODEC_HEVC: codec_uvd_name = AMFVideoDecoderHW_H265_MAIN10; break;
+        case RGY_CODEC_VP9:  codec_uvd_name = AMFVideoDecoderHW_VP9_10BIT; break;
+        default:
+            PrintMes(RGY_LOG_ERROR, _T("\"%s\" not supported for high bit depth decoding.\n"), CodecToStr(inputCodec).c_str());
+            return RGY_ERR_UNSUPPORTED;
+        }
     }
     PrintMes(RGY_LOG_DEBUG, _T("decoder: use codec \"%s\".\n"), wstring_to_tstring(codec_uvd_name).c_str());
     auto res = m_pFactory->CreateComponent(m_dev->context(), codec_uvd_name, &m_pDecoder);
@@ -618,11 +624,13 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
     }
     PrintMes(RGY_LOG_DEBUG, _T("set codec header to decoder: %d bytes.\n"), header.size());
 
-    amf::AMFBufferPtr buffer;
-    m_dev->context()->AllocBuffer(amf::AMF_MEMORY_HOST, header.size(), &buffer);
+    if (header.size() > 0) {
+        amf::AMFBufferPtr buffer;
+        m_dev->context()->AllocBuffer(amf::AMF_MEMORY_HOST, header.size(), &buffer);
 
-    memcpy(buffer->GetNative(), header.data(), header.size());
-    m_pDecoder->SetProperty(AMF_VIDEO_DECODER_EXTRADATA, amf::AMFVariant(buffer));
+        memcpy(buffer->GetNative(), header.data(), header.size());
+        m_pDecoder->SetProperty(AMF_VIDEO_DECODER_EXTRADATA, amf::AMFVariant(buffer));
+    }
 
     PrintMes(RGY_LOG_DEBUG, _T("initialize decoder: %dx%d, %s.\n"),
         prm->input.srcWidth, prm->input.srcHeight,

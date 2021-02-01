@@ -52,6 +52,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
   - H.264 / AVC
   - HEVC
   - MPEG2
+  - VP9
   - VC-1
 - Supports various formats such as avs, vpy, y4m, and raw
 - Supports demux/muxing using libavformat
