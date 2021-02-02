@@ -73,7 +73,8 @@ static void show_hw(int deviceid) {
 
 static void show_vce_features(int deviceid) {
     const auto codecs = std::vector<RGY_CODEC>{RGY_CODEC_H264, RGY_CODEC_HEVC};
-    _ftprintf(stdout, _T("%s\n"), check_vce_features(codecs, deviceid, RGY_LOG_ERROR).c_str());
+    _ftprintf(stdout, _T("%s\n"), check_vce_enc_features(codecs, deviceid, RGY_LOG_ERROR).c_str());
+    _ftprintf(stdout, _T("\n%s\n"), check_vce_dec_features(deviceid, RGY_LOG_ERROR).c_str());
     exit(0);
 }
 

@@ -209,7 +209,8 @@ public:
 
     RGY_ERR init(int deviceId, int logLevel);
     tstring devName() const { return m_core->dev()->getGPUInfo(); }
-    tstring checkFeatures(RGY_CODEC codec);
+    tstring checkEncFeatures(RGY_CODEC codec);
+    tstring checkDecFeatures(RGY_CODEC codec);
 protected:
     std::unique_ptr<VCECore> m_core;
 };

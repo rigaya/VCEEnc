@@ -1017,6 +1017,14 @@ static const wchar_t *AMF_PARAM_MAX_QP(RGY_CODEC codec) {
     default:             return AMF_VIDEO_ENCODER_MAX_QP;
     }
 }
+static const wchar_t *AMF_PARAM_CAPS_QUERY_TIMEOUT_SUPPORT(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_CAPS_HEVC_QUERY_TIMEOUT_SUPPORT;
+    case RGY_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_CAPS_QUERY_TIMEOUT_SUPPORT;
+    }
+}
+
 static int64_t get_encoder_usage(RGY_CODEC codec) {
     switch (codec) {
     case RGY_CODEC_HEVC: return (int64_t)AMF_VIDEO_ENCODER_HEVC_USAGE_TRANSCONDING;

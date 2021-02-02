@@ -247,30 +247,61 @@ tstring VCEDevice::QueryIOCaps(amf::AMFIOCapsPtr& ioCaps) {
     return str;
 }
 
-tstring VCEDevice::QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
+tstring VCEDevice::QueryInputCaps(RGY_CODEC codec, amf::AMFCapsPtr& caps) {
+    tstring str;
+    if (caps == NULL) {
+        str += _T("failed to get input capability\n");
+    }
+    str += strsprintf(_T("\n%s input:\n"), CodecToStr(codec).c_str());
+    amf::AMFIOCapsPtr inputCaps;
+    if (caps->GetInputCaps(&inputCaps) == AMF_OK) {
+        str += QueryIOCaps(inputCaps);
+    }
+    return str;
+}
+
+tstring VCEDevice::QueryOutputCaps(RGY_CODEC codec, amf::AMFCapsPtr& caps) {
+    tstring str;
+    if (caps == NULL) {
+        str += _T("failed to get output capability\n");
+    }
+
+    str += strsprintf(_T("\n%s output:\n"), CodecToStr(codec).c_str());
+    amf::AMFIOCapsPtr outputCaps;
+    if (caps->GetOutputCaps(&outputCaps) == AMF_OK) {
+        str += QueryIOCaps(outputCaps);
+    }
+    return str;
+}
+
+tstring VCEDevice::QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& caps) {
+    return QueryInputCaps(codec, caps) + QueryOutputCaps(codec, caps);
+}
+
+tstring VCEDevice::QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
     tstring str;
     if (encoderCaps == NULL) {
         str += _T("failed to get encoder capability\n");
     }
     amf::AMF_ACCELERATION_TYPE accelType = encoderCaps->GetAccelerationType();
-    str += _T("acceleration:   ") + AccelTypeToString(accelType) + _T("\n");
+    str += _T("acceleration:    ") + AccelTypeToString(accelType) + _T("\n");
 
     amf_uint32 maxProfile = 0;
     encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_PROFILE(codec), &maxProfile);
-    str += _T("max profile:    ") + tstring(get_cx_desc(get_profile_list(codec), maxProfile)) + _T("\n");
+    str += _T("max profile:     ") + tstring(get_cx_desc(get_profile_list(codec), maxProfile)) + _T("\n");
 
     amf_uint32 maxLevel = 0;
     encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_LEVEL(codec), &maxLevel);
-    str += _T("max level:      ") + tstring(get_cx_desc(get_level_list(codec), maxLevel)) + _T("\n");
+    str += _T("max level:       ") + tstring(get_cx_desc(get_level_list(codec), maxLevel)) + _T("\n");
 
     amf_uint32 maxBitrate = 0;
     encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_BITRATE(codec), &maxBitrate);
-    str += strsprintf(_T("max bitrate:    %d kbps\n"), maxBitrate / 1000);
+    str += strsprintf(_T("max bitrate:     %d kbps\n"), maxBitrate / 1000);
 
     amf_uint32 maxRef = 0, minRef = 0;
     encoderCaps->GetProperty(AMF_PARAM_CAP_MIN_REFERENCE_FRAMES(codec), &minRef);
     encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_REFERENCE_FRAMES(codec), &maxRef);
-    str += strsprintf(_T("ref frames:     %d-%d\n"), minRef, maxRef);
+    str += strsprintf(_T("ref frames:      %d-%d\n"), minRef, maxRef);
 
     if (codec == RGY_CODEC_H264) {
         //amf_uint32 maxTemporalLayers = 0;
@@ -279,31 +310,33 @@ tstring VCEDevice::QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
 
         bool bBPictureSupported = false;
         encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_BFRAMES, &bBPictureSupported);
-        str += strsprintf(_T("Bframe support: %s\n"), (bBPictureSupported) ? _T("yes") : _T("no"));
+        str += strsprintf(_T("Bframe support:  %s\n"), (bBPictureSupported) ? _T("yes") : _T("no"));
 
         amf_uint32 NumOfHWInstances = 0;
         encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_NUM_OF_HW_INSTANCES, &NumOfHWInstances);
-        str += strsprintf(_T("HW instances:   %d\n"), NumOfHWInstances);
+        str += strsprintf(_T("HW instances:    %d\n"), NumOfHWInstances);
     } else if (codec == RGY_CODEC_HEVC) {
         //いまは特になし
     }
 
     amf_uint32 maxNumOfStreams = 0;
     encoderCaps->GetProperty(AMF_PARAM_CAP_NUM_OF_STREAMS(codec), &maxNumOfStreams);
-    str += strsprintf(_T("max streams:    %d\n"), maxNumOfStreams);
+    str += strsprintf(_T("max streams:     %d\n"), maxNumOfStreams);
 
+    //amf_uint32 throughputMax = 0;
+    //encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_THROUGHPUT(codec), &throughputMax);
+    //str += strsprintf(_T("max throughput:    %d 16x16MB\n"), throughputMax);
 
-    str += strsprintf(_T("\n%s encoder input:\n"), CodecToStr(codec).c_str());
-    amf::AMFIOCapsPtr inputCaps;
-    if (encoderCaps->GetInputCaps(&inputCaps) == AMF_OK) {
-        str += QueryIOCaps(inputCaps);
-    }
+    //amf_uint32 throughputRequested = 0;
+    //encoderCaps->GetProperty(AMF_PARAM_CAP_REQUESTED_THROUGHPUT(codec), &throughputRequested);
+    //str += strsprintf(_T("requested throughput:    %d 16x16 MB\n"), throughputRequested);
 
-    str += strsprintf(_T("\n%s encoder output:\n"), CodecToStr(codec).c_str());
-    amf::AMFIOCapsPtr outputCaps;
-    if (encoderCaps->GetOutputCaps(&outputCaps) == AMF_OK) {
-        str += QueryIOCaps(outputCaps);
-    }
+    bool queryTimeout = false;
+    encoderCaps->GetProperty(AMF_PARAM_CAPS_QUERY_TIMEOUT_SUPPORT(codec), &queryTimeout);
+    str += strsprintf(_T("timeout support: %s\n"), (queryTimeout) ? _T("yes") : _T("no"));
+
+    str += QueryIOCaps(codec, encoderCaps);
+
     return str;
 }
 

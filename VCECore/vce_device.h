@@ -53,7 +53,10 @@ public:
     amf::AMFCapsPtr getEncCaps(RGY_CODEC codec);
     amf::AMFCapsPtr getDecCaps(RGY_CODEC codec);
     tstring QueryIOCaps(amf::AMFIOCapsPtr& ioCaps);
-    tstring QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps);
+    tstring QueryInputCaps(RGY_CODEC codec, amf::AMFCapsPtr& caps);
+    tstring QueryOutputCaps(RGY_CODEC codec, amf::AMFCapsPtr& caps);
+    tstring QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& caps);
+    tstring QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps);
     tstring getGPUInfo() const;
 
     int id() const { return m_id; }

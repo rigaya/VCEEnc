@@ -3083,11 +3083,20 @@ RGY_ERR VCEFeatures::init(int deviceId, int logLevel) {
     return RGY_ERR_NONE;
 }
 
-tstring VCEFeatures::checkFeatures(RGY_CODEC codec) {
+tstring VCEFeatures::checkEncFeatures(RGY_CODEC codec) {
     tstring str;
     amf::AMFCapsPtr encCaps = m_core->dev()->getEncCaps(codec);
     if (encCaps != nullptr) {
-        str = m_core->dev()->QueryIOCaps(codec, encCaps);
+        str = m_core->dev()->QueryEncCaps(codec, encCaps);
+    }
+    return str;
+}
+
+tstring VCEFeatures::checkDecFeatures(RGY_CODEC codec) {
+    tstring str;
+    amf::AMFCapsPtr decCaps = m_core->dev()->getDecCaps(codec);
+    if (decCaps != nullptr) {
+        str = m_core->dev()->QueryOutputCaps(codec, decCaps);
     }
     return str;
 }
@@ -3097,17 +3106,34 @@ bool check_if_vce_available(int deviceId, int logLevel) {
     return vce.init(deviceId, logLevel) == RGY_ERR_NONE;
 }
 
-tstring check_vce_features(const std::vector<RGY_CODEC> &codecs, int deviceId, int logLevel) {
+tstring check_vce_enc_features(const std::vector<RGY_CODEC> &codecs, int deviceId, int logLevel) {
     VCEFeatures vce;
     if (vce.init(deviceId, logLevel) != RGY_ERR_NONE) {
         return _T("VCE not available.\n");
     }
     tstring str = strsprintf(_T("device #%d: "), deviceId) + vce.devName() + _T("\n");
     for (const auto codec : codecs) {
-        auto ret = vce.checkFeatures(codec);
+        auto ret = vce.checkEncFeatures(codec);
         if (ret.length() > 0) {
             str += CodecToStr(codec) + _T(" encode features\n");
-            str += vce.checkFeatures(codec) + _T("\n");
+            str += ret + _T("\n");
+        }
+    }
+    return str;
+}
+
+tstring check_vce_dec_features(int deviceId, int logLevel) {
+    VCEFeatures vce;
+    if (vce.init(deviceId, logLevel) != RGY_ERR_NONE) {
+        return _T("VCE not available.\n");
+    }
+    tstring str = strsprintf(_T("device #%d: "), deviceId) + vce.devName() + _T("\n");
+    for (size_t i = 0; i < _countof(HW_DECODE_LIST); i++) {
+        const auto codec = HW_DECODE_LIST[i].rgy_codec;
+        auto ret = vce.checkDecFeatures(codec);
+        if (ret.length() > 0) {
+            str += CodecToStr(codec) + _T(" decode features\n");
+            str += ret + _T("\n");
         }
     }
     return str;
