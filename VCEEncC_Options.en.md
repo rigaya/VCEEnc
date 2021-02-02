@@ -30,7 +30,7 @@ VCEEncC -i "<avsfile>" -o "<outfilename.264>"
 
 #### example of pipe usage
 ```Batchfile
-avs2pipemod -y4mp "<avsfile>" | VCEEncC - y4m - i - - o "<outfilename.264>"
+avs2pipemod -y4mp "<avsfile>" | VCEEncC --y4m -i - -o "<outfilename.264>"
 ```
 
 #### pipe usage from ffmpeg
