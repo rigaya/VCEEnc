@@ -2208,7 +2208,10 @@ RGY_ERR VCECore::run_output() {
                 default:
                     output.setFrametype(RGY_FRAMETYPE_IDR); break;
                 }
-
+            }
+            uint32_t value32 = 0;
+            if (buffer->GetProperty(AMF_PARAM_STATISTIC_AVERAGE_QP(m_encCodec), &value32) == AMF_OK) {
+                output.setAvgQP(value32);
             }
             if (m_ssim) {
                 if (!m_ssim->decodeStarted()) {
@@ -2576,6 +2579,8 @@ RGY_ERR VCECore::run() {
 
         pSurface->SetProperty(RGY_PROP_TIMESTAMP, pts);
         pSurface->SetProperty(RGY_PROP_DURATION, duration);
+
+        pSurface->SetProperty(AMF_PARAM_STATISTICS_FEEDBACK(m_encCodec), true);
 
         if (m_timecode) {
             m_timecode->write(pts, m_outputTimebase);
