@@ -110,6 +110,12 @@ static const int   FILTER_DEFAULT_UNSHARP_RADIUS = 3;
 static const float FILTER_DEFAULT_UNSHARP_WEIGHT = 0.5f;
 static const float FILTER_DEFAULT_UNSHARP_THRESHOLD = 10.0f;
 
+static const float FILTER_DEFAULT_WARPSHARP_THRESHOLD = 128.0f;
+static const int   FILTER_DEFAULT_WARPSHARP_BLUR = 2;
+static const int   FILTER_DEFAULT_WARPSHARP_TYPE = 0;
+static const float FILTER_DEFAULT_WARPSHARP_DEPTH = 16.0f;
+static const int   FILTER_DEFAULT_WARPSHARP_CHROMA = 0;
+
 static const int   FILTER_DEFAULT_DEBAND_RANGE = 15;
 static const int   FILTER_DEFAULT_DEBAND_THRE_Y = 15;
 static const int   FILTER_DEFAULT_DEBAND_THRE_CB = 15;
@@ -283,6 +289,7 @@ const CX_DESC list_vpp_detail_enahance[] = {
     { _T("none"),       0 },
     { _T("unsharp"),    1 },
     { _T("edgelevel"),  2 },
+    { _T("warpsharp"),  3 },
     { NULL, 0 }
 };
 
@@ -789,6 +796,20 @@ struct VppEdgelevel {
     tstring print() const;
 };
 
+struct VppWarpsharp {
+    bool enable;
+    float threshold;
+    int blur;
+    int type;
+    float depth;
+    int chroma;
+
+    VppWarpsharp();
+    bool operator==(const VppWarpsharp& x) const;
+    bool operator!=(const VppWarpsharp& x) const;
+    tstring print() const;
+};
+
 struct VppTweak {
     bool  enable;
     float brightness; // -1.0 - 1.0 (0.0)
@@ -848,6 +869,7 @@ struct VCEVppParam {
     std::vector<VppSubburn> subburn;
     VppUnsharp unsharp;
     VppEdgelevel edgelevel;
+    VppWarpsharp warpsharp;
     VppTweak tweak;
     VppTransform transform;
     VppDeband deband;

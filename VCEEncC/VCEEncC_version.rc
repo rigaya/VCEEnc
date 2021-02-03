@@ -21,6 +21,7 @@ VCE_FILTER_SMOOTH_CL      EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_smooth.c
 VCE_FILTER_SUBBURN_CL     EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_subburn.cl"
 VCE_FILTER_UNSHARP_CL     EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_unsharp.cl"
 VCE_FILTER_EDGELEVEL_CL   EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_edgelevel.cl"
+VCE_FILTER_WARPSHARP_CL   EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_warpsharp.cl"
 VCE_FILTER_TWEAK_CL       EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_tweak.cl"
 VCE_FILTER_TRANSFORM_CL   EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_transform.cl"
 VCE_FILTER_PAD_CL         EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_pad.cl"

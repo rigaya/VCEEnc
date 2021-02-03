@@ -59,6 +59,7 @@
 #include "vce_filter_subburn.h"
 #include "vce_filter_unsharp.h"
 #include "vce_filter_edgelevel.h"
+#include "vce_filter_warpsharp.h"
 #include "vce_filter_tweak.h"
 #include "vce_filter_transform.h"
 #include "vce_filter_deband.h"
@@ -755,6 +756,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         || inputParam->vpp.subburn.size() > 0
         || inputParam->vpp.unsharp.enable
         || inputParam->vpp.edgelevel.enable
+        || inputParam->vpp.warpsharp.enable
         || inputParam->vpp.tweak.enable
         || inputParam->vpp.transform.enable
         || inputParam->vpp.deband.enable) {
@@ -1103,6 +1105,28 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             unique_ptr<RGYFilter> filter(new RGYFilterEdgelevel(m_dev->cl()));
             shared_ptr<RGYFilterParamEdgelevel> param(new RGYFilterParamEdgelevel());
             param->edgelevel = inputParam->vpp.edgelevel;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
+            param->bOutOverwrite = false;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filter));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+        //warpsharp
+        if (inputParam->vpp.warpsharp.enable) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterWarpsharp(m_dev->cl()));
+            shared_ptr<RGYFilterParamWarpsharp> param(new RGYFilterParamWarpsharp());
+            param->warpsharp = inputParam->vpp.warpsharp;
             param->frameIn = inputFrame;
             param->frameOut = inputFrame;
             param->baseFps = m_encFps;

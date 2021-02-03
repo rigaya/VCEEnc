@@ -564,6 +564,32 @@ tstring VppEdgelevel::print() const {
         strength, threshold, black, white);
 }
 
+VppWarpsharp::VppWarpsharp() :
+    enable(false),
+    threshold(FILTER_DEFAULT_WARPSHARP_THRESHOLD),
+    blur(FILTER_DEFAULT_WARPSHARP_BLUR),
+    type(FILTER_DEFAULT_WARPSHARP_TYPE),
+    depth(FILTER_DEFAULT_WARPSHARP_DEPTH),
+    chroma(FILTER_DEFAULT_WARPSHARP_CHROMA) {
+}
+
+bool VppWarpsharp::operator==(const VppWarpsharp& x) const {
+    return enable == x.enable
+        && threshold == x.threshold
+        && blur == x.blur
+        && type == x.type
+        && depth == x.depth
+        && chroma == x.chroma;
+}
+bool VppWarpsharp::operator!=(const VppWarpsharp& x) const {
+    return !(*this == x);
+}
+
+tstring VppWarpsharp::print() const {
+    return strsprintf(_T("warpsharp: threshold %.1f, blur %d, type %d, depth %.1f, chroma %d"),
+        threshold, blur, type, depth, chroma);
+}
+
 VppTweak::VppTweak() :
     enable(false),
     brightness(FILTER_DEFAULT_TWEAK_BRIGHTNESS),
@@ -706,6 +732,7 @@ VCEVppParam::VCEVppParam() :
     subburn(),
     unsharp(),
     edgelevel(),
+    warpsharp(),
     tweak(),
     transform(),
     deband() {
