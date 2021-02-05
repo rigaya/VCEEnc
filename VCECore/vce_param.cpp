@@ -29,6 +29,113 @@
 #include "vce_param.h"
 #include "afs_stg.h"
 
+ColorspaceConv::ColorspaceConv() :
+    from(),
+    to(),
+    sdr_source_peak(FILTER_DEFAULT_COLORSPACE_NOMINAL_SOURCE_PEAK),
+    approx_gamma(false),
+    scene_ref(false) {
+
+}
+bool ColorspaceConv::operator==(const ColorspaceConv &x) const {
+    return from == x.from
+        && to == x.to
+        && sdr_source_peak == x.sdr_source_peak
+        && approx_gamma == x.approx_gamma
+        && scene_ref == x.scene_ref;
+}
+bool ColorspaceConv::operator!=(const ColorspaceConv &x) const {
+    return !(*this == x);
+}
+
+TonemapHable::TonemapHable() :
+    a(FILTER_DEFAULT_HDR2SDR_HABLE_A),
+    b(FILTER_DEFAULT_HDR2SDR_HABLE_B),
+    c(FILTER_DEFAULT_HDR2SDR_HABLE_C),
+    d(FILTER_DEFAULT_HDR2SDR_HABLE_D),
+    e(FILTER_DEFAULT_HDR2SDR_HABLE_E),
+    f(FILTER_DEFAULT_HDR2SDR_HABLE_F) {}
+
+bool TonemapHable::operator==(const TonemapHable &x) const {
+    return a == x.a
+        && b == x.b
+        && c == x.c
+        && d == x.d
+        && e == x.e
+        && f == x.f;
+}
+bool TonemapHable::operator!=(const TonemapHable &x) const {
+    return !(*this == x);
+}
+TonemapMobius::TonemapMobius() :
+    transition(FILTER_DEFAULT_HDR2SDR_MOBIUS_TRANSITION),
+    peak(FILTER_DEFAULT_HDR2SDR_MOBIUS_PEAK) {
+}
+bool TonemapMobius::operator==(const TonemapMobius &x) const {
+    return transition == x.transition
+        &&peak == x.peak;
+}
+bool TonemapMobius::operator!=(const TonemapMobius &x) const {
+    return !(*this == x);
+}
+TonemapReinhard::TonemapReinhard() :
+    contrast(FILTER_DEFAULT_HDR2SDR_REINHARD_CONTRAST),
+    peak(FILTER_DEFAULT_HDR2SDR_REINHARD_PEAK) {
+}
+bool TonemapReinhard::operator==(const TonemapReinhard &x) const {
+    return contrast == x.contrast
+        &&peak == x.peak;
+}
+bool TonemapReinhard::operator!=(const TonemapReinhard &x) const {
+    return !(*this == x);
+}
+
+HDR2SDRParams::HDR2SDRParams() :
+    tonemap(HDR2SDR_DISABLED),
+    hable(),
+    mobius(),
+    reinhard(),
+    ldr_nits(FILTER_DEFAULT_COLORSPACE_LDRNITS),
+    hdr_source_peak(FILTER_DEFAULT_COLORSPACE_HDR_SOURCE_PEAK),
+    desat_base(FILTER_DEFAULT_HDR2SDR_DESAT_BASE),
+    desat_strength(FILTER_DEFAULT_HDR2SDR_DESAT_STRENGTH),
+    desat_exp(FILTER_DEFAULT_HDR2SDR_DESAT_EXP) {
+
+}
+bool HDR2SDRParams::operator==(const HDR2SDRParams &x) const {
+    return tonemap == x.tonemap
+        && hable == x.hable
+        && mobius == x.mobius
+        && reinhard == x.reinhard;
+}
+bool HDR2SDRParams::operator!=(const HDR2SDRParams &x) const {
+    return !(*this == x);
+}
+
+VppColorspace::VppColorspace() :
+    enable(false),
+    hdr2sdr(),
+    convs() {
+
+}
+
+bool VppColorspace::operator==(const VppColorspace &x) const {
+    if (enable != x.enable
+        || x.hdr2sdr != this->hdr2sdr
+        || x.convs.size() != this->convs.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < x.convs.size(); i++) {
+        if (x.convs[i].from != this->convs[i].from
+            || x.convs[i].to != this->convs[i].to) {
+            return false;
+        }
+    }
+    return true;
+}
+bool VppColorspace::operator!=(const VppColorspace &x) const {
+    return !(*this == x);
+}
 
 VppAfs::VppAfs() :
     enable(false),
@@ -722,6 +829,7 @@ tstring VppDeband::print() const {
 
 VCEVppParam::VCEVppParam() :
     resize(RGY_VPP_RESIZE_AUTO),
+    colorspace(),
     afs(),
     nnedi(),
     decimate(),

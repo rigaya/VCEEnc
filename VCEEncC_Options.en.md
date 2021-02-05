@@ -919,6 +919,93 @@ Specify the resizing algorithm.
 | lanczos3 | 6x6 Lanczos resampling |
 | lanczos4 | 8x8 Lanczos resampling |
 
+### --vpp-colorspace [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...  
+Converts colorspace of the video. Available on x64 version.  
+Values for parameters will be copied from input file for "input".
+
+**parameters**
+- matrix=&lt;from&gt;:&lt;to&gt;  
+  
+```
+  bt709, smpte170m, bt470bg, smpte240m, YCgCo, fcc, GBR, bt2020nc, bt2020c, auto
+```
+
+- colorprim=&lt;from&gt;:&lt;to&gt;  
+```
+  bt709, smpte170m, bt470m, bt470bg, smpte240m, film, bt2020, auto
+```
+
+- transfer=&lt;from&gt;:&lt;to&gt;  
+```
+  bt709, smpte170m, bt470m, bt470bg, smpte240m, linear,
+  log100, log316, iec61966-2-4, iec61966-2-1,
+  bt2020-10, bt2020-12, smpte2084, arib-std-b67, auto
+```
+
+- range=&lt;from&gt;:&lt;to&gt;  
+```
+  limited, full, auto
+```
+
+- hdr2sdr=&lt;string&gt;  
+  Enables HDR10 to SDR by selected tone-mapping.  
+
+  - none (default)  
+    hdr2sdr processing is disabled.
+  
+  - hable  
+    Trys to preserve both bright and dark detailes, but with rather dark result.
+    You may specify addtional params (a,b,c,d,e,f) for the hable tone-mapping function below.  
+
+    hable(x) = ( (x * (a*x + c*b) + d*e) / (x * (a*x + b) + d*f) ) - e/f  
+    output = hable( input ) / hable( (source_peak / ldr_nits) )
+    
+    defaults: a = 0.22, b = 0.3, c = 0.1, d = 0.2, e = 0.01, f = 0.3
+
+  - mobius  
+    Trys to preserve contrast and colors while bright details might be removed.  
+    - transition=&lt;float&gt;  (default: 0.3)  
+      Threshold to move from linear conversion to mobius tone mapping.  
+    - peak=&lt;float&gt;  (default: 1.0)  
+      reference peak brightness
+  
+  - reinhard  
+    - contrast=&lt;float&gt;  (default: 0.5)  
+      local contrast coefficient  
+    - peak=&lt;float&gt;  (default: 1.0)  
+      reference peak brightness
+      
+  - bt2390  
+    Perceptual tone mapping curve EETF) specified in BT.2390.
+
+- source_peak=&lt;float&gt;  (default: 1000.0)  
+
+- ldr_nits=&lt;float&gt;  (default: 100.0)  
+  Target brightness for hdr2sdr function.
+  
+- desat_base=&lt;float&gt;  (default: 0.18)  
+  Offset for desaturation curve used in hdr2sr.
+
+- desat_strength=&lt;float&gt;  (default: 0.75)  
+  Strength of desaturation curve used in hdr2sr.
+  0.0 will disable the desaturation, 1.0 will make overly bright colors will tend towards white.
+
+- desat_exp=&lt;float&gt;  (default: 1.5)  
+  Exponent of the desaturation curve used in hdr2sr.
+  This controls the brightness of which desaturated is going to start.
+  Lower value will make the desaturation to start earlier.
+
+```
+example1: convert from BT.601 -> BT.709
+--vpp-colorspace matrix=smpte170m:bt709
+
+example2: using hdr2sdr (hable tone-mapping)
+--vpp-colorspace hdr2sdr=hable,source_peak=1000.0,ldr_nits=100.0
+
+example3: using hdr2sdr (hable tone-mapping) and setting the coefs (this is example for the default settings)
+--vpp-colorspace hdr2sdr=hable,source_peak=1000.0,ldr_nits=100.0,a=0.22,b=0.3,c=0.1,d=0.2,e=0.01,f=0.3
+```
+
 ### --vpp-afs [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 Activate Auto Field Shift (AFS) deinterlacer.
 

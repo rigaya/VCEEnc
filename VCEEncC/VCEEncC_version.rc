@@ -26,6 +26,8 @@ VCE_FILTER_TWEAK_CL       EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_tweak.cl
 VCE_FILTER_TRANSFORM_CL   EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_transform.cl"
 VCE_FILTER_PAD_CL         EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_pad.cl"
 
+VCE_FILTER_COLORSPACE_CL  EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_colorspace_func.h"
+
 VCE_FILTER_DEBAND_CL                 EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_deband.cl"
 VCE_FILTER_DEBAND_GEN_RAND_CL        EXE_DATA DISCARDABLE "..\\VCECore\\vce_filter_deband_gen_rand.cl"
 VCE_FILTER_CLRNG_CLH                 EXE_DATA DISCARDABLE "..\\clRNG\\src\\include\\clRNG\\clRNG.clh"

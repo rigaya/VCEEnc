@@ -916,6 +916,91 @@ mux時にオプションパラメータを渡す。&lt;string1&gt;にオプシ�
 | lanczos3 | 6x6 lanczos補間 |
 | lanczos4 | 8x8 lanczos補間 |
 
+### --vpp-colorspace [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...  
+色空間変換を行う。x64版のみ使用可能。  
+パラメータに"input"を指定すると、入力ファイルの値を参照できる。(avhww/avsw読み込みのみ)
+
+**パラメータ**
+- matrix=&lt;from&gt;:&lt;to&gt;  
+  
+```
+  bt709, smpte170m, bt470bg, smpte240m, YCgCo, fcc, GBR, bt2020nc, bt2020c, auto
+```
+
+- colorprim=&lt;from&gt;:&lt;to&gt;  
+```
+  bt709, smpte170m, bt470m, bt470bg, smpte240m, film, bt2020, auto
+```
+
+- transfer=&lt;from&gt;:&lt;to&gt;  
+```
+  bt709, smpte170m, bt470m, bt470bg, smpte240m, linear,
+  log100, log316, iec61966-2-4, iec61966-2-1,
+  bt2020-10, bt2020-12, smpte2084, arib-std-b67, auto
+```
+
+- range=&lt;from&gt;:&lt;to&gt;  
+```
+  limited, full, auto
+```
+
+- hdr2sdr=&lt;string&gt;  
+  tone-mappingを指定してHDRからSDRへの変換を行う。 
+  
+  - none  (デフォルト)  
+    hdr2sdrの処理を行うない。
+
+  - hable    
+    明部と暗部のディテールの両方をバランスよく保ちながら変換する。(ただし、やや暗めになる)
+    下記のhable tone-mappingの式のパラメータ(a,b,c,d,e,f)の指定も可能。
+
+    hable(x) = ( (x * (a*x + c*b) + d*e) / (x * (a*x + b) + d*f) ) - e/f  
+    output = hable( input ) / hable( (source_peak / ldr_nits) )
+    
+    デフォルト: a = 0.22, b = 0.3, c = 0.1, d = 0.2, e = 0.01, f = 0.3
+
+  - mobius  
+    なるべく画面の明るさやコントラストを維持した変換を行うが、明部のディテールがつぶれる可能性がある。
+   
+    - transition=&lt;float&gt;  (デフォルト: 0.3)  
+      線形変換から mobius tone mappingに移行する分岐点。  
+    - peak=&lt;float&gt;  (デフォルト: 1.0)  
+      reference peak brightness
+  
+  - reinhard  
+    - contrast=&lt;float&gt;  (デフォルト: 0.5)  
+      local contrast coefficient  
+    - peak=&lt;float&gt;  (デフォルト: 1.0)  
+      reference peak brightness
+      
+  - bt2390  
+    BT.2390で規定されるtone mapping。
+
+
+- source_peak=&lt;float&gt;  (デフォルト: 1000.0)  
+
+- ldr_nits=&lt;float&gt;  (デフォルト: 100.0)  
+
+- desat_base=&lt;float&gt;  (デフォルト: 0.18)  
+  hdr2sdrで使用されるdesaturation処理のオフセット。
+
+- desat_strength=&lt;float&gt;  (デフォルト: 0.75)  
+  hdr2sdrで使用されるdesaturation処理の強度。0.0では処理が無効化され、1.0では明るい色は白くなる。
+
+- desat_exp=&lt;float&gt;  (デフォルト: 1.5)  
+  hdr2sdrで使用されるdesaturation処理の指数で、どのくらいの明るさから処理が行われるかを制御する。
+  低めの値では、より積極的に処理が行われる。
+
+```
+例1: BT.709(fullrange) -> BT.601 への変換
+--vpp-colorspace matrix=smpte170m:bt709,range=full:limited
+
+例2: hdr2sdrの使用 (hable tone-mapping)
+--vpp-colorspace hdr2sdr=hable,source_peak=1000.0,ldr_nits=100.0
+
+例3: hdr2sdr使用時の追加パラメータの指定例 (下記例ではデフォルトと同じ意味)
+--vpp-colorspace hdr2sdr=hable,source_peak=1000.0,ldr_nits=100.0,a=0.22,b=0.3,c=0.1,d=0.2,e=0.01,f=0.3
+```
 
 ### --vpp-afs [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 自動フィールドシフトによるインタレ解除を行う。

@@ -51,6 +51,7 @@
 #include "vce_core.h"
 #include "vce_param.h"
 #include "vce_filter.h"
+#include "vce_filter_colorspace.h"
 #include "vce_filter_afs.h"
 #include "vce_filter_nnedi.h"
 #include "vce_filter_denoise_knn.h"
@@ -747,6 +748,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     //フィルタが必要
     if (resizeRequired
         || cropRequired
+        || inputParam->vpp.colorspace.enable
         || inputParam->vpp.afs.enable
         || inputParam->vpp.nnedi.enable
         || inputParam->vpp.pad.enable
@@ -793,7 +795,6 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             filterCsp = (RGY_CSP_BIT_DEPTH[inputFrame.csp] > 8) ? RGY_CSP_YUV444_16 : RGY_CSP_YUV444;
         }
         //colorspace
-#if 0
         if (inputParam->vpp.colorspace.enable) {
             amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
             unique_ptr<RGYFilter> filter(new RGYFilterColorspace(m_dev->cl()));
@@ -803,7 +804,6 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             param->frameIn = inputFrame;
             param->frameOut = inputFrame;
             param->baseFps = m_encFps;
-            NVEncCtxAutoLock(cxtlock(m_ctxLock));
             auto sts = filter->init(param, m_pLog);
             if (sts != RGY_ERR_NONE) {
                 return sts;
@@ -816,7 +816,6 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             inputFrame = param->frameOut;
             m_encFps = param->baseFps;
         }
-#endif
         if (filterCsp != inputFrame.csp
             || cropRequired) { //cropが必要ならただちに適用する
             amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());

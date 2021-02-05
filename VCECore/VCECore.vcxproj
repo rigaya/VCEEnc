@@ -276,6 +276,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="vce_filter_colorspace.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="vce_filter_crop.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -427,6 +433,8 @@
     <ClInclude Include="vce_device.h" />
     <ClInclude Include="vce_filter.h" />
     <ClInclude Include="vce_filter_afs.h" />
+    <ClInclude Include="vce_filter_colorspace.h" />
+    <ClInclude Include="vce_filter_colorspace_func.h" />
     <ClInclude Include="vce_filter_deband.h" />
     <ClInclude Include="vce_filter_denoise_knn.h" />
     <ClInclude Include="vce_filter_denoise_pmd.h" />
