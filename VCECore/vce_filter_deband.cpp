@@ -200,7 +200,7 @@ std::string RGYFilterDeband::getEmbeddedResourceStr(const tstring &name, const t
                     datalen -= 3;
                 }
             }
-            data_str = data;
+            data_str = std::string(data, datalen);
         }
     }
     return data_str;
