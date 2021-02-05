@@ -55,7 +55,9 @@ inline int conv_bit_depth(const int c, const int bit_depth_in, const int bit_dep
 
 #define BIT_DEPTH_CONV_AVG(a, b) (TypeOut)conv_bit_depth((a)+(b), in_bit_depth, out_bit_depth, 1)
 
-#define BIT_DEPTH_CONV_3x1_AVG(a, b) (TypeOut)conv_bit_depth((a)*3+(b), in_bit_depth, out_bit_depth, 2)
+#define BIT_DEPTH_CONV_3x1_AVG(a, b) (TypeOut)conv_bit_depth(((a)<<1)+(a)+(b), in_bit_depth, out_bit_depth, 2)
+
+#define BIT_DEPTH_CONV_7x1_AVG(a, b) (TypeOut)conv_bit_depth(((a)<<3)-(a)+(b), in_bit_depth, out_bit_depth, 3)
 
 #define LOAD_IMG(src, ix, iy) (TypeIn)(read_imageui((src), sampler, (int2)((ix), (iy))).x)
 #define LOAD_IMG_NV12_UV(src, src_u, src_v, ix, iy, cropX, cropY) { \
@@ -96,6 +98,33 @@ inline int conv_bit_depth(const int c, const int bit_depth_in, const int bit_dep
 #define STORE         STORE_BUF
 #define STORE_NV12_UV STORE_BUF_NV12_UV
 #endif
+
+void conv_c_yuv420_yuv444(
+#if IMAGE_DST
+    __write_only image2d_t dst,
+#else
+    __global uchar *dst,
+#endif
+    const int dstPitch,
+    const int dst_x, const int dst_y,
+    int pixSrc01, int pixSrc02,
+    int pixSrc11, int pixSrc12,
+    int pixSrc21, int pixSrc22
+) {
+    pixSrc02 = (pixSrc01 + pixSrc02 + 1) >> 1;
+    pixSrc12 = (pixSrc11 + pixSrc12 + 1) >> 1;
+    pixSrc22 = (pixSrc21 + pixSrc22 + 1) >> 1;
+
+    TypeOut pixDst11 = BIT_DEPTH_CONV_3x1_AVG(pixSrc11, pixSrc01);
+    TypeOut pixDst12 = BIT_DEPTH_CONV_3x1_AVG(pixSrc12, pixSrc02);
+    TypeOut pixDst21 = BIT_DEPTH_CONV_7x1_AVG(pixSrc11, pixSrc21);
+    TypeOut pixDst22 = BIT_DEPTH_CONV_7x1_AVG(pixSrc12, pixSrc22);
+
+    STORE(dst, dst_x+0, dst_y+0, pixDst11);
+    STORE(dst, dst_x+1, dst_y+0, pixDst12);
+    STORE(dst, dst_x+0, dst_y+1, pixDst21);
+    STORE(dst, dst_x+1, dst_y+1, pixDst22);
+}
 
 __kernel void kernel_copy_plane(
 #if IMAGE_DST
@@ -188,6 +217,92 @@ __kernel void kernel_crop_nv12_yv12(
     }
 }
 
+__kernel void kernel_crop_nv12_yuv444(
+#if IMAGE_DST
+    __write_only image2d_t dstU,
+    __write_only image2d_t dstV,
+#else
+    __global uchar *dstU,
+    __global uchar *dstV,
+#endif
+    int dstPitch,
+    int dstWidth,
+    int dstHeight,
+#if IMAGE_SRC
+    __read_only image2d_t src,
+#else
+    __global uchar *src,
+#endif
+    int srcPitch,
+    int srcWidth,
+    int srcHeight,
+    int cropX,
+    int cropY
+) {
+    const int src_x = get_global_id(0);
+    const int src_y = get_global_id(1);
+    const int dst_x = src_x << 1;
+    const int dst_y = src_y << 1;
+
+    if (dst_x < dstWidth && dst_y < dstHeight) {
+        const int loadx = src_x + (cropX>>1);
+        const int loady = src_y + (cropY>>1);
+
+        TypeIn pixSrcU01, pixSrcV01, pixSrcU02, pixSrcV02;
+        TypeIn pixSrcU11, pixSrcV11, pixSrcU12, pixSrcV12;
+        TypeIn pixSrcU21, pixSrcV21, pixSrcU22, pixSrcV22;
+        LOAD_NV12_UV(src, pixSrcU01, pixSrcV01,     loadx,              max(loady-1, 0),         0, 0);
+        LOAD_NV12_UV(src, pixSrcU02, pixSrcV02, min(loadx+1, srcWidth), max(loady-1, 0),         0, 0);
+        LOAD_NV12_UV(src, pixSrcU11, pixSrcV11,     loadx,                  loady,               0, 0);
+        LOAD_NV12_UV(src, pixSrcU12, pixSrcV12, min(loadx+1, srcWidth),     loady,               0, 0);
+        LOAD_NV12_UV(src, pixSrcU21, pixSrcV21,     loadx,              min(loady+1, srcHeight), 0, 0);
+        LOAD_NV12_UV(src, pixSrcU22, pixSrcV22, min(loadx+1, srcWidth), min(loady+1, srcHeight), 0, 0);
+
+        conv_c_yuv420_yuv444(dstU, dstPitch, dst_x, dst_y, pixSrcU01, pixSrcU02, pixSrcU11, pixSrcU12, pixSrcU21, pixSrcU22);
+        conv_c_yuv420_yuv444(dstV, dstPitch, dst_x, dst_y, pixSrcV01, pixSrcV02, pixSrcV11, pixSrcV12, pixSrcV21, pixSrcV22);
+    }
+}
+
+__kernel void kernel_crop_c_yuv444_nv12(
+#if IMAGE_DST
+    __write_only image2d_t dst,
+#else
+    __global uchar *dst,
+#endif
+    int dstPitch,
+    int dstWidth,
+    int dstHeight,
+#if IMAGE_SRC
+    __read_only image2d_t srcU,
+    __read_only image2d_t srcV,
+#else
+    __global uchar *srcU,
+    __global uchar *srcV,
+#endif
+    int srcPitch,
+    int srcWidth,
+    int srcHeight,
+    int cropX,
+    int cropY
+) {
+    const int dst_x = get_global_id(0);
+    const int dst_y = get_global_id(1);
+
+    if (dst_x < dstWidth && dst_y < dstHeight) {
+        const int src_x = dst_x << 1;
+        const int src_y = dst_y << 1;
+        const int loadx = src_x + cropX;
+        const int loady = src_y + cropY;
+        const int pixSrcU00 = LOAD(srcU, loadx+0, loady+0);
+        const int pixSrcU10 = LOAD(srcU, loadx+0, loady+1);
+        const int pixSrcV00 = LOAD(srcV, loadx+0, loady+0);
+        const int pixSrcV10 = LOAD(srcV, loadx+0, loady+1);
+        TypeOut pixDstU = BIT_DEPTH_CONV_AVG(pixSrcU00, pixSrcU10);
+        TypeOut pixDstV = BIT_DEPTH_CONV_AVG(pixSrcV00, pixSrcV10);
+        STORE_NV12_UV(dst, dst_x, dst_y, pixDstU, pixDstV);
+    }
+}
+
 __kernel void kernel_crop_yv12_nv12(
 #if IMAGE_DST
     __write_only image2d_t dst,
@@ -212,11 +327,85 @@ __kernel void kernel_crop_yv12_nv12(
     const int uv_y = get_global_id(1);
 
     if (uv_x < uvWidth && uv_y < uvHeight) {
-        TypeIn pixSrcU = LOAD(srcU, uv_x + (cropX>>1), uv_y + (cropY>>1));
-        TypeIn pixSrcV = LOAD(srcV, uv_x + (cropX>>1), uv_y + (cropY>>1));
-        TypeOut pixDstU = BIT_DEPTH_CONV(pixSrcU);
-        TypeOut pixDstV = BIT_DEPTH_CONV(pixSrcV);
+        const TypeIn pixSrcU = LOAD(srcU, uv_x + (cropX>>1), uv_y + (cropY>>1));
+        const TypeIn pixSrcV = LOAD(srcV, uv_x + (cropX>>1), uv_y + (cropY>>1));
+        const TypeOut pixDstU = BIT_DEPTH_CONV(pixSrcU);
+        const TypeOut pixDstV = BIT_DEPTH_CONV(pixSrcV);
         STORE_NV12_UV(dst, uv_x, uv_y, pixDstU, pixDstV);
+    }
+}
+
+__kernel void kernel_crop_c_yv12_yuv444(
+#if IMAGE_DST
+    __write_only image2d_t dst,
+#else
+    __global uchar *dst,
+#endif
+    int dstPitch,
+    int dstWidth,
+    int dstHeight,
+#if IMAGE_SRC
+    __read_only image2d_t src,
+#else
+    __global uchar *src,
+#endif
+    int srcPitch,
+    int srcWidth,
+    int srcHeight,
+    int cropX,
+    int cropY
+) {
+    const int src_x = get_global_id(0);
+    const int src_y = get_global_id(1);
+    const int dst_x = src_x << 1;
+    const int dst_y = src_y << 1;
+
+    if (dst_x < dstWidth && dst_y < dstHeight) {
+        const int loadx = src_x + (cropX>>1);
+        const int loady = src_y + (cropY>>1);
+        const int pixSrc01 = LOAD(src,     loadx,              max(loady-1, 0)        );
+        const int pixSrc02 = LOAD(src, min(loadx+1, srcWidth), max(loady-1, 0)        );
+        const int pixSrc11 = LOAD(src,     loadx,                  loady              );
+        const int pixSrc12 = LOAD(src, min(loadx+1, srcWidth),     loady              );
+        const int pixSrc21 = LOAD(src,     loadx,              min(loady+1, srcHeight));
+        const int pixSrc22 = LOAD(src, min(loadx+1, srcWidth), min(loady+1, srcHeight));
+
+        conv_c_yuv420_yuv444(dst, dstPitch, dst_x, dst_y, pixSrc01, pixSrc02, pixSrc11, pixSrc12, pixSrc21, pixSrc22);
+    }
+}
+
+__kernel void kernel_crop_c_yuv444_yv12(
+#if IMAGE_DST
+    __write_only image2d_t dst,
+#else
+    __global uchar *dst,
+#endif
+    int dstPitch,
+    int dstWidth,
+    int dstHeight,
+#if IMAGE_SRC
+    __read_only image2d_t src,
+#else
+    __global uchar *src,
+#endif
+    int srcPitch,
+    int srcWidth,
+    int srcHeight,
+    int cropX,
+    int cropY
+) {
+    const int dst_x = get_global_id(0);
+    const int dst_y = get_global_id(1);
+
+    if (dst_x < dstWidth && dst_y < dstHeight) {
+        const int src_x = dst_x << 1;
+        const int src_y = dst_y << 1;
+        const int loadx = src_x + cropX;
+        const int loady = src_y + cropY;
+        const int pixSrc00 = LOAD(src, loadx+0, loady+0);
+        const int pixSrc10 = LOAD(src, loadx+0, loady+1);
+        const TypeOut pixDst = BIT_DEPTH_CONV_AVG(pixSrc00, pixSrc10);
+        STORE(dst, dst_x, dst_y, pixDst);
     }
 }
 
