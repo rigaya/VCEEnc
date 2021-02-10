@@ -117,7 +117,7 @@ RGY_ERR RGYFilterDeband::procFrame(FrameInfo *pOutputFrame, const FrameInfo *pIn
         const int range_plane = (RGY_CSP_CHROMA_FORMAT[pInputFrame->csp] == RGY_CHROMAFMT_YUV420 && iplane == RGY_PLANE_Y) ? prm->deband.range >> 1 : prm->deband.range;
 
         const auto dither = (iplane == RGY_PLANE_Y) ? prm->deband.ditherY : prm->deband.ditherC;
-        const float dither_range = (float)dither * std::pow(2.0f, RGY_CSP_BIT_DEPTH[pInputFrame->csp] - 12) + 0.5f;
+        const float dither_range = dither * (float)std::pow(2.0f, RGY_CSP_BIT_DEPTH[pInputFrame->csp] - 12) + 0.5f;
 
         const auto threshold = (iplane == RGY_PLANE_Y) ? prm->deband.threY : (iplane == RGY_PLANE_U) ? prm->deband.threCb : prm->deband.threCr;
         const float threshold_float = (threshold << (!(prm->deband.sample && prm->deband.blurFirst) + 1)) * (1.0f / (1 << 12));
