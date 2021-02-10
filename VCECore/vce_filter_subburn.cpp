@@ -410,7 +410,7 @@ RGY_ERR RGYFilterSubburn::checkParam(const std::shared_ptr<RGYFilterParamSubburn
         AddMessage(RGY_LOG_ERROR, _T("track and filename should not be set at the same time.\n"));
         return RGY_ERR_INVALID_PARAM;
     }
-    if (prm->subburn.filename.length() > 0 && !PathFileExists(prm->subburn.filename.c_str())) {
+    if (prm->subburn.filename.length() > 0 && !rgy_file_exists(prm->subburn.filename.c_str())) {
         AddMessage(RGY_LOG_ERROR, _T("subtitle file \"%s\" does not exist\n"), prm->subburn.filename.c_str());
         return RGY_ERR_INVALID_PARAM;
     }
