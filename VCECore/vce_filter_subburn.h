@@ -61,8 +61,9 @@ public:
     VideoInfo       videoInfo;
     AVDemuxStream   streamIn;
     sInputCrop      crop;
+    std::vector<const AVStream *> attachmentStreams;
 
-    RGYFilterParamSubburn() : subburn(), videoOutTimebase(), videoInputStream(nullptr), videoInputFirstKeyPts(0), videoInfo(), streamIn(), crop() {};
+    RGYFilterParamSubburn() : subburn(), videoOutTimebase(), videoInputStream(nullptr), videoInputFirstKeyPts(0), videoInfo(), streamIn(), crop(), attachmentStreams() {};
     virtual ~RGYFilterParamSubburn() {};
     virtual tstring print() const override;
 };

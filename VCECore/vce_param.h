@@ -860,6 +860,7 @@ struct VppSubburn {
     bool  enable;
     tstring filename;
     std::string charcode;
+    tstring fontsdir;
     int trackId;
     int assShaping;
     float scale;

@@ -573,6 +573,7 @@ VppSubburn::VppSubburn() :
     enable(false),
     filename(),
     charcode(),
+    fontsdir(),
     trackId(0),
     assShaping(1),
     scale(0.0),
@@ -587,6 +588,7 @@ bool VppSubburn::operator==(const VppSubburn &x) const {
     return enable == x.enable
         && filename == x.filename
         && charcode == x.charcode
+        && fontsdir == x.fontsdir
         && trackId == x.trackId
         && assShaping == x.assShaping
         && scale == x.scale

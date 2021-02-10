@@ -1280,6 +1280,9 @@ Example: Slightly weak than default
 - ts_offset=&lt;float&gt; (default=0.0)
   add offset in seconds to the subtitle timestamps (for debug perpose).  
 
+- fontsdir=&lt;string&gt;  
+  directory with fonts used.
+
 ```
 Example1: burn in subtitle from the track of the input file
 --vpp-subburn track=1

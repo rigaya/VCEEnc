@@ -1013,6 +1013,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             unique_ptr<RGYFilter> filter(new RGYFilterSubburn(m_dev->cl()));
             shared_ptr<RGYFilterParamSubburn> param(new RGYFilterParamSubburn());
             param->subburn = subburn;
+
             auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
             if (pAVCodecReader != nullptr) {
                 param->videoInputStream = pAVCodecReader->GetInputVideoStream();
@@ -1023,6 +1024,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
                         break;
                     }
                 }
+                param->attachmentStreams = pAVCodecReader->GetInputAttachmentStreams();
             }
             param->videoInfo = m_pFileReader->GetInputFrameInfo();
             if (param->subburn.trackId != 0 && param->streamIn.stream == nullptr) {
