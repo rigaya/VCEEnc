@@ -58,6 +58,7 @@ public:
     tstring QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& caps);
     tstring QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps);
     tstring getGPUInfo() const;
+    CodecCsp getHWDecCodecCsp();
 
     int id() const { return m_id; }
     const tstring &name() const { return m_devName; }

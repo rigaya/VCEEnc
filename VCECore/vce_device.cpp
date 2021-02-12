@@ -351,3 +351,45 @@ tstring VCEDevice::getGPUInfo() const {
     }
     return RGYOpenCLDevice(m_cl->platform()->dev(0)).infostr();
 }
+
+CodecCsp VCEDevice::getHWDecCodecCsp() {
+#if ENABLE_AVSW_READER
+    CodecCsp codecCsp;
+    for (int i = 0; i < _countof(HW_DECODE_LIST); i++) {
+        amf::AMFCapsPtr decCaps = getDecCaps(HW_DECODE_LIST[i].rgy_codec);
+        if (decCaps != nullptr) {
+            amf::AMFIOCapsPtr outputCaps;
+            if (decCaps->GetOutputCaps(&outputCaps) == AMF_OK) {
+                const auto numOfFormats = outputCaps->GetNumOfFormats();
+                for (int ifmt = 0; ifmt < numOfFormats; ifmt++) {
+                    amf::AMF_SURFACE_FORMAT format;
+                    amf_bool native = false;
+                    if (outputCaps->GetFormatAt(ifmt, &format, &native) == AMF_OK && native) {
+                        auto csp = csp_enc_to_rgy(format);
+                        if (csp != RGY_CSP_NA) {
+                            codecCsp[HW_DECODE_LIST[i].rgy_codec].push_back(csp);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // P010がサポートされていてもP010が返ってこなかったりするのでとりあえず追加しておく
+    // 実際には、サポートされていない場合もあるが、正しく確認する方法が(実際に動かしてみる以外)ない
+    if (codecCsp.count(RGY_CODEC_HEVC) > 0) {
+        auto& hevcCsp = codecCsp[RGY_CODEC_HEVC];
+        if (std::find(hevcCsp.begin(), hevcCsp.end(), RGY_CSP_P010) == hevcCsp.end()) {
+            hevcCsp.push_back(RGY_CSP_P010);
+        }
+    }
+    if (codecCsp.count(RGY_CODEC_VP9) > 0) {
+        auto& vp9Csp = codecCsp[RGY_CODEC_VP9];
+        if (std::find(vp9Csp.begin(), vp9Csp.end(), RGY_CSP_P010) == vp9Csp.end()) {
+            vp9Csp.push_back(RGY_CSP_P010);
+        }
+    }
+    return codecCsp;
+#else
+    return CodecCsp();
+#endif
+}

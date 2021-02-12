@@ -1837,6 +1837,22 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
             }
         }
 
+        if (prm->input.type == RGY_INPUT_FMT_AVHW) {
+            const auto dec_csp = (*gpu)->getHWDecCodecCsp();
+            if (dec_csp.count(prm->input.codec) == 0) {
+                message += strsprintf(_T("GPU #%d (%s) does not support %s decoding.\n"), (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->input.codec).c_str());
+                gpu = gpuList.erase(gpu);
+                continue;
+            }
+            const auto targetCsp = RGY_CSP_BIT_DEPTH[prm->input.csp] > 8 ? RGY_CSP_P010 : RGY_CSP_NV12;
+            const auto& cuvid_codec_csp = dec_csp.at(prm->input.codec);
+            if (std::find(cuvid_codec_csp.begin(), cuvid_codec_csp.end(), targetCsp) == cuvid_codec_csp.end()) {
+                message += strsprintf(_T("GPU #%d (%s) does not support %s %s decoding.\n"), (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->input.codec).c_str(), RGY_CSP_NAMES[targetCsp]);
+                gpu = gpuList.erase(gpu);
+                continue;
+            }
+        }
+
         PrintMes(RGY_LOG_DEBUG, _T("GPU #%d (%s) available for encode.\n"), (*gpu)->id(), (*gpu)->name().c_str());
         gpu++;
     }
