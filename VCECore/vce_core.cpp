@@ -745,6 +745,9 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         return RGY_ERR_UNSUPPORTED;
     }
 
+    //VUI情報
+    auto VuiFiltered = inputParam->input.vui;
+
     //フィルタが必要
     if (resizeRequired
         || cropRequired
@@ -797,10 +800,11 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         //colorspace
         if (inputParam->vpp.colorspace.enable) {
             amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterColorspace(m_dev->cl()));
+            unique_ptr<RGYFilterColorspace> filter(new RGYFilterColorspace(m_dev->cl()));
             shared_ptr<RGYFilterParamColorspace> param(new RGYFilterParamColorspace());
             param->colorspace = inputParam->vpp.colorspace;
             param->encCsp = encCsp;
+            param->VuiIn = VuiFiltered;
             param->frameIn = inputFrame;
             param->frameOut = inputFrame;
             param->baseFps = m_encFps;
@@ -808,6 +812,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             if (sts != RGY_ERR_NONE) {
                 return sts;
             }
+            VuiFiltered = filter->VuiOut();
             //フィルタチェーンに追加
             m_vpFilters.push_back(std::move(filter));
             //パラメータ情報を更新
@@ -1256,6 +1261,12 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         m_encFps = param->baseFps;
     }
     m_picStruct = inputFrame.picstruct;
+    m_encVUI = inputParam->common.out_vui;
+    m_encVUI.apply_auto(VuiFiltered, m_encHeight);
+    m_encVUI.descriptpresent =
+        get_cx_value(list_colormatrix, _T("undef")) != (int)m_encVUI.matrix
+        || get_cx_value(list_colorprim, _T("undef")) != (int)m_encVUI.colorprim
+        || get_cx_value(list_transfer, _T("undef")) != (int)m_encVUI.transfer;
     return RGY_ERR_NONE;
 }
 
@@ -1524,8 +1535,6 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     adjust_sar(&par.first, &par.second, m_encWidth, m_encHeight);
     m_sar = rgy_rational<int>(par.first, par.second);
 
-    m_encVUI = prm->common.out_vui;
-    m_encVUI.apply_auto(prm->input.vui, m_encHeight);
     m_encVUI.descriptpresent =
            get_cx_value(list_colormatrix, _T("undef")) != (int)m_encVUI.matrix
         || get_cx_value(list_colorprim, _T("undef")) != (int)m_encVUI.colorprim
