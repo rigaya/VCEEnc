@@ -236,9 +236,11 @@ amf::AMFCapsPtr VCEDevice::getDecCaps(RGY_CODEC codec) {
                     if (m_factory->CreateComponent(m_context, codec_uvd_name, &p_decode10bit) == AMF_OK
                         && p_decode10bit->GetCaps(&decodeCaps10bit) == AMF_OK) {
                         decodeCaps->SetProperty(CAP_10BITDEPTH, true);
+                        p_decode10bit->Terminate();
                     }
                 }
                 m_decCaps[codec] = decodeCaps;
+                p_decode->Terminate();
             }
         }
     }
@@ -249,7 +251,7 @@ std::vector<RGY_CSP> VCEDevice::getIOCspSupport(amf::AMFIOCapsPtr& ioCaps) const
     std::vector<RGY_CSP> csps;
     const auto numOfFormats = ioCaps->GetNumOfFormats();
     for (int ifmt = 0; ifmt < numOfFormats; ifmt++) {
-        amf::AMF_SURFACE_FORMAT format;
+        amf::AMF_SURFACE_FORMAT format = amf::AMF_SURFACE_UNKNOWN;
         amf_bool native = false;
         if (ioCaps->GetFormatAt(ifmt, &format, &native) == AMF_OK && native) {
             auto csp = csp_enc_to_rgy(format);
