@@ -69,6 +69,8 @@ public:
     shared_ptr<RGYOpenCLContext> cl() { return m_cl; }
     bool dx11interlop() const { return m_d3d11interlop; }
     bool dx9interlop() const { return m_d3d9interlop; }
+
+    static const wchar_t *CAP_10BITDEPTH;
 protected:
     virtual RGY_ERR CreateContext();
     void getAllCaps();
@@ -98,8 +100,6 @@ protected:
         va_end(args);
         PrintMes(log_level, buffer);
     }
-
-    static const wchar_t *CAP_10BITDEPTH;
 
     std::shared_ptr<RGYLog> m_log;
 

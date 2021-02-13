@@ -129,7 +129,8 @@ protected:
 
     RGY_ERR checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm);
     RGY_ERR gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm);
-    virtual RGY_CSP GetEncoderCSP(const VCEParam *inputParam);
+    virtual RGY_CSP GetEncoderCSP(const VCEParam *inputParam) const;
+    virtual int GetEncoderBitdepth(const VCEParam *inputParam) const;
     virtual RGY_ERR checkParam(VCEParam *prm);
     virtual RGY_ERR initPerfMonitor(VCEParam *prm);
     virtual RGY_ERR initDecoder(VCEParam *prm);

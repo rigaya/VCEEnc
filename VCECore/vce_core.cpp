@@ -314,13 +314,25 @@ RGY_ERR VCECore::initPerfMonitor(VCEParam *prm) {
     return RGY_ERR_NONE;
 }
 
-RGY_CSP VCECore::GetEncoderCSP(const VCEParam *inputParam) {
-    const bool highBitDepth = inputParam->outputDepth > 8;
+RGY_CSP VCECore::GetEncoderCSP(const VCEParam *inputParam) const {
+    const int bitdepth = GetEncoderBitdepth(inputParam);
+    if (bitdepth <= 0) {
+        return RGY_CSP_NA;
+    }
     const bool yuv444 = false;
-    if (highBitDepth) {
+    if (bitdepth > 8) {
         return (yuv444) ? RGY_CSP_YUV444_16 : RGY_CSP_P010;
     } else {
         return (yuv444) ? RGY_CSP_YUV444 : RGY_CSP_NV12;
+    }
+}
+
+int VCECore::GetEncoderBitdepth(const VCEParam *inputParam) const {
+    switch (inputParam->codec) {
+    case RGY_CODEC_H264: return 8;
+    case RGY_CODEC_HEVC: return inputParam->outputDepth;
+    default:
+        return 0;
     }
 }
 
@@ -344,6 +356,10 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam) {
 
     //入力モジュールが、エンコーダに返すべき色空間をセット
     inputParam->input.csp = GetEncoderCSP(inputParam);
+    if (inputParam->input.csp == RGY_CSP_NA) {
+        PrintMes(RGY_LOG_ERROR, _T("Unknown Error in GetEncoderCSP().\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
 
     const bool vpp_rff = false; // inputParam->vpp.rff;
     auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, inputCspOfRawReader,
@@ -786,6 +802,10 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             m_encFps = param->baseFps;
         }
         const auto encCsp = GetEncoderCSP(inputParam);
+        if (encCsp == RGY_CSP_NA) {
+            PrintMes(RGY_LOG_ERROR, _T("Unknown Error in GetEncoderCSP().\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
         auto filterCsp = encCsp;
         switch (filterCsp) {
         case RGY_CSP_NV12: filterCsp = RGY_CSP_YV12; break;
@@ -1290,7 +1310,13 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     }
 
     m_encCodec = prm->codec;
-    const amf::AMF_SURFACE_FORMAT formatIn = csp_rgy_to_enc(GetEncoderCSP(prm));
+
+    const auto encCsp = GetEncoderCSP(prm);
+    if (encCsp == RGY_CSP_NA) {
+        PrintMes(RGY_LOG_ERROR, _T("Unknown Error in GetEncoderCSP().\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
+    const amf::AMF_SURFACE_FORMAT formatIn = csp_rgy_to_enc(encCsp);
     if (AMF_OK != (res = m_pFactory->CreateComponent(m_dev->context(), codec_rgy_to_enc(prm->codec), &m_pEncoder))) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to AMFCreateComponent: %s.\n"), AMFRetString(res));
         return err_to_rgy(res);
@@ -1715,7 +1741,13 @@ std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3
 }
 
 RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm) {
-    const auto formatIn = csp_rgy_to_enc(GetEncoderCSP(prm));
+    const int encBitdepth = GetEncoderBitdepth(prm);
+    const auto encCsp = GetEncoderCSP(prm);
+    if (encCsp == RGY_CSP_NA) {
+        PrintMes(RGY_LOG_ERROR, _T("Unknown Error in GetEncoderCSP().\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
+    const auto formatIn = csp_rgy_to_enc(encCsp);
     const auto formatOut = formatIn;
     //エンコーダの対応をチェック
     tstring message; //GPUチェックのメッセージ
@@ -1835,6 +1867,22 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
                     (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
                 gpu = gpuList.erase(gpu);
                 continue;
+            }
+        }
+        if (encBitdepth > 8) {
+            if (encBitdepth == 10) {
+                bool Support10bitDepth = false;
+                if (encoderCaps->GetProperty(VCEDevice::CAP_10BITDEPTH, &Support10bitDepth) != AMF_OK) {
+                    Support10bitDepth = false;
+                }
+                if (!Support10bitDepth) {
+                    message += strsprintf(_T("GPU #%d (%s) does not support 10bit depth %s decoding.\n"), (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
+                    gpu = gpuList.erase(gpu);
+                    continue;
+                }
+            } else {
+                PrintMes(RGY_LOG_ERROR, _T("Unsupported output bit depth: %d.\n"), encBitdepth);
+                return RGY_ERR_UNSUPPORTED;
             }
         }
 
