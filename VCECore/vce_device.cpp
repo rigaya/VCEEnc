@@ -349,7 +349,7 @@ tstring VCEDevice::QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
         str += _T("failed to get encoder capability\n");
     }
 
-    bool Support10bitDepth = 0;
+    bool Support10bitDepth = false;
     if (encoderCaps->GetProperty(CAP_10BITDEPTH, &Support10bitDepth) == AMF_OK) {
         str += strsprintf(_T("10bit depth:     %s\n"), (Support10bitDepth) ? _T("yes") : _T("no"));
     }
@@ -417,7 +417,7 @@ tstring VCEDevice::QueryDecCaps(RGY_CODEC codec, amf::AMFCapsPtr& decoderCaps) {
         str += _T("failed to get decoder capability\n");
     }
 
-    bool Support10bitDepth = 0;
+    bool Support10bitDepth = false;
     if (decoderCaps->GetProperty(CAP_10BITDEPTH, &Support10bitDepth) == AMF_OK) {
         str += strsprintf(_T("10bit depth:     %s\n"), (Support10bitDepth) ? _T("yes") : _T("no"));
     }
