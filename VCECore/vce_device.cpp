@@ -28,6 +28,8 @@
 #include "vce_device.h"
 #include "vce_util.h"
 
+const wchar_t *VCEDevice::CAP_10BITDEPTH = L"CAP_10BITDEPTH";
+
 VCEDevice::VCEDevice(shared_ptr<RGYLog> &log, amf::AMFFactory *factory, amf::AMFTrace *trace) :
     m_log(log),
     m_id(-1),
@@ -188,14 +190,40 @@ amf::AMFCapsPtr VCEDevice::getDecCaps(RGY_CODEC codec) {
         if (codec_uvd_name != nullptr) {
             amf::AMFCapsPtr decodeCaps;
             amf::AMFComponentPtr p_decode;
-            auto ret = m_factory->CreateComponent(m_context, codec_uvd_name, &p_decode);
-            if (ret == AMF_OK) {
-                ret = p_decode->GetCaps(&decodeCaps);
+            if (m_factory->CreateComponent(m_context, codec_uvd_name, &p_decode) == AMF_OK
+                && p_decode->GetCaps(&decodeCaps) == AMF_OK) {
+                // 10bit深度のサポートのチェック
+                decodeCaps->SetProperty(CAP_10BITDEPTH, false);
+                const auto codec_uvd_10bit_name = codec_rgy_to_dec_10bit(codec);
+                if (codec_uvd_10bit_name != nullptr) {
+                    amf::AMFCapsPtr decodeCaps10bit;
+                    amf::AMFComponentPtr p_decode10bit;
+                    if (m_factory->CreateComponent(m_context, codec_uvd_name, &p_decode10bit) == AMF_OK
+                        && p_decode10bit->GetCaps(&decodeCaps10bit) == AMF_OK) {
+                        decodeCaps->SetProperty(CAP_10BITDEPTH, true);
+                    }
+                }
                 m_decCaps[codec] = decodeCaps;
             }
         }
     }
     return m_decCaps[codec];
+}
+
+std::vector<RGY_CSP> VCEDevice::getIOCspSupport(amf::AMFIOCapsPtr& ioCaps) const {
+    std::vector<RGY_CSP> csps;
+    const auto numOfFormats = ioCaps->GetNumOfFormats();
+    for (int ifmt = 0; ifmt < numOfFormats; ifmt++) {
+        amf::AMF_SURFACE_FORMAT format;
+        amf_bool native = false;
+        if (ioCaps->GetFormatAt(ifmt, &format, &native) == AMF_OK && native) {
+            auto csp = csp_enc_to_rgy(format);
+            if (csp != RGY_CSP_NA) {
+                csps.push_back(csp);
+            }
+        }
+    }
+    return csps;
 }
 
 tstring VCEDevice::QueryIOCaps(amf::AMFIOCapsPtr& ioCaps) {
@@ -340,6 +368,37 @@ tstring VCEDevice::QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
     return str;
 }
 
+tstring VCEDevice::QueryDecCaps(RGY_CODEC codec, amf::AMFCapsPtr& decoderCaps) {
+    tstring str;
+    if (decoderCaps == NULL) {
+        str += _T("failed to get decoder capability\n");
+    }
+
+    bool Support10bitDepth = 0;
+    if (decoderCaps->GetProperty(CAP_10BITDEPTH, &Support10bitDepth) == AMF_OK) {
+        str += strsprintf(_T("10bit depth:     %s\n"), (Support10bitDepth) ? _T("yes") : _T("no"));
+    }
+
+    amf::AMF_ACCELERATION_TYPE accelType = decoderCaps->GetAccelerationType();
+    str += _T("acceleration:    ") + AccelTypeToString(accelType) + _T("\n");
+
+    amf_uint32 maxNumOfStreams = 0;
+    decoderCaps->GetProperty(AMF_PARAM_CAP_NUM_OF_STREAMS(codec), &maxNumOfStreams);
+    str += strsprintf(_T("max streams:     %d\n"), maxNumOfStreams);
+
+    //amf_uint32 throughputMax = 0;
+    //encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_THROUGHPUT(codec), &throughputMax);
+    //str += strsprintf(_T("max throughput:    %d 16x16MB\n"), throughputMax);
+
+    //amf_uint32 throughputRequested = 0;
+    //encoderCaps->GetProperty(AMF_PARAM_CAP_REQUESTED_THROUGHPUT(codec), &throughputRequested);
+    //str += strsprintf(_T("requested throughput:    %d 16x16 MB\n"), throughputRequested);
+
+    str += QueryOutputCaps(codec, decoderCaps);
+
+    return str;
+}
+
 tstring VCEDevice::getGPUInfo() const {
     if (m_dx11.isValid()) {
         auto str = m_dx11.GetDisplayDeviceName();
@@ -360,32 +419,17 @@ CodecCsp VCEDevice::getHWDecCodecCsp() {
         if (decCaps != nullptr) {
             amf::AMFIOCapsPtr outputCaps;
             if (decCaps->GetOutputCaps(&outputCaps) == AMF_OK) {
-                const auto numOfFormats = outputCaps->GetNumOfFormats();
-                for (int ifmt = 0; ifmt < numOfFormats; ifmt++) {
-                    amf::AMF_SURFACE_FORMAT format;
-                    amf_bool native = false;
-                    if (outputCaps->GetFormatAt(ifmt, &format, &native) == AMF_OK && native) {
-                        auto csp = csp_enc_to_rgy(format);
-                        if (csp != RGY_CSP_NA) {
-                            codecCsp[HW_DECODE_LIST[i].rgy_codec].push_back(csp);
-                        }
+                auto csps = getIOCspSupport(outputCaps);
+                // 10bitサポートのチェック
+                if (std::find(csps.begin(), csps.end(), RGY_CSP_P010) == csps.end()) {
+                    bool Support10bitDepth = 0;
+                    if (decCaps->GetProperty(CAP_10BITDEPTH, &Support10bitDepth) == AMF_OK) {
+                        csps.push_back(RGY_CSP_P010);
                     }
                 }
+                codecCsp[HW_DECODE_LIST[i].rgy_codec] = csps;
             }
-        }
-    }
-    // P010がサポートされていてもP010が返ってこなかったりするのでとりあえず追加しておく
-    // 実際には、サポートされていない場合もあるが、正しく確認する方法が(実際に動かしてみる以外)ない
-    if (codecCsp.count(RGY_CODEC_HEVC) > 0) {
-        auto& hevcCsp = codecCsp[RGY_CODEC_HEVC];
-        if (std::find(hevcCsp.begin(), hevcCsp.end(), RGY_CSP_P010) == hevcCsp.end()) {
-            hevcCsp.push_back(RGY_CSP_P010);
-        }
-    }
-    if (codecCsp.count(RGY_CODEC_VP9) > 0) {
-        auto& vp9Csp = codecCsp[RGY_CODEC_VP9];
-        if (std::find(vp9Csp.begin(), vp9Csp.end(), RGY_CSP_P010) == vp9Csp.end()) {
-            vp9Csp.push_back(RGY_CSP_P010);
+
         }
     }
     return codecCsp;

@@ -598,10 +598,8 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
         return RGY_ERR_UNSUPPORTED;
     }
     if (prm->input.csp == RGY_CSP_P010) {
-        switch (inputCodec) {
-        case RGY_CODEC_HEVC: codec_uvd_name = AMFVideoDecoderHW_H265_MAIN10; break;
-        case RGY_CODEC_VP9:  codec_uvd_name = AMFVideoDecoderHW_VP9_10BIT; break;
-        default:
+        codec_uvd_name = codec_rgy_to_dec_10bit(inputCodec);
+        if (codec_uvd_name == nullptr) {
             PrintMes(RGY_LOG_ERROR, _T("\"%s\" not supported for high bit depth decoding.\n"), CodecToStr(inputCodec).c_str());
             return RGY_ERR_UNSUPPORTED;
         }
@@ -1370,6 +1368,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             }
         } else if (prm->codec == RGY_CODEC_HEVC) {
             //いまはなにもなし
+        } else {
+            PrintMes(RGY_LOG_WARN, _T("Unsupported codec.\n"));
+            return RGY_ERR_UNSUPPORTED;
         }
 
         if (prm->pa.enable) {
@@ -3151,7 +3152,7 @@ tstring VCEFeatures::checkDecFeatures(RGY_CODEC codec) {
     tstring str;
     amf::AMFCapsPtr decCaps = m_core->dev()->getDecCaps(codec);
     if (decCaps != nullptr) {
-        str = m_core->dev()->QueryOutputCaps(codec, decCaps);
+        str = m_core->dev()->QueryDecCaps(codec, decCaps);
     }
     return str;
 }

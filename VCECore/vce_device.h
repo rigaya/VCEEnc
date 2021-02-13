@@ -53,10 +53,12 @@ public:
     amf::AMFCapsPtr getEncCaps(RGY_CODEC codec);
     amf::AMFCapsPtr getDecCaps(RGY_CODEC codec);
     tstring QueryIOCaps(amf::AMFIOCapsPtr& ioCaps);
+    std::vector<RGY_CSP> getIOCspSupport(amf::AMFIOCapsPtr& ioCaps) const;
     tstring QueryInputCaps(RGY_CODEC codec, amf::AMFCapsPtr& caps);
     tstring QueryOutputCaps(RGY_CODEC codec, amf::AMFCapsPtr& caps);
     tstring QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& caps);
     tstring QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps);
+    tstring QueryDecCaps(RGY_CODEC codec, amf::AMFCapsPtr& decoderCaps);
     tstring getGPUInfo() const;
     CodecCsp getHWDecCodecCsp();
 
@@ -96,6 +98,8 @@ protected:
         va_end(args);
         PrintMes(log_level, buffer);
     }
+
+    static const wchar_t *CAP_10BITDEPTH;
 
     std::shared_ptr<RGYLog> m_log;
 
