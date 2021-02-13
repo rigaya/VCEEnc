@@ -2972,7 +2972,11 @@ tstring VCECore::GetEncoderParam() {
     nMotionEst |= GetPropertyInt(AMF_PARAM_MOTION_QUARTERPIXEL(m_encCodec)) ? VCE_MOTION_EST_QUATER | VCE_MOTION_EST_HALF : 0;
 
     mes += strsprintf(_T("%s\n"), get_encoder_version());
-    mes += strsprintf(_T("OS Version     %s %s (%d)\n"), osversionstr.c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"), osversioninfo.dwBuildNumber);
+    mes += strsprintf(_T("OS Version     %s %s (%d)"), osversionstr.c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"), osversioninfo.dwBuildNumber);
+#if defined(_WIN32) || defined(_WIN64)
+    mes += _T(" [") + getACPCodepageStr() + _T("]");
+#endif //#if defined(_WIN32) || defined(_WIN64)
+    mes += _T("\n");
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
     mes += strsprintf(_T("GPU:           %s, AMF Runtime %d.%d.%d / SDK %d.%d.%d\n"), gpu_info.c_str(),
         (int)AMF_GET_MAJOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_MINOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_SUBMINOR_VERSION(m_AMFRuntimeVersion),
