@@ -969,6 +969,15 @@ RGY_ERR AMFParams::GetParam(const std::wstring &name, amf::AMFVariantStruct *val
     return RGY_ERR_NONE;
 }
 
+RGY_ERR AMFParams::SetParamTypeCodec(const RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_H264: SetParamTypeAVC(); break;
+    case RGY_CODEC_HEVC: SetParamTypeHEVC(); break;
+    default: return RGY_ERR_UNSUPPORTED;
+    }
+    return RGY_ERR_NONE;
+}
+
 RGY_ERR AMFParams::SetParamTypeAVC() {
     SetParamType(SETFRAMEPARAMFREQ_PARAM_NAME, AMF_PARAM_COMMON, L"Frequency of applying frame parameters (in frames, default = 0 )");
     SetParamType(SETDYNAMICPARAMFREQ_PARAM_NAME, AMF_PARAM_COMMON, L"Frequency of applying dynamic parameters. (in frames, default = 0 )");
@@ -1083,6 +1092,7 @@ RGY_ERR AMFParams::SetParamTypeHEVC() {
     SetParamType(SETFRAMEPARAMFREQ_PARAM_NAME, AMF_PARAM_COMMON, L"Frequency of applying frame parameters (in frames, default = 0 )");
     SetParamType(SETDYNAMICPARAMFREQ_PARAM_NAME, AMF_PARAM_COMMON, L"Frequency of applying dynamic parameters. (in frames, default = 0 )");
 
+    SetParamType(AMF_VIDEO_ENCODER_HEVC_ASPECT_RATIO, AMF_PARAM_STATIC, L"");
 
     // ------------- Encoder params usage---------------
     SetParamType(AMF_VIDEO_ENCODER_HEVC_USAGE, AMF_PARAM_ENCODER_USAGE, L"Encoder usage type. Set many default parameters. (TRANSCONDING, ULTRALOWLATENCY, LOWLATENCY, WEBCAM, default = N/A)");

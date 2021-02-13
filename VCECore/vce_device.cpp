@@ -171,14 +171,49 @@ amf::AMFCapsPtr VCEDevice::getEncCaps(RGY_CODEC codec) {
     if (m_encCaps.count(codec) == 0) {
         m_encCaps[codec] = amf::AMFCapsPtr();
         amf::AMFCapsPtr encoderCaps;
-        amf::AMFComponentPtr p_encoder;
-        auto ret = m_factory->CreateComponent(m_context, codec_rgy_to_enc(codec), &p_encoder);
-        if (ret == AMF_OK) {
-            //HEVCでのAMFComponent::GetCaps()は、AMFComponent::Init()を呼んでおかないと成功しない
-            p_encoder->Init(amf::AMF_SURFACE_NV12, 1280, 720);
-            ret = p_encoder->GetCaps(&encoderCaps);
-            m_encCaps[codec] = encoderCaps;
+        auto ret = AMF_OK;
+        {   amf::AMFComponentPtr p_encoder;
+            ret = m_factory->CreateComponent(m_context, codec_rgy_to_enc(codec), &p_encoder);
+            if (ret == AMF_OK) {
+                //HEVCでのAMFComponent::GetCaps()は、AMFComponent::Init()を呼んでおかないと成功しない
+                p_encoder->Init(amf::AMF_SURFACE_NV12, 1280, 720);
+                ret = p_encoder->GetCaps(&encoderCaps);
+                encoderCaps->SetProperty(CAP_10BITDEPTH, false);
+                p_encoder->Terminate();
+            }
         }
+        //10bit深度のチェック
+        if (ret == AMF_OK
+            && codec == RGY_CODEC_HEVC) {
+            amf::AMFComponentPtr p_encoder;
+            if (m_factory->CreateComponent(m_context, codec_rgy_to_enc(codec), &p_encoder) == AMF_OK) {
+                const int dummy_width = 1920;
+                const int dummy_height = 1080;
+
+                AMFParams params;
+                params.SetParamTypeCodec(codec);
+                params.SetParam(VCE_PARAM_KEY_INPUT_WIDTH, dummy_width);
+                params.SetParam(VCE_PARAM_KEY_INPUT_HEIGHT, dummy_height);
+                params.SetParam(VCE_PARAM_KEY_OUTPUT_WIDTH, dummy_width);
+                params.SetParam(VCE_PARAM_KEY_OUTPUT_HEIGHT, dummy_height);
+                params.SetParam(AMF_PARAM_FRAMESIZE(codec), AMFConstructSize(dummy_width, dummy_height));
+                params.SetParam(AMF_PARAM_FRAMERATE(codec), AMFConstructRate(30, 1));
+
+                params.SetParam(AMF_VIDEO_ENCODER_HEVC_COLOR_BIT_DEPTH, (amf_int64)10);
+
+                // Usage is preset that will set many parameters
+                params.Apply(p_encoder, AMF_PARAM_ENCODER_USAGE);
+                // override some usage parameters
+                params.Apply(p_encoder, AMF_PARAM_STATIC);
+                //HEVCでのAMFComponent::GetCaps()は、AMFComponent::Init()を呼んでおかないと成功しない
+                if (p_encoder->Init(amf::AMF_SURFACE_P010, dummy_width, dummy_height) == AMF_OK
+                    && p_encoder->GetCaps(&encoderCaps) == AMF_OK) {
+                    encoderCaps->SetProperty(CAP_10BITDEPTH, true);
+                    p_encoder->Terminate();
+                }
+            }
+        }
+        m_encCaps[codec] = encoderCaps;
     }
     return m_encCaps[codec];
 }
@@ -311,6 +346,12 @@ tstring VCEDevice::QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
     if (encoderCaps == NULL) {
         str += _T("failed to get encoder capability\n");
     }
+
+    bool Support10bitDepth = 0;
+    if (encoderCaps->GetProperty(CAP_10BITDEPTH, &Support10bitDepth) == AMF_OK) {
+        str += strsprintf(_T("10bit depth:     %s\n"), (Support10bitDepth) ? _T("yes") : _T("no"));
+    }
+
     amf::AMF_ACCELERATION_TYPE accelType = encoderCaps->GetAccelerationType();
     str += _T("acceleration:    ") + AccelTypeToString(accelType) + _T("\n");
 

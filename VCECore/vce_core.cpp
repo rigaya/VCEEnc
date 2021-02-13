@@ -1467,16 +1467,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParamType(VCE_PARAM_KEY_ADAPTERID,     AMF_PARAM_COMMON, L"Specifies adapter ID (integer, default = 0)");
     m_params.SetParamType(VCE_PARAM_KEY_CAPABILITY,    AMF_PARAM_COMMON, L"Enable/Disable to display the device capabilities (true, false default =  false)");
 
-    switch (prm->codec) {
-    case RGY_CODEC_H264:
-        m_params.SetParamTypeAVC();
-        break;
-    case RGY_CODEC_HEVC:
-        m_params.SetParamTypeHEVC();
-        //なぜかパラメータセットに登録されていないのでここで追加。
-        m_params.SetParamType(AMF_PARAM_ASPECT_RATIO(prm->codec), AMF_PARAM_STATIC, L"");
-        break;
-    default:
+    if (m_params.SetParamTypeCodec(prm->codec) != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("Unknown Codec.\n"));
         return RGY_ERR_UNSUPPORTED;
     }

@@ -1207,6 +1207,7 @@ public:
     virtual ~AMFParams() {};
 
     RGY_ERR SetParamType(const std::wstring &name, AMFParamType type, const std::wstring &desc);
+    RGY_ERR SetParamTypeCodec(const RGY_CODEC codec);
     RGY_ERR SetParamTypeAVC();
     RGY_ERR SetParamTypeHEVC();
 
