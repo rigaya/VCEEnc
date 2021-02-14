@@ -221,7 +221,7 @@ amf::AMFCapsPtr VCEDevice::getEncCaps(RGY_CODEC codec) {
 amf::AMFCapsPtr VCEDevice::getDecCaps(RGY_CODEC codec) {
     if (m_decCaps.count(codec) == 0) {
         const auto codec_uvd_name = codec_rgy_to_dec(codec);
-        m_encCaps[codec] = amf::AMFCapsPtr();
+        m_decCaps[codec] = amf::AMFCapsPtr();
         if (codec_uvd_name != nullptr) {
             amf::AMFCapsPtr decodeCaps;
             amf::AMFComponentPtr p_decode;
