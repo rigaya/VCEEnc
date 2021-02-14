@@ -468,7 +468,11 @@ CodecCsp VCEDevice::getHWDecCodecCsp() {
                     bool Support10bitDepth = 0;
                     if (decCaps->GetProperty(CAP_10BITDEPTH, &Support10bitDepth) == AMF_OK) {
                         csps.push_back(RGY_CSP_P010);
+                        csps.push_back(RGY_CSP_YUV422_10);
                     }
+                }
+                if (std::find(csps.begin(), csps.end(), RGY_CSP_NV12) != csps.end()) {
+                    csps.push_back(RGY_CSP_YV12);
                 }
                 codecCsp[HW_DECODE_LIST[i].rgy_codec] = csps;
             }
