@@ -465,10 +465,10 @@ CodecCsp VCEDevice::getHWDecCodecCsp() {
                 auto csps = getIOCspSupport(outputCaps);
                 // 10bitサポートのチェック
                 if (std::find(csps.begin(), csps.end(), RGY_CSP_P010) == csps.end()) {
-                    bool Support10bitDepth = 0;
-                    if (decCaps->GetProperty(CAP_10BITDEPTH, &Support10bitDepth) == AMF_OK) {
+                    bool Support10bitDepth = false;
+                    if (decCaps->GetProperty(CAP_10BITDEPTH, &Support10bitDepth) == AMF_OK && Support10bitDepth) {
                         csps.push_back(RGY_CSP_P010);
-                        csps.push_back(RGY_CSP_YUV422_10);
+                        csps.push_back(RGY_CSP_YV12_10);
                     }
                 }
                 if (std::find(csps.begin(), csps.end(), RGY_CSP_NV12) != csps.end()) {
