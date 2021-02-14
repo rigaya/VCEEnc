@@ -336,10 +336,12 @@ int VCECore::GetEncoderBitdepth(const VCEParam *inputParam) const {
     }
 }
 
-RGY_ERR VCECore::initInput(VCEParam *inputParam) {
+RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCEDevice>> &gpuList) {
 #if ENABLE_RAW_READER
     DeviceCodecCsp HWDecCodecCsp;
-    HWDecCodecCsp.push_back(std::make_pair(0, getHWDecCodecCsp(inputParam->ctrl.skipHWDecodeCheck)));
+    for (const auto &gpu : gpuList) {
+        HWDecCodecCsp.push_back(std::make_pair(gpu->id(), gpu->getHWDecCodecCsp()));
+    }
     m_pStatus.reset(new EncodeStatus());
 
     int subburnTrackId = 0;
@@ -2141,7 +2143,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
 
     m_nAVSyncMode = prm->common.AVSyncMode;
 
-    if (RGY_ERR_NONE != (ret = initInput(prm))) {
+    if (RGY_ERR_NONE != (ret = initInput(prm, devList))) {
         return ret;
     }
 

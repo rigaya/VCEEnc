@@ -108,7 +108,7 @@ public:
     virtual RGY_ERR initAMFFactory();
     virtual RGY_ERR initTracer(int log_level);
     virtual RGY_ERR initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId);
-    virtual RGY_ERR initInput(VCEParam *pParams);
+    virtual RGY_ERR initInput(VCEParam *pParams, std::vector<std::unique_ptr<VCEDevice>> &gpuList);
     virtual RGY_ERR initOutput(VCEParam *prm);
     virtual RGY_ERR run();
     void Terminate();

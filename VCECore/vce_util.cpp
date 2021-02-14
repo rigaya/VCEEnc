@@ -292,25 +292,6 @@ VideoInfo videooutputinfo(
     return info;
 }
 
-//TODO: ちゃんと動的にチェックする
-CodecCsp getHWDecCodecCsp(const bool skipHWDecodeCheck) {
-#if ENABLE_AVSW_READER
-    std::vector<RGY_CSP> supportedCsp = { RGY_CSP_NV12, RGY_CSP_YV12 };
-    CodecCsp codecCsp;
-    for (int i = 0; i < _countof(HW_DECODE_LIST); i++) {
-        codecCsp[HW_DECODE_LIST[i].rgy_codec] = supportedCsp;
-    }
-    codecCsp[RGY_CODEC_HEVC].push_back(RGY_CSP_YV12_10);
-    codecCsp[RGY_CODEC_HEVC].push_back(RGY_CSP_YV12_12);
-    codecCsp[RGY_CODEC_VP9].push_back(RGY_CSP_YV12_10);
-    codecCsp[RGY_CODEC_VP9].push_back(RGY_CSP_YV12_12);
-    return codecCsp;
-#else
-    return CodecCsp();
-#endif
-}
-
-
 #if !ENABLE_AVSW_READER
 #define TTMATH_NOASM
 #pragma warning(push)
