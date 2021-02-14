@@ -135,11 +135,11 @@ reader used will be selected depending on the extension of input file.
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|
 | raw    |   ◎   |      |   ◎   |   ◎   |       |       |
 | y4m    |   ◎   |      |   ◎   |   ◎   |       |       |
-| avi    |   ○   |  ○  |        |        |   ○  |   ○  |
-| avs    |   ◎   |  ○  |   ◎   |   ◎   |   ○  |   ○  |
+| avi    |   ○   |  ○  |        |        |       |       |
+| avs    |   ◎   |  ○  |   ◎   |   ◎   |       |       |
 | vpy    |   ◎   |      |   ◎   |   ◎   |       |       |
 | avhw   |   □   |      |        |        |       |       |
-| avsw   |   ◎   |      |   ◎   |   ◎   |   ○  |   ○  |
+| avsw   |   ◎   |      |   ◎   |   ◎   |       |       |
 
 ◎ ... 8bit / 9bit / 10bit / 12bit / 14bit / 16bit supported  
 ◇ ... 8bit / 10bit / 12bit supported  
