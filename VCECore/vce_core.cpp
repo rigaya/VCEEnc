@@ -2914,7 +2914,7 @@ RGY_ERR VCECore::run() {
     if (m_ssim) {
         m_ssim->showResult();
     }
-    return RGY_ERR_NONE;
+    return (m_state == RGY_STATE_ERROR) ? res : RGY_ERR_NONE;
 }
 
 void VCECore::PrintEncoderParam() {
