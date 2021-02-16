@@ -67,6 +67,29 @@ VCEEncを使用したことによる、いかなる損害・トラブルにつ�
 - HWリサイズ
 - ソースファイルからの音声抽出や音声エンコード
 - mp4,mkv,tsなどの多彩なコンテナに映像・音声をmuxしながら出力
+- エンコード結果のSSIM/PSNRを計算
+- GPUを使用した高速フィルタリング
+  - OpenCLによるGPUフィルタリング
+    - インタレ解除  
+      - afs (自動フィールドシフト)
+      - nnedi
+    - 字幕焼きこみ
+    - 色空間変換
+      - hdr2sdr
+    - リサイズ  
+      - spline16, spline36, spline64
+      - lanczos2, lanczos3, lanczos4
+    - 回転 / 反転
+    - パディング(黒帯)の追加
+    - バンディング低減
+    - ノイズ除去
+      - knn (K-nearest neighbor)
+      - pmd (正則化pmd法)
+    - 輪郭・ディテール強調
+      - unsharp
+      - edgelevel (エッジレベル調整)
+      - warpsharp
+
 
 
 ## ソースコードについて

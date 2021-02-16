@@ -58,6 +58,28 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 - Supports various formats such as avs, vpy, y4m, and raw
 - Supports demux/muxing using libavformat
 - Supports decode using libavcodec
+- Calculation of ssim/psnr of the encode
+- High performance filtering (VPP, Video Pre-Processing)
+  - GPU filtering by OpenCL
+    - deinterlacer
+      - afs (Automatic field shift)
+      - nnedi
+    - colorspace conversion
+      - hdr2sdr
+    - subburn
+    - resize
+      - spline16, spline36, spline64
+      - lanczos2, lanczos3, lanczos4
+    - transpose / rotate / flip
+    - padding
+    - deband
+    - noise reduction
+      - knn (K-nearest neighbor)
+      - pmd (modified pmd method)
+    - edge / detail enhancement
+      - unsharp
+      - edgelevel (edge ​​level adjustment)
+      - warpsharp
 
 #### VCEEnc.auo (Aviutl plugin)
 - Audio encoding
