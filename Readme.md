@@ -64,7 +64,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 - Mux audio and chapter
 - afs (Automatic field shift) support
 
-### NVEnc source code
+### VCEEnc source code
 - MIT license.
 - This program is based on samples of [AMD Media Framework](https://github.com/GPUOpen-LibrariesAndSDKs/AMF), and contains source code provided by
   AMD Media Framework.
