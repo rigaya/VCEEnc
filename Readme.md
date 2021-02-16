@@ -99,6 +99,32 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
   [ttmath](http://www.ttmath.org/) &
   [Caption2Ass](https://github.com/maki-rxrz/Caption2Ass_PCR).
   For these licenses, please see the header part of the corresponding source and VCEEnc_license.txt.
+  
+#### Auto GPU selection in multi GPU envinronment
+VCEEncC will automatically select a GPU depending on the options used,
+when there are multiple GPUs available which support VCE/VCN.
+--device option can be used to specify on which GPU to run manually. 
+
+1. Select GPU which supports...  
+  Items below will be checked whether the GPU supports it or not  
+  - Codec, Profile, Level
+  - Additionally, below items will be checked if specified
+    - 10bit depth encoding
+    - HW decode
+  
+2. Prefer GPU which supports...  
+  - B frame support
+  
+3. If there are multiple GPUs which suports all the items checked in 1. and 2., GPU below will be prefered.  
+  - GPU which has low Video Engine(VE) utilization
+  - GPU which has low GPU core utilization
+  
+  The purpose of selecting GPU with lower VE/GPU ulitization is to assign tasks to mulitple GPUs
+  and improve the throughput of the tasks.  
+  
+  Please note that VE and GPU ulitization are check at the initialization pahse of the app,
+  and there are delays in values taken. Therefore, it is likely that the multiple tasks started at the same time
+  to run on the same GPU, and divided into multiple GPUs, even if the options are supported in every GPUs.
 
 ### About source code
 Windows ... VC build
