@@ -81,26 +81,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
       - edgelevel (edge ​​level adjustment)
       - warpsharp
 
-#### VCEEnc.auo (Aviutl plugin)
+### VCEEnc.auo (Aviutl plugin)
 - Audio encoding
 - Mux audio and chapter
 - afs (Automatic field shift) support
-
-### VCEEnc source code
-- MIT license.
-- This program is based on samples of [AMD Media Framework](https://github.com/GPUOpen-LibrariesAndSDKs/AMF), and contains source code provided by
-  AMD Media Framework.
-  For these licenses, please see the header part of the corresponding source and VCEEnc_license.txt.
-- This software depends on
-  [ffmpeg](https://ffmpeg.org/),
-  [tinyxml2](http://www.grinninglizard.com/tinyxml2/),
-  [dtl](https://github.com/cubicdaiya/dtl),
-  [clRNG](https://github.com/clMathLibraries/clRNG),
-  [ttmath](http://www.ttmath.org/) &
-  [Caption2Ass](https://github.com/maki-rxrz/Caption2Ass_PCR).
-  For these licenses, please see the header part of the corresponding source and VCEEnc_license.txt.
   
-#### Auto GPU selection in multi GPU envinronment
+## Auto GPU selection in multi GPU envinronment
 VCEEncC will automatically select a GPU depending on the options used,
 when there are multiple GPUs available which support VCE/VCN.
 --device option can be used to specify on which GPU to run manually. 
@@ -125,6 +111,20 @@ when there are multiple GPUs available which support VCE/VCN.
   Please note that VE and GPU ulitization are check at the initialization pahse of the app,
   and there are delays in values taken. Therefore, it is likely that the multiple tasks started at the same time
   to run on the same GPU, and divided into multiple GPUs, even if the options are supported in every GPUs.
+
+## VCEEnc source code
+- MIT license.
+- This program is based on samples of [AMD Media Framework](https://github.com/GPUOpen-LibrariesAndSDKs/AMF), and contains source code provided by
+  AMD Media Framework.
+  For these licenses, please see the header part of the corresponding source and VCEEnc_license.txt.
+- This software depends on
+  [ffmpeg](https://ffmpeg.org/),
+  [tinyxml2](http://www.grinninglizard.com/tinyxml2/),
+  [dtl](https://github.com/cubicdaiya/dtl),
+  [clRNG](https://github.com/clMathLibraries/clRNG),
+  [ttmath](http://www.ttmath.org/) &
+  [Caption2Ass](https://github.com/maki-rxrz/Caption2Ass_PCR).
+  For these licenses, please see the header part of the corresponding source and VCEEnc_license.txt.
 
 ### About source code
 Windows ... VC build
