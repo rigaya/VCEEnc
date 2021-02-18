@@ -812,6 +812,7 @@ Read subtitle from the specified file and mux into the output file.
 ```
 Example1: --sub-source "<sub_file>"
 Example2: --sub-source "<sub_file>":disposition=default;metadata=language=jpn
+```
 
 ### --sub-copy [{&lt;int&gt;or&lt;string&gt;};[,{&lt;int&gt;or&lt;string&gt;}]...]
 Copy subtitle tracks from input file. Available only when avhw / avsw reader is used.
