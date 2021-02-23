@@ -1,0 +1,111 @@
+device #0: Radeon RX 460
+H.264/AVC encode features
+10bit depth:     no
+acceleration:    Hardware-accelerated
+max profile:     High
+max level:       5.2
+max bitrate:     100000 kbps
+ref frames:      1-16
+Bframe support:  no
+HW instances:    1
+max streams:     16
+timeout support: yes
+
+H.264/AVC input:
+Width:       64 - 4096
+Height:      64 - 4096
+alignment:   32
+Interlace:   no
+pix format:  NV12(native), YUV420P, YV12, BGRA, RGBA, ARGB
+memory type: DX11(native), OPENCL, OPENGL, HOST
+
+H.264/AVC output:
+Width:       64 - 4096
+Height:      64 - 4096
+alignment:   32
+Interlace:   no
+pix format:  NV12(native)
+memory type: DX11(native), OPENCL, OPENGL, HOST
+
+H.265/HEVC encode features
+10bit depth:     no
+acceleration:    Hardware-accelerated
+max profile:     main
+max level:       6.2
+max bitrate:     2147483 kbps
+ref frames:      1-16
+max streams:     16
+timeout support: yes
+
+H.265/HEVC input:
+Width:       192 - 4096
+Height:      128 - 4096
+alignment:   32
+Interlace:   no
+pix format:  NV12(native), P010(native), YUV420P, YV12, BGRA, RGBA, ARGB
+memory type: DX11(native), OPENCL, OPENGL, HOST
+
+H.265/HEVC output:
+Width:       192 - 4096
+Height:      128 - 4096
+alignment:   32
+Interlace:   no
+pix format:  NV12(native), P010(native)
+memory type: DX11(native), OPENCL, OPENGL, HOST
+
+
+
+device #0: Radeon RX 460
+H.264/AVC decode features
+10bit depth:     no
+acceleration:    Hardware-accelerated
+max streams:     16
+
+H.264/AVC output:
+Width:       32 - 4096
+Height:      32 - 4080
+alignment:   32
+Interlace:   yes
+pix format:  NV12(native), BGRA, RGBA
+memory type: DX11(native)
+
+H.265/HEVC decode features
+10bit depth:     yes
+acceleration:    Hardware-accelerated
+max streams:     0
+
+H.265/HEVC output:
+Width:       32 - 4096
+Height:      32 - 4096
+alignment:   32
+Interlace:   yes
+pix format:  NV12(native), BGRA, RGBA
+memory type: DX11(native)
+
+MPEG2 decode features
+10bit depth:     no
+acceleration:    Hardware-accelerated
+max streams:     16
+
+MPEG2 output:
+Width:       32 - 1920
+Height:      32 - 1080
+alignment:   32
+Interlace:   yes
+pix format:  NV12(native), BGRA, RGBA
+memory type: DX11(native)
+
+VC-1 decode features
+10bit depth:     no
+acceleration:    Hardware-accelerated
+max streams:     16
+
+VC-1 output:
+Width:       32 - 1920
+Height:      32 - 1080
+alignment:   32
+Interlace:   yes
+pix format:  NV12(native), BGRA, RGBA
+memory type: DX11(native)
+
+
