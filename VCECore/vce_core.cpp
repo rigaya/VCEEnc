@@ -1084,7 +1084,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
             unique_ptr<RGYFilter> filterResize(new RGYFilterResize(m_dev->cl()));
             shared_ptr<RGYFilterParamResize> param(new RGYFilterParamResize());
-            param->interp = (inputParam->vpp.resize != RGY_VPP_RESIZE_AUTO) ? inputParam->vpp.resize : RGY_VPP_RESIZE_SPLINE36;
+            param->interp = (inputParam->vpp.resize_algo != RGY_VPP_RESIZE_AUTO) ? inputParam->vpp.resize_algo : RGY_VPP_RESIZE_SPLINE36;
             param->frameIn = inputFrame;
             param->frameOut = inputFrame;
             param->frameOut.width = resizeWidth;
