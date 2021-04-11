@@ -417,7 +417,6 @@ const CX_DESC list_colorprim[] = {
 
 const CX_DESC list_videoformat[] = {
     { _T("undef"),     5  },
-    { _T("auto"),     COLOR_VALUE_AUTO  },
     { _T("ntsc"),      2  },
     { _T("component"), 0  },
     { _T("pal"),       1  },

@@ -381,9 +381,8 @@ Encode as full range YUV.
 ```
 
 ### --videoformat &lt;string&gt;
-"auto" will copy characteristic from input file (available when using [avhw](#--avhw)/[avsw](#--avsw) reader).
 ```
-  undef, auto, ntsc, component, pal, secam, mac
+  undef, ntsc, component, pal, secam, mac
 ```
 ### --colormatrix &lt;string&gt;
 "auto" will copy characteristic from input file (available when using [avhw](#--avhw)/[avsw](#--avsw) reader).
