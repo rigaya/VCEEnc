@@ -1301,8 +1301,8 @@ std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const FrameInfo&
     FrameInfo clframe = frame;
     clframe.mem_type = RGY_MEM_TYPE_GPU;
     for (int i = 0; i < _countof(clframe.ptr); i++) {
-        clframe.ptr[0] = nullptr;
-        clframe.pitch[0] = 0;
+        clframe.ptr[i] = nullptr;
+        clframe.pitch[i] = 0;
     }
     for (int i = 0; i < RGY_CSP_PLANES[frame.csp]; i++) {
         const auto plane = getPlane(&clframe, (RGY_PLANE)i);
