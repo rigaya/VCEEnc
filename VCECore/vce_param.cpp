@@ -164,6 +164,9 @@ RGY_ERR AMFParams::SetParamTypeAVC() {
     // ------------- Encoder params usage---------------
     SetParamType(AMF_VIDEO_ENCODER_USAGE, AMF_PARAM_ENCODER_USAGE, L"Encoder usage type. Set many default parameters. (TRANSCONDING, ULTRALOWLATENCY, LOWLATENCY, WEBCAM, default = N/A)");
     // ------------- Encoder params static---------------
+    SetParamType(AMF_VIDEO_ENCODER_FRAMESIZE, AMF_PARAM_STATIC, L"AMFSize; default = 0,0; Frame size");
+    SetParamType(AMF_VIDEO_ENCODER_FRAMERATE, AMF_PARAM_STATIC, L"Frame Rate (num,den), default = depends on USAGE)");
+
     SetParamType(AMF_VIDEO_ENCODER_PROFILE, AMF_PARAM_STATIC, L"H264 profile (Main, Baseline,High, default = Main");
     SetParamType(AMF_VIDEO_ENCODER_PROFILE_LEVEL, AMF_PARAM_STATIC, L"H264 profile level (float or integer, default = 4.2 (or 42)");
     SetParamType(AMF_VIDEO_ENCODER_MAX_LTR_FRAMES, AMF_PARAM_STATIC, L"Max Of LTR frames (integer, default = 0)");
@@ -192,10 +195,6 @@ RGY_ERR AMFParams::SetParamTypeAVC() {
     SetParamType(AMF_VIDEO_ENCODER_OUTPUT_HDR_METADATA, AMF_PARAM_STATIC, L"AMFBuffer containing AMFHDRMetadata; default NULL");
 
     // ------------- Encoder params dynamic ---------------
-    SetParamType(AMF_VIDEO_ENCODER_FRAMERATE, AMF_PARAM_DYNAMIC, L"Frame Rate (num,den), default = depends on USAGE)");
-    //SetParamType(AMF_VIDEO_ENCODER_WIDTH, AMF_PARAM_DYNAMIC, L"Frame width (integer, default = 0)");
-    //SetParamType(AMF_VIDEO_ENCODER_HEIGHT, AMF_PARAM_DYNAMIC, L"Frame height (integer, default = 0)");
-
     SetParamType(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP, AMF_PARAM_DYNAMIC, L"B-picture Delta  (integer, default = depends on USAGE)");
     SetParamType(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP, AMF_PARAM_DYNAMIC, L"Reference B-picture Delta  (integer, default = depends on USAGE)");
 
