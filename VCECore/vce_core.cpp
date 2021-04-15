@@ -1676,14 +1676,14 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.Apply(m_pEncoder, AMF_PARAM_STATIC, m_pLog.get());
     PrintMes(RGY_LOG_DEBUG, _T("pushed static params.\n"));
 
+    m_params.Apply(m_pEncoder, AMF_PARAM_DYNAMIC, m_pLog.get());
+    PrintMes(RGY_LOG_DEBUG, _T("pushed dynamic params.\n"));
+
     if (AMF_OK != (res = m_pEncoder->Init(formatIn, m_encWidth, m_encHeight))) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to initalize encoder: %s.\n"), AMFRetString(res));
         return err_to_rgy(res);
     }
     PrintMes(RGY_LOG_DEBUG, _T("initalized encoder.\n"));
-
-    m_params.Apply(m_pEncoder, AMF_PARAM_DYNAMIC, m_pLog.get());
-    PrintMes(RGY_LOG_DEBUG, _T("pushed dynamic params.\n"));
     return RGY_ERR_NONE;
 }
 
