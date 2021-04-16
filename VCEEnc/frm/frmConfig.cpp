@@ -1032,7 +1032,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
 
     SetCXIndex(fcgCXMotionEst,          get_cx_index(list_mv_presicion, vce.nMotionEst));
 
-    SetCXIndex(fcgCXVppResizeAlg, get_cx_index(list_vpp_resize, vce.vpp.resize));
+    SetCXIndex(fcgCXVppResizeAlg, get_cx_index(list_vpp_resize, vce.vpp.resize_algo));
 
 
         int denoise_idx = 0;
@@ -1219,7 +1219,7 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
 
     vce.bTimerPeriodTuning                      = fcgCBTimerPeriodTuning->Checked;
 
-    vce.vpp.resize                 = (RGY_VPP_RESIZE_ALGO)list_vpp_resize[fcgCXVppResizeAlg->SelectedIndex].value;
+    vce.vpp.resize_algo                 = (RGY_VPP_RESIZE_ALGO)list_vpp_resize[fcgCXVppResizeAlg->SelectedIndex].value;
 
     vce.vpp.knn.enable = fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("knn"));
     vce.vpp.knn.radius = (int)fcgNUVppDenoiseKnnRadius->Value;
