@@ -129,13 +129,13 @@
     <ClCompile Include="rgy_opencl.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter.cpp">
+    <ClCompile Include="rgy_filter.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_resize.cpp">
+    <ClCompile Include="rgy_filter_resize.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_crop.cpp">
+    <ClCompile Include="rgy_filter_crop.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="rgy_device.cpp">
@@ -162,25 +162,25 @@
     <ClCompile Include="rgy_input_sm.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_afs.cpp">
+    <ClCompile Include="rgy_filter_afs.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_afs_analyze.cpp">
+    <ClCompile Include="rgy_filter_afs_analyze.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_afs_filter.cpp">
+    <ClCompile Include="rgy_filter_afs_filter.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_afs_merge.cpp">
+    <ClCompile Include="rgy_filter_afs_merge.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_afs_synthesize.cpp">
+    <ClCompile Include="rgy_filter_afs_synthesize.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="rgy_perf_counter.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_ssim.cpp">
+    <ClCompile Include="rgy_filter_ssim.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="rgy_frame.cpp">
@@ -192,37 +192,37 @@
     <ClCompile Include="vce_device.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_denoise_knn.cpp">
+    <ClCompile Include="rgy_filter_denoise_knn.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_denoise_pmd.cpp">
+    <ClCompile Include="rgy_filter_denoise_pmd.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_edgelevel.cpp">
+    <ClCompile Include="rgy_filter_edgelevel.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_tweak.cpp">
+    <ClCompile Include="rgy_filter_tweak.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_unsharp.cpp">
+    <ClCompile Include="rgy_filter_unsharp.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_deband.cpp">
+    <ClCompile Include="rgy_filter_deband.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_pad.cpp">
+    <ClCompile Include="rgy_filter_pad.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_transform.cpp">
+    <ClCompile Include="rgy_filter_transform.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_nnedi.cpp">
+    <ClCompile Include="rgy_filter_nnedi.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_smooth.cpp">
+    <ClCompile Include="rgy_filter_smooth.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_subburn.cpp">
+    <ClCompile Include="rgy_filter_subburn.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="rgy_timecode.cpp">
@@ -231,10 +231,10 @@
     <ClCompile Include="rgy_language.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_warpsharp.cpp">
+    <ClCompile Include="rgy_filter_warpsharp.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="vce_filter_colorspace.cpp">
+    <ClCompile Include="rgy_filter_colorspace.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="rgy_ini.cpp">
@@ -359,7 +359,7 @@
     <ClInclude Include="rgy_opencl.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter.h">
+    <ClInclude Include="rgy_filter.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="rgy_device.h">
@@ -386,13 +386,13 @@
     <ClInclude Include="rgy_shared_mem.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_afs.h">
+    <ClInclude Include="rgy_filter_afs.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="rgy_perf_counter.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_ssim.h">
+    <ClInclude Include="rgy_filter_ssim.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="rgy_frame.h">
@@ -404,34 +404,34 @@
     <ClInclude Include="vce_device.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_denoise_knn.h">
+    <ClInclude Include="rgy_filter_denoise_knn.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_denoise_pmd.h">
+    <ClInclude Include="rgy_filter_denoise_pmd.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_edgelevel.h">
+    <ClInclude Include="rgy_filter_edgelevel.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_tweak.h">
+    <ClInclude Include="rgy_filter_tweak.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_unsharp.h">
+    <ClInclude Include="rgy_filter_unsharp.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_deband.h">
+    <ClInclude Include="rgy_filter_deband.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_transform.h">
+    <ClInclude Include="rgy_filter_transform.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_nnedi.h">
+    <ClInclude Include="rgy_filter_nnedi.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_smooth.h">
+    <ClInclude Include="rgy_filter_smooth.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_subburn.h">
+    <ClInclude Include="rgy_filter_subburn.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="rgy_timecode.h">
@@ -440,13 +440,13 @@
     <ClInclude Include="rgy_language.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_warpsharp.h">
+    <ClInclude Include="rgy_filter_warpsharp.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_colorspace.h">
+    <ClInclude Include="rgy_filter_colorspace.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="vce_filter_colorspace_func.h">
+    <ClInclude Include="rgy_filter_colorspace_func.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="rgy_ini.h">
@@ -454,70 +454,70 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="vce_filter.cl">
+    <None Include="rgy_filter.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_resize.cl">
+    <None Include="rgy_filter_resize.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_afs_analyze.cl">
+    <None Include="rgy_filter_afs_analyze.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_afs_filter.cl">
+    <None Include="rgy_filter_afs_filter.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_afs_merge.cl">
+    <None Include="rgy_filter_afs_merge.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_afs_synthesize.cl">
+    <None Include="rgy_filter_afs_synthesize.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_ssim.cl">
+    <None Include="rgy_filter_ssim.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_denoise_knn.cl">
+    <None Include="rgy_filter_denoise_knn.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_denoise_pmd.cl">
+    <None Include="rgy_filter_denoise_pmd.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_edgelevel.cl">
+    <None Include="rgy_filter_edgelevel.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_tweak.cl">
+    <None Include="rgy_filter_tweak.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_unsharp.cl">
+    <None Include="rgy_filter_unsharp.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_deband.cl">
+    <None Include="rgy_filter_deband.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_deband_gen_rand.cl">
+    <None Include="rgy_filter_deband_gen_rand.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_pad.cl">
+    <None Include="rgy_filter_pad.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_transform.cl">
+    <None Include="rgy_filter_transform.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_nnedi_k1.cl">
+    <None Include="rgy_filter_nnedi_k1.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_nnedi_common.cl">
+    <None Include="rgy_filter_nnedi_common.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_nnedi_k0.cl">
+    <None Include="rgy_filter_nnedi_k0.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_smooth.cl">
+    <None Include="rgy_filter_smooth.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_subburn.cl">
+    <None Include="rgy_filter_subburn.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="vce_filter_warpsharp.cl">
+    <None Include="rgy_filter_warpsharp.cl">
       <Filter>ソース ファイル</Filter>
     </None>
   </ItemGroup>

@@ -236,133 +236,133 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter.cpp">
+    <ClCompile Include="rgy_filter.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_afs.cpp">
+    <ClCompile Include="rgy_filter_afs.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_afs_analyze.cpp">
+    <ClCompile Include="rgy_filter_afs_analyze.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_afs_filter.cpp">
+    <ClCompile Include="rgy_filter_afs_filter.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_afs_merge.cpp">
+    <ClCompile Include="rgy_filter_afs_merge.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_afs_synthesize.cpp">
+    <ClCompile Include="rgy_filter_afs_synthesize.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_colorspace.cpp">
+    <ClCompile Include="rgy_filter_colorspace.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_crop.cpp">
+    <ClCompile Include="rgy_filter_crop.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_deband.cpp">
+    <ClCompile Include="rgy_filter_deband.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_denoise_knn.cpp">
+    <ClCompile Include="rgy_filter_denoise_knn.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_denoise_pmd.cpp">
+    <ClCompile Include="rgy_filter_denoise_pmd.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_edgelevel.cpp">
+    <ClCompile Include="rgy_filter_edgelevel.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_nnedi.cpp">
+    <ClCompile Include="rgy_filter_nnedi.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_pad.cpp">
+    <ClCompile Include="rgy_filter_pad.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_resize.cpp">
+    <ClCompile Include="rgy_filter_resize.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_smooth.cpp">
+    <ClCompile Include="rgy_filter_smooth.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_ssim.cpp">
+    <ClCompile Include="rgy_filter_ssim.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_subburn.cpp">
+    <ClCompile Include="rgy_filter_subburn.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_transform.cpp">
+    <ClCompile Include="rgy_filter_transform.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_tweak.cpp">
+    <ClCompile Include="rgy_filter_tweak.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_unsharp.cpp">
+    <ClCompile Include="rgy_filter_unsharp.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="vce_filter_warpsharp.cpp">
+    <ClCompile Include="rgy_filter_warpsharp.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -428,59 +428,59 @@
     <ClInclude Include="vce_core.h" />
     <ClInclude Include="rgy_input.h" />
     <ClInclude Include="vce_device.h" />
-    <ClInclude Include="vce_filter.h" />
-    <ClInclude Include="vce_filter_afs.h" />
-    <ClInclude Include="vce_filter_colorspace.h" />
-    <ClInclude Include="vce_filter_colorspace_func.h" />
-    <ClInclude Include="vce_filter_deband.h" />
-    <ClInclude Include="vce_filter_denoise_knn.h" />
-    <ClInclude Include="vce_filter_denoise_pmd.h" />
-    <ClInclude Include="vce_filter_edgelevel.h" />
-    <ClInclude Include="vce_filter_nnedi.h" />
-    <ClInclude Include="vce_filter_smooth.h" />
-    <ClInclude Include="vce_filter_ssim.h" />
-    <ClInclude Include="vce_filter_subburn.h" />
-    <ClInclude Include="vce_filter_transform.h" />
-    <ClInclude Include="vce_filter_tweak.h" />
-    <ClInclude Include="vce_filter_unsharp.h" />
-    <ClInclude Include="vce_filter_warpsharp.h" />
+    <ClInclude Include="rgy_filter.h" />
+    <ClInclude Include="rgy_filter_afs.h" />
+    <ClInclude Include="rgy_filter_colorspace.h" />
+    <ClInclude Include="rgy_filter_colorspace_func.h" />
+    <ClInclude Include="rgy_filter_deband.h" />
+    <ClInclude Include="rgy_filter_denoise_knn.h" />
+    <ClInclude Include="rgy_filter_denoise_pmd.h" />
+    <ClInclude Include="rgy_filter_edgelevel.h" />
+    <ClInclude Include="rgy_filter_nnedi.h" />
+    <ClInclude Include="rgy_filter_smooth.h" />
+    <ClInclude Include="rgy_filter_ssim.h" />
+    <ClInclude Include="rgy_filter_subburn.h" />
+    <ClInclude Include="rgy_filter_transform.h" />
+    <ClInclude Include="rgy_filter_tweak.h" />
+    <ClInclude Include="rgy_filter_unsharp.h" />
+    <ClInclude Include="rgy_filter_warpsharp.h" />
     <ClInclude Include="vce_util.h" />
     <ClInclude Include="vce_param.h" />
     <ClInclude Include="rgy_version.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="vce_filter.cl">
+    <None Include="rgy_filter.cl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
-    <None Include="vce_filter_afs_analyze.cl" />
-    <None Include="vce_filter_afs_filter.cl" />
-    <None Include="vce_filter_afs_merge.cl" />
-    <None Include="vce_filter_afs_synthesize.cl" />
-    <None Include="vce_filter_deband.cl" />
-    <None Include="vce_filter_deband_gen_rand.cl" />
-    <None Include="vce_filter_denoise_knn.cl" />
-    <None Include="vce_filter_denoise_pmd.cl" />
-    <None Include="vce_filter_edgelevel.cl" />
-    <None Include="vce_filter_nnedi_common.cl" />
-    <None Include="vce_filter_nnedi_k0.cl" />
-    <None Include="vce_filter_nnedi_k1.cl" />
-    <None Include="vce_filter_pad.cl" />
-    <None Include="vce_filter_resize.cl">
+    <None Include="rgy_filter_afs_analyze.cl" />
+    <None Include="rgy_filter_afs_filter.cl" />
+    <None Include="rgy_filter_afs_merge.cl" />
+    <None Include="rgy_filter_afs_synthesize.cl" />
+    <None Include="rgy_filter_deband.cl" />
+    <None Include="rgy_filter_deband_gen_rand.cl" />
+    <None Include="rgy_filter_denoise_knn.cl" />
+    <None Include="rgy_filter_denoise_pmd.cl" />
+    <None Include="rgy_filter_edgelevel.cl" />
+    <None Include="rgy_filter_nnedi_common.cl" />
+    <None Include="rgy_filter_nnedi_k0.cl" />
+    <None Include="rgy_filter_nnedi_k1.cl" />
+    <None Include="rgy_filter_pad.cl" />
+    <None Include="rgy_filter_resize.cl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
-    <None Include="vce_filter_smooth.cl" />
-    <None Include="vce_filter_ssim.cl" />
-    <None Include="vce_filter_subburn.cl" />
-    <None Include="vce_filter_transform.cl" />
-    <None Include="vce_filter_tweak.cl" />
-    <None Include="vce_filter_unsharp.cl" />
-    <None Include="vce_filter_warpsharp.cl" />
+    <None Include="rgy_filter_smooth.cl" />
+    <None Include="rgy_filter_ssim.cl" />
+    <None Include="rgy_filter_subburn.cl" />
+    <None Include="rgy_filter_transform.cl" />
+    <None Include="rgy_filter_tweak.cl" />
+    <None Include="rgy_filter_unsharp.cl" />
+    <None Include="rgy_filter_warpsharp.cl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{06E67B5B-0DA2-4503-A1CA-D75F94BD977A}</ProjectGuid>
