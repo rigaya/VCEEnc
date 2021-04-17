@@ -45,8 +45,8 @@
 #include "rgy_device.h"
 #include "vce_device.h"
 #include "vce_param.h"
-#include "vce_filter.h"
-#include "vce_filter_ssim.h"
+#include "rgy_filter.h"
+#include "rgy_filter_ssim.h"
 
 #pragma warning(pop)
 

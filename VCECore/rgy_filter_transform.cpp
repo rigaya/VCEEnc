@@ -30,7 +30,7 @@
 #include <cmath>
 #include <map>
 #include <array>
-#include "vce_filter_transform.h"
+#include "rgy_filter_transform.h"
 
 static const int TRASNPOSE_BLOCK_DIM = 16;
 static const int TRASNPOSE_TILE_DIM = 64;
@@ -131,9 +131,9 @@ RGY_ERR RGYFilterTransform::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<R
             prm->trans.flipX ? 1 : 0,
             prm->trans.flipY ? 1 : 0,
             FLIP_BLOCK_DIM, TRASNPOSE_BLOCK_DIM, TRASNPOSE_TILE_DIM);
-        m_transform = m_cl->buildResource(_T("VCE_FILTER_TRANSFORM_CL"), _T("EXE_DATA"), options.c_str());
+        m_transform = m_cl->buildResource(_T("RGY_FILTER_TRANSFORM_CL"), _T("EXE_DATA"), options.c_str());
         if (!m_transform) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_TRANSFORM_CL(m_transform)\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_TRANSFORM_CL(m_transform)\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
     }

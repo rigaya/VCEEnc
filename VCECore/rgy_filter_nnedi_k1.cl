@@ -10,7 +10,7 @@
 // weight_loop
 // prescreen_new
 
-#include "vce_filter_nnedi_common.cl"
+#include "rgy_filter_nnedi_common.cl"
 
 void kernel_comute_network1_calc_scale_get_sum_sumsq(float *sum, float *sumsq, TypeCalc tsum, TypeCalc tsumsq) {
 #if USE_FP16

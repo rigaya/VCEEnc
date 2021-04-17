@@ -29,7 +29,7 @@
 #include <map>
 #include <array>
 #include <cmath>
-#include "vce_filter_afs.h"
+#include "rgy_filter_afs.h"
 
 #define BLOCK_INT_X  (32) //blockDim(x) = スレッド数/ブロック
 #define BLOCK_Y       (8) //blockDim(y) = スレッド数/ブロック
@@ -45,9 +45,9 @@ RGY_ERR RGYFilterAfs::build_analyze(const RGY_CSP csp, const bool tb_order) {
             RGY_CSP_CHROMA_FORMAT[csp] == RGY_CHROMAFMT_YUV420 ? 1 : 0,
             (tb_order) ? 1 : 0,
             BLOCK_INT_X, BLOCK_Y, BLOCK_LOOP_Y);
-        m_analyze = m_cl->buildResource(_T("VCE_FILTER_AFS_ANALYZE_CL"), _T("EXE_DATA"), options.c_str());
+        m_analyze = m_cl->buildResource(_T("RGY_FILTER_AFS_ANALYZE_CL"), _T("EXE_DATA"), options.c_str());
         if (!m_analyze) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_AFS_ANALYZE_CL\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_AFS_ANALYZE_CL\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
     }

@@ -30,7 +30,7 @@
 #include <cmath>
 #include <map>
 #include <array>
-#include "vce_filter_unsharp.h"
+#include "rgy_filter_unsharp.h"
 
 static const int UNSHARP_RADIUS_MAX = 9;
 
@@ -147,9 +147,9 @@ RGY_ERR RGYFilterUnsharp::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGY
             RGY_CSP_BIT_DEPTH[prm->frameOut.csp] > 8 ? "ushort" : "uchar",
             prm->unsharp.radius,
             RGY_CSP_BIT_DEPTH[prm->frameOut.csp]);
-        m_unsharp = m_cl->buildResource(_T("VCE_FILTER_UNSHARP_CL"), _T("EXE_DATA"), options.c_str());
+        m_unsharp = m_cl->buildResource(_T("RGY_FILTER_UNSHARP_CL"), _T("EXE_DATA"), options.c_str());
         if (!m_unsharp) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_UNSHARP_CL(m_unsharp)\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_UNSHARP_CL(m_unsharp)\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
         float sigmaY = 0.8f + 0.3f * prm->unsharp.radius;

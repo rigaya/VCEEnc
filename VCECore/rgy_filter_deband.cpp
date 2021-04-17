@@ -32,7 +32,7 @@
 #include <array>
 #include "rgy_osdep.h"
 #include "rgy_opencl.h"
-#include "vce_filter_deband.h"
+#include "rgy_filter_deband.h"
 #pragma warning(push)
 #pragma warning(disable:4819) //ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。
 #pragma warning(disable:4201) //非標準の拡張機能が使用されています: 無名の構造体または共用体です。
@@ -259,18 +259,18 @@ RGY_ERR RGYFilterDeband::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
                 prm->deband.sample,
                 prm->deband.blurFirst,
                 DEBAND_BLOCK_LOOP_X_INNER, DEBAND_BLOCK_LOOP_Y_INNER, DEBAND_BLOCK_LOOP_X_OUTER, DEBAND_BLOCK_LOOP_Y_OUTER);
-            m_deband = m_cl->buildResource(_T("VCE_FILTER_DEBAND_CL"), _T("EXE_DATA"), options.c_str());
+            m_deband = m_cl->buildResource(_T("RGY_FILTER_DEBAND_CL"), _T("EXE_DATA"), options.c_str());
             if (!m_deband) {
-                AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_DEBAND_CL(m_deband)\n"));
+                AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_DEBAND_CL(m_deband)\n"));
                 return RGY_ERR_OPENCL_CRUSH;
             }
         }
 
         {
-            auto deband_gen_rand_cl   = getEmbeddedResourceStr(_T("VCE_FILTER_DEBAND_GEN_RAND_CL"),        _T("EXE_DATA"));
-            auto clrng_clh            = getEmbeddedResourceStr(_T("VCE_FILTER_CLRNG_CLH"),                 _T("EXE_DATA"));
-            auto mrg31k3p_clh         = getEmbeddedResourceStr(_T("VCE_FILTER_CLRNG_MRG31K3P_CLH"),        _T("EXE_DATA"));
-            auto mrg31k3p_private_c_h = getEmbeddedResourceStr(_T("VCE_FILTER_CLRNG_MRG31K3P_PRIVATE_CH"), _T("EXE_DATA"));
+            auto deband_gen_rand_cl   = getEmbeddedResourceStr(_T("RGY_FILTER_DEBAND_GEN_RAND_CL"),        _T("EXE_DATA"));
+            auto clrng_clh            = getEmbeddedResourceStr(_T("RGY_FILTER_CLRNG_CLH"),                 _T("EXE_DATA"));
+            auto mrg31k3p_clh         = getEmbeddedResourceStr(_T("RGY_FILTER_CLRNG_MRG31K3P_CLH"),        _T("EXE_DATA"));
+            auto mrg31k3p_private_c_h = getEmbeddedResourceStr(_T("RGY_FILTER_CLRNG_MRG31K3P_PRIVATE_CH"), _T("EXE_DATA"));
 
             //includeをチェック
             {
@@ -300,7 +300,7 @@ RGY_ERR RGYFilterDeband::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
                 GEN_RAND_BLOCK_LOOP_Y);
             m_debandGenRand = m_cl->build(deband_gen_rand_source, options.c_str());
             if (!m_debandGenRand) {
-                AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_DEBAND_GEN_RAND_CL(m_debandGenRand)\n"));
+                AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_DEBAND_GEN_RAND_CL(m_debandGenRand)\n"));
                 return RGY_ERR_OPENCL_CRUSH;
             }
         }

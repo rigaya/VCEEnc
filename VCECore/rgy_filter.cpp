@@ -25,7 +25,7 @@
 //
 // ------------------------------------------------------------------------------------------
 
-#include "vce_filter.h"
+#include "rgy_filter.h"
 
 RGYFilter::RGYFilter(shared_ptr<RGYOpenCLContext> context) :
     m_name(), m_infoStr(), m_pLog(), m_cl(context), m_frameBuf(),

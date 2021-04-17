@@ -31,7 +31,7 @@
 #include <map>
 #include <array>
 #include <filesystem>
-#include "vce_filter_subburn.h"
+#include "rgy_filter_subburn.h"
 #include "rgy_codepage.h"
 
 #if ENABLE_AVSW_READER
@@ -717,9 +717,9 @@ RGY_ERR RGYFilterSubburn::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGY
             RGY_CSP_CHROMA_FORMAT[prm->frameOut.csp] == RGY_CHROMAFMT_YUV420 ? 1 : 0
         );
 
-        m_subburn = m_cl->buildResource(_T("VCE_FILTER_SUBBURN_CL"), _T("EXE_DATA"), options.c_str());
+        m_subburn = m_cl->buildResource(_T("RGY_FILTER_SUBBURN_CL"), _T("EXE_DATA"), options.c_str());
         if (!m_subburn) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_SUBBURN_CL(m_subburn)\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_SUBBURN_CL(m_subburn)\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
 

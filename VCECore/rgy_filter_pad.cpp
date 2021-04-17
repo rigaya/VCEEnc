@@ -26,7 +26,7 @@
 //
 // ------------------------------------------------------------------------------------------
 
-#include "vce_filter.h"
+#include "rgy_filter.h"
 
 tstring RGYFilterParamPad::print() const {
     return strsprintf(_T("pad: [%dx%d]->[%dx%d] "),
@@ -126,9 +126,9 @@ RGY_ERR RGYFilterPad::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog>
     if (!m_pad
         || std::dynamic_pointer_cast<RGYFilterParamPad>(m_param)->pad != prm->pad) {
         const auto options = strsprintf("-D Type=%s", RGY_CSP_BIT_DEPTH[prm->frameOut.csp] > 8 ? "ushort" : "uchar");
-        m_pad = m_cl->buildResource(_T("VCE_FILTER_PAD_CL"), _T("EXE_DATA"), options.c_str());
+        m_pad = m_cl->buildResource(_T("RGY_FILTER_PAD_CL"), _T("EXE_DATA"), options.c_str());
         if (!m_pad) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_PAD_CL(m_pad)\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_PAD_CL(m_pad)\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
     }

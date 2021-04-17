@@ -31,7 +31,7 @@
 #include <map>
 #include <array>
 #include "convert_csp.h"
-#include "vce_filter.h"
+#include "rgy_filter.h"
 #include "vce_param.h"
 
 
@@ -161,9 +161,9 @@ RGY_ERR RGYFilterResize::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
             RGY_CSP_BIT_DEPTH[pResizeParam->frameOut.csp] > 8 ? "ushort" : "uchar",
             RGY_CSP_BIT_DEPTH[pResizeParam->frameOut.csp],
             radius);
-        m_resize = m_cl->buildResource(_T("VCE_FILTER_RESIZE_CL"), _T("EXE_DATA"), options.c_str());
+        m_resize = m_cl->buildResource(_T("RGY_FILTER_RESIZE_CL"), _T("EXE_DATA"), options.c_str());
         if (!m_resize) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_CL(m_crop)\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_CL(m_crop)\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
         if (!m_weightSpline

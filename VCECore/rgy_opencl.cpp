@@ -871,9 +871,9 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDstOrg, const FrameInfo *pla
                         RGY_CSP_BIT_DEPTH[planeDst.csp] > 8 ? "ushort" : "uchar",
                         RGY_CSP_BIT_DEPTH[planeSrc.csp],
                         RGY_CSP_BIT_DEPTH[planeDst.csp]);
-                    m_copyB2B = buildResource(_T("VCE_FILTER_CL"), _T("EXE_DATA"), options.c_str());
+                    m_copyB2B = buildResource(_T("RGY_FILTER_CL"), _T("EXE_DATA"), options.c_str());
                     if (!m_copyB2B) {
-                        m_pLog->write(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_CL(m_copyB2B)\n"));
+                        m_pLog->write(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_CL(m_copyB2B)\n"));
                         return RGY_ERR_OPENCL_CRUSH;
                     }
                 }
@@ -892,9 +892,9 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDstOrg, const FrameInfo *pla
                     RGY_CSP_BIT_DEPTH[planeDst.csp] > 8 ? "ushort" : "uchar",
                     RGY_CSP_BIT_DEPTH[planeSrc.csp],
                     RGY_CSP_BIT_DEPTH[planeDst.csp]);
-                m_copyB2I = buildResource(_T("VCE_FILTER_CL"), _T("EXE_DATA"), options.c_str());
+                m_copyB2I = buildResource(_T("RGY_FILTER_CL"), _T("EXE_DATA"), options.c_str());
                 if (!m_copyB2I) {
-                    m_pLog->write(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_CL(m_copyB2I)\n"));
+                    m_pLog->write(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_CL(m_copyB2I)\n"));
                     return RGY_ERR_OPENCL_CRUSH;
                 }
             }
@@ -919,9 +919,9 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDstOrg, const FrameInfo *pla
                     RGY_CSP_BIT_DEPTH[planeDst.csp] > 8 ? "ushort" : "uchar",
                     RGY_CSP_BIT_DEPTH[planeSrc.csp],
                     RGY_CSP_BIT_DEPTH[planeDst.csp]);
-                m_copyI2B = buildResource(_T("VCE_FILTER_CL"), _T("EXE_DATA"), options.c_str());
+                m_copyI2B = buildResource(_T("RGY_FILTER_CL"), _T("EXE_DATA"), options.c_str());
                 if (!m_copyI2B) {
-                    m_pLog->write(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_CL(m_copyI2B)\n"));
+                    m_pLog->write(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_CL(m_copyI2B)\n"));
                     return RGY_ERR_OPENCL_CRUSH;
                 }
             }
@@ -943,9 +943,9 @@ RGY_ERR RGYOpenCLContext::copyPlane(FrameInfo *planeDstOrg, const FrameInfo *pla
                         RGY_CSP_BIT_DEPTH[planeDst.csp] > 8 ? "ushort" : "uchar",
                         RGY_CSP_BIT_DEPTH[planeSrc.csp],
                         RGY_CSP_BIT_DEPTH[planeDst.csp]);
-                    m_copyI2I = buildResource(_T("VCE_FILTER_CL"), _T("EXE_DATA"), options.c_str());
+                    m_copyI2I = buildResource(_T("RGY_FILTER_CL"), _T("EXE_DATA"), options.c_str());
                     if (!m_copyI2I) {
-                        m_pLog->write(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_CL(m_copyI2I)\n"));
+                        m_pLog->write(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_CL(m_copyI2I)\n"));
                         return RGY_ERR_OPENCL_CRUSH;
                     }
                 }
@@ -1074,9 +1074,9 @@ RGY_ERR RGYOpenCLContext::setPlane(int value, FrameInfo *planeDst, const sInputC
             planeDst->mem_type == RGY_MEM_TYPE_GPU_IMAGE ? 1 : 0,
             RGY_CSP_BIT_DEPTH[planeDst->csp], //dummy
             RGY_CSP_BIT_DEPTH[planeDst->csp]);
-        m_setB = buildResource(_T("VCE_FILTER_CL"), _T("EXE_DATA"), options.c_str());
+        m_setB = buildResource(_T("RGY_FILTER_CL"), _T("EXE_DATA"), options.c_str());
         if (!m_setB) {
-            m_pLog->write(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_CL(m_setB)\n"));
+            m_pLog->write(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_CL(m_setB)\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
     }

@@ -12,7 +12,7 @@
 // weight_loop
 // prescreen_new
 
-#include "vce_filter_nnedi_common.cl"
+#include "rgy_filter_nnedi_common.cl"
 
 // prescreen_new では、4ピクセル分一度に処理する
 #define  pix_x_per_thread ((prescreen_new) ? 4 : 1)

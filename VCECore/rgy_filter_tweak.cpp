@@ -30,7 +30,7 @@
 #include <cmath>
 #include <map>
 #include <array>
-#include "vce_filter_tweak.h"
+#include "rgy_filter_tweak.h"
 
 static const int TWEAK_BLOCK_X = 64;
 static const int TWEAK_BLOCK_Y = 4;
@@ -148,9 +148,9 @@ RGY_ERR RGYFilterTweak::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
             RGY_CSP_BIT_DEPTH[prm->frameOut.csp] > 8 ? "ushort" : "uchar",
             RGY_CSP_BIT_DEPTH[prm->frameOut.csp] > 8 ? "ushort4" : "uchar4",
             RGY_CSP_BIT_DEPTH[prm->frameOut.csp]);
-        m_tweak = m_cl->buildResource(_T("VCE_FILTER_TWEAK_CL"), _T("EXE_DATA"), options.c_str());
+        m_tweak = m_cl->buildResource(_T("RGY_FILTER_TWEAK_CL"), _T("EXE_DATA"), options.c_str());
         if (!m_tweak) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_TWEAK_CL(m_tweak)\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_TWEAK_CL(m_tweak)\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
     }

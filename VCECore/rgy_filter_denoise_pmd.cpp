@@ -30,7 +30,7 @@
 #include <cmath>
 #include <map>
 #include <array>
-#include "vce_filter_denoise_pmd.h"
+#include "rgy_filter_denoise_pmd.h"
 
 static const int KNN_RADIUS_MAX = 5;
 
@@ -180,9 +180,9 @@ RGY_ERR RGYFilterDenoisePmd::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<
             RGY_CSP_BIT_DEPTH[pPmdParam->frameOut.csp] > 8 ? "ushort" : "uchar",
             RGY_CSP_BIT_DEPTH[pPmdParam->frameOut.csp],
             pPmdParam->pmd.useExp ? 1 : 0);
-        m_pmd = m_cl->buildResource(_T("VCE_FILTER_DENOISE_PMD_CL"), _T("EXE_DATA"), options.c_str());
+        m_pmd = m_cl->buildResource(_T("RGY_FILTER_DENOISE_PMD_CL"), _T("EXE_DATA"), options.c_str());
         if (!m_pmd) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_DENOISE_PMD_CL(m_pmd)\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_DENOISE_PMD_CL(m_pmd)\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
     }

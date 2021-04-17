@@ -30,7 +30,7 @@
 #include <array>
 #include <cmath>
 #include "convert_csp.h"
-#include "vce_filter_afs.h"
+#include "rgy_filter_afs.h"
 
 #define MERGE_BLOCK_INT_X  (32) //work groupサイズ(x) = スレッド数/work group
 #define MERGE_BLOCK_Y       (8) //work groupサイズ(y) = スレッド数/work group
@@ -41,9 +41,9 @@ RGY_ERR RGYFilterAfs::build_merge_scan() {
     if (!m_mergeScan) {
         const auto options = strsprintf("-D Type=uint -D MERGE_BLOCK_INT_X=%d -D MERGE_BLOCK_Y=%d -D MERGE_BLOCK_LOOP_Y=%d",
             MERGE_BLOCK_INT_X, MERGE_BLOCK_Y, MERGE_BLOCK_LOOP_Y);
-        m_mergeScan = m_cl->buildResource(_T("VCE_FILTER_AFS_MERGE_CL"), _T("EXE_DATA"), options.c_str());
+        m_mergeScan = m_cl->buildResource(_T("RGY_FILTER_AFS_MERGE_CL"), _T("EXE_DATA"), options.c_str());
         if (!m_mergeScan) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_AFS_MERGE_CL\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_AFS_MERGE_CL\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
     }

@@ -34,7 +34,7 @@
 #include <numeric>
 #define _USE_MATH_DEFINES
 #include <cmath>
-#include "vce_filter_nnedi.h"
+#include "rgy_filter_nnedi.h"
 
 //dot_product1で重み(nns)方向のループアンロールを行う
 //これにより、一度sharedメモリからレジスタにのせたpixel情報を使いまわすことができる
@@ -635,14 +635,14 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
         }
         const auto devInfo = RGYOpenCLDevice(m_cl->platform()->dev(0)).info();
         const bool sub_group_ext_avail = ENABLE_DP1_SHUFFLE_OPT && devInfo.extensions.find("cl_khr_subgroups") != std::string::npos && (clGetKernelSubGroupInfoKHR != nullptr || clGetKernelSubGroupInfo != nullptr);
-        const auto nnedi_common_cl = getEmbeddedResourceStr(_T("VCE_FILTER_NNEDI_COMMON_CL"), _T("EXE_DATA"));
+        const auto nnedi_common_cl = getEmbeddedResourceStr(_T("RGY_FILTER_NNEDI_COMMON_CL"), _T("EXE_DATA"));
         const int prescreen_new = ((prm->nnedi.pre_screen & VPP_NNEDI_PRE_SCREEN_MODE) == VPP_NNEDI_PRE_SCREEN_ORIGINAL) ? 0 : 1;
         const auto fields = make_array<NnediTargetField>(NNEDI_GEN_FIELD_TOP, NNEDI_GEN_FIELD_BOTTOM);
         {
-            auto nnedi_k0_cl = getEmbeddedResourceStr(_T("VCE_FILTER_NNEDI_K0_CL"), _T("EXE_DATA"));
-            auto pos = nnedi_k0_cl.find("#include \"vce_filter_nnedi_common.cl\"");
+            auto nnedi_k0_cl = getEmbeddedResourceStr(_T("RGY_FILTER_NNEDI_K0_CL"), _T("EXE_DATA"));
+            auto pos = nnedi_k0_cl.find("#include \"rgy_filter_nnedi_common.cl\"");
             if (pos == std::string::npos) {
-                AddMessage(RGY_LOG_ERROR, _T("failed to search #include \"vce_filter_nnedi_common.cl\"\n"));
+                AddMessage(RGY_LOG_ERROR, _T("failed to search #include \"rgy_filter_nnedi_common.cl\"\n"));
                 return RGY_ERR_UNKNOWN;
             }
             const int wstep = prm->nnedi.precision == VPP_FP_PRECISION_FP16 ? 2 : 1; //half2なら2, floatなら1
@@ -650,7 +650,7 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
             const int nny = 4;
             const int nnxy = nnx * nny;
             const int nns = 4 / wstep; //half2の場合、nns方向を2つ格納できる
-            nnedi_k0_cl = str_replace(nnedi_k0_cl, "#include \"vce_filter_nnedi_common.cl\"", nnedi_common_cl);
+            nnedi_k0_cl = str_replace(nnedi_k0_cl, "#include \"rgy_filter_nnedi_common.cl\"", nnedi_common_cl);
             const auto options = strsprintf("-cl-std=CL2.0 " //sub_group_broadcastに必要
                 "-D TypePixel=%s -D TypePixel2=%s -D TypePixel4=%s -D bit_depth=%d -D TypeCalc=%s -D USE_FP16=%d "
                 "-D nnx=%d -D nny=%d -D nnxy=%d -D nns=%d "
@@ -672,18 +672,18 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
                 );
             m_nnedi_k0 = m_cl->build(nnedi_k0_cl, options.c_str());
             if (!m_nnedi_k0) {
-                AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_NNEDI_K0_CL(m_nnedi_k0)\n"));
+                AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_NNEDI_K0_CL(m_nnedi_k0)\n"));
                 return RGY_ERR_OPENCL_CRUSH;
             }
         }
         {
-            auto nnedi_k1_cl = getEmbeddedResourceStr(_T("VCE_FILTER_NNEDI_K1_CL"), _T("EXE_DATA"));
-            auto pos = nnedi_k1_cl.find("#include \"vce_filter_nnedi_common.cl\"");
+            auto nnedi_k1_cl = getEmbeddedResourceStr(_T("RGY_FILTER_NNEDI_K1_CL"), _T("EXE_DATA"));
+            auto pos = nnedi_k1_cl.find("#include \"rgy_filter_nnedi_common.cl\"");
             if (pos == std::string::npos) {
-                AddMessage(RGY_LOG_ERROR, _T("failed to search #include \"vce_filter_nnedi_common.cl\"\n"));
+                AddMessage(RGY_LOG_ERROR, _T("failed to search #include \"rgy_filter_nnedi_common.cl\"\n"));
                 return RGY_ERR_UNKNOWN;
             }
-            nnedi_k1_cl = str_replace(nnedi_k1_cl, "#include \"vce_filter_nnedi_common.cl\"", nnedi_common_cl);
+            nnedi_k1_cl = str_replace(nnedi_k1_cl, "#include \"rgy_filter_nnedi_common.cl\"", nnedi_common_cl);
             auto options = strsprintf("-cl-std=CL2.0  " //sub_group_broadcastに必要
                 "-D TypePixel=%s -D TypePixel2=%s -D TypePixel4=%s -D bit_depth=%d -D TypeCalc=%s -D USE_FP16=%d "
                 "-D nnx=%d -D nny=%d -D nnxy=%d -D nns=%d "
@@ -706,7 +706,7 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
             //options += "-fbin-exe -save-temps=F:\\temp\\nnedi_";
             m_nnedi_k1 = m_cl->build(nnedi_k1_cl, options.c_str());
             if (!m_nnedi_k1) {
-                AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_NNEDI_K1_CL(m_nnedi_k1)\n"));
+                AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_NNEDI_K1_CL(m_nnedi_k1)\n"));
                 return RGY_ERR_OPENCL_CRUSH;
             }
             if (sub_group_ext_avail) {

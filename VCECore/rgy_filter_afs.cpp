@@ -30,7 +30,7 @@
 #include <array>
 #include <emmintrin.h>
 #include "convert_csp.h"
-#include "vce_filter_afs.h"
+#include "rgy_filter_afs.h"
 #include "afs_stg.h"
 #include "vce_util.h"
 #pragma warning (push)
@@ -109,7 +109,7 @@ RGY_ERR afsSourceCache::add(const FrameInfo *pInputFrame, RGYOpenCLQueue &queue_
             const auto options = strsprintf("-D TypeIn=%s -D TypeOut=%s -D IMAGE_SRC=0 -D IMAGE_DST=0 -D in_bit_depth=%d -D out_bit_depth=%d",
                 pixel_size >= 2 ? "ushort" : "uchar", pixel_size >= 2 ? "ushort" : "uchar",
                 RGY_CSP_BIT_DEPTH[pInputFrame->csp], RGY_CSP_BIT_DEPTH[pInputFrame->csp]);
-            m_sepFields = m_cl->buildResource(_T("VCE_FILTER_CL"), _T("EXE_DATA"), options.c_str());
+            m_sepFields = m_cl->buildResource(_T("RGY_FILTER_CL"), _T("EXE_DATA"), options.c_str());
             if (!m_sepFields) {
                 return RGY_ERR_OPENCL_CRUSH;
             }

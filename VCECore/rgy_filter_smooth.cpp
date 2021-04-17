@@ -30,7 +30,7 @@
 #include <cmath>
 #include <map>
 #include <array>
-#include "vce_filter_smooth.h"
+#include "rgy_filter_smooth.h"
 
 #define SPP_THREAD_BLOCK_X (8) //blockDim.x
 #define SPP_THREAD_BLOCK_Y (8) //blockDim.y
@@ -173,9 +173,9 @@ RGY_ERR RGYFilterSmooth::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
         };
 
         bool usefp16 = prm->smooth.prec == VPP_FP_PRECISION_FP16;
-        m_smooth = m_cl->buildResource(_T("VCE_FILTER_SMOOTH_CL"), _T("EXE_DATA"), gen_options(usefp16).c_str());
+        m_smooth = m_cl->buildResource(_T("RGY_FILTER_SMOOTH_CL"), _T("EXE_DATA"), gen_options(usefp16).c_str());
         if (!m_smooth) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_SMOOTH_CL(m_smooth)\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_SMOOTH_CL(m_smooth)\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
         if (usefp16) {
@@ -193,9 +193,9 @@ RGY_ERR RGYFilterSmooth::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
                 prm->smooth.prec = VPP_FP_PRECISION_FP32;
             }
             if (prm->smooth.prec != VPP_FP_PRECISION_FP16) {
-                m_smooth = m_cl->buildResource(_T("VCE_FILTER_SMOOTH_CL"), _T("EXE_DATA"), gen_options(false).c_str());
+                m_smooth = m_cl->buildResource(_T("RGY_FILTER_SMOOTH_CL"), _T("EXE_DATA"), gen_options(false).c_str());
                 if (!m_smooth) {
-                    AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_SMOOTH_CL(m_smooth)\n"));
+                    AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_SMOOTH_CL(m_smooth)\n"));
                     return RGY_ERR_OPENCL_CRUSH;
                 }
             }

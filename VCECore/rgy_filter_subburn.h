@@ -26,8 +26,8 @@
 //
 // ------------------------------------------------------------------------------------------
 
-#include "vce_filter.h"
-#include "vce_param.h"
+#include "rgy_filter.h"
+#include "rgy_prm.h"
 #include "rgy_frame.h"
 #include "rgy_input_avcodec.h"
 #include <array>

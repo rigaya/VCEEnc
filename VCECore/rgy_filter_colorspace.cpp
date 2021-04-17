@@ -33,8 +33,8 @@
 #include <deque>
 #include <unordered_set>
 #include <unordered_map>
-#include "vce_filter_colorspace.h"
-#include "vce_filter_colorspace_func.h"
+#include "rgy_filter_colorspace.h"
+#include "rgy_filter_colorspace_func.h"
 
 static const int COLORSPACE_BLOCK_X = 64;
 static const int COLORSPACE_BLOCK_Y = 4;
@@ -1463,7 +1463,7 @@ std::string RGYFilterColorspace::getEmbeddedResourceStr(const tstring &name, con
 }
 
 std::string RGYFilterColorspace::genKernelCode() {
-    const auto colorspace_func_h_cl = getEmbeddedResourceStr(_T("VCE_FILTER_COLORSPACE_CL"), _T("EXE_DATA"));
+    const auto colorspace_func_h_cl = getEmbeddedResourceStr(_T("RGY_FILTER_COLORSPACE_CL"), _T("EXE_DATA"));
 
     std::string kernel;
     kernel += colorspace_func_h_cl;
@@ -1568,7 +1568,7 @@ RGY_ERR RGYFilterColorspace::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<
             RGY_CSP_BIT_DEPTH[prm->frameOut.csp]);
         m_colorspace = m_cl->build(genKernelCode(), options.c_str());
         if (!m_colorspace) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_COLORSPACE_CL(m_colorspace)\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_COLORSPACE_CL(m_colorspace)\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
     }

@@ -28,8 +28,8 @@
 
 #pragma once
 
-#include "vce_filter.h"
-#include "vce_param.h"
+#include "rgy_filter.h"
+#include "rgy_prm.h"
 #include "vce_util.h"
 #include "Factory.h"
 #include "Trace.h"

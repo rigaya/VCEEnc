@@ -30,7 +30,7 @@
 #include <cmath>
 #include <map>
 #include <array>
-#include "vce_filter_warpsharp.h"
+#include "rgy_filter_warpsharp.h"
 
 static const int WARPSHARP_BLOCK_X = 32;
 static const int WARPSHARP_BLOCK_Y = 8;
@@ -245,9 +245,9 @@ RGY_ERR RGYFilterWarpsharp::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<R
             RGY_CSP_BIT_DEPTH[prm->frameOut.csp],
             prm->warpsharp.type == 0 ? 6 : 2,
             WARPSHARP_BLOCK_X, WARPSHARP_BLOCK_Y);
-        m_warpsharp = m_cl->buildResource(_T("VCE_FILTER_WARPSHARP_CL"), _T("EXE_DATA"), options.c_str());
+        m_warpsharp = m_cl->buildResource(_T("RGY_FILTER_WARPSHARP_CL"), _T("EXE_DATA"), options.c_str());
         if (!m_warpsharp) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_WARPSHARP_CL(m_warpsharp)\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_WARPSHARP_CL(m_warpsharp)\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
     }

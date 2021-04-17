@@ -28,8 +28,8 @@
 
 #pragma once
 
-#include "vce_filter.h"
-#include "vce_param.h"
+#include "rgy_filter.h"
+#include "rgy_prm.h"
 #include <array>
 
 static const bool STREAM_OPT = false;

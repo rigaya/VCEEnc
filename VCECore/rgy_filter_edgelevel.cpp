@@ -30,7 +30,7 @@
 #include <cmath>
 #include <map>
 #include <array>
-#include "vce_filter_edgelevel.h"
+#include "rgy_filter_edgelevel.h"
 
 RGY_ERR RGYFilterEdgelevel::procPlane(FrameInfo *pOutputPlane, const FrameInfo *pInputPlane, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     auto prm = std::dynamic_pointer_cast<RGYFilterParamEdgelevel>(m_param);
@@ -117,9 +117,9 @@ RGY_ERR RGYFilterEdgelevel::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<R
         const auto options = strsprintf("-D Type=%s -D bit_depth=%d",
             RGY_CSP_BIT_DEPTH[prm->frameOut.csp] > 8 ? "ushort" : "uchar",
             RGY_CSP_BIT_DEPTH[prm->frameOut.csp]);
-        m_edgelevel = m_cl->buildResource(_T("VCE_FILTER_EDGELEVEL_CL"), _T("EXE_DATA"), options.c_str());
+        m_edgelevel = m_cl->buildResource(_T("RGY_FILTER_EDGELEVEL_CL"), _T("EXE_DATA"), options.c_str());
         if (!m_edgelevel) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_EDGELEVEL_CL(m_edgelevel)\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_EDGELEVEL_CL(m_edgelevel)\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
     }

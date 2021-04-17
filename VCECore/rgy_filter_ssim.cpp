@@ -29,7 +29,7 @@
 #include <map>
 #include "rgy_avutil.h"
 #include "vce_util.h"
-#include "vce_filter_ssim.h"
+#include "rgy_filter_ssim.h"
 #include "VideoDecoderUVD.h"
 
 const TCHAR *AMFRetString(AMF_RESULT ret);
@@ -570,9 +570,9 @@ RGY_ERR RGYFilterSsim::build_kernel(const RGY_CSP csp) {
         const auto options = strsprintf("-D BIT_DEPTH=%d -D SSIM_BLOCK_X=%d -D SSIM_BLOCK_Y=%d",
             RGY_CSP_BIT_DEPTH[csp],
             SSIM_BLOCK_X, SSIM_BLOCK_Y);
-        m_kernel = m_cl->buildResource(_T("VCE_FILTER_SSIM_CL"), _T("EXE_DATA"), options.c_str());
+        m_kernel = m_cl->buildResource(_T("RGY_FILTER_SSIM_CL"), _T("EXE_DATA"), options.c_str());
         if (!m_kernel) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load VCE_FILTER_SSIM_CL\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_SSIM_CL\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
     }
