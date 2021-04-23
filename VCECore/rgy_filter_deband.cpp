@@ -295,7 +295,7 @@ RGY_ERR RGYFilterDeband::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
             mrg31k3p_clh = str_replace(mrg31k3p_clh, "#include <clRNG/clRNG.clh>", clrng_clh);
             mrg31k3p_clh = str_replace(mrg31k3p_clh, "#include <clRNG/private/mrg31k3p.c.h>", mrg31k3p_private_c_h);
             auto deband_gen_rand_source = str_replace(deband_gen_rand_cl, "#include <clRNG/mrg31k3p.clh>", mrg31k3p_clh);
-            const auto options = strsprintf("-D yuv420=%d -D gen_rand_block_loop_y=%d",
+            const auto options = strsprintf("-D CLRNG_SINGLE_PRECISION -D yuv420=%d -D gen_rand_block_loop_y=%d",
                 RGY_CSP_CHROMA_FORMAT[prm->frameOut.csp] == RGY_CHROMAFMT_YUV420,
                 GEN_RAND_BLOCK_LOOP_Y);
             m_debandGenRand = m_cl->build(deband_gen_rand_source, options.c_str());
