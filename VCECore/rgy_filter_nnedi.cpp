@@ -265,13 +265,6 @@ RGY_ERR RGYFilterNnedi::checkParam(const std::shared_ptr<RGYFilterParamNnedi> pr
         AddMessage(RGY_LOG_ERROR, _T("invalid value for param \"prec\": %d\n"), prm->nnedi.precision);
         return RGY_ERR_INVALID_PARAM;
     }
-    if (prm->nnedi.precision == VPP_FP_PRECISION_FP16) {
-        const auto devInfo = RGYOpenCLDevice(m_cl->platform()->dev(0)).info();
-        if (devInfo.extensions.find("cl_khr_fp16") == std::string::npos) {
-            AddMessage(RGY_LOG_ERROR, _T("Current device does not support \"prec\": %d\n"), prm->nnedi.precision);
-            return RGY_ERR_INVALID_PARAM;
-        }
-    }
     return RGY_ERR_NONE;
 }
 
@@ -633,8 +626,23 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
         if ((sts = initParams(prm)) != RGY_ERR_NONE) {
             return sts;
         }
-        const auto devInfo = RGYOpenCLDevice(m_cl->platform()->dev(0)).info();
-        const bool sub_group_ext_avail = ENABLE_DP1_SHUFFLE_OPT && devInfo.extensions.find("cl_khr_subgroups") != std::string::npos && (clGetKernelSubGroupInfoKHR != nullptr || clGetKernelSubGroupInfo != nullptr);
+        const auto cl_fp16_support = RGYOpenCLDevice(m_cl->queue().devid()).checkExtension("cl_khr_fp16");
+        if (prm->nnedi.precision == VPP_FP_PRECISION_FP16 && !cl_fp16_support) {
+            AddMessage(RGY_LOG_WARN, _T("fp16 not supported on this device, switching to fp32 mode.\n"));
+            prm->nnedi.precision = VPP_FP_PRECISION_FP32;
+        }
+        const auto sub_group_ext_avail = m_cl->platform()->checkSubGroupSupport(m_cl->queue().devid());
+        std::string clversionRequired;
+        switch (sub_group_ext_avail) {
+        case RGYOpenCLSubGroupSupport::STD22:
+        case RGYOpenCLSubGroupSupport::STD20KHR:
+            clversionRequired = "-cl-std=CL2.0 "; break;
+        case RGYOpenCLSubGroupSupport::INTEL_EXT: break;
+        case RGYOpenCLSubGroupSupport::NONE:
+        default:
+            AddMessage(RGY_LOG_ERROR, _T("--vpp-nnedi requires OpenCL subgroup support!\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
         const auto nnedi_common_cl = getEmbeddedResourceStr(_T("RGY_FILTER_NNEDI_COMMON_CL"), _T("EXE_DATA"));
         const int prescreen_new = ((prm->nnedi.pre_screen & VPP_NNEDI_PRE_SCREEN_MODE) == VPP_NNEDI_PRE_SCREEN_ORIGINAL) ? 0 : 1;
         const auto fields = make_array<NnediTargetField>(NNEDI_GEN_FIELD_TOP, NNEDI_GEN_FIELD_BOTTOM);
@@ -651,7 +659,7 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
             const int nnxy = nnx * nny;
             const int nns = 4 / wstep; //half2の場合、nns方向を2つ格納できる
             nnedi_k0_cl = str_replace(nnedi_k0_cl, "#include \"rgy_filter_nnedi_common.cl\"", nnedi_common_cl);
-            const auto options = strsprintf("-cl-std=CL2.0 " //sub_group_broadcastに必要
+            const auto options = clversionRequired + strsprintf(" "
                 "-D TypePixel=%s -D TypePixel2=%s -D TypePixel4=%s -D bit_depth=%d -D TypeCalc=%s -D USE_FP16=%d "
                 "-D nnx=%d -D nny=%d -D nnxy=%d -D nns=%d "
                 "-D thread_y_loop=%d -D weight_loop=%d -D prescreen_new=%d "
@@ -684,7 +692,7 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
                 return RGY_ERR_UNKNOWN;
             }
             nnedi_k1_cl = str_replace(nnedi_k1_cl, "#include \"rgy_filter_nnedi_common.cl\"", nnedi_common_cl);
-            auto options = strsprintf("-cl-std=CL2.0  " //sub_group_broadcastに必要
+            auto options = clversionRequired + strsprintf(" "
                 "-D TypePixel=%s -D TypePixel2=%s -D TypePixel4=%s -D bit_depth=%d -D TypeCalc=%s -D USE_FP16=%d "
                 "-D nnx=%d -D nny=%d -D nnxy=%d -D nns=%d "
                 "-D thread_y_loop=%d -D weight_loop=%d -D prescreen_new=%d "
@@ -709,7 +717,8 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
                 AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_NNEDI_K1_CL(m_nnedi_k1)\n"));
                 return RGY_ERR_OPENCL_CRUSH;
             }
-            if (sub_group_ext_avail) {
+#if 0
+            if (sub_group_ext_avail != RGYOpenCLSubGroupSupport::NONE) {
                 auto getKernelSubGroupInfo = clGetKernelSubGroupInfo != nullptr ? clGetKernelSubGroupInfo : clGetKernelSubGroupInfoKHR;
                 RGYWorkSize local(NNEDI_BLOCK_X, NNEDI_BLOCK_Y);
                 const char *kernel_name = "kernel_compute_network1";
@@ -720,6 +729,7 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
                     ///////////<<<<< 未実装 >>>>>>>>>>>;
                 }
             }
+#endif
         }
     }
     if (prm->nnedi.isbob()) {

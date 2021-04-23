@@ -579,7 +579,7 @@ RGY_ERR RGYFilterSsim::build_kernel(const RGY_CSP csp) {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYFilterSsim::calc_ssim_plane(const RGYFrameInfo *p0, const RGYFrameInfo *p1, std::unique_ptr<RGYCLBuf>& tmp, RGYOpenCLQueue *queue, const std::vector<RGYOpenCLEvent> &wait_events) {
+RGY_ERR RGYFilterSsim::calc_ssim_plane(const RGYFrameInfo *p0, const RGYFrameInfo *p1, std::unique_ptr<RGYCLBuf>& tmp, RGYOpenCLQueue& queue, const std::vector<RGYOpenCLEvent> &wait_events) {
     const int width = p0->width & (~3);
     const int height = p0->height & (~3);
     RGYWorkSize local(SSIM_BLOCK_X, SSIM_BLOCK_Y);
@@ -590,7 +590,7 @@ RGY_ERR RGYFilterSsim::calc_ssim_plane(const RGYFrameInfo *p0, const RGYFrameInf
     if (!tmp || tmp->size() < grid_count * sizeof(float)) {
         tmp = m_cl->createBuffer(grid_count * sizeof(float));
     }
-    auto err = m_kernel->kernel("kernel_ssim").config(*queue, local, global, wait_events).launch(
+    auto err = m_kernel->kernel("kernel_ssim").config(queue, local, global, wait_events).launch(
         (cl_mem)p0->ptr[0], p0->pitch[0], (cl_mem)p1->ptr[0], p1->pitch[0],
         p0->width, p0->height,
         tmp->mem()
@@ -599,7 +599,7 @@ RGY_ERR RGYFilterSsim::calc_ssim_plane(const RGYFrameInfo *p0, const RGYFrameInf
         AddMessage(RGY_LOG_ERROR, _T("error at kernel_ssim (calc_ssim_plane(%s)): %s.\n"), RGY_CSP_NAMES[p0->csp], get_err_mes(err));
         return err;
     }
-    err = tmp->queueMapBuffer(queue->get(), CL_MAP_READ);
+    err = tmp->queueMapBuffer(queue, CL_MAP_READ);
     if (err != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("error at queueMapBuffer (calc_ssim_plane(%s)): %s.\n"), RGY_CSP_NAMES[p0->csp], get_err_mes(err));
         return err;
@@ -611,7 +611,7 @@ RGY_ERR RGYFilterSsim::calc_ssim_frame(const RGYFrameInfo *p0, const RGYFrameInf
     for (int i = 0; i < RGY_CSP_PLANES[p0->csp]; i++) {
         const auto plane0 = getPlane(p0, (RGY_PLANE)i);
         const auto plane1 = getPlane(p1, (RGY_PLANE)i);
-        const auto err = calc_ssim_plane(&plane0, &plane1, m_tmpSsim[i], &m_queueCalcSsim[i], { m_cropEvent });
+        const auto err = calc_ssim_plane(&plane0, &plane1, m_tmpSsim[i], m_queueCalcSsim[i], { m_cropEvent });
         if (err != RGY_ERR_NONE) {
             return err;
         }
@@ -619,7 +619,7 @@ RGY_ERR RGYFilterSsim::calc_ssim_frame(const RGYFrameInfo *p0, const RGYFrameInf
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYFilterSsim::calc_psnr_plane(const RGYFrameInfo *p0, const RGYFrameInfo *p1, std::unique_ptr<RGYCLBuf> &tmp, RGYOpenCLQueue *queue, const std::vector<RGYOpenCLEvent> &wait_events) {
+RGY_ERR RGYFilterSsim::calc_psnr_plane(const RGYFrameInfo *p0, const RGYFrameInfo *p1, std::unique_ptr<RGYCLBuf> &tmp, RGYOpenCLQueue& queue, const std::vector<RGYOpenCLEvent> &wait_events) {
     const int width = p0->width;
     const int height = p0->height;
     RGYWorkSize local(SSIM_BLOCK_X, SSIM_BLOCK_Y);
@@ -629,7 +629,7 @@ RGY_ERR RGYFilterSsim::calc_psnr_plane(const RGYFrameInfo *p0, const RGYFrameInf
     if (!tmp || tmp->size() < grid_count * sizeof(float)) {
         tmp = m_cl->createBuffer(grid_count * sizeof(float));
     }
-    auto err = m_kernel->kernel("kernel_psnr").config(*queue, local, global, wait_events).launch(
+    auto err = m_kernel->kernel("kernel_psnr").config(queue, local, global, wait_events).launch(
         (cl_mem)p0->ptr[0], p0->pitch[0], (cl_mem)p1->ptr[0], p1->pitch[0],
         p0->width, p0->height,
         tmp->mem()
@@ -638,7 +638,7 @@ RGY_ERR RGYFilterSsim::calc_psnr_plane(const RGYFrameInfo *p0, const RGYFrameInf
         AddMessage(RGY_LOG_ERROR, _T("error at kernel_psnr (calc_psnr_plane(%s)): %s.\n"), RGY_CSP_NAMES[p0->csp], get_err_mes(err));
         return err;
     }
-    err = tmp->queueMapBuffer(queue->get(), CL_MAP_READ);
+    err = tmp->queueMapBuffer(queue, CL_MAP_READ);
     if (err != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("error at queueMapBuffer (calc_psnr_plane(%s)): %s.\n"), RGY_CSP_NAMES[p0->csp], get_err_mes(err));
         return err;
@@ -650,7 +650,7 @@ RGY_ERR RGYFilterSsim::calc_psnr_frame(const RGYFrameInfo *p0, const RGYFrameInf
     for (int i = 0; i < RGY_CSP_PLANES[p0->csp]; i++) {
         const auto plane0 = getPlane(p0, (RGY_PLANE)i);
         const auto plane1 = getPlane(p1, (RGY_PLANE)i);
-        const auto err = calc_psnr_plane(&plane0, &plane1, m_tmpPsnr[i], &m_queueCalcPsnr[i], { m_cropEvent });
+        const auto err = calc_psnr_plane(&plane0, &plane1, m_tmpPsnr[i], m_queueCalcPsnr[i], { m_cropEvent });
         if (err != RGY_ERR_NONE) {
             return err;
         }
