@@ -1,10 +1,10 @@
 ﻿// -----------------------------------------------------------------------------------------
-// NVEnc by rigaya
+// QSVEnc/VCEEnc by rigaya
 // -----------------------------------------------------------------------------------------
 //
 // The MIT License
 //
-// Copyright (c) 2014-2016 rigaya
+// Copyright (c) 2019-2021 rigaya
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,7 @@
 #include <array>
 #include "convert_csp.h"
 #include "rgy_filter.h"
-#include "vce_param.h"
+#include "rgy_prm.h"
 
 
 RGY_ERR RGYFilterResize::resizePlane(RGYFrameInfo *pOutputPlane, const RGYFrameInfo *pInputPlane, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
