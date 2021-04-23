@@ -26,6 +26,9 @@
 //
 // ------------------------------------------------------------------------------------------
 
+#ifndef __RGY_FILTER_DENOISE_KNN_H__
+#define __RGY_FILTER_DENOISE_KNN_H__
+
 #include "rgy_filter.h"
 #include "rgy_prm.h"
 #include <array>
@@ -54,3 +57,5 @@ protected:
     unique_ptr<RGYOpenCLProgram> m_knn;
     unique_ptr<RGYCLFrame> m_srcImage;
 };
+
+#endif //__RGY_FILTER_DENOISE_KNN_H__
