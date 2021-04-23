@@ -390,7 +390,7 @@ RGY_ERR RGYFilterSsim::addBitstream(const RGYBitstream *bitstream) {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYFilterSsim::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+RGY_ERR RGYFilterSsim::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     UNREFERENCED_PARAMETER(ppOutputFrames);
     UNREFERENCED_PARAMETER(pOutputFrameNum);
     RGY_ERR sts = RGY_ERR_NONE;
@@ -403,9 +403,9 @@ RGY_ERR RGYFilterSsim::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOu
     auto &copyFrame = m_unused.front();
     if (m_cropOrg) {
         int cropFilterOutputNum = 0;
-        FrameInfo *outInfo[1] = { &copyFrame->frame };
-        FrameInfo cropInput = *pInputFrame;
-        auto sts_filter = m_cropOrg->filter(&cropInput, (FrameInfo **)&outInfo, &cropFilterOutputNum, queue, wait_events, event);
+        RGYFrameInfo *outInfo[1] = { &copyFrame->frame };
+        RGYFrameInfo cropInput = *pInputFrame;
+        auto sts_filter = m_cropOrg->filter(&cropInput, (RGYFrameInfo **)&outInfo, &cropFilterOutputNum, queue, wait_events, event);
         if (outInfo[0] == nullptr || cropFilterOutputNum != 1) {
             AddMessage(RGY_LOG_ERROR, _T("Unknown behavior \"%s\".\n"), m_cropOrg->name().c_str());
             return sts_filter;
@@ -532,9 +532,9 @@ RGY_ERR RGYFilterSsim::compare_frames(bool flush) {
                 m_decFrameCopy = m_cl->createFrameBuffer(m_cropDec->GetFilterParam()->frameOut);
             }
             int cropFilterOutputNum = 0;
-            FrameInfo *outInfo[1] = { &m_decFrameCopy->frame };
-            FrameInfo decFrameInfo = decFrame->getInfo();
-            auto sts_filter = m_cropDec->filter(&decFrameInfo, (FrameInfo **)&outInfo, &cropFilterOutputNum, m_queueCrop, &m_cropEvent);
+            RGYFrameInfo *outInfo[1] = { &m_decFrameCopy->frame };
+            RGYFrameInfo decFrameInfo = decFrame->getInfo();
+            auto sts_filter = m_cropDec->filter(&decFrameInfo, (RGYFrameInfo **)&outInfo, &cropFilterOutputNum, m_queueCrop, &m_cropEvent);
             if (outInfo[0] == nullptr || cropFilterOutputNum != 1) {
                 AddMessage(RGY_LOG_ERROR, _T("Unknown behavior \"%s\".\n"), m_cropDec->name().c_str());
                 return sts_filter;
@@ -579,7 +579,7 @@ RGY_ERR RGYFilterSsim::build_kernel(const RGY_CSP csp) {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYFilterSsim::calc_ssim_plane(const FrameInfo *p0, const FrameInfo *p1, std::unique_ptr<RGYCLBuf>& tmp, RGYOpenCLQueue *queue, const std::vector<RGYOpenCLEvent> &wait_events) {
+RGY_ERR RGYFilterSsim::calc_ssim_plane(const RGYFrameInfo *p0, const RGYFrameInfo *p1, std::unique_ptr<RGYCLBuf>& tmp, RGYOpenCLQueue *queue, const std::vector<RGYOpenCLEvent> &wait_events) {
     const int width = p0->width & (~3);
     const int height = p0->height & (~3);
     RGYWorkSize local(SSIM_BLOCK_X, SSIM_BLOCK_Y);
@@ -607,7 +607,7 @@ RGY_ERR RGYFilterSsim::calc_ssim_plane(const FrameInfo *p0, const FrameInfo *p1,
     return err;
 }
 
-RGY_ERR RGYFilterSsim::calc_ssim_frame(const FrameInfo *p0, const FrameInfo *p1) {
+RGY_ERR RGYFilterSsim::calc_ssim_frame(const RGYFrameInfo *p0, const RGYFrameInfo *p1) {
     for (int i = 0; i < RGY_CSP_PLANES[p0->csp]; i++) {
         const auto plane0 = getPlane(p0, (RGY_PLANE)i);
         const auto plane1 = getPlane(p1, (RGY_PLANE)i);
@@ -619,7 +619,7 @@ RGY_ERR RGYFilterSsim::calc_ssim_frame(const FrameInfo *p0, const FrameInfo *p1)
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYFilterSsim::calc_psnr_plane(const FrameInfo *p0, const FrameInfo *p1, std::unique_ptr<RGYCLBuf> &tmp, RGYOpenCLQueue *queue, const std::vector<RGYOpenCLEvent> &wait_events) {
+RGY_ERR RGYFilterSsim::calc_psnr_plane(const RGYFrameInfo *p0, const RGYFrameInfo *p1, std::unique_ptr<RGYCLBuf> &tmp, RGYOpenCLQueue *queue, const std::vector<RGYOpenCLEvent> &wait_events) {
     const int width = p0->width;
     const int height = p0->height;
     RGYWorkSize local(SSIM_BLOCK_X, SSIM_BLOCK_Y);
@@ -646,7 +646,7 @@ RGY_ERR RGYFilterSsim::calc_psnr_plane(const FrameInfo *p0, const FrameInfo *p1,
     return err;
 }
 
-RGY_ERR RGYFilterSsim::calc_psnr_frame(const FrameInfo *p0, const FrameInfo *p1) {
+RGY_ERR RGYFilterSsim::calc_psnr_frame(const RGYFrameInfo *p0, const RGYFrameInfo *p1) {
     for (int i = 0; i < RGY_CSP_PLANES[p0->csp]; i++) {
         const auto plane0 = getPlane(p0, (RGY_PLANE)i);
         const auto plane1 = getPlane(p1, (RGY_PLANE)i);
@@ -658,7 +658,7 @@ RGY_ERR RGYFilterSsim::calc_psnr_frame(const FrameInfo *p0, const FrameInfo *p1)
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYFilterSsim::calc_ssim_psnr(const FrameInfo *p0, const FrameInfo *p1) {
+RGY_ERR RGYFilterSsim::calc_ssim_psnr(const RGYFrameInfo *p0, const RGYFrameInfo *p1) {
     auto prm = std::dynamic_pointer_cast<RGYFilterParamSsim>(m_param);
     if (!prm) {
         AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));

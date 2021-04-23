@@ -703,7 +703,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     const bool cropRequired = cropEnabled(inputParam->input.crop)
         && m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN;
 
-    FrameInfo inputFrame;
+    RGYFrameInfo inputFrame;
     inputFrame.width = inputParam->input.srcWidth;
     inputFrame.height = inputParam->input.srcHeight;
     inputFrame.csp = inputParam->input.csp;
@@ -2514,11 +2514,11 @@ RGY_ERR VCECore::run() {
 
     auto filter_frame = [&](int &nFilterFrame, unique_ptr<RGYFrame> &inframe, deque<unique_ptr<RGYFrame>> &dqEncFrames, bool &bDrain) {
 
-        deque<std::pair<FrameInfo, uint32_t>> filterframes;
+        deque<std::pair<RGYFrameInfo, uint32_t>> filterframes;
 
         bool skipFilters = false;
         if (bDrain) {
-            filterframes.push_back(std::make_pair(FrameInfo(), 0u));
+            filterframes.push_back(std::make_pair(RGYFrameInfo(), 0u));
         } else {
             auto &lastFilter = m_vpFilters[m_vpFilters.size()-1];
             const auto inframeInfo = inframe->getInfo();
@@ -2566,8 +2566,8 @@ RGY_ERR VCECore::run() {
             for (uint32_t ifilter = filterframes.front().second; ifilter < m_vpFilters.size() - 1; ifilter++) {
                 amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
                 int nOutFrames = 0;
-                FrameInfo *outInfo[16] = { 0 };
-                auto sts_filter = m_vpFilters[ifilter]->filter(&filterframes.front().first, (FrameInfo **)&outInfo, &nOutFrames);
+                RGYFrameInfo *outInfo[16] = { 0 };
+                auto sts_filter = m_vpFilters[ifilter]->filter(&filterframes.front().first, (RGYFrameInfo **)&outInfo, &nOutFrames);
                 if (sts_filter != RGY_ERR_NONE) {
                     PrintMes(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), m_vpFilters[ifilter]->name().c_str());
                     return sts_filter;
@@ -2627,9 +2627,9 @@ RGY_ERR VCECore::run() {
                 //エンコードバッファのポインタを渡す
                 int nOutFrames = 0;
                 auto encSurfaceInfo = encSurface->getInfo();
-                FrameInfo *outInfo[1];
+                RGYFrameInfo *outInfo[1];
                 outInfo[0] = &encSurfaceInfo;
-                auto sts_filter = lastFilter->filter(&filterframes.front().first, (FrameInfo **)&outInfo, &nOutFrames);
+                auto sts_filter = lastFilter->filter(&filterframes.front().first, (RGYFrameInfo **)&outInfo, &nOutFrames);
                 filterframes.pop_front();
                 if (sts_filter != RGY_ERR_NONE) {
                     PrintMes(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), lastFilter->name().c_str());

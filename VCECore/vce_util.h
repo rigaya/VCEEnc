@@ -392,8 +392,8 @@ private:
         return std::make_unique<RGYFrame>(amf::AMFSurfacePtr(data));
     }
 
-    FrameInfo infoAMF() const {
-        FrameInfo info;
+    RGYFrameInfo infoAMF() const {
+        RGYFrameInfo info;
         for (int i = 0; i < 4; i++) {
             auto plane = amfptr->GetPlaneAt(i);
             if (plane) {
@@ -418,17 +418,17 @@ private:
         }
         return info;
     }
-    FrameInfo infoCL() const {
+    RGYFrameInfo infoCL() const {
         return clbuf->frame;
     }
 public:
-    FrameInfo getInfo() const {
+    RGYFrameInfo getInfo() const {
         if (amfptr) {
             return infoAMF();
         } else if (clbuf) {
             return infoCL();
         } else {
-            return FrameInfo();
+            return RGYFrameInfo();
         }
     }
     void ptrArray(void *array[3], bool bRGB) {

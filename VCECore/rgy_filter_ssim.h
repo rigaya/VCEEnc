@@ -72,14 +72,14 @@ public:
 protected:
     RGY_ERR init_cl_resources();
     void close_cl_resources();
-    virtual RGY_ERR run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) override;
+    virtual RGY_ERR run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) override;
     virtual void close() override;
     RGY_ERR build_kernel(const RGY_CSP csp);
-    RGY_ERR calc_ssim_plane(const FrameInfo *p0, const FrameInfo *p1, std::unique_ptr<RGYCLBuf> &tmp, RGYOpenCLQueue *queue, const std::vector<RGYOpenCLEvent> &wait_events);
-    RGY_ERR calc_ssim_frame(const FrameInfo *p0, const FrameInfo *p1);
-    RGY_ERR calc_psnr_plane(const FrameInfo *p0, const FrameInfo *p1, std::unique_ptr<RGYCLBuf> &tmp, RGYOpenCLQueue *queue, const std::vector<RGYOpenCLEvent> &wait_events);
-    RGY_ERR calc_psnr_frame(const FrameInfo *p0, const FrameInfo *p1);
-    RGY_ERR calc_ssim_psnr(const FrameInfo *p0, const FrameInfo *p1);
+    RGY_ERR calc_ssim_plane(const RGYFrameInfo *p0, const RGYFrameInfo *p1, std::unique_ptr<RGYCLBuf> &tmp, RGYOpenCLQueue *queue, const std::vector<RGYOpenCLEvent> &wait_events);
+    RGY_ERR calc_ssim_frame(const RGYFrameInfo *p0, const RGYFrameInfo *p1);
+    RGY_ERR calc_psnr_plane(const RGYFrameInfo *p0, const RGYFrameInfo *p1, std::unique_ptr<RGYCLBuf> &tmp, RGYOpenCLQueue *queue, const std::vector<RGYOpenCLEvent> &wait_events);
+    RGY_ERR calc_psnr_frame(const RGYFrameInfo *p0, const RGYFrameInfo *p1);
+    RGY_ERR calc_ssim_psnr(const RGYFrameInfo *p0, const RGYFrameInfo *p1);
 
     bool m_decodeStarted; //デコードが開始したか
     int m_deviceId;       //SSIM計算で使用するCUDA device ID

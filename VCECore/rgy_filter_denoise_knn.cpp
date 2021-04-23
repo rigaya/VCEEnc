@@ -34,7 +34,7 @@
 
 static const int KNN_RADIUS_MAX = 5;
 
-RGY_ERR RGYFilterDenoiseKnn::denoisePlane(FrameInfo *pOutputPlane, const FrameInfo *pInputPlane, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+RGY_ERR RGYFilterDenoiseKnn::denoisePlane(RGYFrameInfo *pOutputPlane, const RGYFrameInfo *pInputPlane, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     auto prm = std::dynamic_pointer_cast<RGYFilterParamDenoiseKnn>(m_param);
     if (!prm) {
         AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
@@ -58,7 +58,7 @@ RGY_ERR RGYFilterDenoiseKnn::denoisePlane(FrameInfo *pOutputPlane, const FrameIn
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYFilterDenoiseKnn::denoiseFrame(FrameInfo *pOutputFrame, const FrameInfo *pInputFrame, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+RGY_ERR RGYFilterDenoiseKnn::denoiseFrame(RGYFrameInfo *pOutputFrame, const RGYFrameInfo *pInputFrame, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     m_srcImage = m_cl->createImageFromFrameBuffer(*pInputFrame, true, CL_MEM_READ_ONLY);
     for (int i = 0; i < RGY_CSP_PLANES[pOutputFrame->csp]; i++) {
         auto planeDst = getPlane(pOutputFrame, (RGY_PLANE)i);
@@ -147,7 +147,7 @@ RGY_ERR RGYFilterDenoiseKnn::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<
     return sts;
 }
 
-RGY_ERR RGYFilterDenoiseKnn::run_filter(const FrameInfo *pInputFrame, FrameInfo **ppOutputFrames, int *pOutputFrameNum, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+RGY_ERR RGYFilterDenoiseKnn::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     RGY_ERR sts = RGY_ERR_NONE;
     if (pInputFrame->ptr[0] == nullptr) {
         return sts;
