@@ -464,8 +464,10 @@ static const int RGY_MAX_PLANES = 4;
 enum RGY_MEM_TYPE {
     RGY_MEM_TYPE_CPU = 0,
     RGY_MEM_TYPE_GPU,
-    RGY_MEM_TYPE_GPU_IMAGE
+    RGY_MEM_TYPE_GPU_IMAGE,
+    RGY_MEM_TYPE_GPU_IMAGE_NORMALIZED
 };
+const TCHAR *get_memtype_str(RGY_MEM_TYPE type);
 
 class RGYFrameData;
 
