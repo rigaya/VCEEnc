@@ -163,7 +163,7 @@ RGY_ERR RGYFilterResize::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
             radius);
         m_resize = m_cl->buildResource(_T("RGY_FILTER_RESIZE_CL"), _T("EXE_DATA"), options.c_str());
         if (!m_resize) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_CL(m_crop)\n"));
+            AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_RESIZE_CL(resize)\n"));
             return RGY_ERR_OPENCL_CRUSH;
         }
         if (!m_weightSpline
