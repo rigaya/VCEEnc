@@ -97,6 +97,7 @@ RGYInputAvcodecPrm::RGYInputAvcodecPrm(RGYInputPrm base) :
     seekSec(0.0),
     logFramePosList(),
     logCopyFrameData(),
+    logPackets(),
     threadInput(0),
     queueInfo(nullptr),
     HWDecCodecCsp(nullptr),
@@ -114,6 +115,7 @@ RGYInputAvcodecPrm::RGYInputAvcodecPrm(RGYInputPrm base) :
 RGYInputAvcodec::RGYInputAvcodec() :
     m_Demux(),
     m_logFramePosList(),
+    m_fpPacketList(),
     m_hevcMp42AnnexbBuffer(),
     m_cap2ass() {
     memset(&m_Demux.format, 0, sizeof(m_Demux.format));
@@ -278,6 +280,7 @@ void RGYInputAvcodec::Close() {
     }
     m_Demux.frames.clear();
     AddMessage(RGY_LOG_DEBUG, _T("Cleared frame pos list.\n"));
+    m_fpPacketList.reset();
     AddMessage(RGY_LOG_DEBUG, _T("Closed.\n"));
 }
 
@@ -1270,6 +1273,9 @@ RGY_ERR RGYInputAvcodec::Init(const TCHAR *strFileName, VideoInfo *inputInfo, co
         m_cap2ass.disable();
     }
 #endif
+    if (input_prm->logPackets.length() > 0) {
+        m_fpPacketList.reset(_tfopen(input_prm->logPackets.c_str(), _T("w")));
+    }
     //ファイルのオープン
     if ((ret = avformat_open_input(&(m_Demux.format.formatCtx), filename_char.c_str(), inFormat, &m_Demux.format.formatOptions)) != 0) {
         AddMessage(RGY_LOG_ERROR, _T("error opening file \"%s\": %s\n"), char_to_tstring(filename_char, CP_UTF8).c_str(), qsv_av_err2str(ret).c_str());
