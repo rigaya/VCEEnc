@@ -34,6 +34,7 @@
 #include <tchar.h>
 #include "rgy_version.h"
 #include "rgy_codepage.h"
+#include "rgy_resource.h"
 #include "vce_param.h"
 #include "vce_core.h"
 #include "vce_cmd.h"
