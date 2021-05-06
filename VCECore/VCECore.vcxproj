@@ -387,6 +387,7 @@
     <ClInclude Include="gpu_info.h" />
     <ClInclude Include="h264_level.h" />
     <ClInclude Include="hevc_level.h" />
+    <ClInclude Include="rgy_arch.h" />
     <ClInclude Include="rgy_avlog.h" />
     <ClInclude Include="rgy_avutil.h" />
     <ClInclude Include="rgy_bitstream.h" />
