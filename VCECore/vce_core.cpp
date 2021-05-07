@@ -56,6 +56,7 @@
 #include "rgy_filter_nnedi.h"
 #include "rgy_filter_denoise_knn.h"
 #include "rgy_filter_denoise_pmd.h"
+#include "rgy_filter_decimate.h"
 #include "rgy_filter_smooth.h"
 #include "rgy_filter_subburn.h"
 #include "rgy_filter_unsharp.h"
@@ -770,6 +771,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         || inputParam->vpp.colorspace.enable
         || inputParam->vpp.afs.enable
         || inputParam->vpp.nnedi.enable
+        || inputParam->vpp.decimate.enable
         || inputParam->vpp.pad.enable
         || inputParam->vpp.knn.enable
         || inputParam->vpp.pmd.enable
@@ -920,6 +922,29 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             unique_ptr<RGYFilter> filter(new RGYFilterNnedi(m_dev->cl()));
             shared_ptr<RGYFilterParamNnedi> param(new RGYFilterParamNnedi());
             param->nnedi = inputParam->vpp.nnedi;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
+            param->bOutOverwrite = false;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filter));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+        //decimate
+        if (inputParam->vpp.decimate.enable) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterDecimate(m_dev->cl()));
+            shared_ptr<RGYFilterParamDecimate> param(new RGYFilterParamDecimate());
+            param->decimate = inputParam->vpp.decimate;
+            param->outfilename = inputParam->common.outputFilename;
             param->frameIn = inputFrame;
             param->frameOut = inputFrame;
             param->baseFps = m_encFps;

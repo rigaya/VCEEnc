@@ -505,11 +505,29 @@ struct RGYFrameInfo {
     std::basic_string<TCHAR> print() const;
 };
 
+static bool interlaced(const RGYFrameInfo& frameInfo) {
+    return (frameInfo.picstruct & RGY_PICSTRUCT_INTERLACED) != 0;
+}
+
+static void copyFrameProp(RGYFrameInfo *dst, const RGYFrameInfo *src) {
+    dst->width = src->width;
+    dst->height = src->height;
+    dst->csp = src->csp;
+    dst->picstruct = src->picstruct;
+    dst->timestamp = src->timestamp;
+    dst->duration = src->duration;
+    dst->flags = src->flags;
+    dst->inputFrameId = src->inputFrameId;
+}
+
 static RGYFrameInfo getPlane(const RGYFrameInfo *frameInfo, RGY_PLANE plane) {
     RGYFrameInfo planeInfo = *frameInfo;
     if (frameInfo->csp == RGY_CSP_YUY2
+        || frameInfo->csp == RGY_CSP_Y210 || frameInfo->csp == RGY_CSP_Y216
+        || frameInfo->csp == RGY_CSP_Y410 || frameInfo->csp == RGY_CSP_Y416
         || RGY_CSP_CHROMA_FORMAT[frameInfo->csp] == RGY_CHROMAFMT_RGB_PACKED
-        || RGY_CSP_CHROMA_FORMAT[frameInfo->csp] == RGY_CHROMAFMT_MONOCHROME) {
+        || RGY_CSP_CHROMA_FORMAT[frameInfo->csp] == RGY_CHROMAFMT_MONOCHROME
+        || RGY_CSP_PLANES[frameInfo->csp] == 1) {
         return planeInfo; //何もしない
     }
     if (frameInfo->csp == RGY_CSP_GBR || frameInfo->csp == RGY_CSP_GBRA) {
@@ -627,10 +645,6 @@ static bool cmpFrameInfoCspResolution(const RGYFrameInfo *pA, const RGYFrameInfo
         || pA->height != pB->height
         || pA->mem_type != pB->mem_type
         || pA->pitch != pB->pitch;
-}
-
-static bool interlaced(const RGYFrameInfo& FrameInfo) {
-    return (FrameInfo.picstruct & RGY_PICSTRUCT_INTERLACED) != 0;
 }
 
 #ifdef __CUDACC__
