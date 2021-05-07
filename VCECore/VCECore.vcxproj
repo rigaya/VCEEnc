@@ -77,6 +77,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="logo.cpp" />
     <ClCompile Include="rgy_avlog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -124,6 +125,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="rgy_filter_decimate.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="rgy_filter_delogo.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -412,6 +419,7 @@
     <ClInclude Include="rgy_err.h" />
     <ClInclude Include="rgy_event.h" />
     <ClInclude Include="rgy_filter_decimate.h" />
+    <ClInclude Include="rgy_filter_delogo.h" />
     <ClInclude Include="rgy_filter_mpdecimate.h" />
     <ClInclude Include="rgy_frame.h" />
     <ClInclude Include="rgy_hdr10plus.h" />
@@ -479,6 +487,7 @@
     <None Include="rgy_filter_deband.cl" />
     <None Include="rgy_filter_deband_gen_rand.cl" />
     <None Include="rgy_filter_decimate.cl" />
+    <None Include="rgy_filter_delogo.cl" />
     <None Include="rgy_filter_denoise_knn.cl" />
     <None Include="rgy_filter_denoise_pmd.cl" />
     <None Include="rgy_filter_edgelevel.cl" />

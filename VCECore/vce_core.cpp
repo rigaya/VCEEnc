@@ -54,6 +54,7 @@
 #include "rgy_filter_colorspace.h"
 #include "rgy_filter_afs.h"
 #include "rgy_filter_nnedi.h"
+#include "rgy_filter_delogo.h"
 #include "rgy_filter_denoise_knn.h"
 #include "rgy_filter_denoise_pmd.h"
 #include "rgy_filter_decimate.h"
@@ -769,6 +770,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     //フィルタが必要
     if (resizeRequired
         || cropRequired
+        || inputParam->vpp.delogo.enable
         || inputParam->vpp.colorspace.enable
         || inputParam->vpp.afs.enable
         || inputParam->vpp.nnedi.enable
@@ -874,6 +876,29 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             }
             //フィルタチェーンに追加
             m_vpFilters.push_back(std::move(filterCrop));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+        //delogo
+        if (inputParam->vpp.delogo.enable) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterDelogo(m_dev->cl()));
+            shared_ptr < RGYFilterParamDelogo> param(new RGYFilterParamDelogo());
+            param->delogo = inputParam->vpp.delogo;
+            param->inputFileName = inputParam->common.inputFilename.c_str();
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
+            param->bOutOverwrite = false;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filter));
             //パラメータ情報を更新
             m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
             //入力フレーム情報を更新
