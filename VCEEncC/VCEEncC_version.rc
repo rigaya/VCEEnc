@@ -18,6 +18,7 @@ RGY_FILTER_RESIZE_CL      EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_resize.c
 RGY_FILTER_DENOISE_KNN_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_denoise_knn.cl"
 RGY_FILTER_DENOISE_PMD_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_denoise_pmd.cl"
 RGY_FILTER_DECIMATE_CL    EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_decimate.cl"
+RGY_FILTER_MPDECIMATE_CL  EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_mpdecimate.cl"
 RGY_FILTER_SMOOTH_CL      EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_smooth.cl"
 RGY_FILTER_SUBBURN_CL     EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_subburn.cl"
 RGY_FILTER_UNSHARP_CL     EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_unsharp.cl"
