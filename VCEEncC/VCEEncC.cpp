@@ -367,11 +367,39 @@ int _tmain(int argc, TCHAR **argv) {
             }
         }
     }
+    
+    //optionファイルの読み取り
+    std::vector<tstring> argvCnfFile;
+    for (int iarg = 1; iarg < argc; iarg++) {
+        const TCHAR *option_name = nullptr;
+        if (argv[iarg][0] == _T('-')) {
+            if (argv[iarg][1] == _T('\0')) {
+                continue;
+            } else if (argv[iarg][1] == _T('-')) {
+                option_name = &argv[iarg][2];
+            }
+        }
+        if (option_name != nullptr
+            && tstring(option_name) == _T("option-file")) {
+            if (iarg + 1 >= argc) {
+                _ftprintf(stderr, _T("option file name is not specified.\n"));
+                return -1;
+            }
+            tstring cnffile = argv[iarg + 1];
+            vector_cat(argvCnfFile, cmd_from_config_file(argv[iarg + 1]));
+        }
+    }
 
     VCEParam prm;
-    vector<const TCHAR *> argvCopy(argv, argv + argc);
+    std::vector<const TCHAR *> argvCopy(argv, argv + argc);
+    //optionファイルのパラメータを追加
+    for (size_t i = 0; i < argvCnfFile.size(); i++) {
+        if (argvCnfFile[i].length() > 0) {
+            argvCopy.push_back(argvCnfFile[i].c_str());
+        }
+    }
     argvCopy.push_back(_T(""));
-    if (parse_cmd(&prm, argc, argvCopy.data())) {
+    if (parse_cmd(&prm, (int)argvCopy.size()-1, argvCopy.data())) {
         return 1;
     }
 
