@@ -384,7 +384,7 @@ DAR比 (画面アスペクト比) の指定。
   limited, full, auto
 ```
 
-### --videoformat &lt;string&gt
+### --videoformat &lt;string&gt;
 ```
   undef, ntsc, component, pal, secam, mac
 ```
@@ -419,9 +419,12 @@ DAR比 (画面アスペクト比) の指定。
 
 ## 入出力 / 音声 / 字幕などのオプション
 
-### --input-analyze &lt;int&gt;
+### --input-analyze &lt;float&gt;
 libavが読み込み時に解析するファイルの時間を秒で指定。デフォルトは5。
 音声トラックなどが正しく抽出されない場合、この値を大きくしてみてください(例:60)。
+
+### --input-probesize &lt;int&gt;
+libavが読み込み時に解析する最大のサイズをbyte単位で指定。
 
 ### --trim &lt;int&gt;:&lt;int&gt;[,&lt;int&gt;:&lt;int&gt;][,&lt;int&gt;:&lt;int&gt;]...
 指定した範囲のフレームのみをエンコードする。
@@ -446,6 +449,10 @@ avhw/avswリーダー使用時に、入力のフォーマットを指定する�
 ### -f, --output-format &lt;string&gt;
 muxerに出力フォーマットを指定して出力する。
 
+出力フォーマットは出力拡張子から自動的に決定されるので、通常、特に指定する必要はないが、このオプションで出力フォーマットを強制できる。
+
+使用可能なフォーマットは[--check-formats](#--check-formats)で確認できる。H.264/HEVCをElementary Streamで出力する場合には、"raw"を指定する。
+
 ### --video-track &lt;int&gt;
 エンコード対象の映像トラックの選択。avsw/avhwリーダー使用時のみ有効。
  - 1  ... 最も高解像度の映像トラック (デフォルト)
@@ -457,11 +464,7 @@ muxerに出力フォーマットを指定して出力する。
 ### --video-streamid &lt;int&gt;
 エンコード対象の映像トラックをstream idで選択。
 
-出力フォーマットは出力拡張子から自動的に決定されるので、通常、特に指定する必要はないが、このオプションで出力フォーマットを強制できる。
-
-使用可能なフォーマットは[--check-formats](#--check-formats)で確認できる。H.264/HEVCをElementary Streamで出力する場合には、"raw"を指定する。
-
-### --video-tag  &lt;string&gt;
+### --video-tag &lt;string&gt;
 映像のcodec tagの指定。
 ```
  -o test.mp4 -c hevc --video-tag hvc1
@@ -883,8 +886,8 @@ attachmentストリームをコピーする。avhw/avswリーダー使用時の�
 avsw/avhwでの読み込み時にオプションパラメータを渡す。&lt;string1&gt;にオプション名、&lt;string2&gt;にオプションの値を指定する。
 
 ```
-Example: Blurayのplaylist 1を読み込み
--i bluray:D:\ --input-option palylist:1
+例: Blurayのplaylist 1を読み込み
+-i bluray:D:\ --input-option playlist:1
 ```
 
 ### -m, --mux-option &lt;string1&gt;:&lt;string2&gt;
@@ -893,6 +896,9 @@ mux時にオプションパラメータを渡す。&lt;string1&gt;にオプシ�
 ```
 例: HLS用の出力
 -i <input> -o test.m3u8 -f hls -m hls_time:5 -m hls_segment_filename:test_%03d.ts --gop-len 30
+
+例: "default"として設定されている字幕トラックがない場合に、自動的に"default"が付与されるのを抑止しする (mkvのみ)
+-m default_mode:infer_no_subs
 ```
 
 ### --metadata &lt;string&gt; or &lt;string&gt;=&lt;string&gt;
@@ -925,19 +931,6 @@ mux時にオプションパラメータを渡す。&lt;string1&gt;にオプシ�
   指定のパスにtimecodeファイルを出力する。パスを省略した場合には、"&lt;出力ファイル名&gt;.timecode.txt"に出力する。
 
 ## vppオプション
-
-### --vpp-resize &lt;string&gt;
-リサイズのアルゴリズムを指定する。
-
-| オプション名 | 説明 |
-|:---|:---|
-| bilinear | 線形補間 |
-| spline16 | 4x4 Spline補間 |
-| spline36 | 6x6 Spline補間 |
-| spline64 | 8x8 Spline補間 |
-| lanczos2 | 4x4 lanczos補間 |
-| lanczos3 | 6x6 lanczos補間 |
-| lanczos4 | 8x8 lanczos補間 |
 
 ### --vpp-colorspace [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...  
 色空間変換を行う。x64版のみ使用可能。  
@@ -1024,6 +1017,52 @@ mux時にオプションパラメータを渡す。&lt;string1&gt;にオプシ�
 例3: hdr2sdr使用時の追加パラメータの指定例 (下記例ではデフォルトと同じ意味)
 --vpp-colorspace hdr2sdr=hable,source_peak=1000.0,ldr_nits=100.0,a=0.22,b=0.3,c=0.1,d=0.2,e=0.01,f=0.3
 ```
+
+
+### --vpp-delogo &lt;string&gt;[,&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+ロゴファイルとロゴ消しのオプションを指定する。ロゴファイルは、".lgd",".ldp",".ldp2"に対応。
+
+**パラメータ**
+- select=&lt;string&gt;  
+ロゴパックの場合に、使用するロゴを以下のいずれかで指定する。
+
+  - ロゴ名
+  - インデックス (1,2,...)
+  - 自動選択用iniファイル
+```
+ [LOGO_AUTO_SELECT]
+ logo<連番数字>=<マッチパターン>,<リストに表示されているロゴ名(完全一致!)>
+```
+
+ 例:
+ ```ini
+[LOGO_AUTO_SELECT]
+logo1= (NHK-G).,NHK総合 1440x1080
+logo2= (NHK-E).,NHK-E 1440x1080
+logo3= (MX).,TOKYO MX 1 1440x1080
+logo4= (CTC).,チバテレビ 1440x1080
+logo5= (NTV).,日本テレビ 1440x1080
+logo6= (TBS).,TBS 1440x1088
+logo7= (TX).,TV東京 50th 1440x1080
+logo8= (CX).,フジテレビ 1440x1088
+logo9= (BSP).,NHK BSP v3 1920x1080
+logo10= (BS4).,BS日テレ 1920x1080
+logo11= (BSA).,BS朝日 1920x1080
+logo12= (BS-TBS).,BS-TBS 1920x1080
+logo13= (BSJ).,BS Japan 1920x1080
+logo14= (BS11).,BS11 1920x1080 v3
+```
+
+- pos=&lt;int&gt;:&lt;int&gt;  
+1/4画素精度のロゴ位置の調整。Aviutlで言うところの &lt;位置 X&gt;:&lt;位置 Y&gt;。
+
+- depth=&lt;int&gt;  
+ロゴの透明度の補正。デフォルト128。Aviutlで言うところの &lt;深度&gt;。
+
+- y=&lt;int&gt;  
+- cb=&lt;int&gt;  
+- cr=&lt;int&gt;  
+ロゴの各色成分の補正。Aviutlで言うところの &lt;Y&gt;, &lt;Cb&gt;, &lt;Cr&gt;。  
 
 ### --vpp-afs [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 自動フィールドシフトによるインタレ解除を行う。
@@ -1230,8 +1269,65 @@ nnediによるインタレ解除を行う。基本的には片方フィールド
 例: --vpp-nnedi field=auto,nns=64,nsize=32x6,quality=slow,prescreen=none,prec=fp32
 ```
 
-### --vpp-pad &lt;int&gt;,&lt;int&gt;,&lt;int&gt;,&lt;int&gt;
-指定のピクセル数(偶数)分のパディングを行う。左、上、右、下の順にピクセル数で指定する。
+### --vpp-decimate [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...  
+重複フレームを削除します。
+
+**パラメータ**
+  - cycle=&lt;int&gt;  (デフォルト: 5)  
+    ドロップするフレームの周期。ここで設定したフレーム数の中から1枚フレームをドロップする。
+
+  - thredup=&lt;float&gt;  (デフォルト: 1.1,  0.0 - 100.0)  
+    重複と判定する閾値。
+
+  - thresc=&lt;float&gt;   (デフォルト: 15.0,  0.0 - 100.0)  
+    シーンチェンジと判定する閾値。
+
+  - blockx=&lt;int&gt;  
+  - blocky=&lt;int&gt;  
+    重複判定の計算を行うブロックサイズ。デフォルト: 32。 
+    ブロックサイズは 4, 8, 16, 32, 64のいずれかから選択可能。
+    
+  - chroma=&lt;bool&gt;  
+    色差成分を考慮した判定を行う。(デフォルト: on)
+    
+  - log=&lt;bool&gt;  
+    判定結果のログファイルの出力。 (デフォルト: off)
+    
+
+### --vpp-mpdecimate [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...  
+連続した重複フレームを削除し、VFR動画を作ることで、実効的なエンコード速度の向上と圧縮率向上を測ります。
+なお、このフィルタを使用すると[--avsync](./NVEncC_Options.ja.md#--avsync-string) vfrが自動で有効になります。
+
+**パラメータ**
+  - hi=&lt;int&gt;  (デフォルト: 768)  
+    ドロップ対象とするかどうかの閾値。各8x8ブロックの中の差分の総和が、ひとつでもこの閾値を上回っていれば、ドロップ対象から外す。
+
+  - lo=&lt;int&gt;  (デフォルト: 320)  
+  - frac=&lt;float&gt;  (デフォルト: 0.33)  
+    ドロップ対象とするかどうかの閾値。各8x8ブロックの中の差分の総和について、閾値"lo"を上回っているブロックの数をカウントし、
+    それが全体のブロック数に占める割合が"frac"以上であればドロップ対象から外す。
+
+  - max=&lt;int&gt;  (デフォルト: 0)  
+    正の値での指定: 連続ドロップフレーム数の上限。  
+    負の値での指定: 間引く1フレームを決めるフレーム間隔の下限。
+    
+  - log=&lt;bool&gt;  
+    判定結果のログファイルの出力。 (デフォルト: off)
+
+### --vpp-resize &lt;string&gt;
+リサイズのアルゴリズムを指定する。
+
+| オプション名 | 説明 |
+|:---|:---|
+| auto     | 自動的に適切なものを選択 |
+| bilinear | 線形補間 |
+| spline16 | 4x4 Spline補間 |
+| spline36 | 6x6 Spline補間 |
+| spline64 | 8x8 Spline補間 |
+| lanczos2 | 4x4 lanczos補間 |
+| lanczos3 | 6x6 lanczos補間 |
+| lanczos4 | 8x8 lanczos補間 |
+
   
 ### --vpp-knn [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 
@@ -1486,6 +1582,10 @@ unsharpフィルタ。輪郭・ディテール強調用のフィルタ。
 --vpp-deband range=31,dither=12,rand_each_frame
 ```
 
+
+### --vpp-pad &lt;int&gt;,&lt;int&gt;,&lt;int&gt;,&lt;int&gt;
+指定のピクセル数(偶数)分のパディングを行う。左、上、右、下の順にピクセル数で指定する。
+
 ## 制御系のオプション
 
 ### --output-buf &lt;int&gt;
@@ -1520,6 +1620,14 @@ file以外のプロトコルを使用する場合には、この出力バッフ�
 
 ### --log-framelist
 avsw/avhw読み込み時のデバッグ情報出力。
+
+### --log-packets
+avsw/avhw読み込み時のデバッグ情報出力。
+
+### --option-file &lt;string&gt;
+使用するオプションを記載したファイルを指定する。
+1行に複数のオプションを記載できるが、改行は空白として扱われるので、
+ひとつのオプション名やその値が行をまたがってはならない。
 
 ### --max-procfps &lt;int&gt;
 エンコード速度の上限を設定。デフォルトは0 ( = 無制限)。

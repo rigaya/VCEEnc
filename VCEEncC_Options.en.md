@@ -416,9 +416,12 @@ Calculate psnr of the encoded video.
 
 ## IO / Audio / Subtitle Options
 
-### --input-analyze &lt;int&gt;
+### --input-analyze &lt;float&gt;
 Specify the length in seconds that libav parses for file analysis. The default is 5 (sec).
 If audio / subtitle tracks etc. are not detected properly, try increasing this value (eg 60).
+
+### --input-probesize &lt;int&gt;
+Set the maximum size in bytes that libav parses for file analysis.
 
 ### --trim &lt;int&gt;:&lt;int&gt;[,&lt;int&gt;:&lt;int&gt;][,&lt;int&gt;:&lt;int&gt;]...
 Encode only frames in the specified range.
@@ -500,12 +503,12 @@ Example: Extract track numbers #1 and #2
 --audio-copy eng,jpn
 ```
 
-### --audio-codec [[{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;[:&lt;string&gt;=&lt;string&gt;][,&lt;string&gt;=&lt;string&gt;],...]
+### --audio-codec [[{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;[:&lt;string&gt;=&lt;string&gt;][,&lt;string&gt;=&lt;string&gt;][#&lt;string&gt;=&lt;string&gt;][,&lt;string&gt;=&lt;string&gt;],...]
 Encode audio track with the codec specified. If codec is not set, most suitable codec will be selected automatically. Codecs available could be checked with [--check-encoders](#--check-codecs---check-decoders---check-encoders).
 
 You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
 
-Also, you can specify params for audio encoder.
+Also, after ":" you can specify params for audio encoder,  after "#" you can specify params for audio decoder.
 ```
 Example 1: encode all audio tracks to mp3
 --audio-codec libmp3lame
@@ -603,10 +606,10 @@ Specify the engine used for mixing audio channels and sampling frequency convers
 ### --audio-delay [{&lt;int&gt;or&lt;string&gt;}?]&lt;int&gt;
 Specify audio delay in milli seconds.　You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
 
-### --audio-file [&lt;int&gt;?][&lt;string&gt;]&lt;string&gt;
+### --audio-file [{&lt;int&gt;or&lt;string&gt;}?][&lt;string&gt;]&lt;string&gt;
 Extract audio track to the specified path. The output format is determined automatically from the output extension. Available only when avhw / avsw reader is used.
 
-You can also specify the audio track (1, 2, ...) to extract.
+You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt].
 ```
 Example: extract audio track number #2 to test_out2.aac
 --audio-file 2?"test_out2.aac"
@@ -621,7 +624,7 @@ Example: Output in adts format without extension
 ### --audio-filter [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;
 Apply filters to audio track. Filters could be slected from [link](https://ffmpeg.org/ffmpeg-filters.html#Audio-Filters).
 
-You can also specify the audio track (1, 2, ...) to filter.
+You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
 
 ```
 Example 1: --audio-filter volume=0.2  (lowering the volume)
@@ -650,14 +653,16 @@ You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select a
  metadata
  copy
 
-例:
+Example:
 --audio-disposition 2?default,forced
 ```
 
-### --audio-metadata &lt;string&gt; or &lt;string&gt;=&lt;string&gt;
+### --audio-metadata [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt; or [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;=&lt;string&gt;
 Set metadata for audio track.
   - copy  ... copy metadata from input if possible (default)
   - clear ... do not copy metadata
+
+You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
 
 ```
 Example1: copy metadata from input file
@@ -669,7 +674,6 @@ Example2: clear metadata from input file
 Example3: set metadata
 --audio-metadata 1?title="audio title" --audio-metadata 1?language=jpn
 ```
-
 
 ### --audio-ignore-decode-error &lt;int&gt;
 Ignore the consecutive audio decode error, and continue transcoding within the threshold specified. The portion of audio which could not be decoded properly will be replaced with silence.
@@ -852,7 +856,7 @@ set disposition for the specified subtitle track.
  copy
 ```
 
-### --sub-metadata &lt;string&gt; or &lt;string&gt;=&lt;string&gt;
+### --sub-metadata [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt; or [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;=&lt;string&gt;
 Set metadata for subtitle track.
   - copy  ... copy metadata from input if possible (default)
   - clear ... do not copy metadata
@@ -869,7 +873,9 @@ Example3: set metadata
 ```
 
 ### --caption2ass [&lt;string&gt;]
-Enable caption2ass process. This feature requires Caption.dll.  
+Enable internal caption2ass process. This feature requires Caption.dll.  
+
+**Note:** Pelase always select srt format when muxing to mp4.  
 
 supported formats ... srt (default), ass
 
@@ -880,11 +886,11 @@ Copy data stream from input file. Available only when avhw / avsw reader is used
 Copy attachment stream from input file. Available only when avhw / avsw reader is used.
 
 ### --input-option &lt;string1&gt;:&lt;string2&gt;
-Pass optional parameters for input for avhw/avsw reader. Specify the option name in &lt;string1&gt, and the option value in &lt;string2&gt;.
+Pass optional parameters for input for avhw/avsw reader. Specify the option name in &lt;string1&gt;, and the option value in &lt;string2&gt;.
 
 ```
 Example: Reading playlist 1 of bluray 
--i bluray:D:\ --input-option palylist:1
+-i bluray:D:\ --input-option playlist:1
 ```
 
 ### -m, --mux-option &lt;string1&gt;:&lt;string2&gt;
@@ -893,6 +899,9 @@ Pass optional parameters to muxer. Specify the option name in &lt;string1&gt, an
 ```
 Example: Output for HLS
 -i <input> -o test.m3u8 -f hls -m hls_time:5 -m hls_segment_filename:test_%03d.ts --gop-len 30
+
+Example: Pass through "default" disposition even if there are no "default" tracks in the output (mkv only)
+-m default_mode:infer_no_subs
 ```
 
 ### --metadata &lt;string&gt; or &lt;string&gt;=&lt;string&gt;
@@ -916,29 +925,15 @@ Example3: set metadata
     The input will be assumed as CFR and input pts will not be checked.
 
   - forcecfr
-    Check pts from the input file, and duplicate or remove frames if required to keep CFR, so that synchronization with the audio could be maintained. Please note this mode could not be used with --trim.
+    Check pts from the input file, and duplicate or remove frames if required to keep CFR, so that synchronization with the audio could be maintained. Please note that this could not be used with --trim.
 
   - vfr  
-    Honor source timestamp and enable vfr output. Only available for avsw/avhw reader.
+    Honor source timestamp and enable vfr output. Only available for avsw/avhw reader, and could not be used with --trim.
     
 ### --timecode [&lt;string&gt;]  
   Write timecode file to the specified path. If the path is not set, it will be written to "&lt;output file path&gt;.timecode.txt".
 
 ## Vpp Options
-
-### --vpp-resize &lt;string&gt;
-Specify the resizing algorithm.
-
-| option name | description |
-|:---|:---|
-| default  | auto select |
-| bilinear | linear interpolation |
-| spline16 | 4x4 spline curve interpolation |
-| spline36 | 6x6 spline curve interpolation |
-| spline64 | 8x8 spline curve interpolation |
-| lanczos2 | 4x4 Lanczos resampling |
-| lanczos3 | 6x6 Lanczos resampling |
-| lanczos4 | 8x8 Lanczos resampling |
 
 ### --vpp-colorspace [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...  
 Converts colorspace of the video. Available on x64 version.  
@@ -1027,6 +1022,56 @@ example3: using hdr2sdr (hable tone-mapping) and setting the coefs (this is exam
 --vpp-colorspace hdr2sdr=hable,source_peak=1000.0,ldr_nits=100.0,a=0.22,b=0.3,c=0.1,d=0.2,e=0.01,f=0.3
 ```
 
+
+### --vpp-delogo &lt;string&gt;[,&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+**Parameters**
+- select=&lt;string&gt;  
+For logo pack, specify the logo to use with one of the following.
+  - Logo name
+  - Index (1, 2, ...)
+  - Automatic selection ini file
+
+For logo pack, specify the logo to use with one of the following.
+
+- Logo name
+- Index (1, 2, ...)
+- Automatic selection ini file
+```
+ [LOGO_AUTO_SELECT]
+ logo<num>=<pattern>,<logo name>
+```
+
+ Example:
+ ```ini
+[LOGO_AUTO_SELECT]
+logo1= (NHK-G).,NHK総合 1440x1080
+logo2= (NHK-E).,NHK-E 1440x1080
+logo3= (MX).,TOKYO MX 1 1440x1080
+logo4= (CTC).,チバテレビ 1440x1080
+logo5= (NTV).,日本テレビ 1440x1080
+logo6= (TBS).,TBS 1440x1088
+logo7= (TX).,TV東京 50th 1440x1080
+logo8= (CX).,フジテレビ 1440x1088
+logo9= (BSP).,NHK BSP v3 1920x1080
+logo10= (BS4).,BS日テレ 1920x1080
+logo11= (BSA).,BS朝日 1920x1080
+logo12= (BS-TBS).,BS-TBS 1920x1080
+logo13= (BSJ).,BS Japan 1920x1080
+logo14= (BS11).,BS11 1920x1080 v3
+```
+
+
+- pos &lt;int&gt;:&lt;int&gt;
+Adjustment of logo position with 1/4 pixel accuracy in x:y direction.  
+
+- depth &lt;int&gt;
+Adjustment of logo transparency. Default 128.  
+
+- y=&lt;int&gt;  
+- cb=&lt;int&gt;  
+- cr=&lt;int&gt;  
+Adjustment of each color component of the logo.  
 ### --vpp-afs [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 Activate Auto Field Shift (AFS) deinterlacer.
 
@@ -1150,7 +1195,7 @@ nnedi deinterlacer.
     No pre-screening is done and all pixels will be generated by neural net.
 
   - original
-  - new  
+  - new  (default)  
     Runs prescreener to determine which pixel to apply neural net, other pixels will be generated from simple interpolation. 
 
   - original_block
@@ -1184,9 +1229,65 @@ nnedi deinterlacer.
 example: --vpp-nnedi field=auto,nns=64,nsize=32x6,quality=slow,prescreen=none,prec=fp32
 ```
 
-### --vpp-pad &lt;int&gt;,&lt;int&gt;,&lt;int&gt;,&lt;int&gt;
-add padding to left,top,right,bottom (in pixels)
 
+### --vpp-decimate [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...  
+Drop duplicated frame in cycles set.
+
+**parameters**
+  - cycle=&lt;int&gt;  (default: 5)  
+    num of frame from which a frame will be droppped.
+
+  - thredup=&lt;float&gt;  (default: 1.1,  0.0 - 100.0)  
+    duplicate threshold.
+
+  - thresc=&lt;float&gt;   (default: 15.0,  0.0 - 100.0)  
+    scene change threshold.
+
+  - blockx=&lt;int&gt;  
+  - blocky=&lt;int&gt;  
+    block size of x and y direction, default = 32. block size could be 4, 8, 16, 32, 64.
+    
+  - chroma=&lt;bool&gt;  
+    consdier chroma (default: on).
+    
+  - log=&lt;bool&gt;  
+    output log file (default: off).
+    
+
+### --vpp-mpdecimate [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...  
+Drop consequentive duplicate frame(s) and create a VFR video, which might improve effective encoding performance, and improve compression efficiency.
+Please note that [--avsync](./NVEncC_Options.en.md#--avsync-string) vfr is automatically activated when using this filter.
+
+**parameters**
+  - hi=&lt;int&gt;  (default: 768, 8x8x12)  
+    The frame might be dropped if no 8x8 block difference is more than "hi".
+
+  - lo=&lt;int&gt;  (default: 320, 8x8x5)  
+  - frac=&lt;float&gt;  (default: 0.33)  
+    The frame might be dropped if the fraction of 8x8 blocks with difference smaller than "lo" is more than "frac".
+
+  - max=&lt;int&gt;  (default: 0)  
+    Max consecutive frames which can be dropped (if positive).  
+    Min interval between dropped frames (if negative).
+    
+  - log=&lt;bool&gt;  
+    output log file. (default: off)
+
+
+
+### --vpp-resize &lt;string&gt;
+Specify the resizing algorithm.
+
+| option name | description |
+|:---|:---|
+| auto     | auto select |
+| bilinear | linear interpolation |
+| spline16 | 4x4 spline curve interpolation |
+| spline36 | 6x6 spline curve interpolation |
+| spline64 | 8x8 spline curve interpolation |
+| lanczos2 | 4x4 Lanczos resampling |
+| lanczos3 | 6x6 Lanczos resampling |
+| lanczos4 | 8x8 Lanczos resampling |
 ### --vpp-knn [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 Strong noise reduction filter.
 
@@ -1371,7 +1472,6 @@ Edge warping (sharpening) filter.
 
 Rotate video. 90, 180, 270 degrees is allowed.
 
-
 ### --vpp-transform [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 
 **Parameters**
@@ -1398,7 +1498,6 @@ Rotate video. 90, 180, 270 degrees is allowed.
 Example:
 --vpp-tweak brightness=0.1,contrast=1.5,gamma=0.75
 ```
-
 
 ### --vpp-deband [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 
@@ -1442,6 +1541,8 @@ Example:
 --vpp-deband range=31,dither=12,rand_each_frame
 ```
 
+### --vpp-pad &lt;int&gt;,&lt;int&gt;,&lt;int&gt;,&lt;int&gt;
+add padding to left,top,right,bottom (in pixels)
 
 ## Other Options
 
@@ -1476,6 +1577,13 @@ Select the level of log output.
 ### --log-framelist
 FOR DEBUG ONLY! Output debug log for avsw/avhw reader.
 
+### --log-packets
+FOR DEBUG ONLY! Output debug log for packets read in avsw/avhw reader.
+
+### --option-file &lt;string&gt;
+File which containes a list of options to be used.
+Line feed is treated as a blank, therefore an option or a value of it should not splitted in multiple lines.
+
 ### --max-procfps &lt;int&gt;
 Set the upper limit of transcode speed. The default is 0 (= unlimited).
 
@@ -1489,7 +1597,7 @@ Example: Limit maximum speed to 90 fps
 Tune for lower transcoding latency, but will hurt transcoding throughput. Not recommended in most cases.
 
 ### --avsdll &lt;string&gt;
-Specifies AviSynth DLL location to use. When unspecified, the DLL installed in the system32 will be used.
+Specifies AviSynth DLL location to use. When unspecified, the default AviSynth.dll will be used.
 
 ### --process-codepage &lt;string&gt; [Windows OS only]  
 - utf8  
