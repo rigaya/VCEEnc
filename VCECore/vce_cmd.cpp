@@ -175,7 +175,7 @@ tstring encoder_help() {
         _T("                                 - full-pel (fast)\n")
         _T("                                 - half-pel\n")
         _T("                                 - q-pel (best) = default\n")
-        _T("   --gop-len <int>              set length of gop (default: auto)\n"),
+        _T("   --gop-len <int>              set length of gop (default: auto)\n")
         _T("   --vbaq                       enable VBAQ\n")
         _T("   --pe                         enable Pre Encode\n")
         _T("   --pa                         enable Pre Analysis\n")
