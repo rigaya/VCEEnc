@@ -748,7 +748,6 @@ System::Void frmConfig::InitComboBox() {
 
     setComboBox(fcgCXVppResizeAlg,   list_vpp_resize);
     setComboBox(fcgCXVppDeinterlace, list_vpp_deinterlacer);
-    setComboBox(fcgCXVppAfsAnalyze,  list_vpp_afs_analyze);
     setComboBox(fcgCXVppAfsAnalyze,     list_vpp_afs_analyze);
     setComboBox(fcgCXVppNnediNsize,     list_vpp_nnedi_nsize);
     setComboBox(fcgCXVppNnediNns,       list_vpp_nnedi_nns);
@@ -840,6 +839,7 @@ System::Void frmConfig::fcgChangeEnabled(System::Object^  sender, System::EventA
     fcgPNVppDenoiseSmooth->Visible = (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("smooth")));
     fcgPNVppUnsharp->Visible = (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("unsharp")));
     fcgPNVppEdgelevel->Visible = (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("edgelevel")));
+    fcgPNVppWarpsharp->Visible = (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("warpsharp")));
     fcgPNVppAfs->Visible = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"自動フィールドシフト"));
     fcgPNVppNnedi->Visible = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"nnedi"));
     fcgPNVppYadif->Visible = false; // (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"yadif"));
@@ -1050,6 +1050,8 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
             detail_enahance_idx = get_cx_index(list_vpp_detail_enahance, _T("unsharp"));
         } else if (vce.vpp.edgelevel.enable) {
             detail_enahance_idx = get_cx_index(list_vpp_detail_enahance, _T("edgelevel"));
+        } else if (vce.vpp.warpsharp.enable) {
+            detail_enahance_idx = get_cx_index(list_vpp_detail_enahance, _T("warpsharp"));
         }
         SetCXIndex(fcgCXVppDetailEnhance, detail_enahance_idx);
 
@@ -1088,6 +1090,10 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
         SetNUValue(fcgNUVppEdgelevelThreshold,   vce.vpp.edgelevel.threshold);
         SetNUValue(fcgNUVppEdgelevelBlack,       vce.vpp.edgelevel.black);
         SetNUValue(fcgNUVppEdgelevelWhite,       vce.vpp.edgelevel.white);
+        SetNUValue(fcgNUVppWarpsharpBlur,        vce.vpp.warpsharp.blur);
+        SetNUValue(fcgNUVppWarpsharpThreshold,   vce.vpp.warpsharp.threshold);
+        SetNUValue(fcgNUVppWarpsharpType,        vce.vpp.warpsharp.type);
+        SetNUValue(fcgNUVppWarpsharpDepth,       vce.vpp.warpsharp.depth);
 
         SetNUValue(fcgNUVppAfsUp,                vce.vpp.afs.clip.top);
         SetNUValue(fcgNUVppAfsBottom,            vce.vpp.afs.clip.bottom);
@@ -1245,6 +1251,12 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.vpp.edgelevel.threshold = (float)fcgNUVppEdgelevelThreshold->Value;
     vce.vpp.edgelevel.black = (float)fcgNUVppEdgelevelBlack->Value;
     vce.vpp.edgelevel.white = (float)fcgNUVppEdgelevelWhite->Value;
+
+    vce.vpp.warpsharp.enable = fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("warpsharp"));
+    vce.vpp.warpsharp.blur = (int)fcgNUVppWarpsharpBlur->Value;
+    vce.vpp.warpsharp.threshold = (float)fcgNUVppWarpsharpThreshold->Value;
+    vce.vpp.warpsharp.type = (int)fcgNUVppWarpsharpType->Value;
+    vce.vpp.warpsharp.depth = (float)fcgNUVppWarpsharpDepth->Value;
 
     vce.vpp.deband.enable = fcgCBVppDebandEnable->Checked;
     vce.vpp.deband.range = (int)fcgNUVppDebandRange->Value;
