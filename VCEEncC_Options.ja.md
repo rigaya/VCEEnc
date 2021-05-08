@@ -177,6 +177,7 @@ VCEEncCはデフォルトではUTF-8モードで動作するため、Avisynthス
 "[--process-codepage](#--process-codepage-string) os" オプションを追加して、モードを切り替えてください。
 
 ### --vpy
+### --vpy-mt
 入力ファイルをVapourSynthで読み込む。
 
 ### --avsw
@@ -309,6 +310,9 @@ LTRモードの指定。
 ### --enforce-hrd
 HRD互換の出力を行う。
 
+### --filler
+fillerデータを出力し、(名目上の)ビットレートを調整する。
+
 ### --motion-est &lt;string&gt;
 動きベクトル精度 / デフォルト: auto
 - auto     ... 自動
@@ -374,11 +378,7 @@ SAR比 (画素アスペクト比) の指定。
 ### --dar &lt;int&gt;:&lt;int&gt;
 DAR比 (画面アスペクト比) の指定。
 
-### --fullrange
-フルレンジYUVとしてエンコードする。
-
 ### --colorrange &lt;string&gt;
-"--colorrange full"は"--fullrange"に同じ。
 "auto"を指定することで、入力ファイルの値をそのまま反映できます。([avhw](#--avhw)/[avsw](#--avsw)読み込みのみ)
 ```
   limited, full, auto
@@ -409,6 +409,32 @@ DAR比 (画面アスペクト比) の指定。
 ### --chromaloc &lt;int&gt; or "auto"
 出力データのchroma location flagを 0 ～ 5 の範囲で指定する。  
 デフォルト = 0 (unspecified)
+
+### --max-cll &lt;int&gt;,&lt;int&gt; or "copy" [HEVCのみ]
+MaxCLL and MaxFall を nits で指定する。"copy"とすると入力ファイルの値を出力ファイルにそのまま設定します。([avhw](#--avhw)/[avsw](#--avsw)読み込みのみ)  
+
+[--repeat-headers](#--repeat-headers)が自動的に有効になる点に注意してください。  
+```
+例1: --max-cll 1000,300
+例2: --max-cll copy  # 入力ファイルから値をコピー
+```
+
+### --master-display &lt;string&gt; or "copy" [HEVCのみ]
+Mastering display data の設定。"copy"とすると入力ファイルの値を出力ファイルにそのまま設定します。([avhw](#--avhw)/[avsw](#--avsw)読み込みのみ)  
+
+[--repeat-headers](#--repeat-headers)が自動的に有効になる点に注意してください。  
+```
+例1: --master-display G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1)
+例2: --master-display copy  # 入力ファイルから値をコピー
+```
+
+### --atc-sei &lt;string&gt; or &lt;int&gt; [HEVCのみ]
+Alternative transfer characteristics SEI の設定。下記文字列または整数で指定する。
+```
+  undef, auto, bt709, smpte170m, bt470m, bt470bg, smpte240m, linear,
+  log100, log316, iec61966-2-4, bt1361e, iec61966-2-1,
+  bt2020-10, bt2020-12, smpte2084, smpte428, arib-std-b67
+```  
 
 ### --ssim
 エンコード結果のSSIMを計算。

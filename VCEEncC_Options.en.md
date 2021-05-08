@@ -164,6 +164,7 @@ When using scripts in the default codepage of the OS, such as ANSI,
 you will need to add "[--process-codepage](#--process-codepage-string-windows-os-only) os" option to change VCEEncC also work on the default codepage of the OS.
 
 ### --vpy
+### --vpy-mt
 Read VapourSynth script file using vpy reader.
 
 ### --avsw
@@ -305,6 +306,9 @@ Enable skip frame feature. (Default: off)
 ### --enforce-hrd
 Enforce hrd compatibility of bitstream.
 
+### --filler
+Output filler data to adjust nominal bitrate.
+
 ### --motion-est &lt;string&gt;
 Motion vector accuracy / default: auto
 - auto ... automatic
@@ -370,11 +374,7 @@ Set SAR ratio (pixel aspect ratio).
 ### --dar &lt;int&gt;:&lt;int&gt;
 Set DAR ratio (screen aspect ratio).
 
-### --fullrange
-Encode as full range YUV.
-
 ### --colorrange &lt;string&gt;
-"--colorrange full" is same as "--fullrange".
 "auto" will copy characteristic from input file (available when using [avhw](#--avhw)/[avsw](#--avsw) reader).
 ```
   limited, full, auto
@@ -406,6 +406,32 @@ Encode as full range YUV.
 Set chroma location flag of the output bitstream from values 0 ... 5.  
 "auto" will copy from input file (available when using [avhw](#--avhw)/[avsw](#--avsw) reader)
 default: 0 = unspecified
+
+### --max-cll &lt;int&gt;,&lt;int&gt; or "copy" [HEVC only]
+Set MaxCLL and MaxFall in nits.  "copy" will copy values from the input file. (available when using [avhw](#--avhw)/[avsw](#--avsw) reader)  
+
+Please note that this option will implicitly activate [--repeat-headers](#--repeat-headers).  
+```
+Example1: --max-cll 1000,300
+Example2: --max-cll copy  # copy values from source
+```
+
+### --master-display &lt;string&gt; or "copy" [HEVC only]
+Set Mastering display data. "copy" will copy values from the input file. (available when using [avhw](#--avhw)/[avsw](#--avsw) reader)  
+
+Please note that this option will implicitly activate [--repeat-headers](#--repeat-headers).  
+```
+Example1: --master-display G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,1)
+Example2: --master-display copy  # copy values from source
+```
+
+### --atc-sei &lt;string&gt; or &lt;int&gt; [HEVC only]
+Set alternative transfer characteristics SEI from below or by integer, Required for HLG (Hybrid Log Gamma) signaling.
+```
+  undef, auto, bt709, smpte170m, bt470m, bt470bg, smpte240m, linear,
+  log100, log316, iec61966-2-4, bt1361e, iec61966-2-1,
+  bt2020-10, bt2020-12, smpte2084, smpte428, arib-std-b67
+```  
 
 ### --ssim
 Calculate ssim of the encoded video.
@@ -794,6 +820,9 @@ matroska format (hould be in utf-8)
 
 ### --chapter-copy
 Copy chapters from input file.
+
+### --chapter-no-trim
+Do not apply --trim when reading chapters.
 
 ### --key-on-chapter
 Set keyframes on chapter position.
