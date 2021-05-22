@@ -29,9 +29,9 @@
 #ifndef __RGY_VERSION_H__
 #define __RGY_VERSION_H__
 
-#define VER_FILEVERSION             0,6,11,0
-#define VER_STR_FILEVERSION          "6.11"
-#define VER_STR_FILEVERSION_TCHAR _T("6.11")
+#define VER_FILEVERSION             0,6,12,1
+#define VER_STR_FILEVERSION          "6.12 beta1"
+#define VER_STR_FILEVERSION_TCHAR _T("6.12 beta1")
 
 
 #ifdef _M_IX86
