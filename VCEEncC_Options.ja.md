@@ -252,7 +252,7 @@ CQP(固定量子化量)でエンコードを行う。&lt;Iフレーム&gt;:&lt;P
 
 ### -u, --preset
 エンコーダの品質プリセット。
-- default
+- balanced
 - fast
 - slow
 

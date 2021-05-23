@@ -251,7 +251,7 @@ Set bitrate in kbps.
 
 ### -u, --preset
 Encode qulaity preset.
-- default
+- balanced
 - fast
 - slow
 
