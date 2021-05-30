@@ -26,6 +26,7 @@
 // ------------------------------------------------------------------------------------------
 
 #include "rgy_util.h"
+#include "rgy_aspect_ratio.h"
 #include "vce_util.h"
 #include "vce_param.h"
 #include "VideoEncoderVCE.h"

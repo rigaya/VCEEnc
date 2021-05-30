@@ -39,6 +39,7 @@
 #include <iostream>
 
 #include "rgy_util.h"
+#include "rgy_env.h"
 #include "rgy_input.h"
 #include "rgy_input_avi.h"
 #include "rgy_input_avs.h"
@@ -72,6 +73,7 @@
 #include "rgy_chapter.h"
 #include "rgy_codepage.h"
 #include "rgy_timecode.h"
+#include "rgy_aspect_ratio.h"
 #include "cpu_info.h"
 #include "gpu_info.h"
 
