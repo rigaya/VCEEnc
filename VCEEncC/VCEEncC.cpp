@@ -40,6 +40,7 @@
 #include "vce_core.h"
 #include "vce_cmd.h"
 #include "rgy_util.h"
+#include "rgy_filesystem.h"
 #include "rgy_avutil.h"
 
 static void show_version() {

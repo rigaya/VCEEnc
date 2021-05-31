@@ -68,6 +68,7 @@
 #include "rgy_filter_tweak.h"
 #include "rgy_filter_transform.h"
 #include "rgy_filter_deband.h"
+#include "rgy_filesystem.h"
 #include "rgy_version.h"
 #include "rgy_bitstream.h"
 #include "rgy_chapter.h"
