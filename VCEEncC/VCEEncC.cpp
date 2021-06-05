@@ -369,7 +369,7 @@ int _tmain(int argc, TCHAR **argv) {
             }
         }
     }
-    
+
     //optionファイルの読み取り
     std::vector<tstring> argvCnfFile;
     for (int iarg = 1; iarg < argc; iarg++) {
@@ -402,6 +402,13 @@ int _tmain(int argc, TCHAR **argv) {
     }
     argvCopy.push_back(_T(""));
     if (parse_cmd(&prm, (int)argvCopy.size()-1, argvCopy.data())) {
+        return 1;
+    }
+
+    if (prm.common.inputFilename != _T("-")
+        && prm.common.outputFilename != _T("-")
+        && rgy_path_is_same(prm.common.inputFilename, prm.common.outputFilename)) {
+        _ftprintf(stderr, _T("destination file is equal to source file!"));
         return 1;
     }
 
