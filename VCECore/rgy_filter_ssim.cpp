@@ -47,8 +47,8 @@ static double get_psnr(double mse, uint64_t nb_frames, int max) {
 
 tstring RGYFilterParamSsim::print() const {
     tstring str;
-    if (ssim) str += _T("ssim ");
-    if (psnr) str += _T("psnr ");
+    if (metric.ssim) str += _T("ssim ");
+    if (metric.psnr) str += _T("psnr ");
     return str;
 }
 
@@ -279,12 +279,12 @@ RGY_ERR RGYFilterSsim::init_cl_resources() {
     }
     amf::AMFContext::AMFOpenCLLocker locker(m_context);
     m_queueCrop = m_cl->createQueue(m_cl->queue().devid());
-    if (prm->ssim) {
+    if (prm->metric.ssim) {
         for (auto& q : m_queueCalcSsim) {
             q = m_cl->createQueue(m_cl->queue().devid());
         }
     }
-    if (prm->psnr) {
+    if (prm->metric.psnr) {
         for (auto &q : m_queueCalcPsnr) {
             q = m_cl->createQueue(m_cl->queue().devid());
         }
@@ -433,7 +433,7 @@ void RGYFilterSsim::showResult() {
         AddMessage(RGY_LOG_DEBUG, _T("Waiting for ssim/psnr calculation thread to finish.\n"));
         m_thread.join();
     }
-    if (prm->ssim) {
+    if (prm->metric.ssim) {
         auto str = strsprintf(_T("\nSSIM YUV:"));
         for (int i = 0; i < RGY_CSP_PLANES[m_param->frameOut.csp]; i++) {
             str += strsprintf(_T(" %f (%f),"), m_ssimTotalPlane[i] / m_frames, ssim_db(m_ssimTotalPlane[i], (double)m_frames));
@@ -441,7 +441,7 @@ void RGYFilterSsim::showResult() {
         str += strsprintf(_T(" All: %f (%f), (Frames: %d)\n"), m_ssimTotal / m_frames, ssim_db(m_ssimTotal, (double)m_frames), m_frames);
         AddMessage(RGY_LOG_INFO, _T("%s\n"), str.c_str());
     }
-    if (prm->psnr) {
+    if (prm->metric.psnr) {
         auto str = strsprintf(_T("\nPSNR YUV:"));
         for (int i = 0; i < RGY_CSP_PLANES[m_param->frameOut.csp]; i++) {
             str += strsprintf(_T(" %f,"), get_psnr(m_psnrTotalPlane[i], m_frames, (1 << RGY_CSP_BIT_DEPTH[prm->frameOut.csp]) - 1));
@@ -566,7 +566,7 @@ RGY_ERR RGYFilterSsim::build_kernel(const RGY_CSP csp) {
         AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
         return RGY_ERR_INVALID_PARAM;
     }
-    if ((prm->ssim || prm->psnr) && !m_kernel) {
+    if ((prm->metric.enabled()) && !m_kernel) {
         const auto options = strsprintf("-D BIT_DEPTH=%d -D SSIM_BLOCK_X=%d -D SSIM_BLOCK_Y=%d",
             RGY_CSP_BIT_DEPTH[csp],
             SSIM_BLOCK_X, SSIM_BLOCK_Y);
@@ -668,19 +668,19 @@ RGY_ERR RGYFilterSsim::calc_ssim_psnr(const RGYFrameInfo *p0, const RGYFrameInfo
     if (err != RGY_ERR_NONE) {
         return err;
     }
-    if (prm->ssim) {
+    if (prm->metric.ssim) {
         if ((err = calc_ssim_frame(p0, p1)) != RGY_ERR_NONE) {
             return err;
         }
     }
 
-    if (prm->psnr) {
+    if (prm->metric.psnr) {
         if ((err = calc_psnr_frame(p0, p1)) != RGY_ERR_NONE) {
             return err;
         }
     }
 
-    if (prm->ssim) {
+    if (prm->metric.ssim) {
         double ssimv = 0.0;
         for (int i = 0; i < RGY_CSP_PLANES[p0->csp]; i++) {
             amf::AMFContext::AMFOpenCLLocker locker(m_context);
@@ -703,7 +703,7 @@ RGY_ERR RGYFilterSsim::calc_ssim_psnr(const RGYFrameInfo *p0, const RGYFrameInfo
         m_ssimTotal += ssimv;
     }
 
-    if (prm->psnr) {
+    if (prm->metric.psnr) {
         double psnrv = 0.0;
         for (int i = 0; i < RGY_CSP_PLANES[p0->csp]; i++) {
             amf::AMFContext::AMFOpenCLLocker locker(m_context);

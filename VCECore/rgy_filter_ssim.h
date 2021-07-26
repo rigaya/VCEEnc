@@ -40,8 +40,7 @@
 
 class RGYFilterParamSsim : public RGYFilterParam {
 public:
-    bool ssim;
-    bool psnr;
+    RGYVideoQualityMetric metric;
     int deviceId;
     int bitDepth;
     VideoInfo input;
@@ -50,7 +49,7 @@ public:
     amf::AMFTrace *trace;
     amf::AMFContextPtr context;
 
-    RGYFilterParamSsim() : ssim(true), psnr(false), deviceId(0), bitDepth(8), input(), streamtimebase(), factory(nullptr), trace(nullptr), context() {
+    RGYFilterParamSsim() : metric(), deviceId(0), bitDepth(8), input(), streamtimebase(), factory(nullptr), trace(nullptr), context() {
 
     };
     virtual ~RGYFilterParamSsim() {};

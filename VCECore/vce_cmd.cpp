@@ -220,11 +220,6 @@ tstring encoder_help() {
     str += _T("\n");
     str += gen_cmd_help_common();
     str += _T("\n");
-    str += strsprintf(_T("\n")
-        _T("   --ssim                       calc ssim\n")
-        _T("   --psnr                       calc psnr\n")
-        _T("\n"));
-    str += _T("\n");
     str += gen_cmd_help_vpp();
     str += _T("\n");
     str += gen_cmd_help_ctrl();
@@ -627,22 +622,6 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
     }
     if (IS_OPTION("enforce-hrd")) {
         pParams->bEnforceHRD = TRUE;
-        return 0;
-    }
-    if (IS_OPTION("ssim")) {
-        pParams->ssim = true;
-        return 0;
-    }
-    if (IS_OPTION("no-ssim")) {
-        pParams->ssim = false;
-        return 0;
-    }
-    if (IS_OPTION("psnr")) {
-        pParams->psnr = true;
-        return 0;
-    }
-    if (IS_OPTION("no-psnr")) {
-        pParams->psnr = false;
         return 0;
     }
     if (IS_OPTION("no-pe")) {
@@ -1051,8 +1030,6 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
         OPT_LST_H264(_T("--level"), _T(""), nLevel, list_avc_level);
         OPT_LST_H264(_T("--profile"), _T(""), nProfile, list_avc_profile);
     }
-    OPT_BOOL(_T("--ssim"), _T("--no-ssim"), ssim);
-    OPT_BOOL(_T("--psnr"), _T("--no-psnr"), psnr);
 
     OPT_BOOL(_T("--pe"), _T("--no-pe"), pe);
     OPT_BOOL(_T("--pa"), _T("--no-pa"), pa.enable);

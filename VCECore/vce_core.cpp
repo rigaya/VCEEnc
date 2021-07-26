@@ -2135,7 +2135,7 @@ RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, in
 }
 
 RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
-    if (prm->ssim || prm->psnr) {
+    if (prm->common.metric.enabled()) {
         const auto formatOut = csp_rgy_to_enc(GetEncoderCSP(prm));
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
         unique_ptr<RGYFilterSsim> filterSsim(new RGYFilterSsim(m_dev->cl()));
@@ -2160,8 +2160,7 @@ RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
         param->frameOut.mem_type = RGY_MEM_TYPE_GPU;
         param->baseFps = m_encFps;
         param->bOutOverwrite = false;
-        param->psnr = prm->psnr;
-        param->ssim = prm->ssim;
+        param->metric = prm->common.metric;
         auto sts = filterSsim->init(param, m_pLog);
         if (sts != RGY_ERR_NONE) {
             return sts;
