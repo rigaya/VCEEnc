@@ -28,11 +28,21 @@
 
 #include <map>
 #include "rgy_avutil.h"
-#include "vce_util.h"
 #include "rgy_filter_ssim.h"
+#if ENCODER_QSV
+#include "qsv_mfx_dec.h"
+#include "qsv_pipeline_ctrl.h"
+#endif
+#if ENCODER_VCEENC
+#include "vce_util.h"
 #include "VideoDecoderUVD.h"
 
 const TCHAR *AMFRetString(AMF_RESULT ret);
+
+#define VCEAMF(x) x
+#else
+#define VCEAMF(x)
+#endif
 
 static const int SSIM_BLOCK_X = 32;
 static const int SSIM_BLOCK_Y = 8;
@@ -45,6 +55,18 @@ static double get_psnr(double mse, uint64_t nb_frames, int max) {
     return 10.0 * log10((max * max) / (mse / nb_frames));
 }
 
+RGYFilterParamSsim::RGYFilterParamSsim() : metric(), deviceId(0), bitDepth(8), input(), streamtimebase()
+#if ENCODER_VCEENC
+, factory(nullptr), trace(nullptr), context()
+#endif
+#if ENCODER_QSV
+, mfxDEC()
+#endif
+{
+
+};
+RGYFilterParamSsim::~RGYFilterParamSsim() {};
+
 tstring RGYFilterParamSsim::print() const {
     tstring str;
     if (metric.ssim) str += _T("ssim ");
@@ -53,14 +75,29 @@ tstring RGYFilterParamSsim::print() const {
 }
 
 RGYFilterSsim::RGYFilterSsim(shared_ptr<RGYOpenCLContext> context) :
+    RGYFilter(context),
     m_decodeStarted(false),
     m_deviceId(0),
     m_thread(),
     m_mtx(),
     m_abort(false),
+    m_inputOriginal(0),
+    m_inputEnc(0),
     m_input(),
     m_unused(),
+#if ENCODER_VCEENC
+    m_trace(nullptr),
+    m_factory(nullptr),
+    m_context(),
     m_decoder(),
+#endif
+#if ENCODER_QSV
+    m_encBitstream(),
+    m_encBitstreamUnused(),
+    m_mfxDEC(),
+    m_taskDec(),
+    m_surfVppInInterop(),
+#endif
     m_cropOrg(),
     m_cropDec(),
     m_decFrameCopy(),
@@ -76,8 +113,7 @@ RGYFilterSsim::RGYFilterSsim(shared_ptr<RGYOpenCLContext> context) :
     m_psnrTotalPlane(),
     m_psnrTotal(0.0),
     m_frames(0),
-    m_kernel(),
-    RGYFilter(context) {
+    m_kernel() {
     m_name = _T("ssim/psnr");
 }
 
@@ -115,29 +151,17 @@ RGY_ERR RGYFilterSsim::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog
             return RGY_ERR_INVALID_PARAM;
         }
     }
-    if (pParam->frameIn.csp != pParam->frameOut.csp) {
+    {
         unique_ptr<RGYFilterCspCrop> filterCrop(new RGYFilterCspCrop(m_cl));
         shared_ptr<RGYFilterParamCrop> paramCrop(new RGYFilterParamCrop());
         paramCrop->frameIn = pParam->frameIn;
         paramCrop->frameOut = pParam->frameOut;
         paramCrop->baseFps = pParam->baseFps;
-        paramCrop->frameIn.mem_type = RGY_MEM_TYPE_GPU;
-        paramCrop->frameOut.mem_type = RGY_MEM_TYPE_GPU;
-        paramCrop->bOutOverwrite = false;
-        sts = filterCrop->init(paramCrop, m_pLog);
-        if (sts != RGY_ERR_NONE) {
-            return sts;
-        }
-        m_cropOrg = std::move(filterCrop);
-        AddMessage(RGY_LOG_DEBUG, _T("created %s.\n"), m_cropOrg->GetInputMessage().c_str());
-        pParam->frameOut = paramCrop->frameOut;
-    } {
-        unique_ptr<RGYFilterCspCrop> filterCrop(new RGYFilterCspCrop(m_cl));
-        shared_ptr<RGYFilterParamCrop> paramCrop(new RGYFilterParamCrop());
-        paramCrop->frameIn = pParam->frameIn;
-        paramCrop->frameOut = pParam->frameOut;
-        paramCrop->baseFps = pParam->baseFps;
+#if ENCODER_QSV
+        paramCrop->frameIn.mem_type = RGY_MEM_TYPE_GPU_IMAGE_NORMALIZED;
+#elif ENCODER_VCEENC
         paramCrop->frameIn.mem_type = RGY_MEM_TYPE_GPU_IMAGE;
+#endif
         paramCrop->frameOut.mem_type = RGY_MEM_TYPE_GPU;
         paramCrop->bOutOverwrite = false;
         sts = filterCrop->init(paramCrop, m_pLog);
@@ -172,9 +196,20 @@ RGY_ERR RGYFilterSsim::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog
         m_psnrTotalPlane[i] = 0.0;
     }
     m_psnrTotal = 0.0;
+#if ENCODER_VCEENC
     m_context = prm->context;
     m_factory = prm->factory;
     m_trace = prm->trace;
+#endif //#if ENCODER_VCEENC
+#if ENCODER_QSV
+    m_mfxDEC = std::move(prm->mfxDEC);
+    if ((sts = m_mfxDEC->InitSession()) != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("Failed init session for hw decoder.\n"));
+        return sts;
+    }
+    m_encBitstream.init(256, 30, 0);
+    m_encBitstreamUnused.init(256);
+#endif //#if ENCODER_QSV
 
     setFilterInfo(pParam->print() + _T("(") + RGY_CSP_NAMES[pParam->frameOut.csp] + _T(")"));
     m_param = pParam;
@@ -277,7 +312,7 @@ RGY_ERR RGYFilterSsim::init_cl_resources() {
         AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
         return RGY_ERR_INVALID_PARAM;
     }
-    amf::AMFContext::AMFOpenCLLocker locker(m_context);
+    VCEAMF(amf::AMFContext::AMFOpenCLLocker locker(m_context));
     m_queueCrop = m_cl->createQueue(m_cl->queue().devid());
     if (prm->metric.ssim) {
         for (auto& q : m_queueCalcSsim) {
@@ -289,6 +324,7 @@ RGY_ERR RGYFilterSsim::init_cl_resources() {
             q = m_cl->createQueue(m_cl->queue().devid());
         }
     }
+#if ENCODER_VCEENC
     auto codec_uvd_name = codec_rgy_to_dec(prm->input.codec);
     if (codec_uvd_name == nullptr) {
         AddMessage(RGY_LOG_ERROR, _T("Input codec \"%s\" not supported.\n"), CodecToStr(prm->input.codec).c_str());
@@ -323,6 +359,43 @@ RGY_ERR RGYFilterSsim::init_cl_resources() {
         AddMessage(RGY_LOG_ERROR, _T("Failed to init decoder: %s\n"), AMFRetString(res));
         return err_to_rgy(res);
     }
+#endif
+#if ENCODER_QSV
+    RGYBitstream header = RGYBitstreamInit();
+    header.copy((const uint8_t *)prm->input.codecExtra, prm->input.codecExtraSize);
+    auto sts = m_mfxDEC->SetParam(prm->input.codec, header, prm->input);
+    if (sts != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("Failed to set param to hw decoder.\n"));
+        return sts;
+    }
+
+    m_taskDec = std::make_unique<PipelineTaskMFXDecode>(m_mfxDEC->GetVideoSessionPtr(), 1, m_mfxDEC->mfxdec(), m_mfxDEC->mfxparams(), nullptr, m_mfxDEC->mfxver(), m_pLog);
+    auto allocRequest = m_taskDec->requiredSurfOut();
+    if (!allocRequest.has_value()) {
+        AddMessage(RGY_LOG_ERROR, _T("Failed to get required surface num for hw decoder.\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
+
+    allocRequest.value().AllocId            = m_mfxDEC->allocator()->getExtAllocCounts();
+    allocRequest.value().NumFrameSuggested += (mfxU16)m_taskDec->outputMaxQueueSize();
+    allocRequest.value().NumFrameMin       += (mfxU16)m_taskDec->outputMaxQueueSize();
+    if ((sts = m_taskDec->workSurfacesAlloc(allocRequest.value(), true, m_mfxDEC->allocator())) != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("Failed to allocate frames for hw decoder.\n"));
+        return sts;
+    }
+    AddMessage(RGY_LOG_DEBUG, _T("Allocated %d frames for decode [id=%d].\n"), allocRequest.value().NumFrameSuggested, allocRequest.value().AllocId);
+
+    if ((sts = m_mfxDEC->Close()) != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("Failed to reset hw decoder.\n"));
+        return sts;
+    }
+    AddMessage(RGY_LOG_DEBUG, _T("Closed decoder.\n"));
+
+    if ((sts = m_mfxDEC->Init()) != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("Failed to init hw decoder.\n"));
+        return sts;
+    }
+#endif //#if ENCODER_QSV
     AddMessage(RGY_LOG_DEBUG, _T("Initialized decoder\n"));
     return RGY_ERR_NONE;
 }
@@ -346,14 +419,21 @@ void RGYFilterSsim::close_cl_resources() {
     m_input.clear();
     m_unused.clear();
     m_kernel.reset();
+#if ENCODER_VCEENC
     m_decoder.Release();
     m_context.Release();
     m_factory = nullptr;
     m_trace = nullptr;
+#endif //#if ENCODER_VCEENC
+#if ENCODER_QSV
+    m_taskDec.reset();
+    m_mfxDEC.reset();
+    m_surfVppInInterop.clear();
+#endif //#if ENCODER_QSV
 }
 
-
 RGY_ERR RGYFilterSsim::addBitstream(const RGYBitstream *bitstream) {
+#if ENCODER_VCEENC
     if (bitstream == nullptr) {
         m_decoder->Drain();
         return RGY_ERR_NONE;
@@ -387,6 +467,24 @@ RGY_ERR RGYFilterSsim::addBitstream(const RGYBitstream *bitstream) {
     if (ar != AMF_OK) {
         return err_to_rgy(ar);
     }
+#endif //#if ENCODER_VCEENC
+#if ENCODER_QSV
+    RGYBitstream bitstreamCopy;
+    if (!m_encBitstreamUnused.front_copy_and_pop_no_lock(&bitstreamCopy)) {
+        //なにも取得できなかった場合
+        bitstreamCopy = RGYBitstreamInit();
+    }
+    if (bitstream) {
+        bitstreamCopy.copy(bitstream);
+    } else {
+        //flushを意味する
+        bitstreamCopy.setSize(0);
+        bitstreamCopy.setOffset(0);
+    }
+    m_encBitstream.push(bitstreamCopy);
+    AddMessage(RGY_LOG_TRACE, _T("m_inputEnc      = %d.\n"), m_inputEnc);
+    m_inputEnc++;
+#endif //#if ENCODER_QSV
     return RGY_ERR_NONE;
 }
 
@@ -398,10 +496,27 @@ RGY_ERR RGYFilterSsim::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo 
     std::lock_guard<std::mutex> lock(m_mtx); //ロックを忘れないこと
     if (m_unused.size() == 0) {
         //待機中のフレームバッファがなければ新たに作成する
-        m_unused.push_back(m_cl->createFrameBuffer((m_cropOrg) ? m_cropOrg->GetFilterParam()->frameOut : *pInputFrame));
+        m_unused.push_back(m_cl->createFrameBuffer(m_param->frameOut));
     }
     auto &copyFrame = m_unused.front();
-    if (m_cropOrg) {
+    if (m_param->frameOut.csp == pInputFrame->csp) {
+        m_cl->copyFrame(&copyFrame->frame, pInputFrame, nullptr, queue, wait_events, event);
+    } else {
+        if (!m_cropOrg) {
+            unique_ptr<RGYFilterCspCrop> filterCrop(new RGYFilterCspCrop(m_cl));
+            shared_ptr<RGYFilterParamCrop> paramCrop(new RGYFilterParamCrop());
+            paramCrop->frameIn = *pInputFrame;
+            paramCrop->frameOut = m_param->frameOut;
+            paramCrop->frameOut.mem_type = RGY_MEM_TYPE_GPU;
+            paramCrop->baseFps = m_param->baseFps;
+            paramCrop->bOutOverwrite = false;
+            sts = filterCrop->init(paramCrop, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            m_cropOrg = std::move(filterCrop);
+            AddMessage(RGY_LOG_DEBUG, _T("created %s.\n"), m_cropOrg->GetInputMessage().c_str());
+        }
         int cropFilterOutputNum = 0;
         RGYFrameInfo *outInfo[1] = { &copyFrame->frame };
         RGYFrameInfo cropInput = *pInputFrame;
@@ -414,13 +529,13 @@ RGY_ERR RGYFilterSsim::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo 
             AddMessage(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), m_cropOrg->name().c_str());
             return sts_filter;
         }
-    } else {
-        m_cl->copyFrame(&copyFrame->frame, pInputFrame, nullptr, queue, wait_events, event);
     }
 
     //フレームをm_unusedからm_inputに移す
     m_input.push_back(std::move(copyFrame));
     m_unused.pop_front();
+    m_inputOriginal++;
+    AddMessage(RGY_LOG_TRACE, _T("m_inputOriginal = %d.\n"), m_inputOriginal);
     return sts;
 }
 
@@ -457,21 +572,23 @@ RGY_ERR RGYFilterSsim::thread_func() {
         return sts;
     }
     m_decodeStarted = true;
-    auto ret = compare_frames(true);
+    auto ret = compare_frames();
     AddMessage(RGY_LOG_DEBUG, _T("Finishing ssim/psnr calculation thread: %s.\n"), get_err_mes(ret));
     close_cl_resources();
     return ret;
 }
 
-RGY_ERR RGYFilterSsim::compare_frames(bool flush) {
+RGY_ERR RGYFilterSsim::compare_frames() {
     auto prm = std::dynamic_pointer_cast<RGYFilterParamSsim>(m_param);
     if (!prm) {
         AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
         return RGY_ERR_INVALID_PARAM;
     }
     auto res = RGY_ERR_NONE;
+    bool flush = false;
 
     while (!m_abort) {
+#if ENCODER_VCEENC
         amf::AMFSurfacePtr surf;
         auto ar = AMF_REPEAT;
         //auto timeS = std::chrono::system_clock::now();
@@ -507,7 +624,7 @@ RGY_ERR RGYFilterSsim::compare_frames(bool flush) {
         auto decFrame = std::make_unique<RGYFrame>(surf);
         const auto &decAmf = decFrame->amf();
         {
-            amf::AMFContext::AMFOpenCLLocker locker(m_context);
+            VCEAMF(amf::AMFContext::AMFOpenCLLocker locker(m_context));
 #if 1
             //dummyのCPUへのメモリコピーを行う
             //こうしないとデコーダからの出力をOpenCLに渡したときに、フレームが壊れる(フレーム順序が入れ替わってガクガクする)
@@ -521,13 +638,12 @@ RGY_ERR RGYFilterSsim::compare_frames(bool flush) {
                 break;
             }
         }
-
-        if (!m_cropDec) {
-            AddMessage(RGY_LOG_ERROR, _T("m_cropDec not set.\n"));
-            return RGY_ERR_UNKNOWN;
-        }
         {
-            amf::AMFContext::AMFOpenCLLocker locker(m_context);
+            if (!m_cropDec) {
+                AddMessage(RGY_LOG_ERROR, _T("m_cropDec not set.\n"));
+                return RGY_ERR_UNKNOWN;
+            }
+            VCEAMF(amf::AMFContext::AMFOpenCLLocker locker(m_context));
             if (!m_decFrameCopy) {
                 m_decFrameCopy = m_cl->createFrameBuffer(m_cropDec->GetFilterParam()->frameOut);
             }
@@ -556,6 +672,120 @@ RGY_ERR RGYFilterSsim::compare_frames(bool flush) {
             m_input.pop_front();
             m_frames++;
         }
+#endif //#if ENCODER_VCEENC
+#if ENCODER_QSV
+        RGYBitstream bitstream = RGYBitstreamInit();
+        if (!flush // flushでなく、キューに何もない場合はsleep
+            && !m_encBitstream.front_copy_no_lock(&bitstream)) { // ここではキューからpopしない(あとで行う)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            continue;
+        }
+        auto err = RGY_ERR_NONE;
+        if (bitstream.size() > 0) {
+            err = m_taskDec->sendFrame(&bitstream);
+            if (err < RGY_ERR_NONE && err != RGY_ERR_MORE_DATA && err != RGY_ERR_MORE_SURFACE) {
+                AddMessage(RGY_LOG_ERROR, _T("Failed to send frame to hw decoder.\n"));
+                return err;
+            }
+            //sendFrameでbitstreamが消費されたかをチェックする
+            //残っている場合は、キューに残したままにし、完全に消費された場合はキューから取り除く
+            if (bitstream.size() == 0) {
+                m_encBitstream.pop();
+                m_encBitstreamUnused.push(bitstream);
+            }
+        } else {
+            //flushのため、出力バッファを0に
+            m_taskDec->setOutputMaxQueueSize(0);
+            err = m_taskDec->sendFrame(nullptr); //flushのため。nullptrで呼ぶ
+            if (err == RGY_ERR_MORE_DATA) {
+                if (!flush) { // 1回目は内部のバッファを消化する場合がある
+                    err = RGY_ERR_NONE;
+                } else {
+                    break; //flush完了、もう出てない
+                }
+            } else if (err < RGY_ERR_NONE && err != RGY_ERR_MORE_SURFACE) {
+                AddMessage(RGY_LOG_ERROR, _T("Failed to flush hw decoder.\n"));
+                return err;
+            }
+            flush = true;
+        }
+        if (err != RGY_ERR_NONE) {
+            continue;
+        }
+        if (!m_decFrameCopy) {
+            m_decFrameCopy = m_cl->createFrameBuffer(m_cropDec->GetFilterParam()->frameOut);
+        }
+        auto outputFrames = m_taskDec->getOutput(true);
+        for (auto& out : outputFrames) {
+            PipelineTaskOutputSurf *taskSurf = dynamic_cast<PipelineTaskOutputSurf *>(out.get());
+            if (taskSurf == nullptr) {
+                AddMessage(RGY_LOG_ERROR, _T("Invalid task surface.\n"));
+                return RGY_ERR_NULL_PTR;
+            }
+            RGYCLFrameInterop *clFrameInInterop = nullptr;
+            mfxFrameSurface1 *surfVppIn = taskSurf->surf().mfxsurf();
+            if (surfVppIn == nullptr) {
+                AddMessage(RGY_LOG_ERROR, _T("Failed to get mfx surface pointer.\n"));
+                return RGY_ERR_NULL_PTR;
+            }
+            if (m_surfVppInInterop.count(surfVppIn) == 0) {
+                m_surfVppInInterop[surfVppIn] = getOpenCLFrameInterop(surfVppIn, m_mfxDEC->memType(), CL_MEM_READ_ONLY, m_mfxDEC->allocator(), m_cl.get(), m_cl->queue(), m_cropDec->GetFilterParam()->frameIn);
+            }
+            clFrameInInterop = m_surfVppInInterop[surfVppIn].get();
+            if (!clFrameInInterop) {
+                AddMessage(RGY_LOG_ERROR, _T("Failed to get OpenCL interop [in].\n"));
+                return RGY_ERR_NULL_PTR;
+            }
+            err = clFrameInInterop->acquire(m_cl->queue());
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("Failed to acquire OpenCL interop [in]: %s.\n"), get_err_mes(err));
+                return RGY_ERR_NULL_PTR;
+            }
+            clFrameInInterop->frame.flags = (RGY_FRAME_FLAGS)surfVppIn->Data.DataFlag;
+            clFrameInInterop->frame.timestamp = surfVppIn->Data.TimeStamp;
+            clFrameInInterop->frame.inputFrameId = surfVppIn->Data.FrameOrder;
+            clFrameInInterop->frame.picstruct = picstruct_enc_to_rgy(surfVppIn->Info.PicStruct);
+            int cropFilterOutputNum = 0;
+            RGYFrameInfo *outInfo[1] = { &m_decFrameCopy->frame };
+            RGYFrameInfo decFrameInfo = clFrameInInterop->frameInfo();
+            auto sts_filter = m_cropDec->filter(&decFrameInfo, (RGYFrameInfo **)&outInfo, &cropFilterOutputNum, m_queueCrop, &m_cropEvent);
+            if (outInfo[0] == nullptr || cropFilterOutputNum != 1) {
+                AddMessage(RGY_LOG_ERROR, _T("Unknown behavior \"%s\".\n"), m_cropDec->name().c_str());
+                return sts_filter;
+            }
+            if (sts_filter != RGY_ERR_NONE || cropFilterOutputNum != 1) {
+                AddMessage(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), m_cropDec->name().c_str());
+                return sts_filter;
+            }
+            if (clFrameInInterop) {
+                RGYOpenCLEvent event;
+                clFrameInInterop->release(&event);
+                clFrameInInterop = nullptr;
+                taskSurf->addClEvent(event);
+            }
+
+            //比較用のキューの先頭に積まれているものから順次比較していく
+            std::lock_guard<std::mutex> lock(m_mtx); //ロックを忘れないこと
+            auto &originalFrame = m_input.front();
+            sts_filter = calc_ssim_psnr(&originalFrame->frame, &m_decFrameCopy->frame);
+            if (sts_filter != RGY_ERR_NONE) {
+                return sts_filter;
+            }
+            //フレームをm_inputからm_unusedに移す
+            m_unused.push_back(std::move(originalFrame));
+            m_input.pop_front();
+            AddMessage(RGY_LOG_TRACE, _T("compared %d: 0x%p.\n"), m_frames, surfVppIn);
+            m_frames++;
+        }
+        for (auto& out : outputFrames) {
+            PipelineTaskOutputSurf *taskSurf = dynamic_cast<PipelineTaskOutputSurf *>(out.get());
+            if (taskSurf == nullptr) {
+                AddMessage(RGY_LOG_ERROR, _T("Invalid task surface.\n"));
+                return RGY_ERR_NULL_PTR;
+            }
+            taskSurf->depend_clear();
+        }
+#endif //#if ENCODER_QSV
     }
     return res;
 }
@@ -683,7 +913,7 @@ RGY_ERR RGYFilterSsim::calc_ssim_psnr(const RGYFrameInfo *p0, const RGYFrameInfo
     if (prm->metric.ssim) {
         double ssimv = 0.0;
         for (int i = 0; i < RGY_CSP_PLANES[p0->csp]; i++) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_context);
+            VCEAMF(amf::AMFContext::AMFOpenCLLocker locker(m_context));
             m_tmpSsim[i]->mapEvent().wait();
 
             const int count = (int)m_tmpSsim[i]->size() / sizeof(float);
@@ -706,7 +936,7 @@ RGY_ERR RGYFilterSsim::calc_ssim_psnr(const RGYFrameInfo *p0, const RGYFrameInfo
     if (prm->metric.psnr) {
         double psnrv = 0.0;
         for (int i = 0; i < RGY_CSP_PLANES[p0->csp]; i++) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_context);
+            VCEAMF(amf::AMFContext::AMFOpenCLLocker locker(m_context));
             m_tmpPsnr[i]->mapEvent().wait();
 
             const int count = (int)m_tmpPsnr[i]->size() / sizeof(int);

@@ -29,10 +29,18 @@
 #pragma once
 
 #include "rgy_filter.h"
-#include "rgy_prm.h"
+#if ENCODER_VCEENC
 #include "vce_util.h"
 #include "Factory.h"
 #include "Trace.h"
+#endif
+#if ENCODER_QSV
+#include "qsv_util.h"
+#include "rgy_queue.h"
+class QSVMfxDec;
+class PipelineTaskMFXDecode;
+struct RGYBitstream;
+#endif
 #include <array>
 #include <thread>
 #include <deque>
@@ -45,15 +53,19 @@ public:
     int bitDepth;
     VideoInfo input;
     rgy_rational<int> streamtimebase;
+#if ENCODER_VCEENC
     amf::AMFFactory *factory;
     amf::AMFTrace *trace;
     amf::AMFContextPtr context;
+#endif
+#if ENCODER_QSV
+    std::unique_ptr<QSVMfxDec> mfxDEC;
+#endif
 
-    RGYFilterParamSsim() : metric(), deviceId(0), bitDepth(8), input(), streamtimebase(), factory(nullptr), trace(nullptr), context() {
+    RGYFilterParamSsim();
+    virtual ~RGYFilterParamSsim();
 
-    };
-    virtual ~RGYFilterParamSsim() {};
-    virtual tstring print() const override;
+    tstring print() const;
 };
 
 class RGYFilterSsim : public RGYFilter {
@@ -61,13 +73,13 @@ public:
     RGYFilterSsim(shared_ptr<RGYOpenCLContext> context);
     virtual ~RGYFilterSsim();
     virtual RGY_ERR init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog> pPrintMes) override;
-    RGY_ERR initDecode(const RGYBitstream *bitstream);
+    virtual RGY_ERR initDecode(const RGYBitstream *bitstream);
     bool decodeStarted() { return m_decodeStarted; }
     virtual void showResult();
     RGY_ERR thread_func();
-    RGY_ERR compare_frames(bool flush);
+    RGY_ERR compare_frames();
 
-    RGY_ERR addBitstream(const RGYBitstream *bitstream);
+    virtual RGY_ERR addBitstream(const RGYBitstream *bitstream);
 protected:
     RGY_ERR init_cl_resources();
     void close_cl_resources();
@@ -88,15 +100,26 @@ protected:
     std::mutex m_mtx;     //m_input, m_unused操作用のロック
     bool m_abort;         //スレッド中断用
 
+    int m_inputOriginal;
+    int m_inputEnc;
+    std::deque<std::unique_ptr<RGYCLFrame>> m_input;  //使用中のフレームバッファ(オリジナルフレーム格納用)
+    std::deque<std::unique_ptr<RGYCLFrame>> m_unused; //使っていないフレームバッファ(オリジナルフレーム格納用)
+#if ENCODER_VCEENC
     amf::AMFTrace *m_trace;
     amf::AMFFactory *m_factory;
     amf::AMFContextPtr m_context;
     amf::AMFComponentPtr m_decoder;
+#endif
+#if ENCODER_QSV
+    RGYQueueSPSP<RGYBitstream> m_encBitstream;
+    RGYQueueSPSP<RGYBitstream> m_encBitstreamUnused;
+    std::unique_ptr<QSVMfxDec> m_mfxDEC;
+    std::unique_ptr<PipelineTaskMFXDecode> m_taskDec;
+    std::unordered_map<mfxFrameSurface1 *, std::unique_ptr<RGYCLFrameInterop>> m_surfVppInInterop;
+#endif
 
-    std::deque<std::unique_ptr<RGYCLFrame>> m_input;  //使用中のフレームバッファ(オリジナルフレーム格納用)
-    std::deque<std::unique_ptr<RGYCLFrame>> m_unused; //使っていないフレームバッファ(オリジナルフレーム格納用)
-    unique_ptr<RGYFilterCspCrop> m_cropOrg;      // NV12->YV12変換用
-    unique_ptr<RGYFilterCspCrop> m_cropDec;      // NV12->YV12変換用
+    std::unique_ptr<RGYFilterCspCrop> m_cropOrg;      // NV12->YV12変換用
+    std::unique_ptr<RGYFilterCspCrop> m_cropDec;      // NV12->YV12変換用
     std::unique_ptr<RGYCLFrame> m_decFrameCopy; //デコード後にcrop(NV12->YV12変換)したフレームの格納場所
     std::array<std::unique_ptr<RGYCLBuf>, 3> m_tmpSsim; //評価結果を返すための一時バッファ
     std::array<std::unique_ptr<RGYCLBuf>, 3> m_tmpPsnr; //評価結果を返すための一時バッファ
@@ -111,5 +134,5 @@ protected:
     double m_psnrTotal;                     // 評価結果の累積値 All
     int m_frames;                           // 評価したフレーム数
 
-    unique_ptr<RGYOpenCLProgram> m_kernel;
+    std::unique_ptr<RGYOpenCLProgram> m_kernel;
 };
