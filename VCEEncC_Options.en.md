@@ -245,6 +245,7 @@ Generally, it is recommended to set the QP value to be I &lt; P &lt; B.
 
 ### --cbr &lt;int&gt;
 ### --vbr &lt;int&gt;
+### --qvbr &lt;int&gt; [H.264 only]
 Set bitrate in kbps.
 
 ## Other Options for Encoder

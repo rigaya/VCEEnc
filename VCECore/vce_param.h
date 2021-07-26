@@ -148,6 +148,7 @@ const CX_DESC list_vce_h264_rc_method[] = {
     { _T("CBR"), AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR                  },
     { _T("VBR"), AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR },
     { _T("VBR_LAT"), AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR },
+    { _T("QVBR"), AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR },
     { NULL, NULL }
 };
 
@@ -294,6 +295,18 @@ static inline int get_codec_cbr(RGY_CODEC codec) {
         abort();
     }
     return codec_cbr;
+}
+
+static inline int get_codec_qvbr(RGY_CODEC codec) {
+    int codec_vbr = 0;
+    switch (codec) {
+    case RGY_CODEC_HEVC: codec_vbr = -1; break;
+    case RGY_CODEC_H264: codec_vbr = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR; break;
+    default:
+        fprintf(stderr, "Unsupported codec!\n");
+        abort();
+    }
+    return codec_vbr;
 }
 
 struct VCECodecParam {
