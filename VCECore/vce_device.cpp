@@ -288,7 +288,7 @@ tstring VCEDevice::QueryIOCaps(amf::AMFIOCapsPtr& ioCaps) {
             amf_bool native = false;
             if (ioCaps->GetFormatAt(i, &format, &native) == AMF_OK) {
                 if (i) str += _T(", ");
-                str += wstring_to_tstring(m_trace->SurfaceGetFormatName(format)) + ((native) ? _T("(native)") : _T(""));
+                str += wstring_to_tstring(m_trace->SurfaceGetFormatName(format)) + strsprintf(_T("[%d]"), (int)format) + ((native) ? _T("(native)") : _T(""));
             }
         }
         str += _T("\n");
