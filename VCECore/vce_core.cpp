@@ -1875,66 +1875,70 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
             continue;
         }
 
-        amf::AMFIOCapsPtr inputCaps;
-        if (encoderCaps->GetInputCaps(&inputCaps) == AMF_OK) {
-            bool formatSupported = false;
-            int numOfFormats = inputCaps->GetNumOfFormats();
-            for (int i = 0; i < numOfFormats; i++) {
-                amf::AMF_SURFACE_FORMAT format;
-                amf_bool native = false;
-                if (inputCaps->GetFormatAt(i, &format, &native) == AMF_OK && format == formatIn) {
-                    formatSupported = true;
-                    break;
+        if (false) { // 入力フォーマットについてはチェックしないようにする
+            amf::AMFIOCapsPtr inputCaps;
+            if (encoderCaps->GetInputCaps(&inputCaps) == AMF_OK) {
+                bool formatSupported = false;
+                int numOfFormats = inputCaps->GetNumOfFormats();
+                for (int i = 0; i < numOfFormats; i++) {
+                    amf::AMF_SURFACE_FORMAT format;
+                    amf_bool native = false;
+                    if (inputCaps->GetFormatAt(i, &format, &native) == AMF_OK && format == formatIn) {
+                        formatSupported = true;
+                        break;
+                    }
                 }
-            }
-            if (!formatSupported) {
-                message += strsprintf(_T("GPU #%d (%s) [%s] does not support input format %s.\n"),
-                    (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
-                    m_pTrace->SurfaceGetFormatName(formatIn));
-                gpu = gpuList.erase(gpu);
-                continue;
+                if (!formatSupported) {
+                    message += strsprintf(_T("GPU #%d (%s) [%s] does not support input format %s.\n"),
+                        (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
+                        m_pTrace->SurfaceGetFormatName(formatIn));
+                    gpu = gpuList.erase(gpu);
+                    continue;
+                }
             }
         }
 
         amf::AMFIOCapsPtr outputCaps;
         if (encoderCaps->GetOutputCaps(&outputCaps) == AMF_OK) {
-#if 0
-            int minWidth, maxWidth;
-            outputCaps->GetWidthRange(&minWidth, &maxWidth);
-            if (m_encWidth < minWidth || maxWidth < m_encWidth) {
-                message += strsprintf(_T("GPU #%d (%s) [%s] does not support width %d (supported %d - %d).\n"),
-                    (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
-                    m_encWidth, minWidth, maxWidth);
-                gpu = gpuList.erase(gpu);
-                continue;
-            }
+            if (false) {
+                int minWidth, maxWidth;
+                outputCaps->GetWidthRange(&minWidth, &maxWidth);
+                if (m_encWidth < minWidth || maxWidth < m_encWidth) {
+                    message += strsprintf(_T("GPU #%d (%s) [%s] does not support width %d (supported %d - %d).\n"),
+                        (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
+                        m_encWidth, minWidth, maxWidth);
+                    gpu = gpuList.erase(gpu);
+                    continue;
+                }
 
-            int minHeight, maxHeight;
-            outputCaps->GetHeightRange(&minHeight, &maxHeight);
-            if (m_encHeight < minHeight || maxHeight < m_encHeight) {
-                message += strsprintf(_T("GPU #%d (%s) [%s] does not support height %d (supported %d - %d).\n"),
-                    (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
-                    m_encHeight, minHeight, maxHeight);
-                gpu = gpuList.erase(gpu);
-                continue;
-            }
-#endif
-            bool formatSupported = false;
-            int numOfFormats = outputCaps->GetNumOfFormats();
-            for (int i = 0; i < numOfFormats; i++) {
-                amf::AMF_SURFACE_FORMAT format;
-                amf_bool native = false;
-                if (outputCaps->GetFormatAt(i, &format, &native) == AMF_OK && format == formatOut) {
-                    formatSupported = true;
-                    break;
+                int minHeight, maxHeight;
+                outputCaps->GetHeightRange(&minHeight, &maxHeight);
+                if (m_encHeight < minHeight || maxHeight < m_encHeight) {
+                    message += strsprintf(_T("GPU #%d (%s) [%s] does not support height %d (supported %d - %d).\n"),
+                        (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
+                        m_encHeight, minHeight, maxHeight);
+                    gpu = gpuList.erase(gpu);
+                    continue;
                 }
             }
-            if (!formatSupported) {
-                message += strsprintf(_T("GPU #%d (%s) [%s] does not support ouput format %s.\n"),
-                    (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
-                    m_pTrace->SurfaceGetFormatName(formatOut));
-                gpu = gpuList.erase(gpu);
-                continue;
+            if (false) { // 出力フォーマットについてはチェックしないようにする
+                bool formatSupported = false;
+                int numOfFormats = outputCaps->GetNumOfFormats();
+                for (int i = 0; i < numOfFormats; i++) {
+                    amf::AMF_SURFACE_FORMAT format;
+                    amf_bool native = false;
+                    if (outputCaps->GetFormatAt(i, &format, &native) == AMF_OK && format == formatOut) {
+                        formatSupported = true;
+                        break;
+                    }
+                }
+                if (!formatSupported) {
+                    message += strsprintf(_T("GPU #%d (%s) [%s] does not support ouput format %s.\n"),
+                        (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
+                        m_pTrace->SurfaceGetFormatName(formatOut));
+                    gpu = gpuList.erase(gpu);
+                    continue;
+                }
             }
             //インタレ保持のチェック
             const bool interlacedEncoding =
