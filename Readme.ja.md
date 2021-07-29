@@ -25,6 +25,7 @@ VCEが載ったハードウェア
 | VCEEnc 5.01以降 | AMD ドライバ 19.12.1 以降 |
 | VCEEnc 5.02以降 | AMD ドライバ 20.2.1 以降 |
 | VCEEnc 6.09以降 | AMD ドライバ 20.11.2 以降 |
+| VCEEnc 6.13以降 | AMD ドライバ 21.6.1 以降 |
 
 ## VCEEncCCの使用方法とオプション  
 [VCEEncCのオプションの説明](./VCEEncC_Options.ja.md)
