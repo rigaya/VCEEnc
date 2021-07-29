@@ -284,7 +284,7 @@ tstring VCEDevice::QueryIOCaps(amf::AMFIOCapsPtr& ioCaps) {
         amf_int32 numOfFormats = ioCaps->GetNumOfFormats();
         str += _T("pix format:  ");
         for (amf_int32 i = 0; i < numOfFormats; i++) {
-            amf::AMF_SURFACE_FORMAT format;
+            amf::AMF_SURFACE_FORMAT format = amf::AMF_SURFACE_UNKNOWN;
             amf_bool native = false;
             if (ioCaps->GetFormatAt(i, &format, &native) == AMF_OK) {
                 if (i) str += _T(", ");
@@ -297,7 +297,7 @@ tstring VCEDevice::QueryIOCaps(amf::AMFIOCapsPtr& ioCaps) {
             amf_int32 numOfMemTypes = ioCaps->GetNumOfMemoryTypes();
             str += _T("memory type: ");
             for (amf_int32 i = 0; i < numOfMemTypes; i++) {
-                amf::AMF_MEMORY_TYPE memType;
+                amf::AMF_MEMORY_TYPE memType = amf::AMF_MEMORY_UNKNOWN;
                 amf_bool native = false;
                 if (ioCaps->GetMemoryTypeAt(i, &memType, &native) == AMF_OK) {
                     if (i) str += _T(", ");
