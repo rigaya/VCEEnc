@@ -77,7 +77,7 @@ const CX_DESC list_avc_profile[] = {
     { _T("Baseline"), AMF_VIDEO_ENCODER_PROFILE_BASELINE },
     { _T("Main"),     AMF_VIDEO_ENCODER_PROFILE_MAIN     },
     { _T("High"),     AMF_VIDEO_ENCODER_PROFILE_HIGH     },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 
 const CX_DESC list_avc_level[] = {
