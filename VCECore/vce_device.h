@@ -64,7 +64,7 @@ public:
 
     int id() const { return m_id; }
     const tstring &name() const { return m_devName; }
-    LUID luid() const { return (m_dx11.isValid()) ? m_dx11.getLUID() : m_dx9.getLUID(); }
+    LUID luid() const;
     amf::AMFContextPtr context() { return m_context; }
     shared_ptr<RGYOpenCLContext> cl() { return m_cl; }
     bool dx11interlop() const { return m_d3d11interlop; }
@@ -106,9 +106,13 @@ protected:
     int m_id;
     tstring m_devName;
     bool m_d3d9interlop;
+#if ENABLE_D3D9
     DeviceDX9 m_dx9;
+#endif
     bool m_d3d11interlop;
+#if ENABLE_D3D11
     DeviceDX11 m_dx11;
+#endif
     std::shared_ptr<RGYOpenCLContext> m_cl;
     amf::AMFContextPtr m_context;
     amf::AMFFactory *m_factory;

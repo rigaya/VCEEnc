@@ -35,9 +35,13 @@ VCEDevice::VCEDevice(shared_ptr<RGYLog> &log, amf::AMFFactory *factory, amf::AMF
     m_id(-1),
     m_devName(),
     m_d3d9interlop(false),
+#if ENABLE_D3D9
     m_dx9(),
+#endif //#if ENABLE_D3D9
     m_d3d11interlop(false),
+#if ENABLE_D3D11
     m_dx11(),
+#endif //#if ENABLE_D3D11
     m_cl(),
     m_context(),
     m_factory(factory),
@@ -54,8 +58,12 @@ VCEDevice::~VCEDevice() {
     m_trace = nullptr;
 
     m_cl.reset();
+#if ENABLE_D3D11
     m_dx11.Terminate();
+#endif //#if ENABLE_D3D11
+#if ENABLE_D3D9
     m_dx9.Terminate();
+#endif //#if ENABLE_D3D9
     m_devName.clear();
     m_log.reset();
 }
@@ -81,6 +89,7 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
     }
     m_d3d9interlop = interopD3d9;
     m_d3d11interlop = interopD3d11;
+#if ENABLE_D3D9
     if (interopD3d9) {
         auto err = m_dx9.Init(true, deviceId, false, 1280, 720, m_log);
         if (err != RGY_ERR_NONE) {
@@ -93,6 +102,8 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
             return err_to_rgy(amferr);
         }
     }
+#endif //#if ENABLE_D3D9
+#if ENABLE_D3D11
     if (interopD3d11 || !interopD3d9) {
         auto err = m_dx11.Init(deviceId, false, m_log);
         if (err != RGY_ERR_NONE) {
@@ -105,6 +116,7 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
             return err_to_rgy(amferr);
         }
     }
+#endif //#if ENABLE_D3D11
 
     RGYOpenCL cl(m_log);
     auto platforms = cl.getPlatforms("AMD");
@@ -113,17 +125,23 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
         return RGY_ERR_DEVICE_LOST;
     }
     auto& platform = platforms[0];
+#if ENABLE_D3D9
     if (interopD3d9) {
         if (platform->createDeviceListD3D9(CL_DEVICE_TYPE_GPU, (void *)m_dx9.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to find d3d9 device.\n"));
             return RGY_ERR_DEVICE_LOST;
         }
-    } else if (interopD3d11 || !interopD3d9) {
+    } else
+#endif //#if ENABLE_D3D9
+#if ENABLE_D3D11
+    if (interopD3d11 || !interopD3d9) {
         if (platform->createDeviceListD3D11(CL_DEVICE_TYPE_GPU, (void *)m_dx11.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to find d3d11 device.\n"));
             return RGY_ERR_DEVICE_LOST;
         }
-    } else {
+    } else
+#endif //#if ENABLE_D3D11
+    {
         if (platform->createDeviceList(CL_DEVICE_TYPE_GPU) != CL_SUCCESS || platform->devs().size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to find gpu device.\n"));
             return RGY_ERR_DEVICE_LOST;
@@ -136,8 +154,14 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
         return RGY_ERR_DEVICE_LOST;
     }
     platform->setDev(devices[selectCLDevice],
-        (interopD3d9) ? m_dx9.GetDevice() : nullptr,
-        (interopD3d11) ? m_dx11.GetDevice() : nullptr);
+#if ENABLE_D3D9
+        (interopD3d9) ? m_dx9.GetDevice() :
+#endif //#if ENABLE_D3D9
+        nullptr,
+#if ENABLE_D3D11
+        (interopD3d11) ? m_dx11.GetDevice() :
+#endif //#if ENABLE_D3D11
+        nullptr);
 
     m_cl = std::make_shared<RGYOpenCLContext>(platform, m_log);
     if (m_cl->createContext() != CL_SUCCESS) {
@@ -443,6 +467,7 @@ tstring VCEDevice::QueryDecCaps(RGY_CODEC codec, amf::AMFCapsPtr& decoderCaps) {
 }
 
 tstring VCEDevice::getGPUInfo() const {
+#if ENABLE_D3D11
     if (m_dx11.isValid()) {
         auto str = m_dx11.GetDisplayDeviceName();
         str = str_replace(str, L"(TM)", L"");
@@ -451,6 +476,7 @@ tstring VCEDevice::getGPUInfo() const {
         str = str_replace(str, L" Graphics", L"");
         return wstring_to_tstring(str);
     }
+#endif //#if ENABLE_D3D11
     return RGYOpenCLDevice(m_cl->platform()->dev(0)).infostr();
 }
 
@@ -482,5 +508,17 @@ CodecCsp VCEDevice::getHWDecCodecCsp() {
     return codecCsp;
 #else
     return CodecCsp();
+#endif
+}
+
+LUID VCEDevice::luid() const {
+    return
+#if ENABLE_D3D11
+    (m_dx11.isValid()) ? m_dx11.getLUID() :
+#endif //#if ENABLE_D3D11
+#if ENABLE_D3D9
+    m_dx9.getLUID();
+#else
+    LUID();
 #endif
 }

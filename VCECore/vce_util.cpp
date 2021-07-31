@@ -118,14 +118,14 @@ static const auto RGY_PICSTRUCT_TO_VCE = make_array<std::pair<RGY_PICSTRUCT, amf
     );
 MAP_PAIR_0_1(frametype, rgy, RGY_PICSTRUCT, enc, amf::AMF_FRAME_TYPE, RGY_PICSTRUCT_TO_VCE, RGY_PICSTRUCT_UNKNOWN, amf::AMF_FRAME_UNKNOWN);
 
-__declspec(noinline)
+RGY_NOINLINE
 AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM picstruct_rgy_to_enc(RGY_PICSTRUCT picstruct) {
     if (picstruct & RGY_PICSTRUCT_TFF) return AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD;
     if (picstruct & RGY_PICSTRUCT_BFF) return AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD;
     return AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_FRAME;
 }
 
-__declspec(noinline)
+RGY_NOINLINE
 RGY_PICSTRUCT picstruct_enc_to_rgy(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM picstruct) {
     if (picstruct == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD) return RGY_PICSTRUCT_FRAME_TFF;
     if (picstruct == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD) return RGY_PICSTRUCT_FRAME_BFF;
@@ -264,7 +264,7 @@ std::vector<RGYFrameData *> RGYBitstream::getFrameDataList() {
     return make_vector(frameDataList, frameDataNum);
 }
 
-__declspec(noinline)
+RGY_NOINLINE
 VideoInfo videooutputinfo(
     RGY_CODEC codec,
     amf::AMF_SURFACE_FORMAT encFormat,

@@ -603,7 +603,7 @@ PYW_PERF_MONITOR="perf_monitor.pyw"
 
 RESOURCE_NNEDI_WEIGHT="nnedi3_weights.bin"
 
-SRC_QSVENCC="QSVEncC.cpp"
+SRC_VCEENCC="VCEEncC.cpp"
 
 # for src in $SRC_MFX_DISPATCH; do
 #     SRCS="$SRCS mfx_dispatch/src/$src"

@@ -25,19 +25,9 @@
 //
 // ------------------------------------------------------------------------------------------
 
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
-#include <io.h>
-#include <fcntl.h>
 #include <cmath>
-#include <tchar.h>
-#include <process.h>
-#include <mmsystem.h>
-#pragma comment(lib, "winmm.lib")
-
-#include <iostream>
-
+#include "rgy_version.h"
+#include "rgy_osdep.h"
 #include "rgy_util.h"
 #include "rgy_env.h"
 #include "rgy_input.h"
@@ -159,11 +149,13 @@ VCECore::~VCECore() {
 }
 
 void VCECore::Terminate() {
+#if defined(_WIN32) || defined(_WIN64)
     if (m_bTimerPeriodTuning) {
         timeEndPeriod(1);
         PrintMes(RGY_LOG_DEBUG, _T("timeEndPeriod(1)\n"));
         m_bTimerPeriodTuning = false;
     }
+#endif //#if defined(_WIN32) || defined(_WIN64)
     m_state = RGY_STATE_STOPPED;
     PrintMes(RGY_LOG_DEBUG, _T("Pipeline Stopped.\n"));
 
@@ -312,7 +304,11 @@ RGY_ERR VCECore::initPerfMonitor(VCEParam *prm) {
 #endif
     if (m_pPerfMonitor->init(perfMonLog.c_str(), _T(""), (bLogOutput) ? prm->ctrl.perfMonitorInterval : 1000,
         (int)prm->ctrl.perfMonitorSelect, (int)prm->ctrl.perfMonitorSelectMatplot,
+#if defined(_WIN32) || defined(_WIN64)
         std::unique_ptr<void, handle_deleter>(OpenThread(SYNCHRONIZE | THREAD_QUERY_INFORMATION, false, GetCurrentThreadId()), handle_deleter()),
+#else
+        nullptr,
+#endif
         m_pLog, &perfMonitorPrm)) {
         PrintMes(RGY_LOG_WARN, _T("Failed to initialize performance monitor, disabled.\n"));
         m_pPerfMonitor.reset();
@@ -630,7 +626,7 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
     }
     PrintMes(RGY_LOG_DEBUG, _T("decoder: use codec \"%s\".\n"), wstring_to_tstring(codec_uvd_name).c_str());
     auto res = m_pFactory->CreateComponent(m_dev->context(), codec_uvd_name, &m_pDecoder);
-    if (res != RGY_ERR_NONE) {
+    if (res != AMF_OK) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to create decoder context: %s\n"), AMFRetString(res));
         return err_to_rgy(res);
     }
@@ -638,7 +634,7 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
 
     //RGY_CODEC_VC1のときはAMF_TS_SORTを選択する必要がある
     const AMF_TIMESTAMP_MODE_ENUM timestamp_mode = (inputCodec == RGY_CODEC_VC1) ? AMF_TS_SORT : AMF_TS_PRESENTATION;
-    if (RGY_ERR_NONE != (res = m_pDecoder->SetProperty(AMF_TIMESTAMP_MODE, amf_int64(timestamp_mode)))) {
+    if (AMF_OK != (res = m_pDecoder->SetProperty(AMF_TIMESTAMP_MODE, amf_int64(timestamp_mode)))) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to set deocder: %s\n"), AMFRetString(res));
         return err_to_rgy(res);
     }
@@ -1766,12 +1762,12 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 }
 
 RGY_ERR VCECore::initAMFFactory() {
-    m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(LoadLibrary(AMF_DLL_NAME));
+    m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(RGY_LOAD_LIBRARY(wstring_to_tstring(AMF_DLL_NAME).c_str()));
     if (!m_dll) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to load %s.\n"), AMF_DLL_NAME);
         return RGY_ERR_NOT_FOUND;
     }
-    AMFInit_Fn initFun = (AMFInit_Fn)GetProcAddress(m_dll.get(), AMF_INIT_FUNCTION_NAME);
+    AMFInit_Fn initFun = (AMFInit_Fn)RGY_GET_PROC_ADDRESS(m_dll.get(), AMF_INIT_FUNCTION_NAME);
     if (initFun == NULL) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to load %s.\n"), AMF_INIT_FUNCTION_NAME);
         return RGY_ERR_NOT_FOUND;
@@ -1780,7 +1776,7 @@ RGY_ERR VCECore::initAMFFactory() {
     if (res != AMF_OK) {
         return err_to_rgy(res);
     }
-    AMFQueryVersion_Fn versionFun = (AMFQueryVersion_Fn)GetProcAddress(m_dll.get(), AMF_QUERY_VERSION_FUNCTION_NAME);
+    AMFQueryVersion_Fn versionFun = (AMFQueryVersion_Fn)RGY_GET_PROC_ADDRESS(m_dll.get(), AMF_QUERY_VERSION_FUNCTION_NAME);
     if (versionFun == NULL) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to load %s.\n"), AMF_QUERY_VERSION_FUNCTION_NAME);
         return RGY_ERR_NOT_FOUND;
@@ -1810,12 +1806,17 @@ RGY_ERR VCECore::initTracer(int log_level) {
 
 std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3d9, bool interopD3d11) {
     std::vector<std::unique_ptr<VCEDevice>> devs;
+#if ENABLE_D3D11
     const int adapterCount = DeviceDX11::adapterCount();
+#else
+    const int adapterCount = 10;
+#endif
     for (int i = 0; i < adapterCount; i++) {
         auto dev = std::make_unique<VCEDevice>(m_pLog, m_pFactory, m_pTrace);
-        if (dev->init(i, interopD3d9, interopD3d11) == RGY_ERR_NONE) {
-            devs.push_back(std::move(dev));
+        if (dev->init(i, interopD3d9, interopD3d11) != RGY_ERR_NONE) {
+            break;
         }
+        devs.push_back(std::move(dev));
     }
     return devs;
 }
@@ -2076,6 +2077,7 @@ RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList,
     if (gpuList.size() <= 1) {
         return RGY_ERR_NONE;
     }
+#if ENABLE_PERF_COUNTER
     bool counterIsIntialized = m_pPerfMonitor->isPerfCounterInitialized();
     for (int i = 0; i < 4 && !counterIsIntialized; i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -2120,6 +2122,7 @@ RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList,
     for (const auto &gpu : gpuList) {
         PrintMes(RGY_LOG_DEBUG, _T("GPU #%d (%s): score %.1f\n"), gpu->id(), gpu->name().c_str(), gpuscore[gpu->id()]);
     }
+#endif //#if ENABLE_PERF_COUNTER
     return RGY_ERR_NONE;
 }
 
@@ -2184,7 +2187,9 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     // VCE関連の初期化前にカウンターを起動しないと、COM周りのエラーで正常に取得できなくなる場合がある
     // そのため、AMF関係の初期化前にperf counterを初期化する
     m_pPerfMonitor = std::make_unique<CPerfMonitor>();
+#if ENABLE_PERF_COUNTER
     m_pPerfMonitor->runCounterThread();
+#endif //#if ENABLE_PERF_COUNTER
 
     ret = initAMFFactory();
     if (ret != RGY_ERR_NONE) {
@@ -2204,11 +2209,13 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
+#if defined(_WIN32) || defined(_WIN64)
     if (prm->bTimerPeriodTuning) {
         m_bTimerPeriodTuning = true;
         timeBeginPeriod(1);
         PrintMes(RGY_LOG_DEBUG, _T("timeBeginPeriod(1)\n"));
     }
+#endif //#if defined(_WIN32) || defined(_WIN64)
     if (prm->ctrl.lowLatency) {
         m_pipelineDepth = 1;
         prm->nBframes = 0;
@@ -2462,8 +2469,12 @@ RGY_ERR VCECore::run() {
     }
 
     auto run_send_streams = [this, &pWriterForAudioStreams, &pFilterForStreams](int inputFrames) {
+#if ENABLE_SM_READER
         RGYInputSM *pReaderSM = dynamic_cast<RGYInputSM *>(m_pFileReader.get());
         const int droppedInAviutl = (pReaderSM != nullptr) ? pReaderSM->droppedFrames() : 0;
+#else
+        const int droppedInAviutl = 0;
+#endif
 
         vector<AVPacket> packetList = m_pFileReader->GetStreamDataPackets(inputFrames + droppedInAviutl);
 
@@ -2590,7 +2601,7 @@ RGY_ERR VCECore::run() {
         inFrame->setTimestamp(outPtsSource);
         inFrame->setDuration(outDuration);
         outFrames.push_back(std::move(inFrame));
-        return std::move(outFrames);
+        return outFrames;
     };
 
     auto filter_frame = [&](int &nFilterFrame, unique_ptr<RGYFrame> &inframe, deque<unique_ptr<RGYFrame>> &dqEncFrames, bool &bDrain) {
@@ -2922,7 +2933,7 @@ RGY_ERR VCECore::run() {
             if (!bDrain) {
                 dqInFrames.pop_front();
             }
-            while (dqEncFrames.size() >= m_pipelineDepth) {
+            while ((int)dqEncFrames.size() >= m_pipelineDepth) {
                 auto &encframe = dqEncFrames.front();
                 if ((err = send_encoder(encframe)) != RGY_ERR_NONE) {
                     res = err;
@@ -2946,8 +2957,7 @@ RGY_ERR VCECore::run() {
         dqEncFrames.pop_front();
     }
     if (m_thDecoder.joinable()) {
-        DWORD exitCode = 0;
-        while (GetExitCodeThread(m_thDecoder.native_handle(), &exitCode) == STILL_ACTIVE) {
+        while (RGYThreadStillActive(m_thDecoder.native_handle())) {
             if ((res = run_send_streams(nInputFrame)) != RGY_ERR_NONE) {
                 m_state = RGY_STATE_ERROR;
             }
@@ -3016,13 +3026,13 @@ tstring VCECore::GetEncoderParam() {
     };
 
     auto GetPropertyRatio = [pProperty](const wchar_t *pName) {
-        AMFRatio value;
+        AMFRatio value = AMFConstructRatio(0,0);
         pProperty->GetProperty(pName, &value);
         return value;
     };
 
     auto GetPropertyRate = [pProperty](const wchar_t *pName) {
-        AMFRate value;
+        AMFRate value = AMFConstructRate(0,0);
         pProperty->GetProperty(pName, &value);
         return value;
     };
@@ -3047,18 +3057,18 @@ tstring VCECore::GetEncoderParam() {
     getCPUInfo(cpu_info);
     tstring gpu_info = m_dev->getGPUInfo();
 
-    OSVERSIONINFOEXW osversioninfo = { 0 };
-    tstring osversionstr = getOSVersion(&osversioninfo);
-
     uint32_t nMotionEst = 0x0;
     nMotionEst |= GetPropertyInt(AMF_PARAM_MOTION_HALF_PIXEL(m_encCodec)) ? VCE_MOTION_EST_HALF : 0;
     nMotionEst |= GetPropertyInt(AMF_PARAM_MOTION_QUARTERPIXEL(m_encCodec)) ? VCE_MOTION_EST_QUATER | VCE_MOTION_EST_HALF : 0;
 
     mes += strsprintf(_T("%s\n"), get_encoder_version());
-    mes += strsprintf(_T("OS Version     %s %s (%d)"), osversionstr.c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"), osversioninfo.dwBuildNumber);
 #if defined(_WIN32) || defined(_WIN64)
-    mes += _T(" [") + getACPCodepageStr() + _T("]");
-#endif //#if defined(_WIN32) || defined(_WIN64)
+    OSVERSIONINFOEXW osversioninfo = { 0 };
+    tstring osversionstr = getOSVersion(&osversioninfo);
+    mes += strsprintf(_T("OS:            %s %s (%d) [%s]\n"), osversionstr.c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"), osversioninfo.dwBuildNumber, getACPCodepageStr().c_str());
+#else
+    mes += strsprintf(_T("OS:            %s %s\n"), getOSVersion().c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"));
+#endif
     mes += _T("\n");
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
     mes += strsprintf(_T("GPU:           %s, AMF Runtime %d.%d.%d / SDK %d.%d.%d\n"), gpu_info.c_str(),
@@ -3084,10 +3094,10 @@ tstring VCECore::GetEncoderParam() {
         getPropertyDesc(AMF_PARAM_PROFILE_LEVEL(m_encCodec), get_level_list(m_encCodec)).c_str(),
         (m_encCodec == RGY_CODEC_HEVC) ? (tstring(_T(" (")) + getPropertyDesc(AMF_VIDEO_ENCODER_HEVC_TIER, get_tier_list(m_encCodec)) + _T(" tier)")).c_str() : _T(""));
     const AMF_VIDEO_ENCODER_SCANTYPE_ENUM scan_type = (m_encCodec == RGY_CODEC_H264) ? (AMF_VIDEO_ENCODER_SCANTYPE_ENUM)GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE) : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE;
-    AMFRatio aspectRatio;
+    AMFRatio aspectRatio = AMFConstructRatio(0,0);
     m_params.GetParam(AMF_PARAM_ASPECT_RATIO(m_encCodec), aspectRatio);
     auto frameRate = GetPropertyRate(AMF_PARAM_FRAMERATE(m_encCodec));
-    int64_t outWidth, outHeight;
+    int64_t outWidth = 0, outHeight = 0;
     m_params.GetParam(VCE_PARAM_KEY_OUTPUT_WIDTH, outWidth);
     m_params.GetParam(VCE_PARAM_KEY_OUTPUT_HEIGHT, outHeight);
     mes += strsprintf(_T("               %dx%d%s %d:%d %0.3ffps (%d/%dfps)\n"),

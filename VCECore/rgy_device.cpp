@@ -31,10 +31,12 @@
 #include "rgy_log.h"
 #include "rgy_util.h"
 
-#if defined(_WIN32) || defined(_WIN64)
-
+#if ENABLE_D3D9
 #pragma comment(lib, "d3d9.lib")
+#endif
+#if ENABLE_D3D11
 #pragma comment(lib, "d3d11.lib")
+#endif
 
 #define LOG_IF_EXIST(...)  { if (m_log) { m_log->write(__VA_ARGS__); } }
 
@@ -45,6 +47,7 @@
     } \
 }
 
+#if ENABLE_D3D9
 DeviceDX9::DeviceDX9() :
     m_pD3D(),
     m_pD3DDevice(),
@@ -278,7 +281,9 @@ int DeviceDX9::adapterCount() {
     }
     return (int)enumeratedAdapterLUIDs.size();
 }
+#endif
 
+#if ENABLE_D3D11
 DeviceDX11::DeviceDX11() :
     m_pD3DDevice(),
     m_devLUID(),
@@ -465,5 +470,4 @@ int DeviceDX11::adapterCount() {
     }
     return adaptersCount;
 }
-
-#endif //#if defined(_WIN32) || defined(_WIN64)
+#endif

@@ -33,15 +33,22 @@
 #include "rgy_version.h"
 #include <string>
 #include <memory>
-#if defined(_WIN32) || defined(_WIN64)
+
+#if ENABLE_D3D9 || ENABLE_D3D11
 #include <SDKDDKVer.h>
 #include <atlbase.h>
+#endif
+#if ENABLE_D3D9
 #include <d3d9.h>
+#endif
+#if ENABLE_D3D11
 #include <d3d11.h>
+#endif
 #include "rgy_err.h"
 
 class RGYLog;
 
+#if ENABLE_D3D9
 class DeviceDX9 {
 public:
     DeviceDX9();
@@ -68,7 +75,9 @@ private:
     std::wstring                 m_displayDeviceName;
     std::shared_ptr<RGYLog>      m_log;
 };
+#endif
 
+#if ENABLE_D3D11
 class DeviceDX11 {
 public:
     DeviceDX11();
@@ -94,6 +103,6 @@ private:
     std::wstring                 m_displayDeviceName;
     std::shared_ptr<RGYLog>      m_log;
 };
-#endif //#if defined(_WIN32) || defined(_WIN64)
+#endif
 
 #endif //__RGY_DEVICE_H__

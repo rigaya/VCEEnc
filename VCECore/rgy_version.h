@@ -107,6 +107,7 @@ const char *get_encoder_version();
 #define ENABLE_DHDR10_INFO 0
 #define ENABLE_KEYFRAME_INSERT 0
 #define ENABLE_AUTO_PICSTRUCT 0
+#define ENABLE_SM_READER          0
 
 #include "rgy_config.h"
 #define ENCODER_NAME              "VCEEncC"
