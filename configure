@@ -279,8 +279,8 @@ CFLAGS="-Wall -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused \
 -DLINUX -DUNIX -D_FILE_OFFSET_BITS=64 -D__USE_LARGEFILE64 -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS"
 CXXFLAGS="-Wall -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused \
 -DLINUX -DUNIX -D_FILE_OFFSET_BITS=64 -D__USE_LARGEFILE64 -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS \
--I${SRCDIR} -I${SRCDIR}/MediaSDK/include -I${SRCDIR}/VCECore \
--I${SRCDIR}/tinyxml2 -I${SRCDIR}/ChapterRW -I${SRCDIR}/ttmath \
+-I${SRCDIR} -I${SRCDIR}/AMF/amf/public/include -I${SRCDIR}/AMF/amf/public/include/core -I${SRCDIR}/AMF/amf/public/include/components \
+-I${SRCDIR}/VCECore -I${SRCDIR}/tinyxml2 -I${SRCDIR}/ttmath \
 "
 LDFLAGS="-L. -ldl -lm -lstdc++ -lstdc++fs"
 if [ $X86_64 -ne 0 ]; then
@@ -547,32 +547,27 @@ if [ $ENABLE_DTL -ne 0 ]; then
 fi
 
 SRC_VCECORE=" \
-DeviceId.cpp \
 convert_csp.cpp             convert_csp_avx.cpp \
-convert_csp_avx2.cpp        convert_csp_sse2.cpp        convert_csp_sse41.cpp          convert_csp_ssse3.cpp \
-cpu_info.cpp                gpu_info.cpp                gpuz_info.cpp                  logo.cpp \
-qsv_allocator.cpp           qsv_allocator_d3d11.cpp     qsv_allocator_d3d9.cpp         qsv_allocator_sys.cpp \
-qsv_allocator_va.cpp        qsv_cmd.cpp                 qsv_hw_d3d11.cpp               qsv_hw_d3d9.cpp \
-qsv_hw_device.cpp           qsv_hw_va.cpp               qsv_hw_va_utils.cpp            qsv_hw_va_utils_drm.cpp \
-qsv_hw_va_utils_x11.cpp     qsv_mfx_dec.cpp             qsv_pipeline.cpp               qsv_plugin.cpp \
-qsv_prm.cpp                 qsv_query.cpp               qsv_util.cpp                   qsv_vpp_mfx.cpp \
-rgy_aspect_ratio.cpp        rgy_avlog.cpp               rgy_avutil.cpp                 rgy_bitstream.cpp \
-rgy_caption.cpp             rgy_chapter.cpp             rgy_cmd.cpp                    rgy_codepage.cpp \
-rgy_def.cpp                 rgy_env.cpp                 rgy_err.cpp                    rgy_event.cpp \
-rgy_filesystem.cpp          rgy_filter.cpp              rgy_filter_afs.cpp             rgy_filter_afs_analyze.cpp \
-rgy_filter_afs_filter.cpp   rgy_filter_afs_merge.cpp    rgy_filter_afs_synthesize.cpp  rgy_filter_colorspace.cpp \
-rgy_filter_crop.cpp         rgy_filter_deband.cpp       rgy_filter_decimate.cpp        rgy_filter_delogo.cpp \
-rgy_filter_denoise_knn.cpp  rgy_filter_denoise_pmd.cpp  rgy_filter_edgelevel.cpp       rgy_filter_mpdecimate.cpp \
-rgy_filter_nnedi.cpp        rgy_filter_pad.cpp          rgy_filter_resize.cpp          rgy_filter_ssim.cpp \
-rgy_filter_smooth.cpp       rgy_filter_subburn.cpp      rgy_filter_transform.cpp       rgy_filter_tweak.cpp \
-rgy_filter_unsharp.cpp      rgy_filter_warpsharp.cpp    rgy_frame.cpp                  rgy_hdr10plus.cpp \
-rgy_ini.cpp \
-rgy_input.cpp               rgy_input_avcodec.cpp       rgy_input_avi.cpp              rgy_input_avs.cpp \
-rgy_input_raw.cpp           rgy_input_sm.cpp            rgy_input_vpy.cpp              rgy_language.cpp \
-rgy_log.cpp                 rgy_opencl.cpp              rgy_output.cpp                 rgy_output_avcodec.cpp \
-rgy_perf_counter.cpp        rgy_perf_monitor.cpp        rgy_pipe.cpp                   rgy_pipe_linux.cpp \
-rgy_prm.cpp                 rgy_resource.cpp            rgy_simd.cpp                   rgy_status.cpp \
-rgy_timecode.cpp            rgy_util.cpp                rgy_version.cpp \
+convert_csp_avx2.cpp        convert_csp_sse2.cpp           convert_csp_sse41.cpp       convert_csp_ssse3.cpp \
+cpu_info.cpp                gpu_info.cpp                   gpuz_info.cpp               h264_level.cpp \
+hevc_level.cpp              logo.cpp                       rgy_aspect_ratio.cpp        rgy_avlog.cpp \
+rgy_avutil.cpp              rgy_bitstream.cpp              rgy_caption.cpp             rgy_chapter.cpp \
+rgy_cmd.cpp                 rgy_codepage.cpp               rgy_def.cpp                 rgy_device.cpp \
+rgy_env.cpp                 rgy_err.cpp                    rgy_event.cpp               rgy_filesystem.cpp \
+rgy_filter.cpp              rgy_filter_afs.cpp             rgy_filter_afs_analyze.cpp  rgy_filter_afs_filter.cpp \
+rgy_filter_afs_merge.cpp    rgy_filter_afs_synthesize.cpp  rgy_filter_colorspace.cpp   rgy_filter_crop.cpp \
+rgy_filter_deband.cpp       rgy_filter_decimate.cpp        rgy_filter_delogo.cpp       rgy_filter_denoise_knn.cpp \
+rgy_filter_denoise_pmd.cpp  rgy_filter_edgelevel.cpp       rgy_filter_mpdecimate.cpp   rgy_filter_nnedi.cpp \
+rgy_filter_pad.cpp          rgy_filter_resize.cpp          rgy_filter_smooth.cpp       rgy_filter_ssim.cpp \
+rgy_filter_subburn.cpp      rgy_filter_transform.cpp       rgy_filter_tweak.cpp        rgy_filter_unsharp.cpp \
+rgy_filter_warpsharp.cpp    rgy_frame.cpp                  rgy_hdr10plus.cpp           rgy_ini.cpp \
+rgy_input.cpp               rgy_input_avcodec.cpp          rgy_input_avi.cpp           rgy_input_avs.cpp \
+rgy_input_raw.cpp           rgy_input_sm.cpp               rgy_input_vpy.cpp           rgy_language.cpp \
+rgy_log.cpp                 rgy_opencl.cpp                 rgy_output.cpp              rgy_output_avcodec.cpp \
+rgy_perf_counter.cpp        rgy_perf_monitor.cpp           rgy_pipe.cpp                rgy_pipe_linux.cpp \
+rgy_prm.cpp                 rgy_resource.cpp               rgy_simd.cpp                rgy_status.cpp \
+rgy_timecode.cpp            rgy_util.cpp                   rgy_version.cpp             vce_cmd.cpp \
+vce_core.cpp                vce_device.cpp                 vce_param.cpp               vce_util.cpp \
 "
 
 SRC_VCECORE_CL=" \
