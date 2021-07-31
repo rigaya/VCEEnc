@@ -1764,7 +1764,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 RGY_ERR VCECore::initAMFFactory() {
     m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(RGY_LOAD_LIBRARY(wstring_to_tstring(AMF_DLL_NAME).c_str()));
     if (!m_dll) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to load %s.\n"), AMF_DLL_NAME);
+        PrintMes(RGY_LOG_ERROR, _T("Failed to load %s.\n"), wstring_to_tstring(AMF_DLL_NAME).c_str());
         return RGY_ERR_NOT_FOUND;
     }
     AMFInit_Fn initFun = (AMFInit_Fn)RGY_GET_PROC_ADDRESS(m_dll.get(), AMF_INIT_FUNCTION_NAME);
@@ -1787,7 +1787,7 @@ RGY_ERR VCECore::initAMFFactory() {
     }
     m_pFactory->GetTrace(&m_pTrace);
     m_pFactory->GetDebug(&m_pDebug);
-    PrintMes(RGY_LOG_DEBUG, _T("Loaded %s.\n"), AMF_DLL_NAME);
+    PrintMes(RGY_LOG_DEBUG, _T("Loaded %s.\n"), wstring_to_tstring(AMF_DLL_NAME).c_str());
     return RGY_ERR_NONE;
 }
 
