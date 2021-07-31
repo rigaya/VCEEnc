@@ -30,10 +30,7 @@
 #include <sstream>
 #include <iomanip>
 #include <numeric>
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
-#include <shellapi.h>
+#include "rgy_osdep.h"
 #include "rgy_version.h"
 #include "rgy_perf_monitor.h"
 #include "rgy_caption.h"
@@ -900,6 +897,7 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
     return 0;
 }
 
+#if defined(_WIN32) || defined(_WIN64)
 int parse_cmd(VCEParam *pParams, const char *cmda, bool ignore_parse_err) {
     if (cmda == nullptr) {
         return 0;
@@ -925,6 +923,7 @@ int parse_cmd(VCEParam *pParams, const char *cmda, bool ignore_parse_err) {
     int ret = parse_cmd(pParams, argc, strInput, ignore_parse_err);
     return ret;
 }
+#endif //#if defined(_WIN32) || defined(_WIN64)
 
 #pragma warning (push)
 #pragma warning (disable: 4127)
