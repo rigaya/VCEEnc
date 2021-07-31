@@ -99,18 +99,18 @@ const CX_DESC list_avc_level[] = {
     { _T("5"),    50  },
     { _T("5.1"),  51  },
     { _T("5.2"),  52  },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 
 const CX_DESC list_hevc_profile[] = {
     { _T("main"),     AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 
 const CX_DESC list_hevc_tier[] = {
     { _T("main"),     AMF_VIDEO_ENCODER_HEVC_TIER_MAIN },
     { _T("high"),     AMF_VIDEO_ENCODER_HEVC_TIER_HIGH },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 
 const CX_DESC list_hevc_level[] = {
@@ -128,19 +128,19 @@ const CX_DESC list_hevc_level[] = {
     { _T("6"),    AMF_LEVEL_6 },
     { _T("6.1"),  AMF_LEVEL_6_1 },
     { _T("6.2"),  AMF_LEVEL_6_2 },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 const CX_DESC list_hevc_bitdepth[] = {
     { _T("8bit"),   8   },
     { _T("10bit"), 10  },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 
 const CX_DESC list_mv_presicion[] = {
     { _T("full-pel"), VCE_MOTION_EST_FULL   },
     { _T("half-pel"), VCE_MOTION_EST_HALF   },
     { _T("Q-pel"),    VCE_MOTION_EST_QUATER | VCE_MOTION_EST_HALF },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 
 const CX_DESC list_vce_h264_rc_method[] = {
@@ -149,7 +149,7 @@ const CX_DESC list_vce_h264_rc_method[] = {
     { _T("VBR"), AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR },
     { _T("VBR_LAT"), AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR },
     { _T("QVBR"), AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 
 const CX_DESC list_vce_hevc_rc_method[] = {
@@ -157,12 +157,13 @@ const CX_DESC list_vce_hevc_rc_method[] = {
     { _T("CBR"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR },
     { _T("VBR"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR },
     { _T("VBR_LAT"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 
 const CX_DESC list_vce_preanalysis_h264[] = {
     { _T("off"), AMF_VIDEO_ENCODER_PREENCODE_DISABLED },
     { _T("on"),  AMF_VIDEO_ENCODER_PREENCODE_ENABLED },
+    { NULL, 0 }
 };
 
 #define AMF_PA_SCENE_CHANGE_DETECTION_NONE (AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_LOW-1)
@@ -173,7 +174,7 @@ const CX_DESC list_pa_sc_sensitivity[] = {
     { _T("low"),    AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_LOW },
     { _T("medium"), AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_MEDIUM },
     { _T("high"),   AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_HIGH },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 
 const CX_DESC list_pa_ss_sensitivity[] = {
@@ -181,34 +182,34 @@ const CX_DESC list_pa_ss_sensitivity[] = {
     { _T("low"),    AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY_LOW },
     { _T("medium"), AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY_MEDIUM },
     { _T("high"),   AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY_HIGH },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 
 const CX_DESC list_pa_activity[] = {
     { _T("y"),   AMF_PA_ACTIVITY_Y },
     { _T("yuv"), AMF_PA_ACTIVITY_YUV },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 
 const CX_DESC list_pa_caq_strength[] = {
     { _T("low"),    AMF_PA_CAQ_STRENGTH_LOW },
     { _T("medium"), AMF_PA_CAQ_STRENGTH_MEDIUM },
     { _T("high"),   AMF_PA_CAQ_STRENGTH_HIGH },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 
 const CX_DESC list_vce_quality_preset_h264[] = {
     { _T("balanced"), AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED },
     { _T("fast"),     AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED },
     { _T("slow"),     AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 
 const CX_DESC list_vce_quality_preset_hevc[] = {
     { _T("balanced"), AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_BALANCED },
     { _T("fast"),     AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_SPEED },
     { _T("slow"),     AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_QUALITY },
-    { NULL, NULL }
+    { NULL, 0 }
 };
 
 static const CX_DESC *get_quality_preset(RGY_CODEC codec) {
