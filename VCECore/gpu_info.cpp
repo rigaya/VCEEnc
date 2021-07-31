@@ -116,6 +116,7 @@ int getGPUInfo(const char *VendorName, TCHAR *buffer, unsigned int buffer_size, 
     }
 #endif  //#if ENCODER_NVENC && !FOR_AUO
 #if ENCODER_VCEENC && !FOR_AUO
+  #if defined(_WIN32) || defined(_WIN64)
     DeviceDX11 dx11;
     auto err = dx11.Init(device_id, false, nullptr);
     if (err == RGY_ERR_NONE) {
@@ -127,6 +128,7 @@ int getGPUInfo(const char *VendorName, TCHAR *buffer, unsigned int buffer_size, 
         _tcsncpy(buffer, wstring_to_tstring(str).c_str(), buffer_size);
         return 0;
     }
+  #endif //#if defined(_WIN32) || defined(_WIN64)
 #endif //#if ENCODER_VCEENC && !FOR_AUO
 #if !ENABLE_OPENCL
     _stprintf_s(buffer, buffer_size, _T("Unknown (not compiled with OpenCL support)"));

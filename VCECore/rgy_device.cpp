@@ -31,6 +31,8 @@
 #include "rgy_log.h"
 #include "rgy_util.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "d3d11.lib")
 
@@ -463,3 +465,5 @@ int DeviceDX11::adapterCount() {
     }
     return adaptersCount;
 }
+
+#endif //#if defined(_WIN32) || defined(_WIN64)

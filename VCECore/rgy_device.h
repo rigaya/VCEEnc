@@ -30,10 +30,12 @@
 #define __RGY_DEVICE_H__
 
 #include "rgy_osdep.h"
-#include <SDKDDKVer.h>
-#include <atlbase.h>
+#include "rgy_version.h"
 #include <string>
 #include <memory>
+#if defined(_WIN32) || defined(_WIN64)
+#include <SDKDDKVer.h>
+#include <atlbase.h>
 #include <d3d9.h>
 #include <d3d11.h>
 #include "rgy_err.h"
@@ -67,7 +69,6 @@ private:
     std::shared_ptr<RGYLog>      m_log;
 };
 
-
 class DeviceDX11 {
 public:
     DeviceDX11();
@@ -93,5 +94,6 @@ private:
     std::wstring                 m_displayDeviceName;
     std::shared_ptr<RGYLog>      m_log;
 };
+#endif //#if defined(_WIN32) || defined(_WIN64)
 
 #endif //__RGY_DEVICE_H__

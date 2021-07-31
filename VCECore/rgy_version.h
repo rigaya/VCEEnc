@@ -50,9 +50,13 @@ const char *get_encoder_version();
 #define ENCODER_NVENC  0
 #define ENCODER_VCEENC 1
 
+#if defined(_WIN32) || defined(_WIN64)
+
 #define ENABLE_PERF_COUNTER 1
 #define ENABLE_AVCODEC_OUT_THREAD 1
 #define ENABLE_AVCODEC_AUDPROCESS_THREAD 1
+#define ENABLE_D3D9 1
+#define ENABLE_D3D11 1
 #define ENABLE_CPP_REGEX 1
 #define ENABLE_DTL 1
 
@@ -90,5 +94,24 @@ const char *get_encoder_version();
 #define ENABLE_OPENCL             1
 #define ENABLE_CAPTION2ASS        1
 #endif
+
+#else //#if defined(WIN32) || defined(WIN64)
+#define FOR_AUO 0
+#define ENABLE_PERF_COUNTER 0
+#define ENABLE_AVCODEC_OUT_THREAD 1
+#define ENABLE_AVCODEC_AUDPROCESS_THREAD 1
+#define ENABLE_D3D9 0
+#define ENABLE_D3D11 0
+#define ENABLE_CAPTION2ASS 0
+
+#define ENABLE_DHDR10_INFO 0
+#define ENABLE_KEYFRAME_INSERT 0
+#define ENABLE_AUTO_PICSTRUCT 0
+
+#include "rgy_config.h"
+#define ENCODER_NAME              "VCEEncC"
+#define DECODER_NAME              "vce"
+#define HW_TIMEBASE 10000000L //AMF_SECOND
+#endif // #if defined(WIN32) || defined(WIN64)
 
 #endif //##ifndef __RGY_VERSION_H__
