@@ -116,6 +116,8 @@ LIBVA_DRM_SUPPORT=1
 
 OPENCL_HEADERS=""
 
+VULKAN_HEADERS=""
+
 CHECK_LIBAV_NAMES="libswresample libavutil libavcodec libavformat libavfilter"
 LIBAV_CFLAGS=""
 LIBAV_LIBS=""
@@ -157,7 +159,8 @@ options:
   --pkg-config=PKGCONFIG   set pkg-config path [${PKGCONFIG}]
   --enable-debug           compile in debug configuration [${ENABLE_DEBUG}]
 
-  --opencl-headers         set opencl headers path [${OPENCL_CFLAGS}]
+  --opencl-headers         set opencl headers path [${OPENCL_HEADERS}]
+  --vulkan-headers         set vulkan headers path [${VULKAN_HEADERS}]
 
   --extra-cxxflags=XCFLAGS add XCFLAGS to CXXFLAGS
   --extra-ldflags=XLDFLAGS add XLDFLAGS to LDFLAGS
@@ -391,6 +394,18 @@ if cxx_check "opencl-headers" "${CXXFLAGS} ${OPENCL_CXXFLAGS}" "" "CL/opencl.h" 
     cnf_write "yes"
 else
     cnf_write "OpenCL headers not installed." 
+    exit 1
+fi
+
+VULKAN_CXXFLAGS=
+if [ "${VULKAN_HEADERS}" != "" ]; then
+    VULKAN_CXXFLAGS=-I${VULKAN_HEADERS}
+fi
+if cxx_check "vulkan-headers" "${CXXFLAGS} ${VULKAN_CXXFLAGS}" "" "vulkan/vulkan.h" "VkBool32 test = 0;" ; then
+    CXXFLAGS="${CXXFLAGS} ${VULKAN_CXXFLAGS}"
+    cnf_write "yes"
+else
+    cnf_write "vulkan headers not installed." 
     exit 1
 fi
 
