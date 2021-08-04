@@ -57,6 +57,7 @@ const char *get_encoder_version();
 #define ENABLE_AVCODEC_AUDPROCESS_THREAD 1
 #define ENABLE_D3D9 1
 #define ENABLE_D3D11 1
+#define ENABLE_VULKAN 0
 #define ENABLE_CPP_REGEX 1
 #define ENABLE_DTL 1
 
@@ -102,6 +103,7 @@ const char *get_encoder_version();
 #define ENABLE_AVCODEC_AUDPROCESS_THREAD 1
 #define ENABLE_D3D9 0
 #define ENABLE_D3D11 0
+#define ENABLE_VULKAN 1
 #define ENABLE_CAPTION2ASS 0
 
 #define ENABLE_DHDR10_INFO 0

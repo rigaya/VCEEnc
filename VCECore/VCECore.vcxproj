@@ -255,6 +255,7 @@
     </ClCompile>
     <ClCompile Include="rgy_util.cpp" />
     <ClCompile Include="rgy_version.cpp" />
+    <ClCompile Include="rgy_vulkan.cpp" />
     <ClCompile Include="vce_cmd.cpp" />
     <ClCompile Include="vce_core.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -401,6 +402,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="vce_device_vulkan.cpp" />
     <ClCompile Include="vce_util.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -466,6 +468,7 @@
     <ClInclude Include="rgy_thread.h" />
     <ClInclude Include="rgy_timecode.h" />
     <ClInclude Include="rgy_util.h" />
+    <ClInclude Include="rgy_vulkan.h" />
     <ClInclude Include="vce_cmd.h" />
     <ClInclude Include="vce_core.h" />
     <ClInclude Include="rgy_input.h" />
@@ -486,6 +489,7 @@
     <ClInclude Include="rgy_filter_tweak.h" />
     <ClInclude Include="rgy_filter_unsharp.h" />
     <ClInclude Include="rgy_filter_warpsharp.h" />
+    <ClInclude Include="vce_device_vulkan.h" />
     <ClInclude Include="vce_util.h" />
     <ClInclude Include="vce_param.h" />
     <ClInclude Include="rgy_version.h" />

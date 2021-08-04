@@ -42,6 +42,10 @@ VCEDevice::VCEDevice(shared_ptr<RGYLog> &log, amf::AMFFactory *factory, amf::AMF
 #if ENABLE_D3D11
     m_dx11(),
 #endif //#if ENABLE_D3D11
+    m_vulkaninterlop(false),
+#if ENABLE_VULKAN
+    m_vk(),
+#endif
     m_cl(),
     m_context(),
     m_factory(factory),
@@ -58,6 +62,9 @@ VCEDevice::~VCEDevice() {
     m_trace = nullptr;
 
     m_cl.reset();
+#if ENABLE_VULKAN
+    m_vk.Terminate();
+#endif
 #if ENABLE_D3D11
     m_dx11.Terminate();
 #endif //#if ENABLE_D3D11
@@ -78,7 +85,7 @@ RGY_ERR VCEDevice::CreateContext() {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool interopD3d11) {
+RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool interopVulkan) {
     m_devName = strsprintf(_T("device #%d"), deviceId);
     m_id = deviceId;
     {
@@ -89,6 +96,16 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
     }
     m_d3d9interlop = interopD3d9;
     m_d3d11interlop = interopD3d11;
+    m_vulkaninterlop = interopVulkan;
+#if ENABLE_VULKAN
+    if (m_vulkaninterlop) {
+        auto amferr = amf::AMFContext1Ptr(m_context)->InitVulkan(nullptr);
+        if (amferr != AMF_OK) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by vulkan.\n"));
+            return err_to_rgy(amferr);
+        }
+    }
+#endif
 #if ENABLE_D3D9
     if (interopD3d9) {
         auto err = m_dx9.Init(true, deviceId, false, 1280, 720, m_log);

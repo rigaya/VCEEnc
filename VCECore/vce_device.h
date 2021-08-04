@@ -41,6 +41,7 @@
 #include "rgy_log.h"
 #include "rgy_opencl.h"
 #include "rgy_device.h"
+#include "vce_device_vulkan.h"
 #include "vce_param.h"
 
 class VCEDevice {
@@ -48,7 +49,7 @@ public:
     VCEDevice(shared_ptr<RGYLog>& log, amf::AMFFactory *factory, amf::AMFTrace *trace);
     virtual ~VCEDevice();
 
-    virtual RGY_ERR init(const int deviceId, const bool interopD3d9, const bool interopD3d11);
+    virtual RGY_ERR init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool interopVulkan);
 
     amf::AMFCapsPtr getEncCaps(RGY_CODEC codec);
     amf::AMFCapsPtr getDecCaps(RGY_CODEC codec);
@@ -112,6 +113,10 @@ protected:
     bool m_d3d11interlop;
 #if ENABLE_D3D11
     DeviceDX11 m_dx11;
+#endif
+    bool m_vulkaninterlop;
+#if ENABLE_VULKAN
+    DeviceVulkan m_vk;
 #endif
     std::shared_ptr<RGYOpenCLContext> m_cl;
     amf::AMFContextPtr m_context;

@@ -49,8 +49,19 @@ VCEParam::VCEParam() :
     codec(RGY_CODEC_H264),
     codecParam(),
     deviceID(-1),
+#if ENABLE_D3D11
     interopD3d9(false),
     interopD3d11(true),
+    interopVulkan(false),
+#elif ENABLE_VULKAN
+    interopD3d9(false),
+    interopD3d11(false),
+    interopVulkan(true),
+#else
+    interopD3d9(false),
+    interopD3d11(false),
+    interopVulkan(false),
+#endif
     outputDepth(8),
     par(),
     usage(AMF_VIDEO_ENCODER_USAGE_TRANSCONDING),

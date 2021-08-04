@@ -1804,16 +1804,19 @@ RGY_ERR VCECore::initTracer(int log_level) {
     return RGY_ERR_NONE;
 }
 
-std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3d9, bool interopD3d11) {
+std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3d9, bool interopD3d11, bool interopVulkan) {
     std::vector<std::unique_ptr<VCEDevice>> devs;
 #if ENABLE_D3D11
     const int adapterCount = DeviceDX11::adapterCount();
+#elif ENABLE_VULKAN
+    DeviceVulkan devVk;
+    const int adapterCount = devVk.adapterCount();
 #else
-    const int adapterCount = 10;
+    const int adapterCount = 0;
 #endif
     for (int i = 0; i < adapterCount; i++) {
         auto dev = std::make_unique<VCEDevice>(m_pLog, m_pFactory, m_pTrace);
-        if (dev->init(i, interopD3d9, interopD3d11) != RGY_ERR_NONE) {
+        if (dev->init(i, interopD3d9, interopD3d11, interopVulkan) != RGY_ERR_NONE) {
             break;
         }
         devs.push_back(std::move(dev));
@@ -2203,7 +2206,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    auto devList = createDeviceList(prm->interopD3d9, prm->interopD3d11);
+    auto devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->interopVulkan);
     if (devList.size() == 0) {
         PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
         return ret;
@@ -3268,7 +3271,11 @@ RGY_ERR VCEFeatures::init(int deviceId, int logLevel) {
         return err;
     }
 
-    auto devList = m_core->createDeviceList(false, true);
+#if ENABLE_D3D11
+    auto devList = m_core->createDeviceList(false, true, false);
+#else
+    auto devList = m_core->createDeviceList(false, false, true);
+#endif
     if ((err = m_core->initDevice(devList, deviceId)) != RGY_ERR_NONE) {
         return err;
     }
