@@ -1809,8 +1809,12 @@ std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3
 #if ENABLE_D3D11
     const int adapterCount = DeviceDX11::adapterCount();
 #elif ENABLE_VULKAN
-    //DeviceVulkan devVk;
-    const int adapterCount = 1;// devVk.adapterCount();
+    int adapterCount = 1;
+    if (VULKAN_DEFAULT_DEVICE_ONLY != 0) {
+        auto devVk = std::make_unique<DeviceVulkan>();
+        adapterCount = devVk->adapterCount();
+        devVk.reset(); // VCEDevice::init()を呼ぶ前に開放しないとなぜか処理がうまく進まない
+    }
 #else
     const int adapterCount = 0;
 #endif
@@ -2130,6 +2134,10 @@ RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList,
 }
 
 RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId) {
+    if (VULKAN_DEFAULT_DEVICE_ONLY && deviceId > 0) {
+        PrintMes(RGY_LOG_ERROR, _T("Currently default device is always used when using vulkan!: selected device = %d\n"), deviceId);
+        return RGY_ERR_UNSUPPORTED;
+    }
     auto gpu = (deviceId < 0)
         ? gpuList.begin()
         : std::find_if(gpuList.begin(), gpuList.end(), [device_id = deviceId](const std::unique_ptr<VCEDevice> &gpuinfo) {

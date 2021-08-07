@@ -104,6 +104,7 @@ const char *get_encoder_version();
 #define ENABLE_D3D9 0
 #define ENABLE_D3D11 0
 #define ENABLE_VULKAN 1
+#define VULKAN_DEFAULT_DEVICE_ONLY 1
 #define ENABLE_CAPTION2ASS 0
 
 #define ENABLE_DHDR10_INFO 0

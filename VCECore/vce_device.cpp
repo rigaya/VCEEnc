@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------------------
 //     VCEEnc by rigaya
 // -----------------------------------------------------------------------------------------
 // The MIT License
@@ -98,8 +98,19 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
     m_d3d11interlop = interopD3d11;
     m_vulkaninterlop = interopVulkan;
 #if ENABLE_VULKAN
-    { // linuxでは常にこれを呼ぶ必要がありそう
-        auto amferr = amf::AMFContext1Ptr(m_context)->InitVulkan(nullptr);
+    if (interopVulkan) {
+        auto amferr = AMF_OK;
+        if (VULKAN_DEFAULT_DEVICE_ONLY) {
+            amferr = amf::AMFContext1Ptr(m_context)->InitVulkan(NULL);
+        } else {
+            //現状これをやるとなぜか異常終了してしまう
+            auto err = m_vk.Init(deviceId, m_context.GetPtr(), m_log);
+            if (err != RGY_ERR_NONE) {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to get vulkan device.\n"));
+                return RGY_ERR_DEVICE_LOST;
+            }
+            amferr = amf::AMFContext1Ptr(m_context)->InitVulkan(m_vk.GetDevice());
+        }
         if (amferr != AMF_OK) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by vulkan.\n"));
             return err_to_rgy(amferr);
@@ -147,29 +158,29 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
     for (auto& platform : platforms) {
         PrintMes(RGY_LOG_DEBUG, _T("Checking platform %s...\n"), char_to_tstring(platform->info().name).c_str());
 #if ENABLE_D3D9
-    if (interopD3d9) {
-        if (platform->createDeviceListD3D9(CL_DEVICE_TYPE_GPU, (void *)m_dx9.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to find d3d9 device.\n"));
-            return RGY_ERR_DEVICE_LOST;
-        }
-    } else
+        if (interopD3d9) {
+            if (platform->createDeviceListD3D9(CL_DEVICE_TYPE_GPU, (void *)m_dx9.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to find d3d9 device.\n"));
+                return RGY_ERR_DEVICE_LOST;
+            }
+        } else
 #endif //#if ENABLE_D3D9
 #if ENABLE_D3D11
-    if (interopD3d11 || !interopD3d9) {
-        if (platform->createDeviceListD3D11(CL_DEVICE_TYPE_GPU, (void *)m_dx11.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to find d3d11 device.\n"));
-            return RGY_ERR_DEVICE_LOST;
-        }
-    } else
+        if (interopD3d11 || !interopD3d9) {
+            if (platform->createDeviceListD3D11(CL_DEVICE_TYPE_GPU, (void *)m_dx11.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to find d3d11 device.\n"));
+                return RGY_ERR_DEVICE_LOST;
+            }
+        } else
 #endif //#if ENABLE_D3D11
-    {
-        if (platform->createDeviceList(CL_DEVICE_TYPE_GPU) != CL_SUCCESS || platform->devs().size() == 0) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to find gpu device.\n"));
-            return RGY_ERR_DEVICE_LOST;
+        {
+            if (platform->createDeviceList(CL_DEVICE_TYPE_GPU) != CL_SUCCESS || platform->devs().size() == 0) {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to find gpu device.\n"));
+                return RGY_ERR_DEVICE_LOST;
+            }
         }
-    }
         selectCLDevice = (interopD3d9 || interopD3d11) ? 0 : deviceId - totalDevices;
-    auto devices = platform->devs();
+        auto devices = platform->devs();
         totalDevices += (int)devices.size();
         if (selectCLDevice < (int)devices.size()) {
             selectedPlatform = platform;
