@@ -29,25 +29,28 @@
 #ifndef __RGY_VULKAN_H__
 #define __RGY_VULKAN_H__
 
-#include "rgy_osdep.h"
-#include "rgy_err.h"
 #include "rgy_version.h"
 #if ENABLE_VULKAN
 
-#if defined(_WIN32) || defined(_WIN64)
-#define VK_USE_PLATFORM_WIN32_KHR
-#endif
+#include "rgy_osdep.h"
 
 #include "vulkan/vulkan.h"
+#if defined(_WIN32) || defined(_WIN64)
+#define VK_USE_PLATFORM_WIN32_KHR
+#else
+#include <X11/Xlib.h>
+#include "vulkan/vulkan_xlib.h"
+#endif
+
 
 class RGYVulkanFuncs {
 public:
 	RGYVulkanFuncs();
 	~RGYVulkanFuncs();
 
-	RGY_ERR init();
-	RGY_ERR load(VkInstance instance, bool bDebug);
-	RGY_ERR load(VkDevice device);
+	int init();
+	int load(VkInstance instance, bool bDebug);
+	int load(VkDevice device);
 
 	PFN_vkCreateInstance                                    vkCreateInstance;
 	PFN_vkDestroyInstance                                   vkDestroyInstance;

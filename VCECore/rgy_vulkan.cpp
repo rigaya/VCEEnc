@@ -27,6 +27,7 @@
 
 #include "rgy_vulkan.h"
 #if ENABLE_VULKAN
+#include "rgy_tchar.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 static const TCHAR *VULKAN_DLL = _T("vulkan-1.dll");
@@ -198,14 +199,14 @@ RGYVulkanFuncs::~RGYVulkanFuncs() {
 	m_hVulkanDll = nullptr;
 }
 
-RGY_ERR RGYVulkanFuncs::init() {
+int RGYVulkanFuncs::init() {
 	if (m_hVulkanDll != nullptr) {
-		return RGY_ERR_NONE;
+		return 0;
 	}
 	m_hVulkanDll = RGY_LOAD_LIBRARY(VULKAN_DLL);
 
 #define LOAD(w) w = reinterpret_cast<PFN_##w>(RGY_GET_PROC_ADDRESS(m_hVulkanDll, #w)); if(w==nullptr) \
-	{ RGY_FREE_LIBRARY(m_hVulkanDll); m_hVulkanDll = nullptr; return RGY_ERR_NULL_PTR; };
+	{ RGY_FREE_LIBRARY(m_hVulkanDll); m_hVulkanDll = nullptr; return 1; };
 	LOAD(vkCreateInstance);
 	LOAD(vkCreateInstance);
 	LOAD(vkDestroyInstance);
@@ -356,31 +357,31 @@ RGY_ERR RGYVulkanFuncs::init() {
 #else 
     LOAD(vkCreateXlibSurfaceKHR);
 #endif
-	return RGY_ERR_NONE;
+	return 0;
 
 #undef LOAD
 }
 
-RGY_ERR RGYVulkanFuncs::load(VkInstance instance, bool bDebug) {
-#define LOAD(w) w = reinterpret_cast<PFN_##w>(vkGetInstanceProcAddr(instance, #w)); if(w==nullptr) { return RGY_ERR_NULL_PTR; };
+int RGYVulkanFuncs::load(VkInstance instance, bool bDebug) {
+#define LOAD(w) w = reinterpret_cast<PFN_##w>(vkGetInstanceProcAddr(instance, #w)); if(w==nullptr) { return 1; };
     if (bDebug) {
     	LOAD(vkCreateDebugReportCallbackEXT);
 	    LOAD(vkDebugReportMessageEXT);
 	    LOAD(vkDestroyDebugReportCallbackEXT);
     }
-	return RGY_ERR_NONE;
+	return 0;
 #undef LOAD
 }
 
 //-------------------------------------------------------------------------------------------------
-RGY_ERR RGYVulkanFuncs::load(VkDevice device) {
-#define LOAD(w) w = reinterpret_cast<PFN_##w>(vkGetDeviceProcAddr(device, #w)); if(w==nullptr) { return RGY_ERR_NULL_PTR; };
+int RGYVulkanFuncs::load(VkDevice device) {
+#define LOAD(w) w = reinterpret_cast<PFN_##w>(vkGetDeviceProcAddr(device, #w)); if(w==nullptr) { return 1; };
 	LOAD(vkCreateSwapchainKHR);
 	LOAD(vkDestroySwapchainKHR);
 	LOAD(vkGetSwapchainImagesKHR);
 	LOAD(vkAcquireNextImageKHR);
 	LOAD(vkQueuePresentKHR);
-	return RGY_ERR_NONE;
+	return 0;
 #undef LOAD
 }
 
