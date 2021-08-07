@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------------------
 //     VCEEnc by rigaya
 // -----------------------------------------------------------------------------------------
 // The MIT License
@@ -1809,15 +1809,15 @@ std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3
 #if ENABLE_D3D11
     const int adapterCount = DeviceDX11::adapterCount();
 #elif ENABLE_VULKAN
-    DeviceVulkan devVk;
-    const int adapterCount = devVk.adapterCount();
+    //DeviceVulkan devVk;
+    const int adapterCount = 1;// devVk.adapterCount();
 #else
     const int adapterCount = 0;
 #endif
     for (int i = 0; i < adapterCount; i++) {
         auto dev = std::make_unique<VCEDevice>(m_pLog, m_pFactory, m_pTrace);
         if (dev->init(i, interopD3d9, interopD3d11, interopVulkan) == RGY_ERR_NONE) {
-        devs.push_back(std::move(dev));
+            devs.push_back(std::move(dev));
         }
     }
     return devs;
