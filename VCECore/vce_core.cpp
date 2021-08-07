@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------
 //     VCEEnc by rigaya
 // -----------------------------------------------------------------------------------------
 // The MIT License
@@ -1864,7 +1864,8 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
                 (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
                 get_cx_desc(get_profile_list(prm->codec), prm->codecParam[prm->codec].nProfile),
                 get_cx_desc(get_profile_list(prm->codec), maxProfile));
-            return RGY_ERR_UNSUPPORTED;
+            gpu = gpuList.erase(gpu);
+            continue;
         }
 
         int maxLevel = 0;
