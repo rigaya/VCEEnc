@@ -252,7 +252,7 @@ RGY_ERR DeviceVulkan::CreateDeviceAndFindQueues(int adapterID, std::vector<const
     if (adapterID < 0) {
         adapterID = 0;
     }
-    if (adapterID < physicalDeviceCount) {
+    if (adapterID >= physicalDeviceCount) {
         m_log->write(RGY_LOG_ERROR, _T("Invalid Adapter ID: %d"), adapterID);
         return RGY_ERR_UNKNOWN;
     }
