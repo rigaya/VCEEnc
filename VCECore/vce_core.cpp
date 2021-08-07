@@ -1816,10 +1816,9 @@ std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3
 #endif
     for (int i = 0; i < adapterCount; i++) {
         auto dev = std::make_unique<VCEDevice>(m_pLog, m_pFactory, m_pTrace);
-        if (dev->init(i, interopD3d9, interopD3d11, interopVulkan) != RGY_ERR_NONE) {
-            break;
-        }
+        if (dev->init(i, interopD3d9, interopD3d11, interopVulkan) == RGY_ERR_NONE) {
         devs.push_back(std::move(dev));
+        }
     }
     return devs;
 }
