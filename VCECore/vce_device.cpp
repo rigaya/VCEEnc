@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------
 //     VCEEnc by rigaya
 // -----------------------------------------------------------------------------------------
 // The MIT License
@@ -141,7 +141,11 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
         PrintMes(RGY_LOG_ERROR, _T("Failed to find AMD OpenCL platforms.\n"));
         return RGY_ERR_DEVICE_LOST;
     }
-    auto& platform = platforms[0];
+    int totalDevices = 0;
+    int selectCLDevice = 0;
+    std::shared_ptr<RGYOpenCLPlatform> selectedPlatform;
+    for (auto& platform : platforms) {
+        PrintMes(RGY_LOG_DEBUG, _T("Checking platform %s...\n"), char_to_tstring(platform->info().name).c_str());
 #if ENABLE_D3D9
     if (interopD3d9) {
         if (platform->createDeviceListD3D9(CL_DEVICE_TYPE_GPU, (void *)m_dx9.GetDevice()) != CL_SUCCESS || platform->devs().size() == 0) {
@@ -164,13 +168,20 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
             return RGY_ERR_DEVICE_LOST;
         }
     }
-    const int selectCLDevice = (interopD3d9 || interopD3d11) ? 0 : deviceId;
+        selectCLDevice = (interopD3d9 || interopD3d11) ? 0 : deviceId - totalDevices;
     auto devices = platform->devs();
-    if ((int)devices.size() <= selectCLDevice) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to device #%d.\n"), deviceId);
+        totalDevices += (int)devices.size();
+        if (selectCLDevice < (int)devices.size()) {
+            selectedPlatform = platform;
+            break;
+        }
+        PrintMes(RGY_LOG_DEBUG, _T("Target device #%d not found in platform %s.\n"), deviceId, char_to_tstring(platform->info().name).c_str());
+    }
+    if (!selectedPlatform) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to find device #%d.\n"), deviceId);
         return RGY_ERR_DEVICE_LOST;
     }
-    platform->setDev(devices[selectCLDevice],
+    selectedPlatform->setDev(selectedPlatform->devs()[selectCLDevice],
 #if ENABLE_D3D9
         (interopD3d9) ? m_dx9.GetDevice() :
 #endif //#if ENABLE_D3D9
@@ -180,7 +191,7 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
 #endif //#if ENABLE_D3D11
         nullptr);
 
-    m_cl = std::make_shared<RGYOpenCLContext>(platform, m_log);
+    m_cl = std::make_shared<RGYOpenCLContext>(selectedPlatform, m_log);
     if (m_cl->createContext() != CL_SUCCESS) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to create OpenCL context.\n"));
         return RGY_ERR_UNKNOWN;
