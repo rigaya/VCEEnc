@@ -98,7 +98,7 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
     m_d3d11interlop = interopD3d11;
     m_vulkaninterlop = interopVulkan;
 #if ENABLE_VULKAN
-    if (m_vulkaninterlop) {
+    { // linuxでは常にこれを呼ぶ必要がありそう
         auto amferr = amf::AMFContext1Ptr(m_context)->InitVulkan(nullptr);
         if (amferr != AMF_OK) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by vulkan.\n"));
