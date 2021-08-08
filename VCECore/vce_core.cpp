@@ -1810,7 +1810,7 @@ std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3
     const int adapterCount = DeviceDX11::adapterCount();
 #elif ENABLE_VULKAN
     int adapterCount = 1;
-    if (VULKAN_DEFAULT_DEVICE_ONLY != 0) {
+    if (VULKAN_DEFAULT_DEVICE_ONLY == 0) {
         auto devVk = std::make_unique<DeviceVulkan>();
         adapterCount = devVk->adapterCount();
         devVk.reset(); // VCEDevice::init()を呼ぶ前に開放しないとなぜか処理がうまく進まない
