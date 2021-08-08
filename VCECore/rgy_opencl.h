@@ -716,6 +716,7 @@ struct RGYOpenCLPlatformInfo {
     std::string vendor;
     std::string extensions;
 
+    RGYOpenCLPlatformInfo();
     std::string print() const;
     std::pair<int, int> clversion() const;
     bool checkVersion(int major, int minor) const;

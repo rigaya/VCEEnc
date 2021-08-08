@@ -968,6 +968,14 @@ RGY_ERR RGYOpenCLPlatform::createDeviceList(cl_device_type device_type) {
     return RGY_ERR_NONE;
 }
 
+RGYOpenCLPlatformInfo::RGYOpenCLPlatformInfo() :
+    profile(),
+    version(),
+    name(),
+    vendor(),
+    extensions() {
+}
+
 std::string RGYOpenCLPlatformInfo::print() const {
     return name + " " + vendor + " " + version + "[" + profile + "]\n  extensions:" + extensions;
 }
