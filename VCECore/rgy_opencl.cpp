@@ -639,7 +639,7 @@ tstring RGYOpenCLDevice::infostr(bool full) const {
 #if ENCODER_VCEENC
         ts << "  name :                       " << dev.name << std::endl;
 #endif
-        ts << "  device type :                " << cldevice_cl_to_str(dev.type) << std::endl;
+        ts << "  device type :                " << tchar_to_string(cldevice_cl_to_str(dev.type)) << std::endl;
         ts << "  vendor :                     " << dev.vendor_id << " (" << dev.vendor << ")" << std::endl;
         ts << "  profile :                    " << dev.profile << std::endl;
         ts << "  version :                    " << dev.version << std::endl;

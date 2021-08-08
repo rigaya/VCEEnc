@@ -58,6 +58,7 @@ const char *get_encoder_version();
 #define ENABLE_D3D9 1
 #define ENABLE_D3D11 1
 #define ENABLE_VULKAN 0
+#define VULKAN_DEFAULT_DEVICE_ONLY 0
 #define ENABLE_CPP_REGEX 1
 #define ENABLE_DTL 1
 

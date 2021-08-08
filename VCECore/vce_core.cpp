@@ -2975,10 +2975,11 @@ RGY_ERR VCECore::run() {
         }
         dqEncFrames.pop_front();
     }
-    if (m_thDecoder.valid()) {
 #if THREAD_DEC_USE_FUTURE
+    if (m_thDecoder.valid()) {
         while (m_thDecoder.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
 #else
+    if (m_thDecoder.joinable()) {
         while (RGYThreadStillActive(m_thDecoder.native_handle())) {
 #endif
             if ((res = run_send_streams(nInputFrame)) != RGY_ERR_NONE) {
