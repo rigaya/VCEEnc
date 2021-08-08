@@ -53,6 +53,15 @@
 #define RGY_PROP_TIMESTAMP L"RGYPropTimestamp"
 #define RGY_PROP_DURATION  L"RGYPropDuration"
 
+#if defined(_WIN32) || defined(_WIN64)
+#define THREAD_DEC_USE_FUTURE 0
+#else
+// linuxではスレッド周りの使用の違いにより、従来の実装ではVCECore解放時に異常終了するので、
+// std::futureを使った実装に切り替える
+// std::threadだとtry joinのようなことができないのが問題
+#define THREAD_DEC_USE_FUTURE 1
+#endif
+
 const TCHAR *AMFRetString(AMF_RESULT ret);
 
 #if ENABLE_AVSW_READER
@@ -194,7 +203,11 @@ protected:
     amf::AMFComponentPtr m_pDecoder;
     amf::AMFComponentPtr m_pEncoder;
     amf::AMFComponentPtr m_pConverter;
+#if THREAD_DEC_USE_FUTURE
+    std::future<RGY_ERR> m_thDecoder;
+#else
     std::thread m_thDecoder;
+#endif
     std::future<RGY_ERR> m_thOutput;
 
     AMFParams m_params;

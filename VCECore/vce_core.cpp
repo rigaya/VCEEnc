@@ -2298,7 +2298,11 @@ RGY_ERR VCECore::init(VCEParam *prm) {
 }
 
 RGY_ERR VCECore::run_decode() {
+#if THREAD_DEC_USE_FUTURE
+    m_thDecoder = std::async(std::launch::async, [this]() {
+#else
     m_thDecoder = std::thread([this]() {
+#endif //#if THREAD_DEC_USE_FUTURE
         auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
         if (pAVCodecReader == nullptr) {
             return RGY_ERR_UNKNOWN;
@@ -2360,7 +2364,7 @@ RGY_ERR VCECore::run_decode() {
         m_pDecoder->Drain();
         return sts;
     });
-    PrintMes(RGY_LOG_DEBUG, _T("Started Encode thread.\n"));
+    PrintMes(RGY_LOG_DEBUG, _T("Started Decode thread.\n"));
     return RGY_ERR_NONE;
 }
 
@@ -2462,10 +2466,14 @@ RGY_ERR VCECore::run() {
         return res;
     }
     if (m_pPerfMonitor) {
+        HANDLE thDecode = NULL;
         HANDLE thOutput = NULL;
         HANDLE thInput = NULL;
         HANDLE thAudProc = NULL;
         HANDLE thAudEnc = NULL;
+#if !THREAD_DEC_USE_FUTURE
+        thDecode = (HANDLE)(m_thDecoder.native_handle());
+#endif
         auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
         if (pAVCodecReader != nullptr) {
             thInput = pAVCodecReader->getThreadHandleInput();
@@ -2476,7 +2484,7 @@ RGY_ERR VCECore::run() {
             thAudProc = pAVCodecWriter->getThreadHandleAudProcess();
             thAudEnc = pAVCodecWriter->getThreadHandleAudEncode();
         }
-        m_pPerfMonitor->SetThreadHandles((HANDLE)(m_thDecoder.native_handle()), thInput, thOutput, thAudProc, thAudEnc);
+        m_pPerfMonitor->SetThreadHandles(thDecode, thInput, thOutput, thAudProc, thAudEnc);
     }
 
     auto run_send_streams = [this, &pWriterForAudioStreams, &pFilterForStreams](int inputFrames) {
@@ -2967,14 +2975,22 @@ RGY_ERR VCECore::run() {
         }
         dqEncFrames.pop_front();
     }
-    if (m_thDecoder.joinable()) {
+    if (m_thDecoder.valid()) {
+#if THREAD_DEC_USE_FUTURE
+        while (m_thDecoder.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
+#else
         while (RGYThreadStillActive(m_thDecoder.native_handle())) {
+#endif
             if ((res = run_send_streams(nInputFrame)) != RGY_ERR_NONE) {
                 m_state = RGY_STATE_ERROR;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
+#if !THREAD_DEC_USE_FUTURE
+        // linuxでは、これがRGYThreadStillActiveのwhile文を抜けるときに行われるため、
+        // これを呼ぶとエラーになってしまう
         m_thDecoder.join();
+#endif
     }
     auto ar = AMF_INPUT_FULL;
     while (ar == AMF_INPUT_FULL) {
