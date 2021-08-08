@@ -525,6 +525,7 @@ CodecCsp VCEDevice::getHWDecCodecCsp() {
     for (int i = 0; i < _countof(HW_DECODE_LIST); i++) {
         amf::AMFCapsPtr decCaps = getDecCaps(HW_DECODE_LIST[i].rgy_codec);
         if (decCaps != nullptr) {
+#if defined(_WIN32) || defined(_WIN64)
             amf::AMFIOCapsPtr outputCaps;
             if (decCaps->GetOutputCaps(&outputCaps) == AMF_OK) {
                 auto csps = getIOCspSupport(outputCaps);
@@ -541,7 +542,16 @@ CodecCsp VCEDevice::getHWDecCodecCsp() {
                 }
                 codecCsp[HW_DECODE_LIST[i].rgy_codec] = csps;
             }
-
+#else
+            //現状まともにoutputCapsが得られないので、適当に作る
+            std::vector<RGY_CSP> csps = { RGY_CSP_NV12, RGY_CSP_YV12 };
+            bool Support10bitDepth = false;
+            if (decCaps->GetProperty(CAP_10BITDEPTH, &Support10bitDepth) == AMF_OK && Support10bitDepth) {
+                csps.push_back(RGY_CSP_P010);
+                csps.push_back(RGY_CSP_YV12_10);
+            }
+            codecCsp[HW_DECODE_LIST[i].rgy_codec] = csps;
+#endif
         }
     }
     return codecCsp;
