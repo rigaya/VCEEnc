@@ -29,8 +29,11 @@
 #pragma warning(push)
 #pragma warning(disable:4201)
 #pragma warning(disable:4100)
+RGY_DISABLE_WARNING_PUSH
+RGY_DISABLE_WARNING_STR("-Wclass-memaccess")
 #include "VideoEncoderVCE.h"
 #include "VideoEncoderHEVC.h"
+RGY_DISABLE_WARNING_POP
 #include "rgy_caption.h"
 #include "rgy_util.h"
 #include "rgy_prm.h"

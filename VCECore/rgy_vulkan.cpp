@@ -36,7 +36,6 @@ static const TCHAR *VULKAN_DLL = _T("libvulkan.so.1");
 #endif
 
 RGYVulkanFuncs::RGYVulkanFuncs() :
-	m_hVulkanDll(nullptr),
 	vkCreateInstance(nullptr),
 	vkDestroyInstance(nullptr),
 	vkEnumeratePhysicalDevices(nullptr),
@@ -189,7 +188,8 @@ RGYVulkanFuncs::RGYVulkanFuncs() :
 #endif
 	vkCreateDebugReportCallbackEXT(nullptr),
 	vkDebugReportMessageEXT(nullptr),
-	vkDestroyDebugReportCallbackEXT(nullptr) {
+	vkDestroyDebugReportCallbackEXT(nullptr),
+	m_hVulkanDll(nullptr) {
 }
 
 RGYVulkanFuncs::~RGYVulkanFuncs() {

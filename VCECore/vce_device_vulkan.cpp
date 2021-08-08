@@ -31,10 +31,13 @@
 #if ENABLE_VULKAN
 
 DeviceVulkan::DeviceVulkan() :
+    m_VulkanDev(),
+    m_displayDeviceName(),
+    m_vk(),
+    m_uQueueGraphicsFamilyIndex(std::numeric_limits<decltype(m_uQueueGraphicsFamilyIndex)>::max()),
+    m_uQueueComputeFamilyIndex(std::numeric_limits<decltype(m_uQueueComputeFamilyIndex)>::max()),
     m_hQueueGraphics(NULL),
     m_hQueueCompute(NULL),
-    m_uQueueGraphicsFamilyIndex(UINT32_MAX),
-    m_uQueueComputeFamilyIndex(UINT32_MAX),
     m_log() {
 	m_VulkanDev = {};
 	m_VulkanDev.cbSizeof = sizeof(amf::AMFVulkanDevice);
@@ -252,7 +255,7 @@ RGY_ERR DeviceVulkan::CreateDeviceAndFindQueues(int adapterID, std::vector<const
     if (adapterID < 0) {
         adapterID = 0;
     }
-    if (adapterID >= physicalDeviceCount) {
+    if (adapterID >= (int)physicalDeviceCount) {
         m_log->write(RGY_LOG_ERROR, _T("Invalid Adapter ID: %d"), adapterID);
         return RGY_ERR_UNKNOWN;
     }
@@ -291,11 +294,11 @@ RGY_ERR DeviceVulkan::CreateDeviceAndFindQueues(int adapterID, std::vector<const
         queueCreateInfo.queueCount = queueFamilyProperty.queueCount;
         queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 
-        if ((queueFamilyProperty.queueFlags & VK_QUEUE_COMPUTE_BIT) && (queueFamilyProperty.queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0 && m_uQueueComputeFamilyIndex == std::numeric_limits<uint32_t>::max()) {
+        if ((queueFamilyProperty.queueFlags & VK_QUEUE_COMPUTE_BIT) && (queueFamilyProperty.queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0 && m_uQueueComputeFamilyIndex == std::numeric_limits<decltype(m_uQueueComputeFamilyIndex)>::max()) {
             m_uQueueComputeFamilyIndex = i;
             uQueueComputeIndex = 0;
         }
-        if ((queueFamilyProperty.queueFlags & VK_QUEUE_GRAPHICS_BIT) && m_uQueueGraphicsFamilyIndex == std::numeric_limits<uint32_t>::max()) {
+        if ((queueFamilyProperty.queueFlags & VK_QUEUE_GRAPHICS_BIT) && m_uQueueGraphicsFamilyIndex == std::numeric_limits<decltype(m_uQueueGraphicsFamilyIndex)>::max()) {
             m_uQueueGraphicsFamilyIndex = i;
             uQueueGraphicsIndex = 0;
         }

@@ -28,12 +28,6 @@
 #pragma once
 
 #include <unordered_map>
-#pragma warning(push)
-#pragma warning(disable:4100)
-#include "Factory.h"
-#include "Context.h"
-#include "Trace.h"
-#pragma warning(pop)
 
 #include "rgy_version.h"
 #include "rgy_err.h"
@@ -43,6 +37,15 @@
 #include "rgy_device.h"
 #include "vce_device_vulkan.h"
 #include "vce_param.h"
+#pragma warning(push)
+#pragma warning(disable:4100)
+RGY_DISABLE_WARNING_PUSH
+RGY_DISABLE_WARNING_STR("-Wclass-memaccess")
+#include "Factory.h"
+#include "Context.h"
+#include "Trace.h"
+RGY_DISABLE_WARNING_POP
+#pragma warning(pop)
 
 class VCEDevice {
 public:

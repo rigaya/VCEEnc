@@ -275,7 +275,6 @@ VideoInfo videooutputinfo(
     const int bframes = (codec == RGY_CODEC_H264) ? prm.get<int>(AMF_VIDEO_ENCODER_B_PIC_PATTERN) : 0;
 
     VideoInfo info;
-    memset(&info, 0, sizeof(info));
     info.codec = codec;
     info.codecLevel = prm.get<int>(AMF_PARAM_PROFILE_LEVEL(codec));
     info.codecProfile = prm.get<int>(AMF_PARAM_PROFILE(codec));

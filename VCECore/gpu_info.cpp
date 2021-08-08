@@ -145,7 +145,7 @@ int getGPUInfo(const char *VendorName, TCHAR *buffer, unsigned int buffer_size, 
         return 1;
     }
     const auto& platform = platforms[0];
-    if (platform->createDeviceList(CL_DEVICE_TYPE_GPU) != CL_SUCCESS || platform->devs().size() <= device_id) {
+    if (platform->createDeviceList(CL_DEVICE_TYPE_GPU) != CL_SUCCESS || (int)platform->devs().size() <= device_id) {
         _stprintf_s(buffer, buffer_size, _T("Unknown (Failed to find %s GPU)"), to_tchar(VendorName).c_str());
         return 1;
     }

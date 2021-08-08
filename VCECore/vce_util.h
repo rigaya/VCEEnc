@@ -34,8 +34,11 @@
 #pragma warning(push)
 #pragma warning(disable:4201)
 #pragma warning(disable:4100)
+RGY_DISABLE_WARNING_PUSH
+RGY_DISABLE_WARNING_STR("-Wclass-memaccess")
 #include "VideoEncoderVCE.h"
 #include "vce_param.h"
+RGY_DISABLE_WARNING_POP
 #pragma warning(pop)
 #include "convert_csp.h"
 #include "rgy_opencl.h"
