@@ -2,8 +2,9 @@
 # VCEEnc  
 by rigaya
 
-**[日本語版はこちら＞＞](./Readme.ja.md)**
-[![Build status](https://ci.appveyor.com/api/projects/status/b3nelkol182q7855?svg=true)](https://ci.appveyor.com/project/rigaya/vceenc)  
+[![Build status](https://ci.appveyor.com/api/projects/status/b3nelkol182q7855?svg=true)](https://ci.appveyor.com/project/rigaya/vceenc)  [![Build Linux Packages](https://github.com/rigaya/VCEEnc/actions/workflows/build_packages.yml/badge.svg)](https://github.com/rigaya/VCEEnc/actions/workflows/build_packages.yml)  
+
+**[日本語版はこちら＞＞](./Readme.ja.md)**  
 
 This software is meant to investigate performance and image quality of HW encoder (VCE) of AMD.
 There are 2 types of software developed, one is command line version that runs independently, and the nother is a output plug-in of [Aviutl](http://spring-fragrance.mints.ne.jp/aviutl/).
@@ -12,7 +13,11 @@ VCEEncC.exe … Command line version supporting transcoding.
 VCEEnc.auo … Output plugin for [Aviutl](http://spring-fragrance.mints.ne.jp/aviutl/).  
 
 ## Downloads & update history
-[rigayaの日記兼メモ帳＞＞](http://rigaya34589.blog135.fc2.com/blog-category-12.html)
+[rigayaの日記兼メモ帳＞＞](http://rigaya34589.blog135.fc2.com/blog-category-12.html)  
+[github releases](https://github.com/rigaya/VCEEnc/releases)  
+
+## Install
+[Install instructions for Windows and Linux](./Install.en.md).
 
 ## System Requirements
 
@@ -132,6 +137,8 @@ when there are multiple GPUs available which support VCE/VCN.
   [ttmath](http://www.ttmath.org/) &
   [Caption2Ass](https://github.com/maki-rxrz/Caption2Ass_PCR).
   For these licenses, please see the header part of the corresponding source and VCEEnc_license.txt.
+  
+- [How to build](./Build.en.md)
 
 ### About source code
 Windows ... VC build
