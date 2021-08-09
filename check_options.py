@@ -67,7 +67,7 @@ if __name__ == '__main__':
     md_files = []
     md_en_file = 'VCEEncC_Options.en.md'
     md_ja_file = 'VCEEncC_Options.ja.md'
-    exe_file = r'_build\x64\RelStatic\VCEEncC64.exe'
+    exe_file = r'_build\x64\RelStatic\VCEEncC64.exe' if os.name == 'nt' else './vceencc'
     
     iarg = 0
     while iarg < len(sys.argv):
