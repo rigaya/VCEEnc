@@ -1,0 +1,27 @@
+FROM centos:8
+
+ARG LOCAL_USER_ID=1000 \
+    LOCAL_GROUP_ID=1000
+
+RUN dnf update -y \
+    && dnf install -y 'dnf-command(config-manager)' \
+    && dnf config-manager --set-enabled powertools \
+    && dnf install -y https://download.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
+    && dnf localinstall -y --nogpgcheck https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm \
+    && dnf install -y \
+      which '@Development Tools' \
+      wget python3 \
+      ffmpeg ffmpeg-devel \
+      libass libass-devel \
+      opencl-headers \
+      libX11-devel \
+      vulkan-loader-devel \
+      rpm-build \
+    && dnf clean all
+
+RUN useradd -u $LOCAL_USER_ID -m --user-group --shell /bin/bash rigaya
+RUN groupmod -g $LOCAL_GROUP_ID rigaya
+WORKDIR /home/rigaya
+COPY . .
+RUN chown -R rigaya:rigaya .
+USER rigaya
