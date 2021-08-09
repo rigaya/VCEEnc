@@ -77,8 +77,8 @@
 #include "h264_level.h"
 #include "hevc_level.h"
 
-void VCECore::PrintMes(int log_level, const TCHAR *format, ...) {
-    if (m_pLog.get() == nullptr || log_level < m_pLog->getLogLevel()) {
+void VCECore::PrintMes(RGYLogLevel log_level, const TCHAR *format, ...) {
+    if (m_pLog.get() == nullptr || log_level < m_pLog->getLogLevel(RGY_LOGT_CORE)) {
         return;
     }
 
@@ -90,7 +90,7 @@ void VCECore::PrintMes(int log_level, const TCHAR *format, ...) {
     _vstprintf_s(buffer.data(), len, format, args);
     va_end(args);
 
-    m_pLog->write(log_level, buffer.data());
+    m_pLog->write(log_level, RGY_LOGT_CORE, buffer.data());
 }
 
 VCECore::VCECore() :
@@ -279,7 +279,7 @@ RGY_ERR VCECore::initChapters(VCEParam *prm) {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCECore::initLog(int loglevel) {
+RGY_ERR VCECore::initLog(RGYLogLevel loglevel) {
     m_pLog.reset(new RGYLog(nullptr, loglevel));
     return RGY_ERR_NONE;
 }
@@ -1370,7 +1370,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_encWidth  = (m_pLastFilterParam) ? m_pLastFilterParam->frameOut.width  : prm->input.srcWidth  - prm->input.crop.e.left - prm->input.crop.e.right;
     m_encHeight = (m_pLastFilterParam) ? m_pLastFilterParam->frameOut.height : prm->input.srcHeight - prm->input.crop.e.bottom - prm->input.crop.e.up;
 
-    if (m_pLog->getLogLevel() <= RGY_LOG_DEBUG) {
+    if (m_pLog->getLogLevel(RGY_LOGT_CORE) <= RGY_LOG_DEBUG) {
         TCHAR cpuInfo[256] = { 0 };
         tstring gpu_info = m_dev->getGPUInfo();
         //std::wstring deviceName = (m_deviceDX9.GetDevice() == nullptr) ? m_deviceDX11.GetDisplayDeviceName() : m_deviceDX9.GetDisplayDeviceName();
@@ -2208,7 +2208,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    ret = initTracer(prm->ctrl.loglevel);
+    ret = initTracer(prm->ctrl.loglevel.get(RGY_LOGT_AMF));
     if (ret != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to set up AMF Tracer: %s"), get_err_mes(ret));
         return ret;
@@ -3240,7 +3240,7 @@ tstring VCECore::GetEncoderParam() {
         break;
     }
     others += (bDeblock) ? _T("deblock ") : _T("no_deblock ");
-    if (m_pLog->getLogLevel() <= RGY_LOG_DEBUG) {
+    if (m_pLog->getLogLevel(RGY_LOGT_CORE) <= RGY_LOG_DEBUG) {
         if (GetPropertyBool(AMF_PARAM_INSERT_AUD(m_encCodec))) {
             others += _T("aud ");
         }
@@ -3287,7 +3287,7 @@ void VCECore::PrintResult() {
     m_pStatus->WriteResults();
 }
 
-RGY_ERR VCEFeatures::init(int deviceId, int logLevel) {
+RGY_ERR VCEFeatures::init(int deviceId, RGYLogLevel logLevel) {
     m_core = std::make_unique<VCECore>();
     auto err = RGY_ERR_NONE;
     if (   (err = m_core->initLog(logLevel)) != RGY_ERR_NONE
@@ -3325,12 +3325,12 @@ tstring VCEFeatures::checkDecFeatures(RGY_CODEC codec) {
     return str;
 }
 
-bool check_if_vce_available(int deviceId, int logLevel) {
+bool check_if_vce_available(int deviceId, RGYLogLevel logLevel) {
     VCEFeatures vce;
     return vce.init(deviceId, logLevel) == RGY_ERR_NONE;
 }
 
-tstring check_vce_enc_features(const std::vector<RGY_CODEC> &codecs, int deviceId, int logLevel) {
+tstring check_vce_enc_features(const std::vector<RGY_CODEC> &codecs, int deviceId, RGYLogLevel logLevel) {
     VCEFeatures vce;
     if (vce.init(deviceId, logLevel) != RGY_ERR_NONE) {
         return _T("VCE not available.\n");
@@ -3346,7 +3346,7 @@ tstring check_vce_enc_features(const std::vector<RGY_CODEC> &codecs, int deviceI
     return str;
 }
 
-tstring check_vce_dec_features(int deviceId, int logLevel) {
+tstring check_vce_dec_features(int deviceId, RGYLogLevel logLevel) {
     VCEFeatures vce;
     if (vce.init(deviceId, logLevel) != RGY_ERR_NONE) {
         return _T("VCE not available.\n");

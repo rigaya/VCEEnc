@@ -138,7 +138,7 @@ RGY_ERR AMFParams::Apply(amf::AMFPropertyStorage *storage, AMFParamType prmType,
             const auto ret = storage->SetProperty(name.c_str(), value);
             if (ret != AMF_OK) {
                 if (pLog) {
-                    pLog->write(RGY_LOG_ERROR, _T("storage->SetProperty(%s)=%s failed: %s.\n"),
+                    pLog->write(RGY_LOG_ERROR, RGY_LOGT_CORE, _T("storage->SetProperty(%s)=%s failed: %s.\n"),
                         wstring_to_tstring(name).c_str(),
                         wstring_to_tstring(value.ToWString().c_str()).c_str(),
                         get_err_mes(err_to_rgy(ret)));

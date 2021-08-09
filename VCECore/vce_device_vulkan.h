@@ -73,6 +73,9 @@ public:
 
     int adapterCount();
 
+protected:
+    void AddMessage(RGYLogLevel log_level, const tstring &str);
+    void AddMessage(RGYLogLevel log_level, const TCHAR *format, ...);
 private:
     RGY_ERR CreateInstance();
     RGY_ERR CreateDeviceAndFindQueues(int adapterID, std::vector<const char*> &deviceExtensions);
@@ -81,6 +84,7 @@ private:
     std::vector<const char*> GetDebugInstanceLayerNames();
     std::vector<const char*> GetDebugDeviceLayerNames(VkPhysicalDevice device);
 
+    tstring                         m_name;
     amf::AMFVulkanDevice            m_VulkanDev;
     std::wstring                    m_displayDeviceName;
     RGYVulkanFuncs                  m_vk;

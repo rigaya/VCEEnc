@@ -45,8 +45,7 @@
 #include <d3d11.h>
 #endif
 #include "rgy_err.h"
-
-class RGYLog;
+#include "rgy_log.h"
 
 #if ENABLE_D3D9
 class DeviceDX9 {
@@ -62,9 +61,13 @@ public:
     LUID getLUID() const { return m_devLUID; };
     std::wstring GetDisplayDeviceName() const { return m_displayDeviceName; }
     static int adapterCount();
+protected:
+    void AddMessage(RGYLogLevel log_level, const tstring &str);
+    void AddMessage(RGYLogLevel log_level, const TCHAR *format, ...);
 private:
     RGY_ERR EnumerateAdapters();
 
+    tstring                             m_name;
     ATL::CComPtr<IDirect3D9>            m_pD3D;
     ATL::CComPtr<IDirect3DDevice9>      m_pD3DDevice;
     LUID                                m_devLUID;
@@ -91,9 +94,13 @@ public:
     LUID getLUID() const { return m_devLUID; };
     std::wstring GetDisplayDeviceName() const { return m_displayDeviceName; }
     static int adapterCount();
+protected:
+    void AddMessage(RGYLogLevel log_level, const tstring &str);
+    void AddMessage(RGYLogLevel log_level, const TCHAR *format, ...);
 private:
     void EnumerateAdapters(bool onlyWithOutputs);
 
+    tstring                      m_name;
     ATL::CComPtr<ID3D11Device>   m_pD3DDevice;
     LUID                         m_devLUID;
 

@@ -31,6 +31,7 @@
 #if ENABLE_VULKAN
 
 DeviceVulkan::DeviceVulkan() :
+    m_name(_T("devVulkan")),
     m_VulkanDev(),
     m_displayDeviceName(),
     m_vk(),
@@ -81,12 +82,12 @@ RGY_ERR DeviceVulkan::Init(int adapterID, amf::AMFContext *pContext, std::shared
     }
 
     if (m_vk.init() != 0) {
-        m_log->write(RGY_LOG_ERROR, _T("LoadFunctionsTable() failed - check if the proper Vulkan SDK is installed\n"));
+        AddMessage(RGY_LOG_ERROR, _T("LoadFunctionsTable() failed - check if the proper Vulkan SDK is installed\n"));
         return RGY_ERR_NULL_PTR;
     }
 
     if ((res = CreateInstance()) != RGY_ERR_NONE) {
-        m_log->write(RGY_LOG_ERROR, _T("CreateInstance() failed\n"));
+        AddMessage(RGY_LOG_ERROR, _T("CreateInstance() failed\n"));
         return res;
     }
 
@@ -96,18 +97,18 @@ RGY_ERR DeviceVulkan::Init(int adapterID, amf::AMFContext *pContext, std::shared
     const bool bDebug = false;
 #endif
     if (m_vk.load(m_VulkanDev.hInstance, bDebug) != 0) {
-        m_log->write(RGY_LOG_ERROR, _T("LoadInstanceFunctionsTableExt() failed - check if the proper Vulkan SDK is installed\n"));
+        AddMessage(RGY_LOG_ERROR, _T("LoadInstanceFunctionsTableExt() failed - check if the proper Vulkan SDK is installed\n"));
         return RGY_ERR_NULL_PTR;
     }
 
     // load instance based functions
     if (CreateDeviceAndFindQueues(adapterID, deviceExtensions) != 0) {
-        m_log->write(RGY_LOG_ERROR, _T("CreateDeviceAndFindQueues() failed\n"));
+        AddMessage(RGY_LOG_ERROR, _T("CreateDeviceAndFindQueues() failed\n"));
         return RGY_ERR_NULL_PTR;
     }
 
     if (m_vk.load(m_VulkanDev.hDevice) != 0) {
-        m_log->write(RGY_LOG_ERROR, _T("LoadDeviceFunctionsTableExt() failed - check if the proper Vulkan SDK is installed\n"));
+        AddMessage(RGY_LOG_ERROR, _T("LoadDeviceFunctionsTableExt() failed - check if the proper Vulkan SDK is installed\n"));
         return RGY_ERR_NULL_PTR;
     }
 
@@ -231,7 +232,7 @@ RGY_ERR DeviceVulkan::CreateInstance() {
     instanceCreateInfo.pApplicationInfo = &applicationInfo;
     
     if ((res = err_to_rgy(GetVulkan()->vkCreateInstance(&instanceCreateInfo, nullptr, &m_VulkanDev.hInstance))) != RGY_ERR_NONE) {
-        m_log->write(RGY_LOG_ERROR, _T("CreateInstance() failed to vkCreateInstance, Error=%s\n"), get_err_mes(res));
+        AddMessage(RGY_LOG_ERROR, _T("CreateInstance() failed to vkCreateInstance, Error=%s\n"), get_err_mes(res));
         return res;
     }
 
@@ -242,13 +243,13 @@ RGY_ERR DeviceVulkan::CreateDeviceAndFindQueues(int adapterID, std::vector<const
     RGY_ERR res = RGY_ERR_NONE;
     uint32_t physicalDeviceCount = 0;
     if ((res = err_to_rgy(GetVulkan()->vkEnumeratePhysicalDevices(m_VulkanDev.hInstance, &physicalDeviceCount, nullptr))) != RGY_ERR_NONE) {
-        m_log->write(RGY_LOG_ERROR, _T("CreateDeviceAndQueues() failed to vkEnumeratePhysicalDevices, Error=%s\n"), get_err_mes(res));
+        AddMessage(RGY_LOG_ERROR, _T("CreateDeviceAndQueues() failed to vkEnumeratePhysicalDevices, Error=%s\n"), get_err_mes(res));
         return res;
     }
 
     std::vector<VkPhysicalDevice> physicalDevices{ physicalDeviceCount };
     if ((res = err_to_rgy(GetVulkan()->vkEnumeratePhysicalDevices(m_VulkanDev.hInstance, &physicalDeviceCount, physicalDevices.data()))) != RGY_ERR_NONE) {
-        m_log->write(RGY_LOG_ERROR, _T("CreateDeviceAndQueues() failed to vkEnumeratePhysicalDevices, Error=%s\n"), get_err_mes(res));
+        AddMessage(RGY_LOG_ERROR, _T("CreateDeviceAndQueues() failed to vkEnumeratePhysicalDevices, Error=%s\n"), get_err_mes(res));
         return res;
     }
 
@@ -256,7 +257,7 @@ RGY_ERR DeviceVulkan::CreateDeviceAndFindQueues(int adapterID, std::vector<const
         adapterID = 0;
     }
     if (adapterID >= (int)physicalDeviceCount) {
-        m_log->write(RGY_LOG_ERROR, _T("Invalid Adapter ID: %d"), adapterID);
+        AddMessage(RGY_LOG_ERROR, _T("Invalid Adapter ID: %d"), adapterID);
         return RGY_ERR_UNKNOWN;
     }
 
@@ -337,11 +338,11 @@ RGY_ERR DeviceVulkan::CreateDeviceAndFindQueues(int adapterID, std::vector<const
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t> (deviceExtensions.size());
 
     if ((res = err_to_rgy(GetVulkan()->vkCreateDevice(m_VulkanDev.hPhysicalDevice, &deviceCreateInfo, nullptr, &m_VulkanDev.hDevice)))!= RGY_ERR_NONE) {
-        m_log->write(RGY_LOG_ERROR, _T("CreateDeviceAndQueues() vkCreateDevice() failed, Error=%s\n"), get_err_mes(res));
+        AddMessage(RGY_LOG_ERROR, _T("CreateDeviceAndQueues() vkCreateDevice() failed, Error=%s\n"), get_err_mes(res));
         return res;
     }
     if (m_VulkanDev.hDevice == nullptr) {
-        m_log->write(RGY_LOG_ERROR, _T("CreateDeviceAndQueues() vkCreateDevice() returned nullptr\n"));
+        AddMessage(RGY_LOG_ERROR, _T("CreateDeviceAndQueues() vkCreateDevice() returned nullptr\n"));
         return RGY_ERR_NULL_PTR;
     }
     
@@ -353,5 +354,31 @@ RGY_ERR DeviceVulkan::CreateDeviceAndFindQueues(int adapterID, std::vector<const
 
 RGYVulkanFuncs * DeviceVulkan::GetVulkan() {
 	return &m_vk;
+}
+
+void DeviceVulkan::AddMessage(RGYLogLevel log_level, const tstring &str) {
+    if (m_log == nullptr || log_level < m_log->getLogLevel(RGY_LOGT_DEV)) {
+        return;
+    }
+    auto lines = split(str, _T("\n"));
+    for (const auto &line : lines) {
+        if (line[0] != _T('\0')) {
+            m_log->write(log_level, RGY_LOGT_DEV, (m_name + _T(": ") + line + _T("\n")).c_str());
+        }
+    }
+}
+void DeviceVulkan::AddMessage(RGYLogLevel log_level, const TCHAR *format, ...) {
+    if (m_log == nullptr || log_level < m_log->getLogLevel(RGY_LOGT_DEV)) {
+        return;
+    }
+
+    va_list args;
+    va_start(args, format);
+    int len = _vsctprintf(format, args) + 1; // _vscprintf doesn't count terminating '\0'
+    tstring buffer;
+    buffer.resize(len, _T('\0'));
+    _vstprintf_s(&buffer[0], len, format, args);
+    va_end(args);
+    AddMessage(log_level, buffer);
 }
 #endif

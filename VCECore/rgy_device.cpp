@@ -38,17 +38,16 @@
 #pragma comment(lib, "d3d11.lib")
 #endif
 
-#define LOG_IF_EXIST(...)  { if (m_log) { m_log->write(__VA_ARGS__); } }
-
 #define CHECK_HRESULT_ERROR_RETURN(hr, mes) { \
     if (hr != S_OK) { \
-        m_log->write(RGY_LOG_ERROR, _T("%s: %x\n"), mes, hr); \
+        AddMessage(RGY_LOG_ERROR, _T("%s: %x\n"), mes, hr); \
         return RGY_ERR_UNKNOWN; \
     } \
 }
 
 #if ENABLE_D3D9
 DeviceDX9::DeviceDX9() :
+    m_name(_T("devDX9")),
     m_pD3D(),
     m_pD3DDevice(),
     m_devLUID(),
@@ -87,7 +86,7 @@ RGY_ERR DeviceDX9::Init(bool dx9ex, int adapterID, bool bFullScreen, int width, 
     EnumerateAdapters();
 
     if (m_adaptersCount <= adapterID) {
-        m_log->write(RGY_LOG_ERROR, _T("Invalid Adapter ID: %d"), adapterID);
+        AddMessage(RGY_LOG_ERROR, _T("Invalid Adapter ID: %d"), adapterID);
         return RGY_ERR_NOT_FOUND;
     }
 
@@ -106,7 +105,7 @@ RGY_ERR DeviceDX9::Init(bool dx9ex, int adapterID, bool bFullScreen, int width, 
     char strDevice[100];
     _snprintf_s(strDevice, 100, "%X", adapterIdentifier.DeviceId);
 
-    m_log->write(RGY_LOG_DEBUG, _T("DX9 : Chosen Device %d: Device ID: %s [ %s ]"), adapterID, char_to_tstring(strDevice).c_str(), char_to_tstring(adapterIdentifier.Description).c_str());
+    AddMessage(RGY_LOG_DEBUG, _T("DX9 : Chosen Device %d: Device ID: %s [ %s ]"), adapterID, char_to_tstring(strDevice).c_str(), char_to_tstring(adapterIdentifier.Description).c_str());
 
     D3DDISPLAYMODE d3ddm;
     hr = m_pD3D->GetAdapterDisplayMode((UINT)adapterID, &d3ddm);
@@ -183,7 +182,7 @@ RGY_ERR DeviceDX9::Init(bool dx9ex, int adapterID, bool bFullScreen, int width, 
     return RGY_ERR_NONE;
 }
 RGY_ERR DeviceDX9::Terminate() {
-    LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closing DX9 device...\n"));
+    AddMessage(RGY_LOG_DEBUG, _T("Closing DX9 device...\n"));
     m_pD3DDevice.Release();
     m_pD3D.Release();
     return RGY_ERR_NONE;
@@ -281,10 +280,37 @@ int DeviceDX9::adapterCount() {
     }
     return (int)enumeratedAdapterLUIDs.size();
 }
+
+void DeviceDX9::AddMessage(RGYLogLevel log_level, const tstring &str) {
+    if (m_log == nullptr || log_level < m_log->getLogLevel(RGY_LOGT_DEV)) {
+        return;
+    }
+    auto lines = split(str, _T("\n"));
+    for (const auto &line : lines) {
+        if (line[0] != _T('\0')) {
+            m_log->write(log_level, RGY_LOGT_DEV, (m_name + _T(": ") + line + _T("\n")).c_str());
+        }
+    }
+}
+void DeviceDX9::AddMessage(RGYLogLevel log_level, const TCHAR *format, ...) {
+    if (m_log == nullptr || log_level < m_log->getLogLevel(RGY_LOGT_DEV)) {
+        return;
+    }
+
+    va_list args;
+    va_start(args, format);
+    int len = _vsctprintf(format, args) + 1; // _vscprintf doesn't count terminating '\0'
+    tstring buffer;
+    buffer.resize(len, _T('\0'));
+    _vstprintf_s(&buffer[0], len, format, args);
+    va_end(args);
+    AddMessage(log_level, buffer);
+}
 #endif
 
 #if ENABLE_D3D11
 DeviceDX11::DeviceDX11() :
+    m_name(_T("devDX11")),
     m_pD3DDevice(),
     m_devLUID(),
     m_adaptersCount(0),
@@ -314,7 +340,7 @@ RGY_ERR DeviceDX11::Init(int adapterID, bool onlyWithOutputs, shared_ptr<RGYLog>
 
     EnumerateAdapters(onlyWithOutputs);
     if (m_adaptersCount <= adapterID) {
-        m_log->write(RGY_LOG_ERROR, _T("Invalid Adapter ID: %d"), adapterID);
+        AddMessage(RGY_LOG_ERROR, _T("Invalid Adapter ID: %d"), adapterID);
         return RGY_ERR_NOT_FOUND;
     }
 
@@ -324,7 +350,7 @@ RGY_ERR DeviceDX11::Init(int adapterID, bool onlyWithOutputs, shared_ptr<RGYLog>
     ATL::CComPtr<IDXGIFactory> pFactory;
     hr = CreateDXGIFactory(__uuidof(IDXGIFactory), (void **)&pFactory);
     if (FAILED(hr)) {
-        m_log->write(RGY_LOG_ERROR, _T("CreateDXGIFactory failed. Error: %x"), hr);
+        AddMessage(RGY_LOG_ERROR, _T("CreateDXGIFactory failed. Error: %x"), hr);
         return RGY_ERR_UNKNOWN;
     }
 
@@ -369,23 +395,23 @@ RGY_ERR DeviceDX11::Init(int adapterID, bool onlyWithOutputs, shared_ptr<RGYLog>
     }
 #endif
     if (FAILED(hr)) {
-        m_log->write(RGY_LOG_ERROR, L"InitDX11() failed to create HW DX11.1 device ");
+        AddMessage(RGY_LOG_ERROR, L"InitDX11() failed to create HW DX11.1 device ");
         hr = D3D11CreateDevice(pAdapter, eDriverType, NULL, createDeviceFlags, featureLevels + 1, _countof(featureLevels) - 1,
             D3D11_SDK_VERSION, &pD3D11Device, &featureLevel, &pD3D11Context);
     }
     if (FAILED(hr)) {
-        m_log->write(RGY_LOG_ERROR, L"InitDX11() failed to create HW DX11 device ");
+        AddMessage(RGY_LOG_ERROR, L"InitDX11() failed to create HW DX11 device ");
         hr = D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_SOFTWARE, NULL, createDeviceFlags, featureLevels, _countof(featureLevels),
             D3D11_SDK_VERSION, &pD3D11Device, &featureLevel, &pD3D11Context);
     }
 
     if (FAILED(hr)) {
-        m_log->write(RGY_LOG_ERROR, L"InitDX11() failed to create SW DX11.1 device ");
+        AddMessage(RGY_LOG_ERROR, L"InitDX11() failed to create SW DX11.1 device ");
         hr = D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_SOFTWARE, NULL, createDeviceFlags, featureLevels + 1, _countof(featureLevels) - 1,
             D3D11_SDK_VERSION, &pD3D11Device, &featureLevel, &pD3D11Context);
     }
     if (FAILED(hr)) {
-        m_log->write(RGY_LOG_ERROR, L"InitDX11() failed to create SW DX11 device ");
+        AddMessage(RGY_LOG_ERROR, L"InitDX11() failed to create SW DX11 device ");
     }
 
     ATL::CComPtr<ID3D10Multithread> pMultithread = NULL;
@@ -401,7 +427,7 @@ RGY_ERR DeviceDX11::Init(int adapterID, bool onlyWithOutputs, shared_ptr<RGYLog>
 }
 
 RGY_ERR DeviceDX11::Terminate() {
-    LOG_IF_EXIST(RGY_LOG_DEBUG, _T("Closing DX11 device...\n"));
+    AddMessage(RGY_LOG_DEBUG, _T("Closing DX11 device...\n"));
     m_pD3DDevice.Release();
     return RGY_ERR_NONE;
 }
@@ -410,7 +436,7 @@ void DeviceDX11::EnumerateAdapters(bool onlyWithOutputs) {
     ATL::CComPtr<IDXGIFactory> pFactory;
     HRESULT hr = CreateDXGIFactory(__uuidof(IDXGIFactory), (void **)&pFactory);
     if (FAILED(hr)) {
-        m_log->write(RGY_LOG_ERROR, _T("CreateDXGIFactory failed. Error: %x"), hr);
+        AddMessage(RGY_LOG_ERROR, _T("CreateDXGIFactory failed. Error: %x"), hr);
         return;
     }
 
@@ -469,5 +495,31 @@ int DeviceDX11::adapterCount() {
         count++;
     }
     return adaptersCount;
+}
+
+void DeviceDX11::AddMessage(RGYLogLevel log_level, const tstring &str) {
+    if (m_log == nullptr || log_level < m_log->getLogLevel(RGY_LOGT_DEV)) {
+        return;
+    }
+    auto lines = split(str, _T("\n"));
+    for (const auto &line : lines) {
+        if (line[0] != _T('\0')) {
+            m_log->write(log_level, RGY_LOGT_DEV, (m_name + _T(": ") + line + _T("\n")).c_str());
+        }
+    }
+}
+void DeviceDX11::AddMessage(RGYLogLevel log_level, const TCHAR *format, ...) {
+    if (m_log == nullptr || log_level < m_log->getLogLevel(RGY_LOGT_DEV)) {
+        return;
+    }
+
+    va_list args;
+    va_start(args, format);
+    int len = _vsctprintf(format, args) + 1; // _vscprintf doesn't count terminating '\0'
+    tstring buffer;
+    buffer.resize(len, _T('\0'));
+    _vstprintf_s(&buffer[0], len, format, args);
+    va_end(args);
+    AddMessage(log_level, buffer);
 }
 #endif

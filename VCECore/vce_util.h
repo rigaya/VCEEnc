@@ -45,9 +45,9 @@ RGY_DISABLE_WARNING_POP
 
 class RGYFrameData;
 
-bool check_if_vce_available(int deviceId, int logLevel);
-tstring check_vce_enc_features(const std::vector<RGY_CODEC>& codecs, int deviceId, int logLevel);
-tstring check_vce_dec_features(int deviceId, int logLevel);
+bool check_if_vce_available(int deviceId, RGYLogLevel logLevel);
+tstring check_vce_enc_features(const std::vector<RGY_CODEC>& codecs, int deviceId, RGYLogLevel logLevel);
+tstring check_vce_dec_features(int deviceId, RGYLogLevel logLevel);
 
 MAP_PAIR_0_1_PROTO(codec, rgy, RGY_CODEC, enc, const wchar_t *);
 MAP_PAIR_0_1_PROTO(codec, rgy, RGY_CODEC, dec, const wchar_t *);

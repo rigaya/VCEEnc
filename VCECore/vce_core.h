@@ -95,7 +95,7 @@ public:
     virtual ~RGYLogTracer() { m_pLog.reset(); }
     virtual void init(shared_ptr<RGYLog> pLog) { m_pLog = pLog; };
     virtual void AMF_CDECL_CALL Write(const wchar_t *scope, const wchar_t *message) override {
-        m_pLog->write(RGY_LOG_INFO, _T("[%s] %s"), scope, message);
+        m_pLog->write(RGY_LOG_INFO, RGY_LOGT_AMF, _T("[%s] %s"), scope, message);
     };
     virtual void AMF_CDECL_CALL Flush() override {
     };
@@ -112,7 +112,7 @@ public:
     virtual ~VCECore();
 
     virtual RGY_ERR init(VCEParam *prm);
-    virtual RGY_ERR initLog(int loglevel);
+    virtual RGY_ERR initLog(RGYLogLevel loglevel);
     virtual RGY_ERR initLog(VCEParam *prm);
     virtual RGY_ERR initAMFFactory();
     virtual RGY_ERR initTracer(int log_level);
@@ -124,7 +124,7 @@ public:
 
     virtual std::vector<std::unique_ptr<VCEDevice>> createDeviceList(bool interopD3d9, bool interopD3d11, bool interopVulkan);
 
-    void PrintMes(int log_level, const TCHAR *format, ...);
+    void PrintMes(RGYLogLevel log_level, const TCHAR *format, ...);
 
     tstring GetEncoderParam();
     void PrintEncoderParam();
@@ -221,7 +221,7 @@ public:
 
     virtual ~VCEFeatures() {};
 
-    RGY_ERR init(int deviceId, int logLevel);
+    RGY_ERR init(int deviceId, RGYLogLevel logLevel);
     tstring devName() const { return m_core->dev()->getGPUInfo(); }
     tstring checkEncFeatures(RGY_CODEC codec);
     tstring checkDecFeatures(RGY_CODEC codec);

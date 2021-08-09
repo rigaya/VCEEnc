@@ -79,19 +79,19 @@ protected:
     virtual RGY_ERR CreateContext();
     void getAllCaps();
 
-    void PrintMes(int log_level, const tstring& str) {
-        if (m_log == nullptr || log_level < m_log->getLogLevel()) {
+    void PrintMes(RGYLogLevel log_level, const tstring& str) {
+        if (m_log == nullptr || log_level < m_log->getLogLevel(RGY_LOGT_DEV)) {
             return;
         }
         auto lines = split(str, _T("\n"));
         for (const auto& line : lines) {
             if (line[0] != _T('\0')) {
-                m_log->write(log_level, (m_devName + _T(": ") + line + _T("\n")).c_str());
+                m_log->write(log_level, RGY_LOGT_DEV, (m_devName + _T(": ") + line + _T("\n")).c_str());
             }
         }
     }
-    void PrintMes(int log_level, const TCHAR *format, ... ) {
-        if (m_log == nullptr || log_level < m_log->getLogLevel()) {
+    void PrintMes(RGYLogLevel log_level, const TCHAR *format, ... ) {
+        if (m_log == nullptr || log_level < m_log->getLogLevel(RGY_LOGT_DEV)) {
             return;
         }
 
