@@ -255,6 +255,8 @@ RGY_ERR AMFParams::SetParamTypeAVC() {
     SetParamType(AMF_VIDEO_ENCODER_FORCE_LTR_REFERENCE_BITFIELD, AMF_PARAM_FRAME, L"Force LTR Reference Bitfield (bitfield default = 0)");
     SetParamType(AMF_VIDEO_ENCODER_ROI_DATA, AMF_PARAM_FRAME, L"2D AMFSurface, surface format: AMF_SURFACE_GRAY32");
     SetParamType(AMF_VIDEO_ENCODER_REFERENCE_PICTURE, AMF_PARAM_FRAME, L"AMFInterface(AMFSurface); surface used for frame injection");
+    SetParamType(AMF_VIDEO_ENCODER_PSNR_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to calculate PSNR score");
+    SetParamType(AMF_VIDEO_ENCODER_SSIM_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to calculate SSIM score");
 
     // ------------- PA parameters ---------------
     SetParamType(AMF_VIDEO_ENCODER_PRE_ANALYSIS_ENABLE, AMF_PARAM_STATIC, L"Enable PA (true, false default =  false)");
@@ -289,6 +291,7 @@ RGY_ERR AMFParams::SetParamTypeHEVC() {
     SetParamType(AMF_VIDEO_ENCODER_HEVC_TIER, AMF_PARAM_STATIC, L"HEVC tier (Main, High, default = Main");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_PROFILE_LEVEL, AMF_PARAM_STATIC, L"HEVC profile level (float or integer, default = based on HW");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_MAX_LTR_FRAMES, AMF_PARAM_STATIC, L"Max Of LTR frames (integer, default = 0)");
+    SetParamType(AMF_VIDEO_ENCODER_HEVC_LTR_MODE, AMF_PARAM_STATIC, L"mf_int64(AMF_VIDEO_ENCODER_HEVC_LTR_MODE_ENUM); default = AMF_VIDEO_ENCODER_HEVC_LTR_MODE_RESET_UNUSED; remove/keep unused LTRs (not specified in property AMF_VIDEO_ENCODER_HEVC_FORCE_LTR_REFERENCE_BITFIELD)");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_MAX_NUM_REFRAMES, AMF_PARAM_STATIC, L" Maximum number of reference frames default = 1");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET, AMF_PARAM_STATIC, L"Quality Preset (BALANCED, SPEED, QUALITY default = depends on USAGE)");
     //SetParamType(AMF_VIDEO_ENCODER_HEVC_EXTRADATA, AMF_PARAM_STATIC, L"AMFInterface* - > AMFBuffer*; SPS/PPS buffer - read-only");
@@ -298,6 +301,7 @@ RGY_ERR AMFParams::SetParamTypeHEVC() {
 #pragma warning(disable:4995) //warning C4995: 'AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_PREANALYSIS_ENABLE': 名前が避けられた #pragma として記述されています。
     SetParamType(AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_PREANALYSIS_ENABLE, AMF_PARAM_STATIC, L"Enable Preanalysis(true, false default = depends on USAGE)");
 #pragma warning(pop)
+    SetParamType(AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE, AMF_PARAM_STATIC, L"amf_int64(AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE_ENUM) default = AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE_FULL");
 
     // Picture control properties
     SetParamType(AMF_VIDEO_ENCODER_HEVC_NUM_GOPS_PER_IDR, AMF_PARAM_STATIC, L"The frequency to insert IDR as start of a GOP. 0 means no IDR will be inserted (in frames, default= 60 )");
@@ -350,6 +354,8 @@ RGY_ERR AMFParams::SetParamTypeHEVC() {
     SetParamType(AMF_VIDEO_ENCODER_HEVC_QP_P, AMF_PARAM_DYNAMIC, L"QP P (integer 0-51, default = 22)");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_SKIP_FRAME_ENABLE, AMF_PARAM_DYNAMIC, L"Rate Control Based Frame Skip (true, false default =  depends on USAGE)");
 
+    SetParamType(AMF_VIDEO_ENCODER_HEVC_INPUT_HDR_METADATA, AMF_PARAM_DYNAMIC, L"AMFBuffer containing AMFHDRMetadata; default NULL");
+
     // ------------- Encoder params per frame ---------------
     SetParamType(AMF_VIDEO_ENCODER_HEVC_END_OF_SEQUENCE, AMF_PARAM_FRAME, L"bool; default = false; generate end of sequence");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_FORCE_PICTURE_TYPE, AMF_PARAM_FRAME, L"amf_int64(AMF_VIDEO_ENCODER_HEVC_PICTURE_TYPE_ENUM); default = AMF_VIDEO_ENCODER_HEVC_PICTURE_TYPE_NONE; generate particular picture type");
@@ -360,6 +366,8 @@ RGY_ERR AMFParams::SetParamTypeHEVC() {
     SetParamType(AMF_VIDEO_ENCODER_HEVC_FORCE_LTR_REFERENCE_BITFIELD, AMF_PARAM_FRAME, L"Force LTR Reference Bitfield (bitfield default = 0)");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_ROI_DATA, AMF_PARAM_FRAME, L"2D AMFSurface, surface format: AMF_SURFACE_GRAY32");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_REFERENCE_PICTURE, AMF_PARAM_FRAME, L"AMFInterface(AMFSurface); surface used for frame injection");
+    SetParamType(AMF_VIDEO_ENCODER_HEVC_PSNR_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to calculate PSNR score");
+    SetParamType(AMF_VIDEO_ENCODER_HEVC_SSIM_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to calculate SSIM score");
 
     // ------------- PA parameters ---------------
     SetParamType(AMF_VIDEO_ENCODER_HEVC_PRE_ANALYSIS_ENABLE, AMF_PARAM_STATIC, L"Enable PA (true, false default =  false)");
