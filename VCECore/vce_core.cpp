@@ -3097,7 +3097,6 @@ tstring VCECore::GetEncoderParam() {
 #else
     mes += strsprintf(_T("OS:            %s %s\n"), getOSVersion().c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"));
 #endif
-    mes += _T("\n");
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
     mes += strsprintf(_T("GPU:           %s, AMF Runtime %d.%d.%d / SDK %d.%d.%d\n"), gpu_info.c_str(),
         (int)AMF_GET_MAJOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_MINOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_SUBMINOR_VERSION(m_AMFRuntimeVersion),
