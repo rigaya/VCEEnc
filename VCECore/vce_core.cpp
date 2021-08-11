@@ -1687,6 +1687,14 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         m_params.SetParam(AMF_PA_CAQ_STRENGTH, (amf_int64)prm->pa.CAQStrength);
     }
 
+    //m_params.SetParam(AMF_PARAM_INPUT_COLOR_PROFILE(prm->codec),           AMF_VIDEO_CONVERTER_COLOR_PROFILE_UNKNOWN);
+    //m_params.SetParam(AMF_PARAM_INPUT_TRANSFER_CHARACTERISTIC(prm->codec), AMF_COLOR_TRANSFER_CHARACTERISTIC_UNDEFINED);
+    //m_params.SetParam(AMF_PARAM_INPUT_COLOR_PRIMARIES(prm->codec),         AMF_COLOR_PRIMARIES_UNDEFINED);
+
+    //m_params.SetParam(AMF_PARAM_OUTPUT_COLOR_PROFILE(prm->codec),           AMF_VIDEO_CONVERTER_COLOR_PROFILE_UNKNOWN);
+    //m_params.SetParam(AMF_PARAM_OUTPUT_TRANSFER_CHARACTERISTIC(prm->codec), AMF_COLOR_TRANSFER_CHARACTERISTIC_UNDEFINED);
+    //m_params.SetParam(AMF_PARAM_OUTPUT_COLOR_PRIMARIES(prm->codec),         AMF_COLOR_PRIMARIES_UNDEFINED);
+
     //m_params.SetParam(AMF_PARAM_END_OF_SEQUENCE(prm->codec),                false);
     m_params.SetParam(AMF_PARAM_INSERT_AUD(prm->codec),                     false);
     if (prm->codec == RGY_CODEC_H264) {
@@ -1729,6 +1737,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_TIER,                            (amf_int64)prm->codecParam[prm->codec].nTier);
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_COLOR_BIT_DEPTH,                 (amf_int64)prm->outputDepth);
+        //m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE,                   (amf_int64)(m_encVUI.colorrange == RGY_COLORRANGE_FULL ? AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE_FULL : AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE_STUDIO));
 
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_I,                        (amf_int64)prm->nQPMin);
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_I,                        (amf_int64)prm->nQPMax);
