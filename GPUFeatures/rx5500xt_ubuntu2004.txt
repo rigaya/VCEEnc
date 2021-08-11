@@ -1,0 +1,80 @@
+device #0: Navi 14 [Radeon RX 5500/5500M / Pro 5500M] (11 CU) @ 1950 MHz (3261.0 (HSA1.1,LC))
+H.264/AVC encode features
+10bit depth:     no
+acceleration:    Hardware-accelerated
+max profile:     Main
+max level:       5.2
+max bitrate:     100000 kbps
+ref frames:      0-0
+Bframe support:  no
+HW instances:    0
+max streams:     16
+timeout support: yes
+
+H.264/AVC input:
+Width:       112 - 4096
+Height:      16 - 4096
+alignment:   32
+Interlace:   no
+pix format:  NV12[1](native), YUV420P[7], YV12[2], BGRA[3], RGBA[5], ARGB[4]
+memory type: OPENCL, OPENGL, HOST
+
+H.264/AVC output:
+Width:       112 - 4096
+Height:      16 - 4096
+alignment:   32
+Interlace:   no
+pix format:  NV12[1](native)
+memory type: XV(native), OPENCL, OPENGL, HOST
+
+
+
+device #0: Navi 14 [Radeon RX 5500/5500M / Pro 5500M] (11 CU) @ 1950 MHz (3261.0 (HSA1.1,LC))
+H.264/AVC decode features
+10bit depth:     no
+acceleration:    Hardware-accelerated
+max streams:     16
+
+H.264/AVC output:
+Width:       32 - 7680
+Height:      32 - 4320
+alignment:   32
+Interlace:   yes
+pix format:  
+memory type: XV(native)
+
+H.265/HEVC decode features
+10bit depth:     yes
+acceleration:    Hardware-accelerated
+max streams:     0
+
+H.265/HEVC output:
+Width:       32 - 7680
+Height:      32 - 4320
+alignment:   32
+Interlace:   yes
+pix format:  
+memory type: XV(native)
+
+MPEG2 decode features
+10bit depth:     no
+acceleration:    Not supported
+max streams:     16
+
+MPEG2 output:
+
+VP9 decode features
+10bit depth:     yes
+acceleration:    Not supported
+max streams:     16
+
+VP9 output:
+
+VC-1 decode features
+10bit depth:     no
+acceleration:    Not supported
+max streams:     16
+
+VC-1 output:
+
+
