@@ -1104,7 +1104,7 @@ RGY_ERR RGYOpenCLContext::createContext() {
         return err_cl_to_rgy(err);
     }
     for (int idev = 0; idev < (int)m_platform->devs().size(); idev++) {
-        m_queue.push_back(std::move(createQueue(m_platform->dev(idev).id())));
+        m_queue.push_back(createQueue(m_platform->dev(idev).id()));
     }
     return RGY_ERR_NONE;
 }
@@ -1114,7 +1114,7 @@ RGYOpenCLQueue RGYOpenCLContext::createQueue(cl_device_id devid) {
     cl_int err = RGY_ERR_NONE;
     CL_LOG(RGY_LOG_DEBUG, _T("createQueue for device : %p\n"), devid);
     try {
-        queue = std::move(RGYOpenCLQueue(clCreateCommandQueue(m_context.get(), devid, 0, &err), devid));
+        queue = RGYOpenCLQueue(clCreateCommandQueue(m_context.get(), devid, 0, &err), devid);
         if (err != RGY_ERR_NONE) {
             CL_LOG(RGY_LOG_ERROR, _T("Error (clCreateCommandQueue): %s\n"), cl_errmes(err));
         }
