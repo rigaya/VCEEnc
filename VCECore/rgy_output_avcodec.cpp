@@ -750,6 +750,7 @@ RGY_ERR RGYOutputAvcodec::InitVideo(const VideoInfo *videoOutputInfo, const Avco
             }
         }
     }
+
     if ((ENCODER_NVENC
         && (videoOutputInfo->codec == RGY_CODEC_H264 || videoOutputInfo->codec == RGY_CODEC_HEVC)
         && videoOutputInfo->sar[0] * videoOutputInfo->sar[1] > 0)
