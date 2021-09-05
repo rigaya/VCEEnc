@@ -26,6 +26,7 @@
 // ------------------------------------------------------------------------------------------
 
 #include <cmath>
+#include <numeric>
 #include "rgy_version.h"
 #include "rgy_osdep.h"
 #include "rgy_util.h"
@@ -1825,7 +1826,15 @@ std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3
         devVk.reset(); // VCEDevice::init()を呼ぶ前に開放しないとなぜか処理がうまく進まない
     }
 #else
-    const int adapterCount = 0;
+    RGYOpenCL cl(m_pLog);
+    auto platforms = cl.getPlatforms("AMD");
+    const int adapterCount = std::accumulate(platforms.begin(), platforms.end(), 0, [](int acc, std::shared_ptr<RGYOpenCLPlatform>& p) {
+        if (p->createDeviceList(CL_DEVICE_TYPE_GPU) == RGY_ERR_NONE) {
+            acc += (int)p->devs().size();
+        }
+        return acc;
+    });
+    PrintMes(RGY_LOG_ERROR, _T("adapterCount %d.\n"), adapterCount);
 #endif
     for (int i = 0; i < adapterCount; i++) {
         auto dev = std::make_unique<VCEDevice>(m_pLog, m_pFactory, m_pTrace);
