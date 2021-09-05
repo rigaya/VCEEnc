@@ -870,6 +870,9 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR:
                 pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR;
                 break;
+            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR:
+                fprintf(stderr, "QVBR unsupported for HEVC encoding!\n");
+                abort();
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP:
             default:
                 pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP;

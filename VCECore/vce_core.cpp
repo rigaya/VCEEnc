@@ -1470,7 +1470,10 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
                 prm->nDeltaQPBFrameRef = 0;
             }
         } else if (prm->codec == RGY_CODEC_HEVC) {
-            //いまはなにもなし
+            if (prm->rateControl == AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR) {
+                PrintMes(RGY_LOG_ERROR, _T("QVBR mode is not supported on HEVC encoding.\n"));
+                return RGY_ERR_UNSUPPORTED;
+            }
         } else {
             PrintMes(RGY_LOG_WARN, _T("Unsupported codec.\n"));
             return RGY_ERR_UNSUPPORTED;
