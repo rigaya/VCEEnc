@@ -1240,7 +1240,7 @@ RGYOpenCLKernelHolder RGYOpenCLProgram::kernel(const char *kernelName) {
     if (err != CL_SUCCESS) {
         CL_LOG(RGY_LOG_ERROR, _T("Failed to get kernel %s: %s\n"), char_to_tstring(kernelName).c_str(), cl_errmes(err));
     }
-    m_kernels.push_back(std::move(std::make_unique<RGYOpenCLKernel>(kernel, kernelName, m_log)));
+    m_kernels.push_back(std::make_unique<RGYOpenCLKernel>(kernel, kernelName, m_log));
     return RGYOpenCLKernelHolder(m_kernels.back().get(), m_log);
 }
 
