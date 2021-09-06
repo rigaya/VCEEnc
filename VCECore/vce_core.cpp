@@ -1459,6 +1459,18 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             prm->nRefFrames = clamp(prm->nRefFrames, minRef, maxRef);
         }
 
+        auto encPorpertyCount = m_pEncoder->GetPropertiesInfoCount();
+        const amf::AMFPropertyInfo* props = nullptr;
+        m_pEncoder->GetPropertyInfo(AMF_PARAM_RATE_CONTROL_METHOD(prm->codec), &props);
+        bool rateControlSupported = false;
+        for (auto penum = props->pEnumDescription; !rateControlSupported && penum->name; penum++) {
+            if (penum->value == prm->rateControl) rateControlSupported = true;
+        }
+        if (!rateControlSupported) {
+            PrintMes(RGY_LOG_ERROR, _T("%s mode is not supported on this device.\n"), get_cx_desc(get_rc_method(prm->codec), prm->rateControl));
+            return RGY_ERR_UNSUPPORTED;
+        }
+
         if (prm->codec == RGY_CODEC_H264) {
             bool bBPictureSupported = false;
             encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_BFRAMES, &bBPictureSupported);
@@ -1997,6 +2009,26 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
                 PrintMes(RGY_LOG_ERROR, _T("Unsupported output bit depth: %d.\n"), encBitdepth);
                 return RGY_ERR_UNSUPPORTED;
             }
+        }
+
+        { //レート制御のチェック
+            amf::AMFComponentPtr encoder;
+            if (m_pFactory->CreateComponent((*gpu)->context(), codec_rgy_to_enc(prm->codec), &encoder) == AMF_OK) {
+                auto encPorpertyCount = encoder->GetPropertiesInfoCount();
+                const amf::AMFPropertyInfo* props = nullptr;
+                encoder->GetPropertyInfo(AMF_PARAM_RATE_CONTROL_METHOD(prm->codec), &props);
+                bool rateControlSupported = false;
+                for (auto penum = props->pEnumDescription; !rateControlSupported && penum->name; penum++) {
+                    if (penum->value == prm->rateControl) rateControlSupported = true;
+                }
+                if (!rateControlSupported) {
+                    message += strsprintf(_T("GPU #%d (%s) does not support %s %s mode.\n"), (*gpu)->id(), (*gpu)->name().c_str(),
+                        CodecToStr(prm->codec).c_str(), get_cx_desc(get_rc_method(prm->codec), prm->rateControl));
+                    gpu = gpuList.erase(gpu);
+                    continue;
+                }
+            }
+            encoder->Clear();
         }
 
         if (prm->input.type == RGY_INPUT_FMT_AVHW) {
