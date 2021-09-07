@@ -136,7 +136,7 @@ public:
 protected:
     virtual RGY_ERR readChapterFile(tstring chapfile);
 
-    RGY_ERR checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm);
+    RGY_ERR checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm, int deviceId);
     RGY_ERR gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm);
     virtual RGY_CSP GetEncoderCSP(const VCEParam *inputParam) const;
     virtual int GetEncoderBitdepth(const VCEParam *inputParam) const;

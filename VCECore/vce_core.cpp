@@ -1860,12 +1860,25 @@ std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3
     return devs;
 }
 
-RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm) {
+RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm, int deviceId) {
     const int encBitdepth = GetEncoderBitdepth(prm);
     const auto encCsp = GetEncoderCSP(prm);
     if (encCsp == RGY_CSP_NA) {
         PrintMes(RGY_LOG_ERROR, _T("Unknown Error in GetEncoderCSP().\n"));
         return RGY_ERR_UNSUPPORTED;
+    }
+    if (deviceId >= 0) {
+        for (auto gpu = gpuList.begin(); gpu != gpuList.end(); ) {
+            if ((*gpu)->id() != deviceId) {
+                gpu = gpuList.erase(gpu);
+                continue;
+            }
+            gpu++;
+        }
+        if (gpuList.size() == 0) {
+            PrintMes(RGY_LOG_ERROR, _T("Selected device #%d not found\n"), deviceId);
+            return RGY_ERR_NOT_FOUND;
+        }
     }
     const auto formatIn = csp_rgy_to_enc(encCsp);
     const auto formatOut = formatIn;
@@ -2303,7 +2316,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    if (RGY_ERR_NONE != (ret = checkGPUListByEncoder(devList, prm))) {
+    if (RGY_ERR_NONE != (ret = checkGPUListByEncoder(devList, prm, prm->deviceID))) {
         return ret;
     }
 
