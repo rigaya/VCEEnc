@@ -98,7 +98,11 @@ VCEParam::VCEParam() :
     ssim(false),
     psnr(false) {
     codecParam[RGY_CODEC_H264].nLevel   = 0;
+#if defined(_WIN32) || defined(_WIN64)
     codecParam[RGY_CODEC_H264].nProfile = list_avc_profile[2].value;
+#else
+    codecParam[RGY_CODEC_H264].nProfile = list_avc_profile[1].value;
+#endif
     codecParam[RGY_CODEC_HEVC].nLevel   = 0;
     codecParam[RGY_CODEC_HEVC].nProfile = AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN;
     codecParam[RGY_CODEC_HEVC].nTier    = AMF_VIDEO_ENCODER_HEVC_TIER_MAIN;
