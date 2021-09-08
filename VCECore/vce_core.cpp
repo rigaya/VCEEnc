@@ -3377,7 +3377,7 @@ RGY_ERR VCEFeatures::init(int deviceId, RGYLogLevel logLevel) {
 #if ENABLE_D3D11
     auto devList = m_core->createDeviceList(false, true, false, true);
 #else
-    auto devList = m_core->createDeviceList(false, false, true, false);
+    auto devList = m_core->createDeviceList(false, false, true, true);
 #endif
     if ((err = m_core->initDevice(devList, deviceId)) != RGY_ERR_NONE) {
         return err;

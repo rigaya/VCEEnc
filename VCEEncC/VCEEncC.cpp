@@ -62,7 +62,7 @@ static void show_hw(int deviceid) {
 #if ENABLE_D3D11
             const auto devList = core->createDeviceList(false, true, false, true);
 #else
-            const auto devList = core->createDeviceList(false, true, ENABLE_VULKAN != 0, false);
+            const auto devList = core->createDeviceList(false, true, ENABLE_VULKAN != 0, true);
 #endif
             if (devList.size() > 0) {
                 _ftprintf(stdout, _T("VCE available\n"));
