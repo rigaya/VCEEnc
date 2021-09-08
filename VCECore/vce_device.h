@@ -52,7 +52,7 @@ public:
     VCEDevice(shared_ptr<RGYLog>& log, amf::AMFFactory *factory, amf::AMFTrace *trace);
     virtual ~VCEDevice();
 
-    virtual RGY_ERR init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool interopVulkan);
+    virtual RGY_ERR init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool interopVulkan, const bool enableOpenCL);
 
     amf::AMFCapsPtr getEncCaps(RGY_CODEC codec);
     amf::AMFCapsPtr getDecCaps(RGY_CODEC codec);

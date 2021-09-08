@@ -122,7 +122,7 @@ public:
     virtual RGY_ERR run();
     void Terminate();
 
-    virtual std::vector<std::unique_ptr<VCEDevice>> createDeviceList(bool interopD3d9, bool interopD3d11, bool interopVulkan);
+    virtual std::vector<std::unique_ptr<VCEDevice>> createDeviceList(bool interopD3d9, bool interopD3d11, bool interopVulkan, bool enableOpenCL);
 
     void PrintMes(RGYLogLevel log_level, const TCHAR *format, ...);
 

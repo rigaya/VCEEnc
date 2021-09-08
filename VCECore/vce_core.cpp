@@ -787,6 +787,10 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         || inputParam->vpp.tweak.enable
         || inputParam->vpp.transform.enable
         || inputParam->vpp.deband.enable) {
+        if (!m_dev->cl()) {
+            PrintMes(RGY_LOG_ERROR, _T("OpenCL disabled, filtering not supported!\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
         //swデコードならGPUに上げる必要がある
         if (m_pFileReader->getInputCodec() == RGY_CODEC_UNKNOWN) {
             amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
@@ -1314,7 +1318,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         }
     }
     //最後のフィルタ
-    {
+    if (m_dev->cl()) {
         //もし入力がCPUメモリで色空間が違うなら、一度そのままGPUに転送する必要がある
         if (inputFrame.mem_type == RGY_MEM_TYPE_CPU && inputFrame.csp != GetEncoderCSP(inputParam)) {
             amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
@@ -1829,7 +1833,7 @@ RGY_ERR VCECore::initTracer(int log_level) {
     return RGY_ERR_NONE;
 }
 
-std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3d9, bool interopD3d11, bool interopVulkan) {
+std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3d9, bool interopD3d11, bool interopVulkan, bool enableOpenCL) {
     std::vector<std::unique_ptr<VCEDevice>> devs;
 #if ENABLE_D3D11
     const int adapterCount = DeviceDX11::adapterCount();
@@ -1853,7 +1857,7 @@ std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3
 #endif
     for (int i = 0; i < adapterCount; i++) {
         auto dev = std::make_unique<VCEDevice>(m_pLog, m_pFactory, m_pTrace);
-        if (dev->init(i, interopD3d9, interopD3d11, interopVulkan) == RGY_ERR_NONE) {
+        if (dev->init(i, interopD3d9, interopD3d11, interopVulkan, enableOpenCL) == RGY_ERR_NONE) {
             devs.push_back(std::move(dev));
         }
     }
@@ -2220,6 +2224,10 @@ RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, in
 
 RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
     if (prm->common.metric.enabled()) {
+        if (!m_dev->cl()) {
+            PrintMes(RGY_LOG_ERROR, _T("OpenCL disabled, %s calculation not supported!\n"), prm->common.metric.enabled_metric().c_str());
+            return RGY_ERR_UNSUPPORTED;
+        }
         const auto formatOut = csp_rgy_to_enc(GetEncoderCSP(prm));
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
         unique_ptr<RGYFilterSsim> filterSsim(new RGYFilterSsim(m_dev->cl()));
@@ -2280,7 +2288,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    auto devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->interopVulkan);
+    auto devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->interopVulkan, prm->ctrl.enableOpenCL);
     if (devList.size() == 0) {
         PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
         return ret;
@@ -2697,15 +2705,19 @@ RGY_ERR VCECore::run() {
         if (bDrain) {
             filterframes.push_back(std::make_pair(RGYFrameInfo(), 0u));
         } else {
-            auto &lastFilter = m_vpFilters[m_vpFilters.size()-1];
             const auto inframeInfo = inframe->getInfo();
-            if (typeid(*lastFilter.get()) == typeid(RGYFilterCspCrop)
-                && m_vpFilters.size() == 1
-                && lastFilter->GetFilterParam()->frameOut.csp == inframeInfo.csp
-                && m_encWidth == inframeInfo.width
-                && m_encHeight == inframeInfo.height
-                && !m_ssim) {
+            if (m_vpFilters.size() == 0) {
                 skipFilters = true;
+            } else {
+                auto &lastFilter = m_vpFilters[m_vpFilters.size() - 1];
+                if (typeid(*lastFilter.get()) == typeid(RGYFilterCspCrop)
+                    && m_vpFilters.size() == 1
+                    && lastFilter->GetFilterParam()->frameOut.csp == inframeInfo.csp
+                    && m_encWidth == inframeInfo.width
+                    && m_encHeight == inframeInfo.height
+                    && !m_ssim) {
+                    skipFilters = true;
+                }
             }
             const auto& inAmf = inframe->amf();
             if (!skipFilters
@@ -2740,7 +2752,7 @@ RGY_ERR VCECore::run() {
 
         while (filterframes.size() > 0 || bDrain) {
             //フィルタリングするならここ
-            for (uint32_t ifilter = filterframes.front().second; ifilter < m_vpFilters.size() - 1; ifilter++) {
+            for (int ifilter = filterframes.front().second; ifilter < (int)m_vpFilters.size() - 1; ifilter++) {
                 amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
                 int nOutFrames = 0;
                 RGYFrameInfo *outInfo[16] = { 0 };
@@ -3362,9 +3374,9 @@ RGY_ERR VCEFeatures::init(int deviceId, RGYLogLevel logLevel) {
     }
 
 #if ENABLE_D3D11
-    auto devList = m_core->createDeviceList(false, true, false);
+    auto devList = m_core->createDeviceList(false, true, false, true);
 #else
-    auto devList = m_core->createDeviceList(false, false, true);
+    auto devList = m_core->createDeviceList(false, false, true, false);
 #endif
     if ((err = m_core->initDevice(devList, deviceId)) != RGY_ERR_NONE) {
         return err;
