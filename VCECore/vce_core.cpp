@@ -1453,14 +1453,17 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
                 prm->nMaxBitrate = maxBitrate;
             }
         }
-        int maxRef = 0, minRef = 0;
-        encoderCaps->GetProperty(AMF_PARAM_CAP_MIN_REFERENCE_FRAMES(prm->codec), &minRef);
-        encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_REFERENCE_FRAMES(prm->codec), &maxRef);
-        if (prm->nRefFrames < minRef || maxRef < prm->nRefFrames) {
-            PrintMes(RGY_LOG_WARN, _T("%s reference frames should be in range of %d - %d (%d specified).\n"),
-                CodecToStr(prm->codec).c_str(),
-                minRef, maxRef, prm->nRefFrames);
-            prm->nRefFrames = clamp(prm->nRefFrames, minRef, maxRef);
+        {
+            int maxRef = 0, minRef = 0;
+            encoderCaps->GetProperty(AMF_PARAM_CAP_MIN_REFERENCE_FRAMES(prm->codec), &minRef);
+            encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_REFERENCE_FRAMES(prm->codec), &maxRef);
+            if (maxRef > 0 // maxRefが0になって適切に取得できない場合があるので、その場合はチェックしない
+                && (prm->nRefFrames < minRef || maxRef < prm->nRefFrames)) {
+                PrintMes(RGY_LOG_WARN, _T("%s reference frames should be in range of %d - %d (%d specified).\n"),
+                    CodecToStr(prm->codec).c_str(),
+                    minRef, maxRef, prm->nRefFrames);
+                prm->nRefFrames = clamp(prm->nRefFrames, minRef, maxRef);
+            }
         }
 
         auto encPorpertyCount = m_pEncoder->GetPropertiesInfoCount();
