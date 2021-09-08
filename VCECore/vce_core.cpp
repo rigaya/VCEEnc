@@ -1466,7 +1466,6 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             }
         }
 
-        auto encPorpertyCount = m_pEncoder->GetPropertiesInfoCount();
         const amf::AMFPropertyInfo* props = nullptr;
         m_pEncoder->GetPropertyInfo(AMF_PARAM_RATE_CONTROL_METHOD(prm->codec), &props);
         bool rateControlSupported = false;
@@ -2034,7 +2033,6 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
         { //レート制御のチェック
             amf::AMFComponentPtr encoder;
             if (m_pFactory->CreateComponent((*gpu)->context(), codec_rgy_to_enc(prm->codec), &encoder) == AMF_OK) {
-                auto encPorpertyCount = encoder->GetPropertiesInfoCount();
                 const amf::AMFPropertyInfo* props = nullptr;
                 encoder->GetPropertyInfo(AMF_PARAM_RATE_CONTROL_METHOD(prm->codec), &props);
                 bool rateControlSupported = false;
