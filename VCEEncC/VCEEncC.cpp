@@ -31,6 +31,7 @@
 #include <filesystem>
 #include <cstdio>
 #include <cassert>
+#include <signal.h>
 #include "rgy_version.h"
 #include "rgy_codepage.h"
 #include "rgy_resource.h"
@@ -200,6 +201,22 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1) {
     return 0;
 }
 
+//Ctrl + C ハンドラ
+static bool g_signal_abort = false;
+#pragma warning(push)
+#pragma warning(disable:4100)
+static void sigcatch(int sig) {
+    g_signal_abort = true;
+}
+#pragma warning(pop)
+static int set_signal_handler() {
+    int ret = 0;
+    if (SIG_ERR == signal(SIGINT, sigcatch)) {
+        _ftprintf(stderr, _T("failed to set signal handler.\n"));
+    }
+    return ret;
+}
+
 #if defined(_WIN32) || defined(_WIN64)
 static bool check_locale_is_ja() {
     const WORD LangID_ja_JP = MAKELANGID(LANG_JAPANESE, SUBLANG_JAPANESE_JAPAN);
@@ -305,6 +322,8 @@ int vce_run(VCEParam *pParams) {
         return 1;
     }
     vce->PrintEncoderParam();
+    vce->SetAbortFlagPointer(&g_signal_abort);
+    set_signal_handler();
 
     try {
         if (vce->run() != RGY_ERR_NONE) {
