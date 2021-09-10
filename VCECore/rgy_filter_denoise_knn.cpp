@@ -59,10 +59,10 @@ RGY_ERR RGYFilterDenoiseKnn::denoisePlane(RGYFrameInfo *pOutputPlane, const RGYF
 }
 
 RGY_ERR RGYFilterDenoiseKnn::denoiseFrame(RGYFrameInfo *pOutputFrame, const RGYFrameInfo *pInputFrame, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
-    m_srcImage = m_cl->createImageFromFrameBuffer(*pInputFrame, true, CL_MEM_READ_ONLY);
+    auto srcImage = m_cl->createImageFromFrameBuffer(*pInputFrame, true, CL_MEM_READ_ONLY);
     for (int i = 0; i < RGY_CSP_PLANES[pOutputFrame->csp]; i++) {
         auto planeDst = getPlane(pOutputFrame, (RGY_PLANE)i);
-        auto planeSrc = getPlane(&m_srcImage->frame, (RGY_PLANE)i);
+        auto planeSrc = getPlane(&srcImage->frame, (RGY_PLANE)i);
         const std::vector<RGYOpenCLEvent> &plane_wait_event = (i == 0) ? wait_events : std::vector<RGYOpenCLEvent>();
         RGYOpenCLEvent *plane_event = (i == RGY_CSP_PLANES[pOutputFrame->csp] - 1) ? event : nullptr;
         auto err = denoisePlane(&planeDst, &planeSrc, queue, plane_wait_event, plane_event);
@@ -74,7 +74,7 @@ RGY_ERR RGYFilterDenoiseKnn::denoiseFrame(RGYFrameInfo *pOutputFrame, const RGYF
     return RGY_ERR_NONE;
 }
 
-RGYFilterDenoiseKnn::RGYFilterDenoiseKnn(shared_ptr<RGYOpenCLContext> context) : RGYFilter(context), m_knn(), m_srcImage() {
+RGYFilterDenoiseKnn::RGYFilterDenoiseKnn(shared_ptr<RGYOpenCLContext> context) : RGYFilter(context), m_knn() {
     m_name = _T("knn");
 }
 
@@ -184,7 +184,6 @@ RGY_ERR RGYFilterDenoiseKnn::run_filter(const RGYFrameInfo *pInputFrame, RGYFram
 
 void RGYFilterDenoiseKnn::close() {
     m_frameBuf.clear();
-    m_srcImage.reset();
     m_knn.reset();
     m_cl.reset();
     m_bInterlacedWarn = false;

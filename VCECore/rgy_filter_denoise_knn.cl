@@ -8,7 +8,7 @@
 #endif
 
 float lerpf(float v0, float v1, float t) {
-    float tmp = (1.0-t)*v0;
+    float tmp = (1.0f-t)*v0;
     return tmp + t*v1;
 }
 
@@ -32,9 +32,9 @@ __kernel void kernel_denoise_knn(
         float center = (float)read_imagef(src, sampler, (int2)(sx, sy)).x;
 
         #pragma unroll
-        for (float i = -knn_radius; i <= knn_radius; i++) {
+        for (int i = -knn_radius; i <= knn_radius; i++) {
             #pragma unroll
-            for (float j = -knn_radius; j <= knn_radius; j++) {
+            for (int j = -knn_radius; j <= knn_radius; j++) {
                 float clrIJ = (float)read_imagef(src, sampler, (int2)(sx+i, sy+j)).x;
                 float distanceIJ = (center - clrIJ) * (center - clrIJ);
 
