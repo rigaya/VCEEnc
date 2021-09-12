@@ -1573,6 +1573,10 @@ Example:
 ### --vpp-pad &lt;int&gt;,&lt;int&gt;,&lt;int&gt;,&lt;int&gt;
 add padding to left,top,right,bottom (in pixels)
 
+### --vpp-perf-monitor
+Print processing time for each filter enabled. This is meant for profiling purpose only, please note that when this option is enabled,
+overall performance will decrease as the application waits each filter to finish when checking processing time of them. 
+
 ## Other Options
 
 ### --output-buf &lt;int&gt;

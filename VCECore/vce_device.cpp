@@ -85,7 +85,7 @@ RGY_ERR VCEDevice::CreateContext() {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool interopVulkan, const bool enableOpenCL) {
+RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor) {
     m_devName = strsprintf(_T("device #%d"), deviceId);
     m_id = deviceId;
     {
@@ -209,7 +209,7 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
             nullptr);
 
         m_cl = std::make_shared<RGYOpenCLContext>(selectedPlatform, m_log);
-        if (m_cl->createContext() != CL_SUCCESS) {
+        if (m_cl->createContext((enableVppPerfMonitor) ? CL_QUEUE_PROFILING_ENABLE : 0) != CL_SUCCESS) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to create OpenCL context.\n"));
             return RGY_ERR_UNKNOWN;
         }

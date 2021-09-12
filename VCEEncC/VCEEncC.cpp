@@ -61,9 +61,9 @@ static void show_hw(int deviceid) {
             && (err = core->initAMFFactory()) == RGY_ERR_NONE
             && (err = core->initTracer(loglevel)) == RGY_ERR_NONE) {
 #if ENABLE_D3D11
-            const auto devList = core->createDeviceList(false, true, false, true);
+            const auto devList = core->createDeviceList(false, true, false, true, false);
 #else
-            const auto devList = core->createDeviceList(false, true, ENABLE_VULKAN != 0, true);
+            const auto devList = core->createDeviceList(false, true, ENABLE_VULKAN != 0, true, false);
 #endif
             if (devList.size() > 0) {
                 _ftprintf(stdout, _T("VCE available\n"));

@@ -1366,6 +1366,12 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         get_cx_value(list_colormatrix, _T("undef")) != (int)m_encVUI.matrix
         || get_cx_value(list_colorprim, _T("undef")) != (int)m_encVUI.colorprim
         || get_cx_value(list_transfer, _T("undef")) != (int)m_encVUI.transfer;
+
+    if (inputParam->vpp.checkPerformance) {
+        for (auto& filter : m_vpFilters) {
+            filter->setCheckPerformance(inputParam->vpp.checkPerformance);
+        }
+    }
     return RGY_ERR_NONE;
 }
 
@@ -1835,7 +1841,7 @@ RGY_ERR VCECore::initTracer(int log_level) {
     return RGY_ERR_NONE;
 }
 
-std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3d9, bool interopD3d11, bool interopVulkan, bool enableOpenCL) {
+std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3d9, bool interopD3d11, bool interopVulkan, bool enableOpenCL, bool enableVppPerfMonitor) {
     std::vector<std::unique_ptr<VCEDevice>> devs;
 #if ENABLE_D3D11
     const int adapterCount = DeviceDX11::adapterCount();
@@ -1859,7 +1865,7 @@ std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3
 #endif
     for (int i = 0; i < adapterCount; i++) {
         auto dev = std::make_unique<VCEDevice>(m_pLog, m_pFactory, m_pTrace);
-        if (dev->init(i, interopD3d9, interopD3d11, interopVulkan, enableOpenCL) == RGY_ERR_NONE) {
+        if (dev->init(i, interopD3d9, interopD3d11, interopVulkan, enableOpenCL, enableVppPerfMonitor) == RGY_ERR_NONE) {
             devs.push_back(std::move(dev));
         }
     }
@@ -2289,7 +2295,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    auto devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->interopVulkan, prm->ctrl.enableOpenCL);
+    auto devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->interopVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance);
     if (devList.size() == 0) {
         PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
         return ret;
@@ -3112,6 +3118,28 @@ RGY_ERR VCECore::run() {
     if (m_ssim) {
         m_ssim->showResult();
     }
+
+    //vpp-perf-monitor
+    std::vector<std::pair<tstring, double>> filter_result;
+    for (auto& filter : m_vpFilters) {
+        auto avgtime = filter->GetAvgTimeElapsed();
+        if (avgtime > 0.0) {
+            filter_result.push_back({ filter->name(), avgtime });
+        }
+    }
+    if (filter_result.size()) {
+        PrintMes(RGY_LOG_INFO, _T("\nVpp Filter Performance\n"));
+        const auto max_len = std::accumulate(filter_result.begin(), filter_result.end(), 0u, [](uint32_t max_length, std::pair<tstring, double> info) {
+            return std::max(max_length, (uint32_t)info.first.length());
+            });
+        for (const auto& info : filter_result) {
+            tstring str = info.first + _T(":");
+            for (uint32_t i = (uint32_t)info.first.length(); i < max_len; i++) {
+                str += _T(" ");
+            }
+            PrintMes(RGY_LOG_INFO, _T("%s %8.1f us\n"), str.c_str(), info.second * 1000.0);
+        }
+    }
     return (m_state == RGY_STATE_ERROR) ? res : RGY_ERR_NONE;
 }
 
@@ -3375,9 +3403,9 @@ RGY_ERR VCEFeatures::init(int deviceId, RGYLogLevel logLevel) {
     }
 
 #if ENABLE_D3D11
-    auto devList = m_core->createDeviceList(false, true, false, true);
+    auto devList = m_core->createDeviceList(false, true, false, true, false);
 #else
-    auto devList = m_core->createDeviceList(false, false, true, true);
+    auto devList = m_core->createDeviceList(false, false, true, true, false);
 #endif
     if ((err = m_core->initDevice(devList, deviceId)) != RGY_ERR_NONE) {
         return err;
