@@ -285,6 +285,15 @@ CXXFLAGS="-Wall -Wno-missing-braces -Wno-unknown-pragmas -Wno-unused \
 -I${SRCDIR} -I${SRCDIR}/AMF/amf/public/include -I${SRCDIR}/AMF/amf/public/include/core -I${SRCDIR}/AMF/amf/public/include/components \
 -I${SRCDIR}/VCECore -I${SRCDIR}/tinyxml2 -I${SRCDIR}/ttmath \
 "
+
+if cxx_check "-Wno-unknown-warning-option" "${CXXFLAGS} -Wno-unknown-warning-option ${LDFLAGS}" ; then
+    CFLAGS="${CFLAGS} -Wno-unknown-warning-option"
+    CXXFLAGS="${CXXFLAGS} -Wno-unknown-warning-option"
+    cnf_write "OK"
+else
+    cnf_write "Skip"
+fi
+
 LDFLAGS="-L. -ldl -lm -lstdc++ -lstdc++fs"
 if [ $X86_64 -ne 0 ]; then
     CFLAGS="${CFLAGS} -DLINUX64 -m64"
@@ -338,10 +347,12 @@ else
     CFLAGS="${CFLAGS} -O3 -DNDEBUG=1"
     if cxx_check "-mfpmath=sse" "${CXXFLAGS} -mfpmath=sse ${LDFLAGS}" ; then
         CXXFLAGS="$CXXFLAGS -mfpmath=sse"
+        cnf_write "yes"
     fi
     if cxx_check "-fPIE" "${CXXFLAGS} -fPIE ${LDFLAGS}" ; then
         CXXFLAGS="$CXXFLAGS -fPIE"
         CFLAGS="$CFLAGS -fPIE"
+        cnf_write "yes"
     fi
     if ${CXX} -dM -E -x c /dev/null | grep "__clang__" > /dev/null; then
         IS_CLANG=1
@@ -351,10 +362,12 @@ else
     if [ $IS_CLANG -eq 0 ]; then
         if cxx_check "-ffast-math" "${CXXFLAGS} -ffast-math ${LDFLAGS}" ; then
             CXXFLAGS="$CXXFLAGS -ffast-math"
+            cnf_write "yes"
         fi
     fi
     if cxx_check "-fomit-frame-pointer" "${CXXFLAGS} -fomit-frame-pointer ${LDFLAGS}" ; then
         CXXFLAGS="$CXXFLAGS -fomit-frame-pointer"
+        cnf_write "yes"
     fi
     LDFLAGS="$LDFLAGS -Wl,-s"
 fi

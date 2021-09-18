@@ -134,7 +134,7 @@ RGY_ERR AMFParams::SetParam(const std::wstring &name, amf::AMFVariantStruct valu
 }
 
 RGY_ERR AMFParams::Apply(amf::AMFPropertyStorage *storage, AMFParamType prmType, RGYLog *pLog) {
-    for (const auto prm : m_params) {
+    for (const auto& prm : m_params) {
         const auto &name = prm.first;
         const auto type = prm.second.type;
         const auto &value = prm.second.value;
