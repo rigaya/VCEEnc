@@ -10,6 +10,7 @@
 // SPP_SHARED_BLOCK_NUM_X
 // SPP_SHARED_BLOCK_NUM_Y
 // SPP_LOOP_COUNT_BLOCK
+// DCT_IDCT_BARRIER
 
 #if usefp16Dct || usefp16IO
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
@@ -117,16 +118,16 @@ void CUDAsubroutineInplaceIDCTvector(__local TypeDct *Vect0, const int Step) {
 //なので、計算の有無はenableフラグで切り替える
 void dct8x8(bool enable, __local TypeDct shared_tmp[8][9], int thWorker) {
     if (enable) CUDAsubroutineInplaceDCTvector((__local TypeDct *)&shared_tmp[thWorker][0], 1); // row
-    barrier(CLK_LOCAL_MEM_FENCE);
+    if (DCT_IDCT_BARRIER) barrier(CLK_LOCAL_MEM_FENCE);
     if (enable) CUDAsubroutineInplaceDCTvector((__local TypeDct *)&shared_tmp[0][thWorker], 9); // column
-    barrier(CLK_LOCAL_MEM_FENCE);
+    if (DCT_IDCT_BARRIER) barrier(CLK_LOCAL_MEM_FENCE);
 }
 
 void idct8x8(bool enable, __local TypeDct shared_tmp[8][9], int thWorker) {
     if (enable) CUDAsubroutineInplaceIDCTvector((__local TypeDct *)&shared_tmp[0][thWorker], 9); // column
-    barrier(CLK_LOCAL_MEM_FENCE);
+    if (DCT_IDCT_BARRIER) barrier(CLK_LOCAL_MEM_FENCE);
     if (enable) CUDAsubroutineInplaceIDCTvector((__local TypeDct *)&shared_tmp[thWorker][0], 1); // row
-    barrier(CLK_LOCAL_MEM_FENCE);
+    if (DCT_IDCT_BARRIER) barrier(CLK_LOCAL_MEM_FENCE);
 }
 float calcThreshold(const float qp, const float threshA, const float threshB) {
     return clamp(threshA * qp + threshB, 0.0f, qp);
