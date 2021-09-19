@@ -113,17 +113,19 @@ void CUDAsubroutineInplaceIDCTvector(__local TypeDct *Vect0, const int Step) {
     (*Vect6) = (TypeDct)(C_norm) * (Y04M2e6bMP - Y1c7dM3f5aPM);
 }
 
-void dct8x8(__local TypeDct shared_tmp[8][9], int thWorker) {
-    CUDAsubroutineInplaceDCTvector((__local TypeDct *)&shared_tmp[thWorker][0], 1); // row
+//こうしたバリアには全スレッドが通るようにしないとRX5500などでは正常に動作しない (他の箇所でbarrierしても意味がない)
+//なので、計算の有無はenableフラグで切り替える
+void dct8x8(bool enable, __local TypeDct shared_tmp[8][9], int thWorker) {
+    if (enable) CUDAsubroutineInplaceDCTvector((__local TypeDct *)&shared_tmp[thWorker][0], 1); // row
     barrier(CLK_LOCAL_MEM_FENCE);
-    CUDAsubroutineInplaceDCTvector((__local TypeDct *)&shared_tmp[0][thWorker], 9); // column
+    if (enable) CUDAsubroutineInplaceDCTvector((__local TypeDct *)&shared_tmp[0][thWorker], 9); // column
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 
-void idct8x8(__local TypeDct shared_tmp[8][9], int thWorker) {
-    CUDAsubroutineInplaceIDCTvector((__local TypeDct *)&shared_tmp[0][thWorker], 9); // column
+void idct8x8(bool enable, __local TypeDct shared_tmp[8][9], int thWorker) {
+    if (enable) CUDAsubroutineInplaceIDCTvector((__local TypeDct *)&shared_tmp[0][thWorker], 9); // column
     barrier(CLK_LOCAL_MEM_FENCE);
-    CUDAsubroutineInplaceIDCTvector((__local TypeDct *)&shared_tmp[thWorker][0], 1); // row
+    if (enable) CUDAsubroutineInplaceIDCTvector((__local TypeDct *)&shared_tmp[thWorker][0], 1); // row
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 float calcThreshold(const float qp, const float threshA, const float threshB) {
@@ -295,20 +297,21 @@ __kernel void kernel_smooth(
             //1warp(subgroup)=16threadの場合には対応できない
             int target_bx = (local_bx < 4) ? local_bx : local_bx + 1;
             load_8x8tmp(shared_tmp[local_bx], shared_in, thWorker, target_bx, local_by, offset1_x, offset1_y, offset2_x, offset2_y);
-            dct8x8(shared_tmp[local_bx], thWorker);
+            dct8x8(true, shared_tmp[local_bx], thWorker);
             threshold8x8(shared_tmp[local_bx], thWorker, threshold);
-            idct8x8(shared_tmp[local_bx], thWorker);
+            idct8x8(true, shared_tmp[local_bx], thWorker);
             add_8x8tmp(shared_out, shared_tmp[local_bx], thWorker, target_bx, local_by, offset1_x, offset1_y, offset2_x, offset2_y);
             if (usefp16Dct) {
                 barrier(CLK_LOCAL_MEM_FENCE);
             }
-            if (local_bx < 1) {
+            { // あまったブロックの処理
+                const bool enable = local_bx < 1;
                 target_bx = 4;
-                load_8x8tmp(shared_tmp[local_bx], shared_in, thWorker, target_bx, local_by, offset1_x, offset1_y, offset2_x, offset2_y);
-                dct8x8(shared_tmp[local_bx], thWorker);
-                threshold8x8(shared_tmp[local_bx], thWorker, threshold);
-                idct8x8(shared_tmp[local_bx], thWorker);
-                add_8x8tmp(shared_out, shared_tmp[local_bx], thWorker, target_bx, local_by, offset1_x, offset1_y, offset2_x, offset2_y);
+                if (enable) load_8x8tmp(shared_tmp[local_bx], shared_in, thWorker, target_bx, local_by, offset1_x, offset1_y, offset2_x, offset2_y);
+                dct8x8(enable, shared_tmp[local_bx], thWorker);
+                if (enable) threshold8x8(shared_tmp[local_bx], thWorker, threshold);
+                idct8x8(enable, shared_tmp[local_bx], thWorker);
+                if (enable) add_8x8tmp(shared_out, shared_tmp[local_bx], thWorker, target_bx, local_by, offset1_x, offset1_y, offset2_x, offset2_y);
             }
             barrier(CLK_LOCAL_MEM_FENCE);
         }
