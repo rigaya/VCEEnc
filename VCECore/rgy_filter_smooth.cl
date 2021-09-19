@@ -188,12 +188,12 @@ void zero_8x8(__local TypeIO shared_out[8 * SPP_SHARED_BLOCK_NUM_Y][8 * SPP_SHAR
 void load_8x8tmp(__local TypeDct shared_tmp[8][9], __local TypeIO shared_in[8 * SPP_SHARED_BLOCK_NUM_Y][8 * SPP_SHARED_BLOCK_NUM_X], int thWorker, int shared_bx, int shared_by, int offset1_x, int offset1_y, int offset2_x, int offset2_y) {
     #pragma unroll
     for (int y = 0; y < 8; y++) {
-        float v0 = SIN(shared_bx * 8 + offset1_x + thWorker, shared_by * 8 + offset1_y + y);
+        TypeIO v0 = SIN(shared_bx * 8 + offset1_x + thWorker, shared_by * 8 + offset1_y + y);
 #if usefp16Dct
-        float v1 = SIN(shared_bx * 8 + offset2_x + thWorker, shared_by * 8 + offset2_y + y);
+        TypeIO v1 = SIN(shared_bx * 8 + offset2_x + thWorker, shared_by * 8 + offset2_y + y);
         STMP(thWorker, y) = (half2)(v0, v1);
 #else
-        STMP(thWorker, y) = v0;
+        STMP(thWorker, y) = (TypeDct)v0;
 #endif
     }
 }
@@ -220,7 +220,7 @@ void store_8x8(__global char *pDst, int dstPitch, int dstWidth, int dstHeight, _
         #pragma unroll
         for (int y = 0; y < 8; y++, ptrDst += dstPitch) {
             if (y < y_max) {
-                *(__global TypePixel *)ptrDst = (TypePixel)clamp(SOUT(shared_bx * 8 + thWorker, shared_by * 8 + y) * (float)(1 << (bit_depth - quality)), 0.0f, (float)((1 << bit_depth) - 0.5f));
+                *(__global TypePixel *)ptrDst = (TypePixel)clamp((float)SOUT(shared_bx * 8 + thWorker, shared_by * 8 + y) * (float)(1 << (bit_depth - quality)), 0.0f, (float)((1 << bit_depth) - 0.5f));
             }
         }
     }
