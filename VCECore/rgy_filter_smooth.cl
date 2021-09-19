@@ -115,12 +115,16 @@ void CUDAsubroutineInplaceIDCTvector(__local TypeDct *Vect0, const int Step) {
 
 void dct8x8(__local TypeDct shared_tmp[8][9], int thWorker) {
     CUDAsubroutineInplaceDCTvector((__local TypeDct *)&shared_tmp[thWorker][0], 1); // row
+    barrier(CLK_LOCAL_MEM_FENCE);
     CUDAsubroutineInplaceDCTvector((__local TypeDct *)&shared_tmp[0][thWorker], 9); // column
+    barrier(CLK_LOCAL_MEM_FENCE);
 }
 
 void idct8x8(__local TypeDct shared_tmp[8][9], int thWorker) {
     CUDAsubroutineInplaceIDCTvector((__local TypeDct *)&shared_tmp[0][thWorker], 9); // column
+    barrier(CLK_LOCAL_MEM_FENCE);
     CUDAsubroutineInplaceIDCTvector((__local TypeDct *)&shared_tmp[thWorker][0], 1); // row
+    barrier(CLK_LOCAL_MEM_FENCE);
 }
 float calcThreshold(const float qp, const float threshA, const float threshB) {
     return clamp(threshA * qp + threshB, 0.0f, qp);
