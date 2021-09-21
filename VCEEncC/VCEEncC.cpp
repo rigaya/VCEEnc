@@ -42,6 +42,7 @@
 #include "rgy_util.h"
 #include "rgy_filesystem.h"
 #include "rgy_avutil.h"
+#include "rgy_opencl.h"
 
 static void show_version() {
     _ftprintf(stdout, _T("%s\n"), GetVCEEncVersion().c_str());
@@ -153,6 +154,11 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1) {
             }
         }
         show_vce_features(deviceid);
+        return 1;
+    }
+    if (0 == _tcscmp(option_name, _T("check-clinfo"))) {
+        tstring str = getOpenCLInfo(CL_DEVICE_TYPE_GPU);
+        _ftprintf(stdout, _T("%s\n"), str.c_str());
         return 1;
     }
 #if ENABLE_AVSW_READER

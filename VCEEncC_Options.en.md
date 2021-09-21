@@ -81,6 +81,9 @@ Check whether the specified device is able to run VCEEnc. DeviceID: "0" will be 
 ### --check-features [&lt;int&gt;]
 Show the information of features of the specified device. DeviceID: "0" will be checked if not specified.
 
+### --check-clinfo
+Show OpenCL information.
+
 ### --check-codecs, --check-decoders, --check-encoders
 Show available audio codec names
 

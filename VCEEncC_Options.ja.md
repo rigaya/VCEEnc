@@ -99,6 +99,9 @@ remuxer.exe -i "<video mp4file>" -i "<m4a(ALAC in mp4)file>" -o "<muxed mp4 file
 ### --check-features [&lt;int&gt;]
 VCEEncの使用可能なエンコード機能を表示する。数字でDeviceIDを指定できる。省略した場合は"0"。
 
+### --check-clinfo
+OpenCLの情報を表示
+
 ### --check-codecs, --check-decoders, --check-encoders
 利用可能な音声コーデック名を表示
 

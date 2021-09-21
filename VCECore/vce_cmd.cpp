@@ -131,6 +131,7 @@ tstring encoder_help() {
         _T("                                 as an option, you can specify device id to check.\n")
         _T("   --check-features [<int>]     check features of vce support for default device.\n")
         _T("                                 as an option, you can specify device id to check.\n")
+        _T("   --check-clinfo               check OpenCL info\n")
 #if ENABLE_AVSW_READER
         _T("   --check-avversion            show dll version\n")
         _T("   --check-codecs               show codecs available\n")
