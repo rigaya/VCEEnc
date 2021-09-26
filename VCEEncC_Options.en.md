@@ -1623,6 +1623,12 @@ Select the level of log output.
 - debug ... Output additional information, mainly for debug
 - trace ... Output information for each frame (slow)
 
+### --log-opt [<param1>[=<value>]][,<param2>[=<value>]][]...
+additional options for log output.
+**parameters**
+- addtime (default=off)  
+  Add time of to each line of the log.
+
 ### --log-framelist
 FOR DEBUG ONLY! Output debug log for avsw/avhw reader.
 
