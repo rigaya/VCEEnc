@@ -17,10 +17,10 @@ VCEEncC.exe … 単体で実行できるコマンドライン版です。
 ## インストール
 インストール方法は[こちら](./Install.ja.md)。
 
-## 基本動作環境
+## 想定動作環境
 
 ### Windows
-Windows 10 (x86/x64)  
+Windows 10/11 (x86/x64)  
 Aviutl 1.00 以降 (VCEEnc.auo)  
 VCEが載ったハードウェア  
   AMD製 GPU Radeon HD 7xxx以降  

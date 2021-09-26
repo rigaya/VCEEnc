@@ -22,7 +22,7 @@ VCEEnc.auo … Output plugin for [Aviutl](http://spring-fragrance.mints.ne.jp/av
 ## System Requirements
 
 ### Windows
-Windows 10 (x86 / x64)  
+Windows 10/11 (x86 / x64)  
 Aviutl 1.00 or later (VCEEnc.auo)  
 Hardware which supports VCE  
   AMD GPU Radeon HD 7xxx or later  
