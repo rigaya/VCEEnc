@@ -310,6 +310,7 @@ RGY_ERR VCECore::initPerfMonitor(VCEParam *prm) {
 #else
         nullptr,
 #endif
+        prm->ctrl.threadAffinity.get(RGYThreadType::PERF_MONITOR),
         m_pLog, &perfMonitorPrm)) {
         PrintMes(RGY_LOG_WARN, _T("Failed to initialize performance monitor, disabled.\n"));
         m_pPerfMonitor.reset();
@@ -2259,6 +2260,7 @@ RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
         param->frameOut.mem_type = RGY_MEM_TYPE_GPU;
         param->baseFps = m_encFps;
         param->bOutOverwrite = false;
+        param->threadAffinityCompare = prm->ctrl.threadAffinity.get(RGYThreadType::VIDEO_QUALITY);;
         param->metric = prm->common.metric;
         auto sts = filterSsim->init(param, m_pLog);
         if (sts != RGY_ERR_NONE) {
@@ -2276,6 +2278,14 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
+    if (const auto affinity = prm->ctrl.threadAffinity.get(RGYThreadType::PROCESS); affinity.mode != RGYThreadAffinityMode::ALL) {
+        SetProcessAffinityMask(GetCurrentProcess(), affinity.getMask());
+        PrintMes(RGY_LOG_DEBUG, _T("Set Process Affinity Mask: %s (0x%llx).\n"), affinity.to_string().c_str(), affinity.getMask());
+    }
+    if (const auto affinity = prm->ctrl.threadAffinity.get(RGYThreadType::MAIN); affinity.mode != RGYThreadAffinityMode::ALL) {
+        SetThreadAffinityMask(GetCurrentThread(), affinity.getMask());
+        PrintMes(RGY_LOG_DEBUG, _T("Set Main thread Affinity Mask: %s (0x%llx).\n"), affinity.to_string().c_str(), affinity.getMask());
+    }
     // VCE関連の初期化前にカウンターを起動しないと、COM周りのエラーで正常に取得できなくなる場合がある
     // そのため、AMF関係の初期化前にperf counterを初期化する
     m_pPerfMonitor = std::make_unique<CPerfMonitor>();

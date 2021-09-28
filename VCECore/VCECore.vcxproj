@@ -242,6 +242,7 @@
     </ClCompile>
     <ClCompile Include="rgy_simd.cpp" />
     <ClCompile Include="rgy_status.cpp" />
+    <ClCompile Include="rgy_thread_affinity.cpp" />
     <ClCompile Include="rgy_timecode.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -461,6 +462,7 @@
     <ClInclude Include="rgy_stream.h" />
     <ClInclude Include="rgy_tchar.h" />
     <ClInclude Include="rgy_thread.h" />
+    <ClInclude Include="rgy_thread_affinity.h" />
     <ClInclude Include="rgy_timecode.h" />
     <ClInclude Include="rgy_util.h" />
     <ClInclude Include="rgy_vulkan.h" />
