@@ -1010,6 +1010,9 @@ public:
     RGY_ERR setBuf(const void *pattern, size_t pattern_size, size_t fill_size_byte, RGYCLBuf *buf, RGYOpenCLQueue &queue);
     RGY_ERR setBuf(const void *pattern, size_t pattern_size, size_t fill_size_byte, RGYCLBuf *buf, RGYOpenCLQueue &queue, RGYOpenCLEvent *event);
     RGY_ERR setBuf(const void *pattern, size_t pattern_size, size_t fill_size_byte, RGYCLBuf *buf, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event = nullptr);
+    std::string cspCopyOptions(const RGYFrameInfo& dst, const RGYFrameInfo& src) const;
+    void requestCSPCopy(const RGYFrameInfo& dst, const RGYFrameInfo& src);
+    RGYOpenCLProgram *getCspCopyProgram(const RGYFrameInfo& dst, const RGYFrameInfo& src);
 protected:
     unique_ptr<RGYOpenCLProgram> build(const char *data, const size_t size, const char *options);
 
@@ -1017,13 +1020,7 @@ protected:
     unique_context m_context;
     std::vector<RGYOpenCLQueue> m_queue;
     shared_ptr<RGYLog> m_log;
-    unique_ptr<RGYOpenCLProgram> m_copyI2B;
-    unique_ptr<RGYOpenCLProgram> m_copyB2I;
-    unique_ptr<RGYOpenCLProgram> m_copyB2B;
-    unique_ptr<RGYOpenCLProgram> m_copyI2I;
-    unique_ptr<RGYOpenCLProgram> m_setB;
-    unique_ptr<RGYOpenCLProgram> m_setI;
-    std::map<std::string, unique_ptr<RGYOpenCLProgram>> m_copyNV12;
+    std::unordered_map<std::string, std::unique_ptr<RGYOpenCLProgram>> m_copy;
 };
 
 class RGYOpenCL {
