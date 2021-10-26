@@ -107,6 +107,7 @@ EXTRALDFLAGS=""
 SRCS=""
 X86_64=1
 NO_RDTSCP_INTRIN=0
+ENABLE_LTO=0
 
 ENABLE_CPP_REGEX=1
 
@@ -158,6 +159,7 @@ options:
   --cxx=CXX                set C++ compiler path [${CXX}]
   --pkg-config=PKGCONFIG   set pkg-config path [${PKGCONFIG}]
   --enable-debug           compile in debug configuration [${ENABLE_DEBUG}]
+  --enable-lto             compile with lto [${ENABLE_LTO}]
 
   --opencl-headers         set opencl headers path [${OPENCL_HEADERS}]
   --vulkan-headers         set vulkan headers path [${VULKAN_HEADERS}]
@@ -206,6 +208,9 @@ for opt; do
             ;;
         --enable-debug)
             ENABLE_DEBUG=1
+            ;;
+        --enable-lto)
+            ENABLE_LTO=1
             ;;
         --opencl-headers=*)
             OPENCL_HEADERS="$optarg"
@@ -370,6 +375,11 @@ else
         cnf_write "yes"
     fi
     LDFLAGS="$LDFLAGS -Wl,-s"
+
+	if [ $ENABLE_LTO -ne 0 ]; then
+		CXXFLAGS="$CXXFLAGS -flto"
+		LDFLAGS="$LDFLAGS -flto"
+	fi
 fi
 
 cnf_print "checking for pkg-config..."
