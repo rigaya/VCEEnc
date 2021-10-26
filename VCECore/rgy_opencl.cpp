@@ -1762,7 +1762,7 @@ std::string RGYOpenCLContext::cspCopyOptions(const RGYFrameInfo& dst, const RGYF
 void RGYOpenCLContext::requestCSPCopy(const RGYFrameInfo& dst, const RGYFrameInfo& src) {
     const auto options = cspCopyOptions(dst, src);
     if (m_copy.count(options) == 0) {
-        m_copy[options] = buildResource(_T("RGY_FILTER_CL"), _T("EXE_DATA"), options.c_str());
+        m_copy[options].set(buildResourceAsync(_T("RGY_FILTER_CL"), _T("EXE_DATA"), options.c_str()));
     }
 }
 
@@ -2102,11 +2102,12 @@ RGY_ERR RGYOpenCLContext::setBuf(const void *pattern, size_t pattern_size, size_
     return RGY_ERR_NONE;
 }
 
-unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::build(const char *data, const size_t size, const char *options) {
-    if (data == nullptr || size == 0) {
+std::unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::buildProgram(const std::string datacopy, const std::string options) {
+    auto datalen = datacopy.length();
+    if (datacopy.size() == 0) {
         return nullptr;
     }
-    auto datalen = size;
+    const char *data = datacopy.data();
     {
         const uint8_t *ptr = (const uint8_t *)data;
         if (ptr[0] == 0xEF && ptr[1] == 0xBB && ptr[2] == 0xBF) { //skip UTF-8 BOM
@@ -2126,7 +2127,7 @@ unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::build(const char *data, const siz
         CL_LOG(RGY_LOG_ERROR, _T("Error (clCreateProgramWithSource): %s\n"), cl_errmes(err));
         return nullptr;
     }
-    err = clBuildProgram(program, (cl_uint)m_platform->devs().size(), m_platform->devs().data(), options, NULL, NULL);
+    err = clBuildProgram(program, (cl_uint)m_platform->devs().size(), m_platform->devs().data(), options.c_str(), NULL, NULL);
     if (err != CL_SUCCESS || m_log->getLogLevel(RGY_LOGT_VPP_BUILD) <= RGY_LOG_DEBUG) {
         const auto loglevel = (err != CL_SUCCESS) ? RGY_LOG_ERROR : RGY_LOG_DEBUG;
 
@@ -2150,12 +2151,15 @@ unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::build(const char *data, const siz
     return std::make_unique<RGYOpenCLProgram>(program, m_log);
 }
 
-unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::build(const std::string &source, const char *options) {
-    const uint8_t* ptr = (const uint8_t*)source.c_str();
-    return build((const char*)ptr, source.length(), options);
+std::unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::build(const std::string &source, const char *options) {
+    return buildProgram(source, options);
 }
 
-unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::buildFile(const tstring& filename, const char *options) {
+std::future<std::unique_ptr<RGYOpenCLProgram>> RGYOpenCLContext::buildAsync(const std::string &source, const char *options) {
+    return std::async(std::launch::async, &RGYOpenCLContext::buildProgram, this, std::string(source), std::string(options));
+}
+
+std::unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::buildFile(const tstring filename, const std::string options) {
     std::ifstream inputFile(filename);
     if (inputFile.bad()) {
         CL_LOG(RGY_LOG_ERROR, _T("Failed to open source file \"%s\".\n"), filename.c_str());
@@ -2166,19 +2170,27 @@ unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::buildFile(const tstring& filename
     std::istreambuf_iterator<char> data_end;
     std::string source = std::string(data_begin, data_end);
     inputFile.close();
-    return build(source, options);
+    return buildProgram(source, options);
 }
 
-unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::buildResource(const TCHAR *name, const TCHAR *type, const char *options) {
+std::future<std::unique_ptr<RGYOpenCLProgram>> RGYOpenCLContext::buildFileAsync(const tstring& filename, const char *options) {
+    return std::async(std::launch::async, &RGYOpenCLContext::buildFile, this, tstring(filename), std::string(options));
+}
+
+std::unique_ptr<RGYOpenCLProgram> RGYOpenCLContext::buildResource(const tstring name, const tstring type, const std::string options) {
     void *data = nullptr;
-    CL_LOG(RGY_LOG_DEBUG, _T("Load resource type: %s, name: %s\n"), type, name);
-    int size = getEmbeddedResource(&data, name, type);
+    CL_LOG(RGY_LOG_DEBUG, _T("Load resource type: %s, name: %s\n"), type.c_str(), name.c_str());
+    int size = getEmbeddedResource(&data, name.c_str(), type.c_str());
     if (data == nullptr || size == 0) {
-        CL_LOG(RGY_LOG_ERROR, _T("Failed to load resource [%s] %s\n"), type, name);
+        CL_LOG(RGY_LOG_ERROR, _T("Failed to load resource [%s] %s\n"), type.c_str(), name.c_str());
         return nullptr;
     }
-    CL_LOG(RGY_LOG_DEBUG, _T("Loaded resource type: %s, name: %s, size = %d\n"), type, name, size);
-    return build((const char *)data, size, options);
+    CL_LOG(RGY_LOG_DEBUG, _T("Loaded resource type: %s, name: %s, size = %d\n"), type.c_str(), name.c_str(), size);
+    return buildProgram(std::string((const char *)data, size), std::string(options));
+}
+
+std::future<std::unique_ptr<RGYOpenCLProgram>> RGYOpenCLContext::buildResourceAsync(const TCHAR *name, const TCHAR *type, const char *options) {
+    return std::async(std::launch::async, &RGYOpenCLContext::buildResource, this, tstring(name), tstring(type), std::string(options));
 }
 
 std::unique_ptr<RGYCLBuf> RGYOpenCLContext::createBuffer(size_t size, cl_mem_flags flags, void *host_ptr) {
@@ -2190,7 +2202,7 @@ std::unique_ptr<RGYCLBuf> RGYOpenCLContext::createBuffer(size_t size, cl_mem_fla
     return std::make_unique<RGYCLBuf>(mem, flags, size);
 }
 
-unique_ptr<RGYCLBuf> RGYOpenCLContext::copyDataToBuffer(const void *host_ptr, size_t size, cl_mem_flags flags, cl_command_queue queue) {
+std::unique_ptr<RGYCLBuf> RGYOpenCLContext::copyDataToBuffer(const void *host_ptr, size_t size, cl_mem_flags flags, cl_command_queue queue) {
     auto buffer = createBuffer(size, flags);
     if (buffer != nullptr) {
         cl_int err = clEnqueueWriteBuffer((queue != RGYDefaultQueue) ? queue : m_queue[0].get(), buffer->mem(), true, 0, size, host_ptr, 0, nullptr, nullptr);
@@ -2230,7 +2242,7 @@ RGY_ERR RGYOpenCLContext::createImageFromPlane(cl_mem &image, cl_mem buffer, int
     return err_cl_to_rgy(err);
 }
 
-unique_ptr<RGYCLFrame> RGYOpenCLContext::createImageFromFrameBuffer(const RGYFrameInfo &frame, bool normalized, cl_mem_flags flags) {
+std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createImageFromFrameBuffer(const RGYFrameInfo &frame, bool normalized, cl_mem_flags flags) {
     RGYFrameInfo frameImage = frame;
     frameImage.mem_type = RGY_MEM_TYPE_GPU_IMAGE;
 
@@ -2317,7 +2329,7 @@ std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const RGYFrameIn
     return std::make_unique<RGYCLFrame>(clframe, flags);
 }
 
-unique_ptr<RGYCLFrameInterop> RGYOpenCLContext::createFrameFromD3D9Surface(void *surf, HANDLE shared_handle, const RGYFrameInfo &frame, RGYOpenCLQueue& queue, cl_mem_flags flags) {
+std::unique_ptr<RGYCLFrameInterop> RGYOpenCLContext::createFrameFromD3D9Surface(void *surf, HANDLE shared_handle, const RGYFrameInfo &frame, RGYOpenCLQueue& queue, cl_mem_flags flags) {
 #if !ENABLE_RGY_OPENCL_D3D9
     CL_LOG(RGY_LOG_ERROR, _T("OpenCL d3d9 interop not supported in this build.\n"));
     return std::unique_ptr<RGYCLFrameInterop>();
@@ -2353,7 +2365,7 @@ unique_ptr<RGYCLFrameInterop> RGYOpenCLContext::createFrameFromD3D9Surface(void 
 #endif
 }
 
-unique_ptr<RGYCLFrameInterop> RGYOpenCLContext::createFrameFromD3D11Surface(void *surf, const RGYFrameInfo &frame, RGYOpenCLQueue& queue, cl_mem_flags flags) {
+std::unique_ptr<RGYCLFrameInterop> RGYOpenCLContext::createFrameFromD3D11Surface(void *surf, const RGYFrameInfo &frame, RGYOpenCLQueue& queue, cl_mem_flags flags) {
 #if !ENABLE_RGY_OPENCL_D3D11
     CL_LOG(RGY_LOG_ERROR, _T("OpenCL d3d11 interop not supported in this build.\n"));
     return std::unique_ptr<RGYCLFrameInterop>();
@@ -2387,7 +2399,7 @@ unique_ptr<RGYCLFrameInterop> RGYOpenCLContext::createFrameFromD3D11Surface(void
 #endif
 }
 
-unique_ptr<RGYCLFrameInterop> RGYOpenCLContext::createFrameFromVASurface(void *surf, const RGYFrameInfo &frame, RGYOpenCLQueue& queue, cl_mem_flags flags) {
+std::unique_ptr<RGYCLFrameInterop> RGYOpenCLContext::createFrameFromVASurface(void *surf, const RGYFrameInfo &frame, RGYOpenCLQueue& queue, cl_mem_flags flags) {
 #if !ENABLE_RGY_OPENCL_VA
     UNREFERENCED_PARAMETER(surf);
     UNREFERENCED_PARAMETER(frame);

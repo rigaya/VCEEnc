@@ -565,6 +565,8 @@ RGY_ERR RGYFilterCspCrop::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGY
         return RGY_ERR_INVALID_PARAM;
     }
 
+    m_cl->requestCSPCopy(pCropParam->frameOut, pCropParam->frameIn);
+
     auto err = AllocFrameBuf(pCropParam->frameOut, 1);
     if (err != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("failed to allocate memory: %s.\n"), get_err_mes(err));

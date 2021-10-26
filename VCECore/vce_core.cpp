@@ -672,6 +672,7 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
 #pragma warning(pop)
 
 RGY_ERR VCECore::initConverter(VCEParam *prm) {
+#if 0 //現状使用していない
     const auto formatOut = csp_rgy_to_enc(GetEncoderCSP(prm));
     if (prm->input.dstWidth == prm->input.srcWidth
         && prm->input.dstHeight == prm->input.srcHeight
@@ -699,6 +700,7 @@ RGY_ERR VCECore::initConverter(VCEParam *prm) {
         return err_to_rgy(res);
     }
     PrintMes(RGY_LOG_DEBUG, _T("initialized converter.\n"));
+#endif
     return RGY_ERR_NONE;
 }
 
@@ -897,7 +899,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             param->frameIn = inputFrame;
             param->frameOut = inputFrame;
             param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
+            param->bOutOverwrite = true;
             auto sts = filter->init(param, m_pLog);
             if (sts != RGY_ERR_NONE) {
                 return sts;
