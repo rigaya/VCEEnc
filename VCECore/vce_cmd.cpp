@@ -161,6 +161,7 @@ tstring encoder_help() {
         _T("   --output-depth <int>         set output bit depth\n")
         _T("   --qp-max <int>               set max qp\n")
         _T("   --qp-min <int>               set min qp\n")
+        _T("   --qvbr-quality <int>         set QVBR level (0 - 51)\n")
         _T("-b,--bframes <int>              set consecutive b frames (default: %d)\n")
         _T("   --(no-)b-pyramid             enable b-pyramid feature\n")
         _T("   --b-deltaqp <int>            set qp offset for non-ref b frames\n")
@@ -445,6 +446,20 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         pParams->rateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR;
         pParams->nBitrate = value;
+        return 0;
+    }
+    if (IS_OPTION("qvbr-quality")) {
+        i++;
+        int value = 0;
+        if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
+        } else if (value < 0) {
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("qvbr-quality should be positive value."));
+            return 1;
+        }
+        pParams->rateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR;
+        pParams->qvbrLevel = value;
         return 0;
     }
     if (IS_OPTION("qp-max")) {
@@ -1006,6 +1021,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
         OPT_QP(_T("--cqp"), nQPI, nQPP, nQPB, true, true);
     } else if (pParams->rateControl == get_codec_qvbr(pParams->codec)) {
         cmd << _T(" --qvbr ") << pParams->nBitrate;
+        cmd << _T(" --qvbr-quality ") << pParams->qvbrLevel;
     }
     OPT_NUM(_T("--output-depth"), outputDepth);
     if (pParams->rateControl != get_codec_cqp(pParams->codec) || save_disabled_prm) {

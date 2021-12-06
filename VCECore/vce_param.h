@@ -107,6 +107,7 @@ const CX_DESC list_avc_level[] = {
 
 const CX_DESC list_hevc_profile[] = {
     { _T("main"),     AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN },
+    { _T("main10"),   AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN_10 },
     { NULL, 0 }
 };
 
@@ -357,6 +358,7 @@ struct VCEParam {
     int     usage;
     int     rateControl;
     int     qualityPreset;
+    int     qvbrLevel;
     int     nBitrate;
     int     nMaxBitrate;
     int     nVBVBufferSize;

@@ -584,6 +584,15 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
 #endif
         prm->bVBAQ = 0;
     }
+    if (prm->codec == RGY_CODEC_HEVC) {
+        if (prm->codecParam[prm->codec].nProfile == AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN_10) {
+            prm->outputDepth = 10;
+        }
+        //RX5500XTがmain10をサポートしないと返したりするので、ここはひとまず無効化する
+        //if (prm->outputDepth == 10) {
+        //    prm->codecParam[prm->codec].nProfile = AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN_10;
+        //}
+    }
     if (prm->nBframes > 0 && prm->codec == RGY_CODEC_HEVC) {
         PrintMes(RGY_LOG_WARN, _T("Bframes is not supported with HEVC encoding, disabled.\n"));
         prm->nBframes = 0;
@@ -1764,6 +1773,8 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_INSERT_AUD(prm->codec),                     false);
     if (prm->codec == RGY_CODEC_H264) {
         //m_params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), (prm->preAnalysis) ? AMF_VIDEO_ENCODER_PREENCODE_ENABLED : AMF_VIDEO_ENCODER_PREENCODE_DISABLED);
+
+        m_params.SetParam(AMF_VIDEO_ENCODER_QVBR_QUALITY_LEVEL, (amf_int64)prm->qvbrLevel);
 
         m_params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)((m_picStruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
 
@@ -3323,10 +3334,15 @@ tstring VCECore::GetEncoderParam() {
         }
         mes += _T("\n");
     } else {
-        mes += strsprintf(_T("%s:           %d kbps, Max %d kbps\n"),
-            getPropertyDesc(AMF_PARAM_RATE_CONTROL_METHOD(m_encCodec), get_rc_method(m_encCodec)).c_str(),
-            GetPropertyInt(AMF_PARAM_TARGET_BITRATE(m_encCodec)) / 1000,
-            GetPropertyInt(AMF_PARAM_PEAK_BITRATE(m_encCodec)) / 1000);
+        {
+            mes += strsprintf(_T("%s:           %d kbps\n"),
+                getPropertyDesc(AMF_PARAM_RATE_CONTROL_METHOD(m_encCodec), get_rc_method(m_encCodec)).c_str(),
+                GetPropertyInt(AMF_PARAM_TARGET_BITRATE(m_encCodec)) / 1000);
+        }
+        if (GetPropertyInt(AMF_PARAM_RATE_CONTROL_METHOD(m_encCodec)) == AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR) {
+            mes += strsprintf(_T("QVBR level:   %d\n"), GetPropertyInt(AMF_VIDEO_ENCODER_QVBR_QUALITY_LEVEL));
+        }
+        mes += strsprintf(_T("Max bitrate:   %d kbps\n"), GetPropertyInt(AMF_PARAM_PEAK_BITRATE(m_encCodec)) / 1000);
         mes += strsprintf(_T("QP:            Min: %d, Max: %d\n"),
             GetPropertyInt(AMF_PARAM_MIN_QP(m_encCodec)),
             GetPropertyInt(AMF_PARAM_MAX_QP(m_encCodec)));

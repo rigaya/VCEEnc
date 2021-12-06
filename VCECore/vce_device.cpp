@@ -429,11 +429,13 @@ tstring VCEDevice::QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
 
     amf_uint32 maxProfile = 0;
     encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_PROFILE(codec), &maxProfile);
-    str += _T("max profile:     ") + tstring(get_cx_desc(get_profile_list(codec), maxProfile)) + _T("\n");
+    auto profile_desc = get_cx_desc(get_profile_list(codec), maxProfile);
+    str += _T("max profile:     ") + tstring(profile_desc ? profile_desc : _T("unknown")) + _T("\n");
 
     amf_uint32 maxLevel = 0;
     encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_LEVEL(codec), &maxLevel);
-    str += _T("max level:       ") + tstring(get_cx_desc(get_level_list(codec), maxLevel)) + _T("\n");
+    auto level_desc = get_cx_desc(get_profile_list(codec), maxProfile);
+    str += _T("max level:       ") + tstring(level_desc ? level_desc : _T("unknown")) + _T("\n");
 
     amf_uint32 maxBitrate = 0;
     encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_BITRATE(codec), &maxBitrate);

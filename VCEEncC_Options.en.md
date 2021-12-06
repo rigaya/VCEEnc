@@ -280,6 +280,9 @@ Set the maximum QP value to &lt;I frame&gt;:&lt;P frame&gt;:&lt;B frame&gt;. Thi
 
 It could be used to maintain certain degree of image quality in any part of the video, even if doing so may exceed the specified bitrate.
 
+### --qvbr-quality &lt;int&gt;
+Set quality level (0-51) for QVBR mode (Quality based VBR).
+
 ### --gop-len &lt;int&gt;
 Set maximum GOP length. When lookahead is off, this value will always be used. (Not variable, fixed GOP)
 
