@@ -293,6 +293,40 @@ RGY_ERR VCECore::initLog(VCEParam *prm) {
     return RGY_ERR_NONE;
 }
 
+//Power throttolingは消費電力削減に有効だが、
+//fpsが高い場合やvppフィルタを使用する場合は、速度に悪影響がある場合がある
+//そのあたりを適当に考慮し、throttolingのauto/onを自動的に切り替え
+RGY_ERR VCECore::initPowerThrottoling(VCEParam *prm) {
+    //解像度が低いほど、fpsが出やすい
+    int score_resolution = 0;
+    const int outputResolution = m_encWidth * m_encHeight;
+    if (outputResolution <= 1024 * 576) {
+        score_resolution += 4;
+    } else if (outputResolution <= 1280 * 720) {
+        score_resolution += 3;
+    } else if (outputResolution <= 1920 * 1080) {
+        score_resolution += 2;
+    } else if (outputResolution <= 2560 * 1440) {
+        score_resolution += 1;
+    }
+    const bool speedLimit = prm->ctrl.procSpeedLimit > 0 && prm->ctrl.procSpeedLimit <= 240;
+    const int score = (speedLimit) ? 0 : score_resolution;
+
+    //一定以上のスコアなら、throttolingをAuto、それ以外はthrottolingを有効にして消費電力を削減
+    const int score_threshold = 3;
+    const auto mode = (score >= score_threshold) ? RGYThreadPowerThrottlingMode::Auto : RGYThreadPowerThrottlingMode::Enabled;
+    PrintMes(RGY_LOG_DEBUG, _T("selected mode %s : score %d: resolution %d, speed limit %s.\n"),
+        rgy_thread_power_throttoling_mode_to_str(mode), score, score_resolution, speedLimit ? _T("on") : _T("off"));
+
+    for (int i = (int)RGYThreadType::ALL + 1; i < (int)RGYThreadType::END; i++) {
+        auto& target = prm->ctrl.threadParams.get((RGYThreadType)i);
+        if (target.throttling == RGYThreadPowerThrottlingMode::Unset) {
+            target.throttling = mode;
+        }
+    }
+    return RGY_ERR_NONE;
+}
+
 RGY_ERR VCECore::initPerfMonitor(VCEParam *prm) {
     const bool bLogOutput = prm->ctrl.perfMonitorSelect || prm->ctrl.perfMonitorSelectMatplot;
     tstring perfMonLog;
@@ -310,7 +344,7 @@ RGY_ERR VCECore::initPerfMonitor(VCEParam *prm) {
 #else
         nullptr,
 #endif
-        prm->ctrl.threadAffinity.get(RGYThreadType::PERF_MONITOR),
+        prm->ctrl.threadParams.get(RGYThreadType::PERF_MONITOR),
         m_pLog, &perfMonitorPrm)) {
         PrintMes(RGY_LOG_WARN, _T("Failed to initialize performance monitor, disabled.\n"));
         m_pPerfMonitor.reset();
@@ -2262,7 +2296,7 @@ RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
         param->frameOut.mem_type = RGY_MEM_TYPE_GPU;
         param->baseFps = m_encFps;
         param->bOutOverwrite = false;
-        param->threadAffinityCompare = prm->ctrl.threadAffinity.get(RGYThreadType::VIDEO_QUALITY);;
+        param->threadParam = prm->ctrl.threadParams.get(RGYThreadType::VIDEO_QUALITY);;
         param->metric = prm->common.metric;
         auto sts = filterSsim->init(param, m_pLog);
         if (sts != RGY_ERR_NONE) {
@@ -2280,11 +2314,11 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    if (const auto affinity = prm->ctrl.threadAffinity.get(RGYThreadType::PROCESS); affinity.mode != RGYThreadAffinityMode::ALL) {
+    if (const auto affinity = prm->ctrl.threadParams.get(RGYThreadType::PROCESS).affinity; affinity.mode != RGYThreadAffinityMode::ALL) {
         SetProcessAffinityMask(GetCurrentProcess(), affinity.getMask());
         PrintMes(RGY_LOG_DEBUG, _T("Set Process Affinity Mask: %s (0x%llx).\n"), affinity.to_string().c_str(), affinity.getMask());
     }
-    if (const auto affinity = prm->ctrl.threadAffinity.get(RGYThreadType::MAIN); affinity.mode != RGYThreadAffinityMode::ALL) {
+    if (const auto affinity = prm->ctrl.threadParams.get(RGYThreadType::MAIN).affinity; affinity.mode != RGYThreadAffinityMode::ALL) {
         SetThreadAffinityMask(GetCurrentThread(), affinity.getMask());
         PrintMes(RGY_LOG_DEBUG, _T("Set Main thread Affinity Mask: %s (0x%llx).\n"), affinity.to_string().c_str(), affinity.getMask());
     }
@@ -2371,6 +2405,10 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
+    if (RGY_ERR_NONE != (ret = initPowerThrottoling(prm))) {
+        return ret;
+    }
+
     if (RGY_ERR_NONE != (ret = initChapters(prm))) {
         return ret;
     }
@@ -2385,6 +2423,12 @@ RGY_ERR VCECore::init(VCEParam *prm) {
 
     if (RGY_ERR_NONE != (ret = initSSIMCalc(prm))) {
         return ret;
+    }
+
+    {
+        const auto& threadParam = prm->ctrl.threadParams.get(RGYThreadType::MAIN);
+        threadParam.apply(GetCurrentThread());
+        PrintMes(RGY_LOG_DEBUG, _T("Set main thread param: %s.\n"), threadParam.desc().c_str());
     }
 
     return ret;

@@ -147,6 +147,7 @@ protected:
     virtual RGY_ERR initConverter(VCEParam *prm);
     virtual RGY_ERR initChapters(VCEParam *prm);
     virtual RGY_ERR initEncoder(VCEParam *prm);
+    virtual RGY_ERR initPowerThrottoling(VCEParam *prm);
     virtual RGY_ERR initSSIMCalc(VCEParam *prm);
 
     virtual RGY_ERR run_decode();
