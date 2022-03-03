@@ -58,6 +58,7 @@ void open_log_window(const char *savefile, const SYSTEM_DATA *sys_dat, int curre
 void auto_save_log(const CONF_GUIEX *conf, const OUTPUT_INFO *oip, const PRM_ENC *pe, const SYSTEM_DATA *sys_dat);
 int get_total_path(const CONF_GUIEX *conf);
 void set_enc_prm(CONF_GUIEX *conf, PRM_ENC *pe, const OUTPUT_INFO *oip, const SYSTEM_DATA *sys_dat);
+void free_enc_prm(PRM_ENC *pe);
 
 int additional_vframe_for_aud_delay_cut(double fps, int audio_rate, int audio_delay);
 int additional_silence_for_aud_delay_cut(double fps, int audio_rate, int audio_delay, int vframe_added = -1);

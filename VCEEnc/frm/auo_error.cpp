@@ -32,6 +32,16 @@
 #include "auo_chapter.h"
 #include "auo_convert.h"
 
+void warning_conf_not_initialized(const char *default_stg_file) {
+    if (default_stg_file && strlen(default_stg_file) > 0) {
+        write_log_auo_line_fmt(LOG_WARNING, "設定が行われていないため、前回出力した設定でエンコードを行います。: %s", default_stg_file);
+    } else {
+        write_log_auo_line(LOG_WARNING, "設定が行われていないため、デフォルト設定でエンコードを行います。");
+    }
+    write_log_auo_line(LOG_WARNING, "設定を変更するには[プラグイン出力]>[" AUO_FULL_NAME "]の画面で「ビデオ圧縮」をクリックし、");
+    write_log_auo_line(LOG_WARNING, "設定画面で設定を変更したのち [ OK ] をクリックしてください。");
+}
+
 void warning_failed_getting_temp_path() {
     write_log_auo_line(LOG_WARNING, "一時フォルダ名取得に失敗しました。一時フォルダ指定を解除しました。");
 }
@@ -46,6 +56,11 @@ void warning_no_aud_temp_root(const char *dir) {
     write_log_auo_line_fmt(LOG_WARNING,
         "指定された音声用一時フォルダ \"%s\" が存在しません。一時フォルダ指定を解除しました。",
         dir);
+}
+
+void error_file_is_already_opened_by_aviutl() {
+    write_log_auo_line(LOG_ERROR, "出力ファイルはすでにAviutlで開かれているため、出力できません。");
+    write_log_auo_line(LOG_ERROR, "異なるファイル名を指定してやり直してください。");
 }
 
 void error_filename_too_long() {
