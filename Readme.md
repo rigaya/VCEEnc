@@ -2,7 +2,7 @@
 # VCEEnc  
 by rigaya
 
-[![Build status](https://ci.appveyor.com/api/projects/status/b3nelkol182q7855?svg=true)](https://ci.appveyor.com/project/rigaya/vceenc)  [![Build Linux Packages](https://github.com/rigaya/VCEEnc/actions/workflows/build_packages.yml/badge.svg)](https://github.com/rigaya/VCEEnc/actions/workflows/build_packages.yml)  
+[![Build Windows Releases](https://github.com/rigaya/VCEEnc/actions/workflows/build_releases.yml/badge.svg)](https://github.com/rigaya/VCEEnc/actions/workflows/build_releases.yml)  [![Build Linux Packages](https://github.com/rigaya/VCEEnc/actions/workflows/build_packages.yml/badge.svg)](https://github.com/rigaya/VCEEnc/actions/workflows/build_packages.yml)  
 
 **[日本語版はこちら＞＞](./Readme.ja.md)**  
 
@@ -18,6 +18,9 @@ VCEEnc.auo … Output plugin for [Aviutl](http://spring-fragrance.mints.ne.jp/av
 
 ## Install
 [Install instructions for Windows and Linux](./Install.en.md).
+
+## Build
+[Build instructions for Windows and Linux](./Build.en.md)
 
 ## System Requirements
 
@@ -138,8 +141,6 @@ when there are multiple GPUs available which support VCE/VCN.
   [ttmath](http://www.ttmath.org/) &
   [Caption2Ass](https://github.com/maki-rxrz/Caption2Ass_PCR).
   For these licenses, please see the header part of the corresponding source and VCEEnc_license.txt.
-  
-- [How to build](./Build.en.md)
 
 ### About source code
 Windows ... VC build

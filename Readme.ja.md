@@ -2,7 +2,7 @@
 # VCEEnc  
 by rigaya
 
-[![Build status](https://ci.appveyor.com/api/projects/status/b3nelkol182q7855?svg=true)](https://ci.appveyor.com/project/rigaya/vceenc)  [![Build Linux Packages](https://github.com/rigaya/VCEEnc/actions/workflows/build_packages.yml/badge.svg)](https://github.com/rigaya/VCEEnc/actions/workflows/build_packages.yml)  
+[![Build Windows Releases](https://github.com/rigaya/VCEEnc/actions/workflows/build_releases.yml/badge.svg)](https://github.com/rigaya/VCEEnc/actions/workflows/build_releases.yml)  [![Build Linux Packages](https://github.com/rigaya/VCEEnc/actions/workflows/build_packages.yml/badge.svg)](https://github.com/rigaya/VCEEnc/actions/workflows/build_packages.yml)  
 
 このソフトウェアは、AMDのGPU/APUに搭載されているHWエンコーダ(VCE)の画質や速度といった性能の実験を目的としています。  
 Aviutlの出力プラグイン版と単体で動作するコマンドライン版があります。  
@@ -12,10 +12,13 @@ VCEEncC.exe … 単体で実行できるコマンドライン版です。
 
 ## 配布場所 & 更新履歴 & コメント等
 [rigayaの日記兼メモ帳＞＞](http://rigaya34589.blog135.fc2.com/blog-category-12.html)  
-[github releases](https://github.com/rigaya/QSVEnc/releases)  
+[github releases](https://github.com/rigaya/VCEEnc/releases)  
 
 ## インストール
 インストール方法は[こちら](./Install.ja.md)。
+
+## ビルド
+ビルド方法は[こちら](./Build.ja.md)。
 
 ## 想定動作環境
 
@@ -144,8 +147,6 @@ VCEEncCでは、VCE/VCNを実行可能なGPUが複数存在する場合、
   [ttmath](http://www.ttmath.org/),
   [Caption2Ass](https://github.com/maki-rxrz/Caption2Ass_PCR)を使用しています。  
   これらのライセンスにつきましては、該当ソースのヘッダ部分や、VCEEnc_license.txtをご覧ください。
-  
-- [ビルド方法](./Build.ja.md)
 
 ### ソース概要
 Windows ... VCビルド  
