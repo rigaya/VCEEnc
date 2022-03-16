@@ -29,9 +29,9 @@
 #ifndef __RGY_VERSION_H__
 #define __RGY_VERSION_H__
 
-#define VER_FILEVERSION             0,6,17,0
-#define VER_STR_FILEVERSION          "6.17"
-#define VER_STR_FILEVERSION_TCHAR _T("6.17")
+#define VER_FILEVERSION             0,6,18,0
+#define VER_STR_FILEVERSION          "6.18"
+#define VER_STR_FILEVERSION_TCHAR _T("6.18")
 
 
 #ifdef _M_IX86
@@ -63,6 +63,7 @@ const char *get_encoder_version();
 #define ENABLE_DTL 1
 
 #define ENABLE_DHDR10_INFO 0
+#define ENABLE_DOVI_METADATA_OPTIONS 0
 #define ENABLE_KEYFRAME_INSERT 0
 #define ENABLE_AUTO_PICSTRUCT 0
 
