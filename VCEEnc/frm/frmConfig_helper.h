@@ -90,6 +90,8 @@ namespace VCEEnc {
     };
 };
 
+static const WCHAR *use_default_exe_path = L"exe_files内の実行ファイルを自動選択";
+
 const int fcgTBQualityTimerLatency = 600;
 const int fcgTBQualityTimerPeriod = 40;
 const int fcgTXCmdfulloffset = 57;

@@ -92,6 +92,18 @@ void error_no_exe_file(const char *name, const char *path) {
     write_log_auo_line_fmt(LOG_ERROR, "%s を用意し、その場所を設定画面かから正しく指定してください。", name);
 }
 
+void warning_use_default_audio_encoder(const char *name) {
+    write_log_auo_line_fmt(LOG_WARNING, "音声エンコーダが適切に設定されていないため、デフォルトの音声エンコーダ %s を使用します。", name);
+}
+
+void info_use_exe_found(const char *target, const char *path) {
+    write_log_auo_line_fmt(LOG_INFO, "%sとして \"%s\" を使用します。", target, path);
+}
+
+void error_invalid_ini_file() {
+    write_log_auo_line(LOG_ERROR, "プラグイン(auo)とiniファイルの音声エンコーダの記述が一致しません。");
+}
+
 void error_mp4_muxer_unmatch_of_ini_and_exe(BOOL exe_file_is_lsmash) {
     static const char *MUXER_TYPE[] = { "mp4box", "L-SMASH" };
     static const char *MUXER_STR1[] = { "mp4 muxの実行ファイル", "iniファイル" };
