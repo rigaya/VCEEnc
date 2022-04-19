@@ -7,24 +7,92 @@ by rigaya
 このソフトウェアは、AMDのGPU/APUに搭載されているHWエンコーダ(VCE/VCN)の画質や速度といった性能の実験を目的としています。  
 Aviutlの出力プラグイン版と単体で動作するコマンドライン版があります。  
 
-- VCEEncC.exe  
-  単体で動作するコマンドライン版です。本項で説明します。
+- [VCEEncC.exe](./Readme.ja.md)  
+  単体で動作するコマンドライン版については、[こちら](./Readme.ja.md)を参照してください。
 
-- [VCEEnc.auo](./VCEEnc_auo_readme.md)  
-  AMDのVCE/VCNを使用してエンコードを行う[Aviutl](http://spring-fragrance.mints.ne.jp/aviutl/)の出力プラグインについては、[こちら](./VCEEnc_auo_readme.md)を参照してください。
+- VCEEnc.auo  
+  AMDのVCE/VCNを使用してエエンコードを行う[Aviutl](http://spring-fragrance.mints.ne.jp/aviutl/)の出力プラグインです。本項で説明します。
 
 ## 配布場所 & 更新履歴
-[こちら](https://github.com/rigaya/VCEEnc/releases)  
+[こちら](https://github.com/rigaya/VCEEnc/releases)から、Aviutl_VCEEnc_x.xx.zipをダウンロードしてください。
 
 ## VCEEnc 使用にあたっての注意事項
 無保証です。自己責任で使用してください。  
 VCEEncを使用したことによる、いかなる損害・トラブルについても責任を負いません。
 
-## インストール
-インストール方法は[こちら](./Install.ja.md)。
+## VCEEnc の Aviutl への導入・更新
 
-## ビルド
-ビルド方法は[こちら](./Build.ja.md)。
+### ダウンロード
+
+まず、VCEEncを[こちら](https://github.com/rigaya/VCEEnc/releases)からダウンロードします。
+
+### 導入・更新
+
+ダウンロードしたzipファイルをダブルクリックして開きます。中身はこんな感じです。
+
+![zipファイルの中身](./data/VCEEnc_7_00_install_02.png)
+
+中身をすべてAviutlフォルダにコピーします。
+
+![中身のコピー](./data/VCEEnc_7_00_install_03.png)
+
+更新時には、下記のように上書きするか聞いてくることがあります。
+
+その場合には「ファイルを置き換える」を選択して上書きしてください。
+
+![上書き](./data/VCEEnc_7_00_install_04.png)
+  
+  
+  
+このあとAviutlをダブルクリックして起動してください。
+
+初回起動時に必要に応じて下の図のようにVCEEncの使用準備をするというメッセージが出ます。環境によっては準備が不要な場合があり、その場合は表示されません。
+
+OKをクリックすると使用準備が開始されます。
+
+![初回起動時](./data/VCEEnc_7_00_install_05.png)
+  
+  
+  
+下の図のように、「この不明な発行元からのアプリがデバイスに変更を加えることを許可しますか?」というメッセージが表示されますので、「はい」をクリックしてください。
+
+![UAC](./data/VCEEnc_7_00_install_06.png)
+  
+  
+  
+下の図のようなウィンドウが表示され、VCEEncの使用に必要なモジュールがインストールされます。
+
+エラーなくインストールが完了すると下記のように表示されますので、右上の[x]ボタンでウィンドウを閉じてください。
+
+![auo_setup](./data/VCEEnc_7_00_install_11.png)
+
+これで使用準備は完了です。
+
+### 確認
+
+VCEEncがAviutlに認識されているか確認します。
+
+Aviutlの [その他] > [出力プラグイン情報]を選択します。
+
+![出力プラグイン情報](./data/VCEEnc_7_00_install_07.png)
+
+
+VCEEnc が表示されていれば成功です。
+
+![確認](./data/VCEEnc_7_00_install_09.png)
+
+
+### エンコード
+[ ファイル ] > [ プラグイン出力 ] > [ 拡張 VCE 出力 (GUI) ] を選択し、出力ファイル名を入力して、「保存」をクリックしてください。
+
+![プラグイン出力](./data/VCEEnc_7_00_install_14.webp)
+
+エンコードが開始されます。
+
+![エンコード](./data/VCEEnc_7_00_install_10.webp)
+
+エンコードが完了するまで待ちます。お疲れ様でした。
+
 
 ## 想定動作環境
 
@@ -34,10 +102,6 @@ Aviutl 1.00 以降 (VCEEnc.auo)
 VCEが載ったハードウェア  
   AMD製 GPU Radeon HD 7xxx以降  
   AMD製 APU Trinity世代(第2世代)以降  
-  
-### Linux
-Debian/Ubuntu系 (VCEEncC)  
-  そのほかのディストリビューションでも動作する可能性があります。
 
 | VCEEnc | 必要なグラフィックスドライバのバージョン |
 |:---|:---|
@@ -48,9 +112,6 @@ Debian/Ubuntu系 (VCEEncC)
 | VCEEnc 6.09以降 | AMD ドライバ 20.11.2 以降 |
 | VCEEnc 6.13以降 | AMD ドライバ 21.6.1 以降 |
 | VCEEnc 6.17以降 | AMD ドライバ 21.12.1 以降 |
-
-## VCEEncCの使用方法とオプション  
-[VCEEncCのオプションの説明](./VCEEncC_Options.ja.md)
 
 
 ## 使用出来る主な機能
@@ -135,6 +196,18 @@ VCEEncCでは、VCE/VCNを実行可能なGPUが複数存在する場合、
   なお、VE/GPU使用率の取得はエンコードの開始時に行われ、その値には数秒のタイムラグがあるため、
   エンコードをほぼ同時に複数開始すると、複数のエンコードが同じGPUに割り当てられてしまうことが
   多いのでご注意ください。
+
+## VCEEnc の Aviutl からの削除
+
+VCEEnc の Aviutl から削除するには、"plugins" フォルダ内の下記ファイルとフォルダを削除してください。
+
+- [フォルダ] VCEEnc_stg
+- [ファイル] VCEEnc.auo
+- [ファイル] VCEEnc.conf (存在する場合のみ)
+- [ファイル] VCEEnc(.ini)
+- [ファイル] auo_setup.auf
+
+![削除](./data/VCEEnc_7_00_uninstall_01.png)
 
 ## ソースコードについて
 - MITライセンスです。
