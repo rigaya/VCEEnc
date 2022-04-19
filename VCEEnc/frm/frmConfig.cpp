@@ -1704,8 +1704,15 @@ VidEncInfo frmConfig::GetVidEncInfo() {
 
     VidEncInfo info;
     info.hwencAvail = false;
-    GetCHARfromString(exe_path, sizeof(exe_path), LocalStg.vidEncPath);
 
+    if (File::Exists(LocalStg.vidEncPath)) {
+        GetCHARfromString(exe_path, sizeof(exe_path), LocalStg.vidEncPath);
+    } else {
+        const auto defaultExePath = find_latest_videnc_for_frm();
+        if (defaultExePath.length() > 0) {
+            strcpy_s(exe_path, defaultExePath.c_str());
+        }
+    }
     if (get_exe_message(exe_path, "--check-hw", mes, _countof(mes), AUO_PIPE_MUXED) == RP_SUCCESS) {
         auto lines = String(mes).ToString()->Split(String(L"\r\n").ToString()->ToCharArray(), System::StringSplitOptions::RemoveEmptyEntries);
         for (int i = 0; i < lines->Length; i++) {
@@ -1721,8 +1728,16 @@ VidEncInfo frmConfig::GetVidEncInfo() {
 
 System::Void frmConfig::GetVidEncInfoAsync() {
     if (!File::Exists(LocalStg.vidEncPath)) {
-        encInfo.hwencAvail = false;
-        return;
+        auto defaultExePath = find_latest_videnc_for_frm();
+        if (defaultExePath.length() == 0) {
+            encInfo.hwencAvail = false;
+            return;
+        }
+        String^ exePath = String(defaultExePath.c_str()).ToString();
+        if (!File::Exists(exePath)) {
+            encInfo.hwencAvail = false;
+            return;
+        }
     }
     if (taskEncInfo != nullptr && !taskEncInfo->IsCompleted) {
         taskEncInfoCancell->Cancel();

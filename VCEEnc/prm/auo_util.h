@@ -1009,4 +1009,6 @@ BOOL SetThreadAffinityForModule(DWORD TargetProcessId, const char *TargetModule,
 
 BOOL getProcessorCount(DWORD *physical_processor_core, DWORD *logical_processor_core);
 
+std::string find_latest_videnc_for_frm();
+
 #endif //_AUO_UTIL_H_
