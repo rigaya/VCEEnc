@@ -1331,19 +1331,48 @@ Please note that [--avsync](./NVEncC_Options.en.md#--avsync-string) vfr is autom
 
 
 
-### --vpp-resize &lt;string&gt;
-Specify the resizing algorithm.
+### --vpp-rotate &lt;int&gt;
 
-| option name | description |
-|:---|:---|
-| auto     | auto select |
-| bilinear | linear interpolation |
-| spline16 | 4x4 spline curve interpolation |
-| spline36 | 6x6 spline curve interpolation |
-| spline64 | 8x8 spline curve interpolation |
-| lanczos2 | 4x4 Lanczos resampling |
-| lanczos3 | 6x6 Lanczos resampling |
-| lanczos4 | 8x8 Lanczos resampling |
+Rotate video. 90, 180, 270 degrees is allowed.
+
+### --vpp-transform [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+**Parameters**
+- flip_x=&lt;bool&gt;
+
+- flip_y=&lt;bool&gt;
+
+- transpose=&lt;bool&gt;
+
+### --vpp-convolution3d [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+3d noise reduction.
+
+**Parameters**
+- matrix=&lt;string&gt;  (default=original)  
+  select matrix to use.  
+  - standard
+  - simple
+  
+- fast=&lt;bool&gt  (default=false)  
+  Use more simple fast mode.
+
+- ythresh=&lt;float&gt;  (default=3, 0-255)  
+  spatial luma threshold. 
+
+- cthresh=&lt;float&gt;  (default=4, 0-255)  
+  spatial chroma threshold.
+
+- t_ythresh=&lt;float&gt;  (default=3, 0-255)  
+  temporal luma threshold. 
+
+- t_cthresh=&lt;float&gt;  (default=4, 0-255)  
+  temporal chroma threshold.
+
+```
+Example: using simple matrix
+--vpp-convolution3d matrix=simple
+```
+
 ### --vpp-knn [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 Strong noise reduction filter.
 
@@ -1455,6 +1484,20 @@ Example3: burn in ASS subtitle from file which charcter code is Shift-JIS
 --vpp-subburn filename="subtitle.sjis.ass",charcode=sjis,shaping=complex
 ```
 
+### --vpp-resize &lt;string&gt;
+Specify the resizing algorithm.
+
+| option name | description |
+|:---|:---|
+| auto     | auto select |
+| bilinear | linear interpolation |
+| spline16 | 4x4 spline curve interpolation |
+| spline36 | 6x6 spline curve interpolation |
+| spline64 | 8x8 spline curve interpolation |
+| lanczos2 | 4x4 Lanczos resampling |
+| lanczos3 | 6x6 Lanczos resampling |
+| lanczos4 | 8x8 Lanczos resampling |
+
 ### --vpp-unsharp [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 unsharp filter, for edge and detail enhancement.
 
@@ -1523,19 +1566,6 @@ Edge warping (sharpening) filter.
 例: Using type 1.
 --vpp-warpsharp threshold=128,blur=3,type=1
 ```
-
-### --vpp-rotate &lt;int&gt;
-
-Rotate video. 90, 180, 270 degrees is allowed.
-
-### --vpp-transform [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
-
-**Parameters**
-- flip_x=&lt;bool&gt;
-
-- flip_y=&lt;bool&gt;
-
-- transpose=&lt;bool&gt;
 
 ### --vpp-tweak [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 

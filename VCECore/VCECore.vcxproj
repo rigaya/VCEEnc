@@ -155,6 +155,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="rgy_filesystem.cpp" />
+    <ClCompile Include="rgy_filter_convolution3d.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="rgy_filter_decimate.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -470,6 +474,7 @@
     <ClInclude Include="rgy_err.h" />
     <ClInclude Include="rgy_event.h" />
     <ClInclude Include="rgy_filesystem.h" />
+    <ClInclude Include="rgy_filter_convolution3d.h" />
     <ClInclude Include="rgy_filter_decimate.h" />
     <ClInclude Include="rgy_filter_delogo.h" />
     <ClInclude Include="rgy_filter_mpdecimate.h" />
@@ -540,6 +545,7 @@
     <None Include="rgy_filter_afs_filter.cl" />
     <None Include="rgy_filter_afs_merge.cl" />
     <None Include="rgy_filter_afs_synthesize.cl" />
+    <None Include="rgy_filter_convolution3d.cl" />
     <None Include="rgy_filter_deband.cl" />
     <None Include="rgy_filter_deband_gen_rand.cl" />
     <None Include="rgy_filter_decimate.cl" />

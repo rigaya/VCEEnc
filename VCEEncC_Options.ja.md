@@ -1365,20 +1365,50 @@ nnediによるインタレ解除を行う。基本的には片方フィールド
   - log=&lt;bool&gt;  
     判定結果のログファイルの出力。 (デフォルト: off)
 
-### --vpp-resize &lt;string&gt;
-リサイズのアルゴリズムを指定する。
 
-| オプション名 | 説明 |
-|:---|:---|
-| auto     | 自動的に適切なものを選択 |
-| bilinear | 線形補間 |
-| spline16 | 4x4 Spline補間 |
-| spline36 | 6x6 Spline補間 |
-| spline64 | 8x8 Spline補間 |
-| lanczos2 | 4x4 lanczos補間 |
-| lanczos3 | 6x6 lanczos補間 |
-| lanczos4 | 8x8 lanczos補間 |
 
+### --vpp-rotate &lt;int&gt;
+
+動画を回転させる。 90, 180, 270 度の回転のみに対応。
+
+
+### --vpp-transform [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+**パラメータ**
+- flip_x=&lt;bool&gt;
+
+- flip_y=&lt;bool&gt;
+
+- transpose=&lt;bool&gt;
+
+### --vpp-convolution3d [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+3次元ノイズ除去フィルタ。
+
+**パラメータ**
+- matrix=&lt;string&gt;  (デフォルト=original)  
+  使用するmatrixの選択。  
+  - standard
+  - simple
+
+- fast=&lt;bool&gt  (default=false)  
+  計算を簡略化した高速モードを使用する。
+
+- ythresh=&lt;float&gt;  (デフォルト=3, 0-255)  
+  spatial luma threshold. 
+
+- cthresh=&lt;float&gt;  (デフォルト=4, 0-255)  
+  spatial chroma threshold.
+
+- t_ythresh=&lt;float&gt;  (デフォルト=3, 0-255)  
+  temporal luma threshold. 
+
+- t_cthresh=&lt;float&gt;  (デフォルト=4, 0-255)  
+  temporal chroma threshold.
+
+```
+例: simple matrixの使用
+--vpp-convolution3d matrix=simple
+```
   
 ### --vpp-knn [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 
@@ -1489,6 +1519,20 @@ nnediによるインタレ解除を行う。基本的には片方フィールド
 --vpp-subburn filename="subtitle.sjis.ass",charcode=sjis,shaping=complex
 ```
 
+### --vpp-resize &lt;string&gt;
+リサイズのアルゴリズムを指定する。
+
+| オプション名 | 説明 |
+|:---|:---|
+| auto     | 自動的に適切なものを選択 |
+| bilinear | 線形補間 |
+| spline16 | 4x4 Spline補間 |
+| spline36 | 6x6 Spline補間 |
+| spline64 | 8x8 Spline補間 |
+| lanczos2 | 4x4 lanczos補間 |
+| lanczos3 | 6x6 lanczos補間 |
+| lanczos4 | 8x8 lanczos補間 |
+
 ### --vpp-unsharp [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 unsharpフィルタ。輪郭・ディテール強調用のフィルタ。
 
@@ -1557,21 +1601,6 @@ unsharpフィルタ。輪郭・ディテール強調用のフィルタ。
 例: type=1を使う場合
 --vpp-warpsharp threshold=128,blur=3,type=1
 ```
-
-
-### --vpp-rotate &lt;int&gt;
-
-動画を回転させる。 90, 180, 270 度の回転のみに対応。
-
-
-### --vpp-transform [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
-
-**パラメータ**
-- flip_x=&lt;bool&gt;
-
-- flip_y=&lt;bool&gt;
-
-- transpose=&lt;bool&gt;
 
 ### --vpp-tweak [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 

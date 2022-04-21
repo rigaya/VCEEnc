@@ -1,0 +1,102 @@
+name: Build Windows Releases
+
+on:
+  push:
+    branches:
+      - master
+      - actions
+    tags:
+      - '*'
+
+jobs:
+  get_version_name:
+    name: Get version name
+    runs-on: ubuntu-latest
+    outputs:
+      rev_count: ${{ steps.rev.outputs.REVCOUNT }}
+      version_name: ${{ steps.rev.outputs.VERSION_NAME }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Set version name
+      id: rev
+      run: |
+        cd ${{ github.workspace }}
+        REVCOUNT=`git rev-list --count HEAD`
+        echo "::set-output name=REV_COUNT::${REVCOUNT}"
+        if [[ "${{ github.ref }}" =~ "refs/tags/" ]]; then
+          VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/##g")
+        else
+          VERSION=r${REVCOUNT}
+        fi
+        echo "::set-output name=VERSION_NAME::${VERSION}"
+
+  build:
+    name: Upload Release Asset
+    runs-on: windows-2022
+    needs: get_version_name
+
+    defaults:
+      run:
+        shell: cmd
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86
+            platform: Win32
+          - arch: x64
+            platform: x64
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Checkout dependencies
+        run: |
+          curl -s -o hdr10plus_gen_0.00_${{ matrix.platform }}.7z -L https://github.com/rigaya/hdr10plus_gen/releases/download/0.00/hdr10plus_gen_0.00_${{ matrix.platform }}.7z
+          7z x -ohdr10plus_gen\ hdr10plus_gen_0.00_${{ matrix.platform }}.7z
+          curl -s -o ffmpeg_lgpl_20220302.zip -L https://github.com/rigaya/ffmpeg5_dlls_for_hwenc/archive/refs/tags/20220302.zip
+          7z x -y ffmpeg_lgpl_20220302.zip
+          move ffmpeg5* ffmpeg_lgpl
+          git clone https://github.com/AviSynth/AviSynthPlus.git ..\AviSynthPlus
+          git clone https://github.com/vapoursynth/vapoursynth.git ..\vapoursynth
+          git clone https://github.com/KhronosGroup/OpenCL-Headers.git ..\openclheaders
+          git clone https://github.com/maki-rxrz/Caption2Ass_PCR.git ..\caption2ass
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.1
+        with:
+          msbuild-architecture: ${{ matrix.arch }}
+
+      - name: MSBuild
+        run: |
+          set AVISYNTH_SDK=${{ github.workspace }}\..\AviSynthPlus\avs_core
+          set VAPOURSYNTH_SDK=${{ github.workspace }}\..\vapoursynth
+          set OPENCL_HEADERS=${{ github.workspace }}\..\openclheaders
+          set CAPTION2ASS_SRC=${{ github.workspace }}\..\caption2ass\src
+          msbuild VCEEnc.sln /t:build /p:configuration=ReleaseStatic /p:Platform=${{ matrix.platform }} -maxcpucount
+
+      - name: Create Archieve
+        id: archieve
+        run: |
+          mkdir VCEEncC_Release
+          copy hdr10plus_gen\hdr10plus_gen.exe VCEEncC_Release
+          copy _build\${{ matrix.platform }}\ReleaseStatic\VCEEncC*.exe VCEEncC_Release
+          copy _build\${{ matrix.platform }}\ReleaseStatic\*.dll VCEEncC_Release
+          7z a -mx9 VCEEncC_${{ needs.get_version_name.outputs.version_name }}_${{ matrix.platform }}.7z .\VCEEncC_Release\*
+
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: .\VCEEncC_${{ needs.get_version_name.outputs.version_name }}_${{ matrix.platform }}.7z
