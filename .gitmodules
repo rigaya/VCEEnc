@@ -1,6 +1,3 @@
-[submodule "AMF"]
-	path = AMF
-	url = git://github.com/GPUOpen-LibrariesAndSDKs/AMF
 [submodule "dtl"]
 	path = dtl
 	url = https://github.com/cubicdaiya/dtl
