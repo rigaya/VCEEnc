@@ -1,8 +1,185 @@
 ﻿
-# VCEEncC option list
+# VCEEncC option list <!-- omit in toc -->
 
 **[日本語版はこちら＞＞](./VCEEncC_Options.ja.md)**  
 
+- [Command line example](#command-line-example)
+  - [Basic commands](#basic-commands)
+  - [More practical commands](#more-practical-commands)
+    - [example of using hw decoder](#example-of-using-hw-decoder)
+    - [example of using hw decoder (interlaced)](#example-of-using-hw-decoder-interlaced)
+    - [avs (Avisynth) example (avs and vpy can also be read via vfw)](#avs-avisynth-example-avs-and-vpy-can-also-be-read-via-vfw)
+    - [example of pipe usage](#example-of-pipe-usage)
+    - [pipe usage from ffmpeg](#pipe-usage-from-ffmpeg)
+    - [Passing video & audio from ffmpeg](#passing-video--audio-from-ffmpeg)
+- [Option format](#option-format)
+- [Display options](#display-options)
+  - [-h, -? --help](#-h-----help)
+  - [-v, --version](#-v---version)
+  - [--option-list](#--option-list)
+  - [--check-hw [&lt;int&gt;]](#--check-hw-int)
+  - [--check-features [&lt;int&gt;]](#--check-features-int)
+  - [--check-clinfo](#--check-clinfo)
+  - [--check-codecs, --check-decoders, --check-encoders](#--check-codecs---check-decoders---check-encoders)
+  - [--check-profiles &lt;string&gt;](#--check-profiles-string)
+  - [--check-formats](#--check-formats)
+  - [--check-protocols](#--check-protocols)
+  - [--check-filters](#--check-filters)
+  - [--check-avversion](#--check-avversion)
+- [Basic encoding options](#basic-encoding-options)
+  - [-d, --device &lt;int&gt;](#-d---device-int)
+  - [-c, --codec &lt;string&gt;](#-c---codec-string)
+  - [-o, --output &lt;string&gt;](#-o---output-string)
+  - [-i, --input &lt;string&gt;](#-i---input-string)
+  - [--raw](#--raw)
+  - [--y4m](#--y4m)
+  - [--avi](#--avi)
+  - [--avs](#--avs)
+  - [--vpy](#--vpy)
+  - [--vpy-mt](#--vpy-mt)
+  - [--avsw](#--avsw)
+  - [--avhw](#--avhw)
+  - [--video-track &lt;int&gt;](#--video-track-int)
+  - [--crop &lt;int&gt;,&lt;int&gt;,&lt;int&gt;,&lt;int&gt;](#--crop-intintintint)
+  - [--fps &lt;int&gt;/&lt;int&gt; or &lt;float&gt;](#--fps-intint-or-float)
+  - [--input-res &lt;int&gt;x&lt;int&gt;](#--input-res-intxint)
+  - [--output-res &lt;int&gt;x&lt;int&gt;](#--output-res-intxint)
+  - [--input-csp &lt;string&gt;](#--input-csp-string)
+- [Encode Mode Options](#encode-mode-options)
+  - [--cqp &lt;int&gt; or &lt;int&gt;:&lt;int&gt;:&lt;int&gt;](#--cqp-int-or-intintint)
+  - [--cbr &lt;int&gt;](#--cbr-int)
+  - [--vbr &lt;int&gt;](#--vbr-int)
+  - [--qvbr &lt;int&gt; [H.264 only]](#--qvbr-int-h264-only)
+- [Other Options for Encoder](#other-options-for-encoder)
+  - [-u, --preset](#-u---preset)
+  - [--output-depth &lt;int&gt;](#--output-depth-int)
+  - [--max-bitrate &lt;int&gt;](#--max-bitrate-int)
+  - [--vbv-bufsize &lt;int&gt;](#--vbv-bufsize-int)
+  - [--qp-min &lt;int&gt; or &lt;int&gt;:&lt;int&gt;:&lt;int&gt;](#--qp-min-int-or-intintint)
+  - [--qp-max &lt;int&gt; or &lt;int&gt;:&lt;int&gt;:&lt;int&gt;](#--qp-max-int-or-intintint)
+  - [--qvbr-quality &lt;int&gt;](#--qvbr-quality-int)
+  - [--gop-len &lt;int&gt;](#--gop-len-int)
+  - [-b, --bframes &lt;int&gt;](#-b---bframes-int)
+  - [--b-pyramid](#--b-pyramid)
+  - [--b-deltaqp &lt;int&gt;](#--b-deltaqp-int)
+  - [--bref-deltaqp &lt;int&gt;](#--bref-deltaqp-int)
+  - [--ref &lt;int&gt;](#--ref-int)
+  - [--ltr &lt;int&gt;](#--ltr-int)
+  - [--vbaq](#--vbaq)
+  - [--skip-frame](#--skip-frame)
+  - [--enforce-hrd](#--enforce-hrd)
+  - [--filler](#--filler)
+  - [--motion-est &lt;string&gt;](#--motion-est-string)
+  - [--pe](#--pe)
+  - [--pa](#--pa)
+  - [--pa-sc &lt;string&gt;](#--pa-sc-string)
+  - [--pa-ss &lt;string&gt;](#--pa-ss-string)
+  - [--pa-activity-type &lt;string&gt;](#--pa-activity-type-string)
+  - [--pa-caq-strength &lt;string&gt;](#--pa-caq-strength-string)
+  - [--pa-initqpsc &lt;int&gt;](#--pa-initqpsc-int)
+  - [--pa-fskip-maxqp &lt;int&gt;](#--pa-fskip-maxqp-int)
+  - [--slices &lt;int&gt;](#--slices-int)
+  - [--level &lt;string&gt;](#--level-string)
+  - [--profile &lt;string&gt;](#--profile-string)
+  - [--tier &lt;string&gt;  [HEVC only]](#--tier-string--hevc-only)
+  - [--sar &lt;int&gt;:&lt;int&gt;](#--sar-intint)
+  - [--dar &lt;int&gt;:&lt;int&gt;](#--dar-intint)
+  - [--colorrange &lt;string&gt;](#--colorrange-string)
+  - [--videoformat &lt;string&gt;](#--videoformat-string)
+  - [--colormatrix &lt;string&gt;](#--colormatrix-string)
+  - [--colorprim &lt;string&gt;](#--colorprim-string)
+  - [--transfer &lt;string&gt;](#--transfer-string)
+  - [--chromaloc &lt;int&gt; or "auto"](#--chromaloc-int-or-auto)
+  - [--max-cll &lt;int&gt;,&lt;int&gt; or "copy" [HEVC only]](#--max-cll-intint-or-copy-hevc-only)
+  - [--master-display &lt;string&gt; or "copy" [HEVC only]](#--master-display-string-or-copy-hevc-only)
+  - [--atc-sei &lt;string&gt; or &lt;int&gt; [HEVC only]](#--atc-sei-string-or-int-hevc-only)
+  - [--ssim](#--ssim)
+  - [--psnr](#--psnr)
+- [IO / Audio / Subtitle Options](#io--audio--subtitle-options)
+  - [--input-analyze &lt;float&gt;](#--input-analyze-float)
+  - [--input-probesize &lt;int&gt;](#--input-probesize-int)
+  - [--trim &lt;int&gt;:&lt;int&gt;,&lt;int&gt;:&lt;int&gt;...](#--trim-intintintint)
+  - [--seek [[&lt;int&gt;:]&lt;int&gt;:]&lt;int&gt;[.&lt;int&gt;]](#--seek-intintintint)
+  - [--input-format &lt;string&gt;](#--input-format-string)
+  - [-f, --output-format &lt;string&gt;](#-f---output-format-string)
+  - [--video-track &lt;int&gt;](#--video-track-int-1)
+  - [--video-streamid &lt;int&gt;](#--video-streamid-int)
+  - [--video-tag &lt;string&gt;](#--video-tag-string)
+  - [--video-metadata &lt;string&gt; or &lt;string&gt;=&lt;string&gt;](#--video-metadata-string-or-stringstring)
+  - [--audio-copy [&lt;int/string&gt;;[,&lt;int/string&gt;]...]](#--audio-copy-intstringintstring)
+  - [--audio-codec [[&lt;int/string&gt;?]&lt;string&gt;[:&lt;string&gt;=&lt;string&gt;[,&lt;string&gt;=&lt;string&gt;]...]...]](#--audio-codec-intstringstringstringstringstringstring)
+  - [--audio-bitrate [&lt;int/string&gt;?]&lt;int&gt;](#--audio-bitrate-intstringint)
+  - [--audio-profile [&lt;int/string&gt;?]&lt;string&gt;](#--audio-profile-intstringstring)
+  - [--audio-stream [&lt;int/string&gt;?]{&lt;string1&gt;}[:&lt;string2&gt;]](#--audio-stream-intstringstring1string2)
+  - [--audio-samplerate [&lt;int/string&gt;?]&lt;int&gt;](#--audio-samplerate-intstringint)
+  - [--audio-resampler &lt;string&gt;](#--audio-resampler-string)
+  - [--audio-delay [&lt;int/string&gt;?]&lt;int&gt;](#--audio-delay-intstringint)
+  - [--audio-file &lt;int/string&gt;?&lt;string&gt;](#--audio-file-intstringstring)
+  - [--audio-filter [&lt;int/string&gt;?]&lt;string&gt;](#--audio-filter-intstringstring)
+  - [--audio-disposition [&lt;int/string&gt;?]&lt;string&gt;,&lt;string&gt;...](#--audio-disposition-intstringstringstring)
+  - [--audio-metadata [&lt;int/string&gt;?]&lt;string&gt; or [&lt;int/string&gt;?]&lt;string&gt;=&lt;string&gt;](#--audio-metadata-intstringstring-or-intstringstringstring)
+  - [--audio-bsf [&lt;int/string&gt;?]&lt;string&gt;](#--audio-bsf-intstringstring)
+  - [--audio-ignore-decode-error &lt;int&gt;](#--audio-ignore-decode-error-int)
+  - [--audio-source &lt;string&gt;[:{&lt;int&gt;?}[;&lt;param1&gt;=&lt;value1&gt;]...]...](#--audio-source-stringintparam1value1)
+  - [--chapter &lt;string&gt;](#--chapter-string)
+  - [--chapter-copy](#--chapter-copy)
+  - [--chapter-no-trim](#--chapter-no-trim)
+  - [--key-on-chapter](#--key-on-chapter)
+  - [--keyfile &lt;string&gt;](#--keyfile-string)
+  - [--sub-source &lt;string&gt;[:{&lt;int&gt;?}[;&lt;param1&gt;=&lt;value1&gt;]...]...](#--sub-source-stringintparam1value1)
+  - [--sub-copy [&lt;int/string&gt;;[,&lt;int/string&gt;]...]](#--sub-copy-intstringintstring)
+  - [--sub-disposition [&lt;int/string&gt;?]&lt;string&gt;](#--sub-disposition-intstringstring)
+  - [--sub-metadata [&lt;int/string&gt;?]&lt;string&gt; or [&lt;int/string&gt;?]&lt;string&gt;=&lt;string&gt;](#--sub-metadata-intstringstring-or-intstringstringstring)
+  - [--sub-bsf [&lt;int/string&gt;?]&lt;string&gt;](#--sub-bsf-intstringstring)
+  - [--caption2ass [&lt;string&gt;]](#--caption2ass-string)
+  - [--data-copy [&lt;int&gt;[,&lt;int&gt;]...]](#--data-copy-intint)
+  - [--attachment-copy [&lt;int&gt;[,&lt;int&gt;]...]](#--attachment-copy-intint)
+  - [--input-option &lt;string1&gt;:&lt;string2&gt;](#--input-option-string1string2)
+  - [-m, --mux-option &lt;string1&gt;:&lt;string2&gt;](#-m---mux-option-string1string2)
+  - [--metadata &lt;string&gt; or &lt;string&gt;=&lt;string&gt;](#--metadata-string-or-stringstring)
+  - [--avsync &lt;string&gt;](#--avsync-string)
+  - [--timecode [&lt;string&gt;]](#--timecode-string)
+- [Vpp Options](#vpp-options)
+  - [Vpp Filtering order](#vpp-filtering-order)
+  - [--vpp-colorspace &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-colorspace-param1value1)
+  - [--vpp-delogo &lt;string&gt;,&lt;param1&gt;=&lt;value1&gt;,...](#--vpp-delogo-stringparam1value1)
+  - [--vpp-afs &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-afs-param1value1)
+  - [--vpp-nnedi &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-nnedi-param1value1)
+  - [--vpp-decimate &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-decimate-param1value1)
+  - [--vpp-mpdecimate &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-mpdecimate-param1value1)
+  - [--vpp-rotate &lt;int&gt;](#--vpp-rotate-int)
+  - [--vpp-transform &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-transform-param1value1)
+  - [--vpp-convolution3d &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-convolution3d-param1value1)
+  - [--vpp-knn &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-knn-param1value1)
+  - [--vpp-pmd &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-pmd-param1value1)
+  - [--vpp-smooth &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-smooth-param1value1)
+  - [--vpp-subburn &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-subburn-param1value1)
+  - [--vpp-resize &lt;string&gt;](#--vpp-resize-string)
+  - [--vpp-unsharp &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-unsharp-param1value1)
+  - [--vpp-edgelevel &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-edgelevel-param1value1)
+  - [--vpp-warpsharp &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-warpsharp-param1value1)
+  - [--vpp-tweak &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-tweak-param1value1)
+  - [--vpp-deband &lt;param1&gt;=&lt;value1&gt;,...](#--vpp-deband-param1value1)
+  - [--vpp-pad &lt;int&gt;,&lt;int&gt;,&lt;int&gt;,&lt;int&gt;](#--vpp-pad-intintintint)
+  - [--vpp-perf-monitor](#--vpp-perf-monitor)
+- [Other Options](#other-options)
+  - [--output-buf &lt;int&gt;](#--output-buf-int)
+  - [--output-thread &lt;int&gt;](#--output-thread-int)
+  - [--log &lt;string&gt;](#--log-string)
+  - [--log-level &lt;string&gt;](#--log-level-string)
+  - [--log-opt &lt;param1&gt;=&lt;value&gt;[,&lt;param2&gt;=&lt;value&gt;]...](#--log-opt-param1valueparam2value)
+  - [--log-framelist](#--log-framelist)
+  - [--log-packets](#--log-packets)
+  - [--thread-affinity [&lt;string1&gt;=]{&lt;string2&gt;[#&lt;int&gt;[:&lt;int&gt;]...] or 0x&lt;hex&gt;}](#--thread-affinity-string1string2intint-or-0xhex)
+  - [--thread-priority [&lt;string1&gt;=]&lt;string2&gt;[#&lt;int&gt;[:&lt;int&gt;]...]](#--thread-priority-string1string2intint)
+  - [--thread-throttling [&lt;string1&gt;=]&lt;string2&gt;[#&lt;int&gt;[:&lt;int&gt;]...]](#--thread-throttling-string1string2intint)
+  - [--option-file &lt;string&gt;](#--option-file-string)
+  - [--max-procfps &lt;int&gt;](#--max-procfps-int)
+  - [--lowlatency](#--lowlatency)
+  - [--avsdll &lt;string&gt;](#--avsdll-string)
+  - [--process-codepage &lt;string&gt; [Windows OS only]](#--process-codepage-string-windows-os-only)
+  - [--perf-monitor [&lt;string&gt;[,&lt;string&gt;]...]](#--perf-monitor-stringstring)
+  - [--perf-monitor-interval &lt;int&gt;](#--perf-monitor-interval-int)
 
 ## Command line example
 
@@ -56,7 +233,8 @@ The argument type is
 - <float>  ... use decimal point
 - <string> ... use character string
 
-The argument with [] brackets are optional.
+The argument with [ ] { } brackets are optional.
+"..." means repeat of previous block.
 
 --(no-)xxx
 If it is attached with --no-xxx, you get the opposite effect of --xxx.
@@ -464,7 +642,7 @@ Example 1: --trim 0:1000,2000:3000    (encode from frame #0 to #1000 and from fr
 Example 2: --trim 2000:0              (encode from frame #2000 to the end)
 ```
 
-### --seek [&lt;int&gt;:][&lt;int&gt;:]&lt;int&gt;[.&lt;int&gt;]
+### --seek [[&lt;int&gt;:]&lt;int&gt;:]&lt;int&gt;[.&lt;int&gt;]
 The format is hh:mm:ss.ms. "hh" or "mm" could be omitted. The transcode will start from the time specified.
 
 Seeking by this option is not exact but fast, compared to [--trim](#--trim-intintintintintint). If you require exact seek, use [--trim](#--trim-intintintintintint).
@@ -518,7 +696,7 @@ Example3: set metadata
 --video-metadata 1?title="video title" --video-metadata 1?language=jpn
 ```
 
-### --audio-copy [{&lt;int&gt;or&lt;string&gt;};[,{&lt;int&gt;or&lt;string&gt;}]...]
+### --audio-copy [&lt;int/string&gt;;[,&lt;int/string&gt;]...]
 Copy audio track into output file. Available only when avhw / avsw reader is used.
 
 If it does not work well, try encoding with [--audio-codec](#--audio-codec-intstring), which is more stable.
@@ -536,7 +714,7 @@ Example: Extract track numbers #1 and #2
 --audio-copy eng,jpn
 ```
 
-### --audio-codec [[{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;[:&lt;string&gt;=&lt;string&gt;][,&lt;string&gt;=&lt;string&gt;][#&lt;string&gt;=&lt;string&gt;][,&lt;string&gt;=&lt;string&gt;],...]
+### --audio-codec [[&lt;int/string&gt;?]&lt;string&gt;[:&lt;string&gt;=&lt;string&gt;[,&lt;string&gt;=&lt;string&gt;]...]...]
 Encode audio track with the codec specified. If codec is not set, most suitable codec will be selected automatically. Codecs available could be checked with [--check-encoders](#--check-codecs---check-decoders---check-encoders).
 
 You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
@@ -559,7 +737,7 @@ Example 5: set param "aac_coder" to "twoloop" which will improve quality at low 
 --audio-codec aac:aac_coder=twoloop
 ```
 
-### --audio-bitrate [{&lt;int&gt;or&lt;string&gt;}?]&lt;int&gt;
+### --audio-bitrate [&lt;int/string&gt;?]&lt;int&gt;
 Specify the bitrate in kbps when encoding audio.
 
 You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
@@ -568,10 +746,10 @@ Example 1: --audio-bitrate 192 (set bitrate of audio track to 192 kbps)
 Example 2: --audio-bitrate 2?256 (set bitrate of 2nd audio track to to 256 kbps)
 ```
 
-### --audio-profile [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;
+### --audio-profile [&lt;int/string&gt;?]&lt;string&gt;
 Specify audio codec profile when encoding audio.You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
 
-### --audio-stream [{&lt;int&gt;or&lt;string&gt;}?][&lt;string1&gt;][:&lt;string2&gt;]
+### --audio-stream [&lt;int/string&gt;?]{&lt;string1&gt;}[:&lt;string2&gt;]
 Separate or merge audio channels.
 Audio tracks specified with this option will always be encoded. (no copying available)
 
@@ -623,7 +801,7 @@ hexagonal  = FL + FR + FC + BL + BR + BC
 7.1(wide)  = FL + FR + FC + LFE + FLC + FRC + SL + SR
 ```
 
-### --audio-samplerate [{&lt;int&gt;or&lt;string&gt;}?]&lt;int&gt;
+### --audio-samplerate [&lt;int/string&gt;?]&lt;int&gt;
 Specify the sampling frequency of the sound in Hz.
 You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt].
 ```
@@ -636,10 +814,10 @@ Specify the engine used for mixing audio channels and sampling frequency convers
 - swr ... swresampler (default)
 - soxr ... sox resampler (libsoxr)
 
-### --audio-delay [{&lt;int&gt;or&lt;string&gt;}?]&lt;int&gt;
+### --audio-delay [&lt;int/string&gt;?]&lt;int&gt;
 Specify audio delay in milli seconds.　You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
 
-### --audio-file [{&lt;int&gt;or&lt;string&gt;}?][&lt;string&gt;]&lt;string&gt;
+### --audio-file [&lt;int/string&gt;?][&lt;string&gt;]&lt;string&gt;
 Extract audio track to the specified path. The output format is determined automatically from the output extension. Available only when avhw / avsw reader is used.
 
 You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt].
@@ -654,7 +832,7 @@ Example: Output in adts format without extension
 --audio-file 2?adts:"test_out2"  
 ```
 
-### --audio-filter [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;
+### --audio-filter [&lt;int/string&gt;?]&lt;string&gt;
 Apply filters to audio track. Filters could be slected from [link](https://ffmpeg.org/ffmpeg-filters.html#Audio-Filters).
 
 You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
@@ -664,7 +842,7 @@ Example 1: --audio-filter volume=0.2  (lowering the volume)
 Example 2: --audio-filter 2?volume=-4db (lowering the volume of the 2nd track)
 ```
 
-### --audio-disposition [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;[,&lt;string&gt;][]...
+### --audio-disposition [&lt;int/string&gt;?]&lt;string&gt;[,&lt;string&gt;][]...
 set disposition for the specified audio track.
 You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
 
@@ -690,7 +868,7 @@ Example:
 --audio-disposition 2?default,forced
 ```
 
-### --audio-metadata [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt; or [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;=&lt;string&gt;
+### --audio-metadata [&lt;int/string&gt;?]&lt;string&gt; or [&lt;int/string&gt;?]&lt;string&gt;=&lt;string&gt;
 Set metadata for audio track.
   - copy  ... copy metadata from input if possible (default)
   - clear ... do not copy metadata
@@ -708,7 +886,7 @@ Example3: set metadata
 --audio-metadata 1?title="audio title" --audio-metadata 1?language=jpn
 ```
 
-### --audio-bsf [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;
+### --audio-bsf [&lt;int/string&gt;?]&lt;string&gt;
 Apply [bitstream filter](https://ffmpeg.org/ffmpeg-bitstream-filters.html) to audio track.
 
 
@@ -725,7 +903,7 @@ Example2: Quit transcoding for a single audio decode error.
 --audio-ignore-decode-error 0
 ```
 
-### --audio-source &lt;string&gt;[:[&lt;int&gt;?][;&lt;param1&gt;=&lt;value1&gt;][;&lt;param2&gt;=&lt;value2&gt;]...][:...]
+### --audio-source &lt;string&gt;[:{&lt;int&gt;?}[;&lt;param1&gt;=&lt;value1&gt;]...]...
 Mux an external audio file specified.
 
 **params** 
@@ -845,7 +1023,7 @@ Set keyframes on chapter position.
 Set keyframes on frames (starting from 0, 1, 2, ...) specified in the file.
 There should be one frame ID per line.
 
-### --sub-source &lt;string&gt;[:[&lt;int&gt;?][;&lt;param1&gt;=&lt;value1&gt;][;&lt;param2&gt;=&lt;value2&gt;]...][:...]
+### --sub-source &lt;string&gt;[:{&lt;int&gt;?}[;&lt;param1&gt;=&lt;value1&gt;]...]...
 Read subtitle from the specified file and mux into the output file.
 
 **params** 
@@ -863,7 +1041,7 @@ Example1: --sub-source "<sub_file>"
 Example2: --sub-source "<sub_file>":disposition=default;metadata=language=jpn
 ```
 
-### --sub-copy [{&lt;int&gt;or&lt;string&gt;};[,{&lt;int&gt;or&lt;string&gt;}]...]
+### --sub-copy [&lt;int/string&gt;;[,&lt;int/string&gt;]...]
 Copy subtitle tracks from input file. Available only when avhw / avsw reader is used.
 It is also possible to specify subtitle tracks (1, 2, ...) to extract with [&lt;int&gt;], or select subtitle tracks to copy by language with [&lt;string&gt;].
 
@@ -880,7 +1058,7 @@ Example: Copy subtitle tracks marked as English and Japanese
 --sub-copy eng,jpn
 ```
 
-### --sub-disposition [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;
+### --sub-disposition [&lt;int/string&gt;?]&lt;string&gt;
 set disposition for the specified subtitle track.
 
 ```
@@ -902,7 +1080,7 @@ set disposition for the specified subtitle track.
  copy
 ```
 
-### --sub-metadata [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt; or [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;=&lt;string&gt;
+### --sub-metadata [&lt;int/string&gt;?]&lt;string&gt; or [&lt;int/string&gt;?]&lt;string&gt;=&lt;string&gt;
 Set metadata for subtitle track.
   - copy  ... copy metadata from input if possible (default)
   - clear ... do not copy metadata
@@ -918,7 +1096,7 @@ Example3: set metadata
 --sub-metadata 1?title="subtitle title" --sub-metadata 1?language=jpn
 ```
 
-### --sub-bsf [{&lt;int&gt;or&lt;string&gt;}?]&lt;string&gt;
+### --sub-bsf [&lt;int/string&gt;?]&lt;string&gt;
 Apply [bitstream filter](https://ffmpeg.org/ffmpeg-bitstream-filters.html) to subtitle track.
 
 ### --caption2ass [&lt;string&gt;]
@@ -983,6 +1161,34 @@ Example3: set metadata
   Write timecode file to the specified path. If the path is not set, it will be written to "&lt;output file path&gt;.timecode.txt".
 
 ## Vpp Options
+
+These options will apply filters before encoding.
+
+### Vpp Filtering order
+
+Vpp filters will be applied in fixed order, regardless of the order in the commandline.
+
+- [--vpp-colorspace](#--vpp-colorspace-param1value1param2value2)
+- [--vpp-delogo](#--vpp-delogo-stringparam1value1param2value2)
+- [--vpp-afs](#--vpp-afs-param1value1param2value2)
+- [--vpp-nnedi](#--vpp-nnedi-param1value1param2value2)
+- [--vpp-transform/rotate](#--vpp-rotate-int)
+- [--vpp-decimate](#--vpp-decimate-param1value1param2value2)
+- [--vpp-mpdecimate](#--vpp-mpdecimate-param1value1param2value2)
+- [--vpp-select-every](#--vpp-select-every-intparam1int)
+- [--vpp-transform/rotate](#--vpp-rotate-int)
+- [--vpp-convolution3d](#--vpp-convolution3d-param1value1param2value2)
+- [--vpp-smooth](#--vpp-smooth-param1value1param2value2)
+- [--vpp-knn](#--vpp-knn-param1value1param2value2)
+- [--vpp-pmd](#--vpp-pmd-param1value1param2value2)
+- [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
+- [--vpp-resize](#--vpp-resize-string)
+- [--vpp-unsharp](#--vpp-unsharp-param1value1param2value2)
+- [--vpp-edgelevel](#--vpp-edgelevel-param1value1param2value2)
+- [--vpp-warpsharp](#--vpp-warpsharp-param1value1param2value2)
+- [--vpp-tweak](#--vpp-tweak-param1value1param2value2)
+- [--vpp-deband](#--vpp-deband-param1value1param2value2)
+- [--vpp-padding](#--vpp-pad-intintintint)
 
 ### --vpp-colorspace [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...  
 Converts colorspace of the video. Available on x64 version.  
@@ -1664,7 +1870,7 @@ Select the level of log output.
 - debug ... Output additional information, mainly for debug
 - trace ... Output information for each frame (slow)
 
-### --log-opt [<param1>[=<value>]][,<param2>[=<value>]][]...
+### --log-opt &lt;param1&gt;=&lt;value&gt;[,&lt;param2&gt;=&lt;value&gt;]...
 additional options for log output.
 **parameters**
 - addtime (default=off)  
@@ -1676,7 +1882,7 @@ FOR DEBUG ONLY! Output debug log for avsw/avhw reader.
 ### --log-packets
 FOR DEBUG ONLY! Output debug log for packets read in avsw/avhw reader.
 
-### --thread-affinity [&lt;string1&gt;=]{&lt;string2&gt;[#&lt;int&gt;[:&lt;int&gt;][]...] or 0x&lt;hex&gt;}
+### --thread-affinity [&lt;string1&gt;=]{&lt;string2&gt;[#&lt;int&gt;[:&lt;int&gt;]...] or 0x&lt;hex&gt;}
 Set thread affinity to the process or threads of the application.
 
 **target** (&lt;string1&gt;)
@@ -1719,7 +1925,7 @@ Example: Set process affinity to firect CCX on Ryzen CPUs
 --thread-affinity process=cachel3#0
 ```
 
-### --thread-priority [&lt;string1&gt;=]&lt;string2&gt;[#&lt;int&gt;[:&lt;int&gt;][]...]
+### --thread-priority [&lt;string1&gt;=]&lt;string2&gt;[#&lt;int&gt;[:&lt;int&gt;]...]
 Set priority to the process or threads of the application. [Windows OS only]  
 
 **target** (&lt;string1&gt;)
@@ -1748,7 +1954,7 @@ Example: apply belownormal priority to output thread, and background priority to
 --thread-priority output=belownormal,perfmonitor=background
 ```
 
-### --thread-throttling [&lt;string1&gt;=]&lt;string2&gt;[#&lt;int&gt;[:&lt;int&gt;][]...]  
+### --thread-throttling [&lt;string1&gt;=]&lt;string2&gt;[#&lt;int&gt;[:&lt;int&gt;]...]  
 Set power throttling mode to the threads of the application. [Windows OS only]  
 
 **target** (&lt;string1&gt;)
@@ -1811,7 +2017,7 @@ Specifies AviSynth DLL location to use. When unspecified, the default AviSynth.d
   and the manifest file of the copy will be modified using UpdateResourceW API to switch back code page
   to the default of the OS, and then the copied exe will be run, allowing us to handle the AviSynth scripts using legacy code page.
 
-### --perf-monitor [&lt;string&gt;][,&lt;string&gt;]...
+### --perf-monitor [&lt;string&gt;[,&lt;string&gt;]...]
 Outputs performance information. You can select the information name you want to output as a parameter from the following table. The default is all (all information).
 
 ```
