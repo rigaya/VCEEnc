@@ -86,6 +86,7 @@ VCEParam::VCEParam() :
     nDeltaQPBFrameRef(4),
     nBframes(VCE_DEFAULT_BFRAMES),
     bBPyramid(false),
+    adaptMiniGOP(false),
     nMotionEst(VCE_MOTION_EST_QUATER | VCE_MOTION_EST_HALF),
     bEnforceHRD(false),
     nIDRPeriod(1),
@@ -189,6 +190,8 @@ RGY_ERR AMFParams::SetParamTypeAVC() {
     SetParamType(AMF_VIDEO_ENCODER_LTR_MODE, AMF_PARAM_STATIC, L"amf_int64(AMF_VIDEO_ENCODER_LTR_MODE_ENUM); default = AMF_VIDEO_ENCODER_LTR_MODE_RESET_UNUSED; remove/keep unused LTRs (not specified in property AMF_VIDEO_ENCODER_FORCE_LTR_REFERENCE_BITFIELD)");
     SetParamType(AMF_VIDEO_ENCODER_SCANTYPE, AMF_PARAM_STATIC, L"Scan Type (PROGRESSIVE, INTERLACED, default = PROGRESSIVE)");
     SetParamType(AMF_VIDEO_ENCODER_MAX_NUM_REFRAMES, AMF_PARAM_STATIC, L"Max Of Reference frames (integer, default = 4)");
+    SetParamType(AMF_VIDEO_ENCODER_MAX_CONSECUTIVE_BPICTURES, AMF_PARAM_STATIC, L"amf_int64; Maximum number of consecutive B Pictures");
+    SetParamType(AMF_VIDEO_ENCODER_ADAPTIVE_MINIGOP, AMF_PARAM_STATIC, L"bool; default = false; Disable/Enable Adaptive MiniGOP");
     SetParamType(AMF_VIDEO_ENCODER_ASPECT_RATIO, AMF_PARAM_STATIC, L"Controls aspect ratio, defulat (1,1)");
     SetParamType(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR, AMF_PARAM_STATIC, L"Inidicates that YUV input is (0,255) (bool, default = false)");
     SetParamType(AMF_VIDEO_ENCODER_LOWLATENCY_MODE, AMF_PARAM_STATIC, L"bool; default = false, enables low latency mode");
@@ -264,6 +267,8 @@ RGY_ERR AMFParams::SetParamTypeAVC() {
     SetParamType(AMF_VIDEO_ENCODER_REFERENCE_PICTURE, AMF_PARAM_FRAME, L"AMFInterface(AMFSurface); surface used for frame injection");
     SetParamType(AMF_VIDEO_ENCODER_PSNR_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to calculate PSNR score");
     SetParamType(AMF_VIDEO_ENCODER_SSIM_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to calculate SSIM score");
+    SetParamType(AMF_VIDEO_ENCODER_STATISTICS_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to collect and feedback statistics");
+    SetParamType(AMF_VIDEO_ENCODER_BLOCK_QP_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to collect and feedback block level QP values");
 
     // ------------- PA parameters ---------------
     SetParamType(AMF_VIDEO_ENCODER_PRE_ANALYSIS_ENABLE, AMF_PARAM_STATIC, L"Enable PA (true, false default =  false)");
@@ -316,6 +321,7 @@ RGY_ERR AMFParams::SetParamTypeHEVC() {
     SetParamType(AMF_VIDEO_ENCODER_HEVC_DE_BLOCKING_FILTER_DISABLE, AMF_PARAM_STATIC, L"De-blocking Filter(true, false default =  false)");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_SLICES_PER_FRAME, AMF_PARAM_STATIC, L"Slices Per Frame (integer, default = 1)");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_HEADER_INSERTION_MODE, AMF_PARAM_STATIC, L"insertion mode (none, gop, idr default = none");
+    SetParamType(AMF_VIDEO_ENCODER_HEVC_INTRA_REFRESH_NUM_CTBS_PER_SLOT, AMF_PARAM_STATIC, L"amf_int64; default = depends on USAGE; Intra Refresh CTBs Number Per Slot in 64x64 CTB");
 
 
     // Rate control properties

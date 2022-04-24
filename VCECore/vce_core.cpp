@@ -1803,6 +1803,8 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         m_params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)((m_picStruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
 
         m_params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN, (amf_int64)prm->nBframes);
+        m_params.SetParam(AMF_VIDEO_ENCODER_MAX_CONSECUTIVE_BPICTURES, (amf_int64)prm->nBframes);
+        m_params.SetParam(AMF_VIDEO_ENCODER_ADAPTIVE_MINIGOP, prm->adaptMiniGOP);
         if (prm->nBframes > 0) {
             m_params.SetParam(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrame);
             m_params.SetParam(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrameRef);
@@ -3474,6 +3476,9 @@ tstring VCECore::GetEncoderParam() {
     if (m_encCodec == RGY_CODEC_H264) {
         if (GetPropertyBool(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR)) {
             others += _T("fullrange ");
+        }
+        if (GetPropertyBool(AMF_VIDEO_ENCODER_ADAPTIVE_MINIGOP)) {
+            others += _T("adaptMiniGOP ");
         }
     }
     if (GetPropertyBool(AMF_PARAM_ENABLE_VBAQ(m_encCodec))) {

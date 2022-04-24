@@ -166,6 +166,7 @@ tstring encoder_help() {
         _T("   --(no-)b-pyramid             enable b-pyramid feature\n")
         _T("   --b-deltaqp <int>            set qp offset for non-ref b frames\n")
         _T("   --bref-deltaqp <int>         set qp offset for ref b frames\n")
+        _T("   --adapt-minigop              enable adaptive mini-gop [H.264]\n")
         _T("   --ref <int>                  set num of reference frames (default: %d)\n")
         _T("   --ltr <int>                  set num of long term reference frames (default: %d)\n")
         _T("   --max-bitrate <int>          set max bitrate (kbps) (default: %d)\n")
@@ -527,6 +528,14 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             return 1;
         }
         pParams->nDeltaQPBFrameRef = value;
+        return 0;
+    }
+    if (IS_OPTION("adapt-minigop")) {
+        pParams->adaptMiniGOP = true;
+        return 0;
+    }
+    if (IS_OPTION("no-adapt-minigop")) {
+        pParams->adaptMiniGOP = false;
         return 0;
     }
     if (IS_OPTION("ref")) {
@@ -1043,6 +1052,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_BOOL(_T("--b-pyramid"), _T("--no-b-pyramid"), bBPyramid);
     OPT_NUM(_T("--b-deltaqp"), nDeltaQPBFrame);
     OPT_NUM(_T("--bref-deltaqp"), nDeltaQPBFrameRef);
+    OPT_BOOL(_T("--adapt-minigop"), _T("--no-adapt-minigop"), adaptMiniGOP);
     OPT_NUM(_T("--ref"), nRefFrames);
     OPT_NUM(_T("--ltr"), nLTRFrames);
     OPT_NUM(_T("--slices"), nSlices);

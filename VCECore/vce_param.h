@@ -378,6 +378,7 @@ struct VCEParam {
     int     nDeltaQPBFrameRef;
     int     nBframes;
     bool    bBPyramid;
+    bool    adaptMiniGOP;
     int     nMotionEst;
     bool    bEnforceHRD;
     int     nIDRPeriod;
