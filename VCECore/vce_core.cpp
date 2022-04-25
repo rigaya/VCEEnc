@@ -1489,15 +1489,18 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             return RGY_ERR_UNSUPPORTED;
         }
 
-        int maxProfile = 0;
-        encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_PROFILE(prm->codec), &maxProfile);
-        PrintMes(RGY_LOG_DEBUG, _T("Max Profile: %s.\n"), get_cx_desc(get_profile_list(prm->codec), maxProfile));
-        if (prm->codecParam[prm->codec].nProfile > maxProfile) {
-            PrintMes(RGY_LOG_ERROR, _T("Max supported %s profile on this platform is %s (%s specified).\n"),
-                CodecToStr(prm->codec).c_str(),
-                get_cx_desc(get_profile_list(prm->codec), maxProfile),
-                get_cx_desc(get_profile_list(prm->codec), prm->codecParam[prm->codec].nProfile));
-            return RGY_ERR_UNSUPPORTED;
+        //HEVCについてはmain10が無効だと返す場合があるので、チェックしないようにする
+        if (prm->codec != RGY_CODEC_HEVC || !IGNORE_HEVC_PROFILE_CAP) {
+            int maxProfile = 0;
+            encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_PROFILE(prm->codec), &maxProfile);
+            PrintMes(RGY_LOG_DEBUG, _T("Max Profile: %s.\n"), get_cx_desc(get_profile_list(prm->codec), maxProfile));
+            if (prm->codecParam[prm->codec].nProfile > maxProfile) {
+                PrintMes(RGY_LOG_ERROR, _T("Max supported %s profile on this platform is %s (%s specified).\n"),
+                    CodecToStr(prm->codec).c_str(),
+                    get_cx_desc(get_profile_list(prm->codec), maxProfile),
+                    get_cx_desc(get_profile_list(prm->codec), prm->codecParam[prm->codec].nProfile));
+                return RGY_ERR_UNSUPPORTED;
+            }
         }
 
         int maxLevel = 0;
@@ -1991,16 +1994,19 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
             continue;
         }
 
-        int maxProfile = 0;
-        encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_PROFILE(prm->codec), &maxProfile);
-        PrintMes(RGY_LOG_DEBUG, _T("  Max Profile: %s.\n"), get_cx_desc(get_profile_list(prm->codec), maxProfile));
-        if (prm->codecParam[prm->codec].nProfile > maxProfile) {
-            message += strsprintf(_T("GPU #%d (%s) does not support %s %s profile (max supported: %s).\n"),
-                (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
-                get_cx_desc(get_profile_list(prm->codec), prm->codecParam[prm->codec].nProfile),
-                get_cx_desc(get_profile_list(prm->codec), maxProfile));
-            gpu = gpuList.erase(gpu);
-            continue;
+        //HEVCについてはmain10が無効だと返す場合があるので、チェックしないようにする
+        if (prm->codec != RGY_CODEC_HEVC || !IGNORE_HEVC_PROFILE_CAP) {
+            int maxProfile = 0;
+            encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_PROFILE(prm->codec), &maxProfile);
+            PrintMes(RGY_LOG_DEBUG, _T("  Max Profile: %s.\n"), get_cx_desc(get_profile_list(prm->codec), maxProfile));
+            if (prm->codecParam[prm->codec].nProfile > maxProfile) {
+                message += strsprintf(_T("GPU #%d (%s) does not support %s %s profile (max supported: %s).\n"),
+                                      (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str(),
+                                      get_cx_desc(get_profile_list(prm->codec), prm->codecParam[prm->codec].nProfile),
+                                      get_cx_desc(get_profile_list(prm->codec), maxProfile));
+                gpu = gpuList.erase(gpu);
+                continue;
+            }
         }
 
         int maxLevel = 0;

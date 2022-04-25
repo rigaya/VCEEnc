@@ -47,6 +47,8 @@ RGY_DISABLE_WARNING_STR("-Wclass-memaccess")
 RGY_DISABLE_WARNING_POP
 #pragma warning(pop)
 
+static bool IGNORE_HEVC_PROFILE_CAP = true;
+
 class VCEDevice {
 public:
     VCEDevice(shared_ptr<RGYLog>& log, amf::AMFFactory *factory, amf::AMFTrace *trace);
