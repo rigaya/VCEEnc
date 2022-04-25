@@ -434,7 +434,7 @@ tstring VCEDevice::QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
 
     amf_uint32 maxLevel = 0;
     encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_LEVEL(codec), &maxLevel);
-    auto level_desc = get_cx_desc(get_profile_list(codec), maxProfile);
+    auto level_desc = get_cx_desc(get_profile_list(codec), maxLevel);
     str += _T("max level:       ") + tstring(level_desc ? level_desc : _T("unknown")) + _T("\n");
 
     amf_uint32 maxBitrate = 0;
