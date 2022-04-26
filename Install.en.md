@@ -11,7 +11,7 @@
 
 ## Windows 10
 
-### 1. Install Intel Graphics driver
+### 1. Install AMD Radeon Graphics driver
 ### 2. Download Windows binary  
 Windows binary can be found from [this link](https://github.com/rigaya/VCEEnc/releases). VCEEncC_x.xx_Win32.7z contains 32bit exe file, VCEEncC_x.xx_x64.7z contains 64bit exe file.
 

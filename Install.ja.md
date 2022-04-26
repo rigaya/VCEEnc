@@ -11,7 +11,7 @@
 
 ## Windows 
 
-### 1. Intelグラフィックスドライバをインストールします。
+### 1. AMD Radeonグラフィックスドライバをインストールします。
 ### 2. Windows用実行ファイルをダウンロードして展開します。  
 実行ファイルは[こちら](https://github.com/rigaya/VCEEnc/releases)からダウンロードできます。VCEEncC_x.xx_Win32.7z が 32bit版、VCEEncC_x.xx_x64.7z が 64bit版です。通常は、64bit版を使用します。
 
