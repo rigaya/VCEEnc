@@ -16,7 +16,7 @@ jobs:
         include:
           - dockerimg: ubuntu2004
             pkgtype: deb
-          - dockerimg: centos8
+          - dockerimg: fedora34
             pkgtype: rpm
 
     env:
