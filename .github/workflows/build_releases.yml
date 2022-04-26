@@ -81,7 +81,7 @@ jobs:
           set VAPOURSYNTH_SDK=${{ github.workspace }}\..\vapoursynth
           set OPENCL_HEADERS=${{ github.workspace }}\..\openclheaders
           set CAPTION2ASS_SRC=${{ github.workspace }}\..\caption2ass\src
-          msbuild VCEEnc.sln /t:build /p:configuration=ReleaseStatic /p:Platform=${{ matrix.platform }} -maxcpucount
+          msbuild VCEEnc.sln /t:build /p:configuration=RelStatic /p:Platform=${{ matrix.platform }} -maxcpucount
 
       - name: Create Archieve
         id: archieve
