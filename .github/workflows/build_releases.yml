@@ -88,8 +88,8 @@ jobs:
         run: |
           mkdir VCEEncC_Release
           copy hdr10plus_gen\hdr10plus_gen.exe VCEEncC_Release
-          copy _build\${{ matrix.platform }}\ReleaseStatic\VCEEncC*.exe VCEEncC_Release
-          copy _build\${{ matrix.platform }}\ReleaseStatic\*.dll VCEEncC_Release
+          copy _build\${{ matrix.platform }}\RelStatic\VCEEncC*.exe VCEEncC_Release
+          copy _build\${{ matrix.platform }}\RelStatic\*.dll VCEEncC_Release
           7z a -mx9 VCEEncC_${{ needs.get_version_name.outputs.version_name }}_${{ matrix.platform }}.7z .\VCEEncC_Release\*
 
       - name: Upload Release Asset
