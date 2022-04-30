@@ -485,10 +485,10 @@ struct RGYCLMemObjInfo {
     bool isImageNormalizedType() const;
 };
 
-enum class RGYCLMapBlock {
-    None,
-    All,
-    Last
+enum RGYCLMapBlock {
+    RGY_CL_MAP_BLOCK_NONE,
+    RGY_CL_MAP_BLOCK_ALL,
+    RGY_CL_MAP_BLOCK_LAST
 };
 
 class RGYCLBufMap {
@@ -536,7 +536,7 @@ public:
     size_t size() const { return m_size; }
     cl_mem_flags flags() const { return m_flags; }
 
-    RGY_ERR queueMapBuffer(RGYOpenCLQueue &queue, cl_map_flags map_flags, const std::vector<RGYOpenCLEvent> &wait_events = {}, const RGYCLMapBlock block_map = RGYCLMapBlock::None);
+    RGY_ERR queueMapBuffer(RGYOpenCLQueue &queue, cl_map_flags map_flags, const std::vector<RGYOpenCLEvent> &wait_events = {}, const RGYCLMapBlock block_map = RGY_CL_MAP_BLOCK_NONE);
     const RGYOpenCLEvent &mapEvent() const { return m_mapped->event(); }
     const void *mappedPtr() const { return m_mapped->ptr(); }
     void *mappedPtr() { return m_mapped->ptr(); }
@@ -599,7 +599,7 @@ public:
     };
     RGYCLFrame(const RGYFrameInfo &info_, const RGYFrameInfo &host_frame_, cl_mem_flags flags_ = CL_MEM_READ_WRITE)
         : frame(info_), host_frame(host_frame_), flags(flags_), m_mapped() {};
-    RGY_ERR queueMapBuffer(RGYOpenCLQueue &queue, cl_map_flags map_flags, const std::vector<RGYOpenCLEvent> &wait_events = {}, const RGYCLMapBlock block_map = RGYCLMapBlock::None);
+    RGY_ERR queueMapBuffer(RGYOpenCLQueue &queue, cl_map_flags map_flags, const std::vector<RGYOpenCLEvent> &wait_events = {}, const RGYCLMapBlock block_map = RGY_CL_MAP_BLOCK_NONE);
     RGY_ERR unmapBuffer();
     RGY_ERR unmapBuffer(RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events = {});
     const RGYOpenCLEvent &mapEvent() const { return m_mapped->event(); }

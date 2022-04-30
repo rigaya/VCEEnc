@@ -1487,7 +1487,7 @@ bool RGYCLMemObjInfo::isImageNormalizedType() const {
 }
 
 RGY_ERR RGYCLBufMap::map(cl_map_flags map_flags, size_t size, RGYOpenCLQueue &queue) {
-    return map(map_flags, size, queue, {}, RGYCLMapBlock::None);
+    return map(map_flags, size, queue, {}, RGY_CL_MAP_BLOCK_NONE);
 }
 
 RGY_ERR RGYCLBufMap::map(cl_map_flags map_flags, size_t size, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, const RGYCLMapBlock block_map) {
@@ -1495,7 +1495,7 @@ RGY_ERR RGYCLBufMap::map(cl_map_flags map_flags, size_t size, RGYOpenCLQueue &qu
     const std::vector<cl_event> v_wait_list = toVec(wait_events);
     const cl_event *wait_list = (v_wait_list.size() > 0) ? v_wait_list.data() : nullptr;
     cl_int err = 0;
-    m_hostPtr = clEnqueueMapBuffer(m_queue, m_mem, (block_map != RGYCLMapBlock::None) ? CL_TRUE : CL_FALSE, map_flags, 0, size, (int)v_wait_list.size(), wait_list, m_eventMap.reset_ptr(), &err);
+    m_hostPtr = clEnqueueMapBuffer(m_queue, m_mem, (block_map != RGY_CL_MAP_BLOCK_NONE) ? CL_TRUE : CL_FALSE, map_flags, 0, size, (int)v_wait_list.size(), wait_list, m_eventMap.reset_ptr(), &err);
     return err_cl_to_rgy(err);
 }
 
@@ -1541,7 +1541,7 @@ RGYCLMemObjInfo RGYCLBuf::getMemObjectInfo() const {
 RGYCLFrameMap::RGYCLFrameMap(RGYFrameInfo dev, RGYOpenCLQueue &queue) : m_dev(dev), m_queue(queue.get()), m_host(), m_eventMap() {};
 
 RGY_ERR RGYCLFrameMap::map(cl_map_flags map_flags, RGYOpenCLQueue& queue) {
-    return map(map_flags, queue, {}, RGYCLMapBlock::None);
+    return map(map_flags, queue, {}, RGY_CL_MAP_BLOCK_NONE);
 }
 
 RGY_ERR RGYCLFrameMap::map(cl_map_flags map_flags, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, const RGYCLMapBlock block_map) {
@@ -1556,9 +1556,9 @@ RGY_ERR RGYCLFrameMap::map(cl_map_flags map_flags, RGYOpenCLQueue &queue, const 
         cl_int err = 0;
         cl_bool block = CL_FALSE;
         switch (block_map) {
-            case RGYCLMapBlock::All: block = CL_TRUE; break;
-            case RGYCLMapBlock::Last: if (i == (RGY_CSP_PLANES[m_dev.csp]-1)) block = CL_TRUE; break;
-            case RGYCLMapBlock::None:
+            case RGY_CL_MAP_BLOCK_ALL: block = CL_TRUE; break;
+            case RGY_CL_MAP_BLOCK_LAST: { if (i == (RGY_CSP_PLANES[m_dev.csp]-1)) block = CL_TRUE; } break;
+            case RGY_CL_MAP_BLOCK_NONE:
             default: break;
         }
         size_t size = (size_t)m_dev.pitch[i] * m_dev.height;

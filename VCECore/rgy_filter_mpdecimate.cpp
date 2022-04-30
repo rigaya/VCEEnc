@@ -97,9 +97,9 @@ RGY_ERR RGYFilterMpdecimate::calcDiff(RGYFilterMpdecimateFrameData *target, cons
         }
 #if ENCODER_VCEENC
         //非同期モードで転送するとなぜかエラー終了したり、予期せぬ結果を招くため、同期転送する
-        RGYCLMapBlock map_mode = RGYCLMapBlock::Last;
+        RGYCLMapBlock map_mode = RGY_CL_MAP_BLOCK_LAST;
 #else
-        RGYCLMapBlock map_mode = RGYCLMapBlock::None;
+        RGYCLMapBlock map_mode = RGY_CL_MAP_BLOCK_NONE;
 #endif
         if ((err = target->tmp()->queueMapBuffer(queue_main, CL_MAP_READ, {}, map_mode)) != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("failed to queueMapBuffer in calcDiff: %s.\n"), get_err_mes(err));
