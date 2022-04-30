@@ -748,6 +748,7 @@ System::Void frmConfig::InitComboBox() {
 
     setComboBox(fcgCXVppResizeAlg,   list_vpp_resize);
     setComboBox(fcgCXVppDeinterlace, list_vpp_deinterlacer);
+    setComboBox(fcgCXVppDenoiseConv3DMatrix, list_vpp_convolution3d_matrix);
     setComboBox(fcgCXVppAfsAnalyze,     list_vpp_afs_analyze);
     setComboBox(fcgCXVppNnediNsize,     list_vpp_nnedi_nsize);
     setComboBox(fcgCXVppNnediNns,       list_vpp_nnedi_nns);
@@ -837,6 +838,7 @@ System::Void frmConfig::fcgChangeEnabled(System::Object^  sender, System::EventA
     fcgPNVppDenoiseKnn->Visible = (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("knn")));
     fcgPNVppDenoisePmd->Visible = (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("pmd")));
     fcgPNVppDenoiseSmooth->Visible = (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("smooth")));
+    fcgPNVppDenoiseConv3D->Visible = (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("convolution3d")));
     fcgPNVppUnsharp->Visible = (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("unsharp")));
     fcgPNVppEdgelevel->Visible = (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("edgelevel")));
     fcgPNVppWarpsharp->Visible = (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("warpsharp")));
@@ -1049,6 +1051,8 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
             denoise_idx = get_cx_index(list_vpp_denoise, _T("pmd"));
         } else if (vce.vpp.smooth.enable) {
             denoise_idx = get_cx_index(list_vpp_denoise, _T("smooth"));
+        } else if (vce.vpp.convolution3d.enable) {
+            denoise_idx = get_cx_index(list_vpp_denoise, _T("convolution3d"));
         }
         SetCXIndex(fcgCXVppDenoiseMethod, denoise_idx);
 
@@ -1080,6 +1084,11 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
         SetNUValue(fcgNUVppDenoisePmdThreshold,  vce.vpp.pmd.threshold);
         SetNUValue(fcgNUVppDenoiseSmoothQuality, vce.vpp.smooth.quality);
         SetNUValue(fcgNUVppDenoiseSmoothQP,      vce.vpp.smooth.qp);
+        SetCXIndex(fcgCXVppDenoiseConv3DMatrix, get_cx_index(list_vpp_convolution3d_matrix, (int)vce.vpp.convolution3d.matrix));
+        SetNUValue(fcgNUVppDenoiseConv3DThreshYSpatial, vce.vpp.convolution3d.threshYspatial);
+        SetNUValue(fcgNUVppDenoiseConv3DThreshCSpatial, vce.vpp.convolution3d.threshCspatial);
+        SetNUValue(fcgNUVppDenoiseConv3DThreshYTemporal, vce.vpp.convolution3d.threshYtemporal);
+        SetNUValue(fcgNUVppDenoiseConv3DThreshCTemporal, vce.vpp.convolution3d.threshCtemporal);
         fcgCBVppDebandEnable->Checked          = vce.vpp.deband.enable;
         SetNUValue(fcgNUVppDebandRange,          vce.vpp.deband.range);
         SetNUValue(fcgNUVppDebandThreY,          vce.vpp.deband.threY);
@@ -1247,6 +1256,13 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.vpp.smooth.enable = fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("smooth"));
     vce.vpp.smooth.quality = (int)fcgNUVppDenoiseSmoothQuality->Value;
     vce.vpp.smooth.qp = (int)fcgNUVppDenoiseSmoothQP->Value;
+
+    vce.vpp.convolution3d.enable = fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("convolution3d"));
+    vce.vpp.convolution3d.matrix = (VppConvolution3dMatrix)list_vpp_convolution3d_matrix[fcgCXVppDenoiseConv3DMatrix->SelectedIndex].value;;
+    vce.vpp.convolution3d.threshYspatial = (int)fcgNUVppDenoiseConv3DThreshYSpatial->Value;
+    vce.vpp.convolution3d.threshCspatial = (int)fcgNUVppDenoiseConv3DThreshCSpatial->Value;
+    vce.vpp.convolution3d.threshYtemporal = (int)fcgNUVppDenoiseConv3DThreshYTemporal->Value;
+    vce.vpp.convolution3d.threshCtemporal = (int)fcgNUVppDenoiseConv3DThreshCTemporal->Value;
 
     vce.vpp.unsharp.enable = fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("unsharp"));
     vce.vpp.unsharp.radius = (int)fcgNUVppUnsharpRadius->Value;
