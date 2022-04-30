@@ -1046,6 +1046,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             unique_ptr<RGYFilter> filter(new RGYFilterMpdecimate(m_dev->cl()));
             shared_ptr<RGYFilterParamMpdecimate> param(new RGYFilterParamMpdecimate());
             param->mpdecimate = inputParam->vpp.mpdecimate;
+            param->useSeparateQueue = false; // やはりuseSeparateQueueはバグっているかもしれない
             param->outfilename = inputParam->common.outputFilename;
             param->frameIn = inputFrame;
             param->frameOut = inputFrame;

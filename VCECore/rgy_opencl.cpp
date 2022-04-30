@@ -1487,15 +1487,15 @@ bool RGYCLMemObjInfo::isImageNormalizedType() const {
 }
 
 RGY_ERR RGYCLBufMap::map(cl_map_flags map_flags, size_t size, RGYOpenCLQueue &queue) {
-    return map(map_flags, size, queue, {});
+    return map(map_flags, size, queue, {}, RGYCLMapBlock::None);
 }
 
-RGY_ERR RGYCLBufMap::map(cl_map_flags map_flags, size_t size, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events) {
+RGY_ERR RGYCLBufMap::map(cl_map_flags map_flags, size_t size, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, const RGYCLMapBlock block_map) {
     m_queue = queue.get();
     const std::vector<cl_event> v_wait_list = toVec(wait_events);
     const cl_event *wait_list = (v_wait_list.size() > 0) ? v_wait_list.data() : nullptr;
     cl_int err = 0;
-    m_hostPtr = clEnqueueMapBuffer(m_queue, m_mem, false, map_flags, 0, size, (int)v_wait_list.size(), wait_list, m_eventMap.reset_ptr(), &err);
+    m_hostPtr = clEnqueueMapBuffer(m_queue, m_mem, (block_map != RGYCLMapBlock::None) ? CL_TRUE : CL_FALSE, map_flags, 0, size, (int)v_wait_list.size(), wait_list, m_eventMap.reset_ptr(), &err);
     return err_cl_to_rgy(err);
 }
 
@@ -1518,9 +1518,9 @@ RGY_ERR RGYCLBufMap::unmap(cl_command_queue queue, const std::vector<RGYOpenCLEv
     return err;
 }
 
-RGY_ERR RGYCLBuf::queueMapBuffer(RGYOpenCLQueue &queue, cl_map_flags map_flags, const std::vector<RGYOpenCLEvent> &wait_events) {
+RGY_ERR RGYCLBuf::queueMapBuffer(RGYOpenCLQueue &queue, cl_map_flags map_flags, const std::vector<RGYOpenCLEvent> &wait_events, const RGYCLMapBlock block_map) {
     m_mapped = std::make_unique<RGYCLBufMap>(m_mem);
-    return m_mapped->map(map_flags, m_size, queue, wait_events);
+    return m_mapped->map(map_flags, m_size, queue, wait_events, block_map);
 }
 
 RGY_ERR RGYCLBuf::unmapBuffer() {
@@ -1541,10 +1541,10 @@ RGYCLMemObjInfo RGYCLBuf::getMemObjectInfo() const {
 RGYCLFrameMap::RGYCLFrameMap(RGYFrameInfo dev, RGYOpenCLQueue &queue) : m_dev(dev), m_queue(queue.get()), m_host(), m_eventMap() {};
 
 RGY_ERR RGYCLFrameMap::map(cl_map_flags map_flags, RGYOpenCLQueue& queue) {
-    return map(map_flags, queue, {});
+    return map(map_flags, queue, {}, RGYCLMapBlock::None);
 }
 
-RGY_ERR RGYCLFrameMap::map(cl_map_flags map_flags, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events) {
+RGY_ERR RGYCLFrameMap::map(cl_map_flags map_flags, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, const RGYCLMapBlock block_map) {
     std::vector<cl_event> v_wait_list = toVec(wait_events);
     cl_event *wait_list = (v_wait_list.size() > 0) ? v_wait_list.data() : nullptr;
     m_host = m_dev;
@@ -1554,8 +1554,15 @@ RGY_ERR RGYCLFrameMap::map(cl_map_flags map_flags, RGYOpenCLQueue &queue, const 
     }
     for (int i = 0; i < RGY_CSP_PLANES[m_dev.csp]; i++) {
         cl_int err = 0;
+        cl_bool block = CL_FALSE;
+        switch (block_map) {
+            case RGYCLMapBlock::All: block = CL_TRUE; break;
+            case RGYCLMapBlock::Last: if (i == (RGY_CSP_PLANES[m_dev.csp]-1)) block = CL_TRUE; break;
+            case RGYCLMapBlock::None:
+            default: break;
+        }
         size_t size = (size_t)m_dev.pitch[i] * m_dev.height;
-        m_host.ptr[i] = (uint8_t *)clEnqueueMapBuffer(m_queue, (cl_mem)m_dev.ptr[i], CL_FALSE, map_flags, 0, size, (int)v_wait_list.size(), wait_list, m_eventMap.reset_ptr(), &err);
+        m_host.ptr[i] = (uint8_t *)clEnqueueMapBuffer(m_queue, (cl_mem)m_dev.ptr[i], block, map_flags, 0, size, (int)v_wait_list.size(), wait_list, m_eventMap.reset_ptr(), &err);
         if (err != 0) {
             return err_cl_to_rgy(err);
         }
@@ -1591,9 +1598,9 @@ RGY_ERR RGYCLFrameMap::unmap(cl_command_queue queue, const std::vector<RGYOpenCL
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYCLFrame::queueMapBuffer(RGYOpenCLQueue &queue, cl_map_flags map_flags, const std::vector<RGYOpenCLEvent> &wait_events) {
+RGY_ERR RGYCLFrame::queueMapBuffer(RGYOpenCLQueue &queue, cl_map_flags map_flags, const std::vector<RGYOpenCLEvent> &wait_events, const RGYCLMapBlock block_map) {
     m_mapped = std::make_unique<RGYCLFrameMap>(frame, queue);
-    return m_mapped->map(map_flags, queue, wait_events);
+    return m_mapped->map(map_flags, queue, wait_events, block_map);
 }
 
 RGY_ERR RGYCLFrame::unmapBuffer() {
@@ -1604,6 +1611,13 @@ RGY_ERR RGYCLFrame::unmapBuffer(RGYOpenCLQueue &queue, const std::vector<RGYOpen
 }
 void RGYCLFrame::clear() {
     m_mapped.reset();
+    for (int i = 0; i < _countof(host_frame.ptr); i++) {
+        if (host_frame.ptr[i] != nullptr) {
+            _aligned_free(host_frame.ptr[i]);
+        }
+        host_frame.ptr[i] = nullptr;
+        host_frame.pitch[i] = 0;
+    }
     for (int i = 0; i < _countof(frame.ptr); i++) {
         if (mem(i)) {
             clReleaseMemObject(mem(i));
@@ -2265,13 +2279,17 @@ std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createImageFromFrameBuffer(const R
     return std::make_unique<RGYCLFrame>(frameImage, flags);
 }
 
-std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const int width, const int height, const RGY_CSP csp, const int bitdepth, const cl_mem_flags flags) {
+std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const int width, const int height, const RGY_CSP csp, const int bitdepth, const cl_mem_flags flags, const bool use_host_ptr) {
     RGYFrameInfo info(width, height, csp, bitdepth);
-    return createFrameBuffer(info, flags);
+    return createFrameBuffer(info, flags, use_host_ptr);
 }
 
-std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const RGYFrameInfo& frame, cl_mem_flags flags) {
+std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const RGYFrameInfo& frame, const cl_mem_flags flags, const bool use_host_ptr) {
     cl_int err = CL_SUCCESS;
+    if (use_host_ptr && (flags & CL_MEM_USE_HOST_PTR) != 0) {
+        CL_LOG(RGY_LOG_ERROR, _T("use_host_ptr = true, but CL_MEM_USE_HOST_PTR flag not set!\n"));
+        return std::unique_ptr<RGYCLFrame>();
+    }
     int pixsize = (RGY_CSP_BIT_DEPTH[frame.csp] + 7) / 8;
     switch (frame.csp) {
     case RGY_CSP_RGB24R:
@@ -2307,12 +2325,23 @@ std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const RGYFrameIn
         clframe.ptr[i] = nullptr;
         clframe.pitch[i] = 0;
     }
+
+    RGYFrameInfo hostframe = frame;
+    hostframe.mem_type = RGY_MEM_TYPE_CPU;
+    for (int i = 0; i < _countof(hostframe.ptr); i++) {
+        hostframe.ptr[i] = nullptr;
+        hostframe.pitch[i] = 0;
+    }
     for (int i = 0; i < RGY_CSP_PLANES[frame.csp]; i++) {
         const auto plane = getPlane(&clframe, (RGY_PLANE)i);
         const int widthByte = plane.width * pixsize;
         const int memPitch = ALIGN(widthByte, 256);
         const int size = memPitch * plane.height;
-        cl_mem mem = clCreateBuffer(m_context.get(), flags, size, nullptr, &err);
+        std::unique_ptr<void, aligned_malloc_deleter> host_ptr;
+        if (use_host_ptr) {
+            host_ptr.reset(_aligned_malloc(size, 4096));
+        }
+        cl_mem mem = clCreateBuffer(m_context.get(), flags, size, host_ptr.get(), &err);
         if (err != CL_SUCCESS) {
             CL_LOG(RGY_LOG_ERROR, _T("Failed to allocate memory: %s\n"), cl_errmes(err));
             for (int j = i-1; j >= 0; j--) {
@@ -2321,12 +2350,20 @@ std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const RGYFrameIn
                     clframe.ptr[j] = nullptr;
                 }
             }
+            for (int j = i-1; j >= 0; j--) {
+                if (hostframe.ptr[j] != nullptr) {
+                    _aligned_free(hostframe.ptr[j]);
+                    hostframe.ptr[j] = nullptr;
+                }
+            }
             return std::unique_ptr<RGYCLFrame>();
         }
         clframe.pitch[i] = memPitch;
         clframe.ptr[i] = (uint8_t *)mem;
+        hostframe.pitch[i] = memPitch;
+        hostframe.ptr[i] = (uint8_t *)host_ptr.release();
     }
-    return std::make_unique<RGYCLFrame>(clframe, flags);
+    return std::make_unique<RGYCLFrame>(clframe, hostframe, flags);
 }
 
 std::unique_ptr<RGYCLFrameInterop> RGYOpenCLContext::createFrameFromD3D9Surface(void *surf, HANDLE shared_handle, const RGYFrameInfo &frame, RGYOpenCLQueue& queue, cl_mem_flags flags) {
