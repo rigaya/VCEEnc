@@ -145,7 +145,7 @@ protected:
     virtual void close() override;
     RGY_ERR check_param(shared_ptr<RGYFilterParamColorspace> prm);
     std::string getEmbeddedResourceStr(const tstring &name, const tstring &type);
-    virtual RGY_ERR procFrame(RGYFrameInfo *pFrame, const RGYFrameInfo *pInputFrame, const RGYCLBuf *additionalParams, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+    virtual RGY_ERR procFrame(RGYFrameInfo *pFrame, const RGYFrameInfo *pInputFrame, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
 
     bool m_bInterlacedWarn;
     unique_ptr<RGYFilterCspCrop> crop;
