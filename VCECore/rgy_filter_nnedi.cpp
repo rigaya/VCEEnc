@@ -572,9 +572,12 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
         AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
         return RGY_ERR_INVALID_PARAM;
     }
+    auto prmPrev = std::dynamic_pointer_cast<RGYFilterParamNnedi>(m_param);
     if (   !m_nnedi_k0.get()
         || !m_nnedi_k1.get()
-        || std::dynamic_pointer_cast<RGYFilterParamNnedi>(m_param)->nnedi != prm->nnedi) {
+        || RGY_CSP_BIT_DEPTH[prmPrev->frameOut.csp] != RGY_CSP_BIT_DEPTH[pParam->frameOut.csp]
+        || prmPrev->nnedi != prm->nnedi
+        ) {
         if ((sts = checkParam(prm)) != RGY_ERR_NONE) {
             return sts;
         }
