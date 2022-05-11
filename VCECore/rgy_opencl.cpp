@@ -2390,40 +2390,64 @@ RGY_ERR RGYOpenCLContext::createImageFromPlane(cl_mem &image, cl_mem buffer, int
     return err_cl_to_rgy(err);
 }
 
-std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createImageFromFrameBuffer(const RGYFrameInfo &frame, bool normalized, cl_mem_flags flags) {
-    RGYFrameInfo frameImage = frame;
-    frameImage.mem_type = RGY_MEM_TYPE_GPU_IMAGE;
+RGY_ERR RGYOpenCLContext::createImageFromFrameBuffer(std::unique_ptr<RGYCLFrame>& imgFrame, const RGYFrameInfo &frame, bool normalized, cl_mem_flags flags) {
+    const auto device = RGYOpenCLDevice(queue().devid());
+    // cl_khr_image2d_from_buffer は OpenCL 3.0 / 1.2 ではオプション、2.0 では必須
+    // cl_khr_image2d_from_buffer のサポートがない場合は新しいimageをつくり、コピーする必要がある
+    const bool cl_not_version_2_0 = device.checkVersion(3, 0) || !device.checkVersion(2, 0);
+    const bool cl_image2d_from_buffer_support = (cl_not_version_2_0) ? device.checkExtension("cl_khr_image2d_from_buffer") : true;
 
-    for (int i = 0; i < RGY_CSP_PLANES[frame.csp]; i++) {
-        const auto plane = getPlane(&frame, (RGY_PLANE)i);
-        cl_mem image;
-        auto err = createImageFromPlane(image, (cl_mem)plane.ptr[0], RGY_CSP_BIT_DEPTH[frame.csp], CL_R, normalized, plane.pitch[0], plane.width, plane.height, flags);
-        if (err != CL_SUCCESS) {
-            CL_LOG(RGY_LOG_ERROR, _T("Failed to create image from buffer memory: %s\n"), cl_errmes(err));
-            for (int j = i-1; j >= 0; j--) {
-                if (frameImage.ptr[j] != nullptr) {
-                    clReleaseMemObject((cl_mem)frameImage.ptr[j]);
-                    frameImage.ptr[j] = nullptr;
+    if (cl_image2d_from_buffer_support
+        || !imgFrame
+        || imgFrame->frame.width != frame.width
+        || imgFrame->frame.height != frame.height
+        || imgFrame->frame.csp != frame.csp) {
+
+        RGYFrameInfo frameImage = frame;
+        frameImage.mem_type = (normalized) ? RGY_MEM_TYPE_GPU_IMAGE_NORMALIZED : RGY_MEM_TYPE_GPU_IMAGE;
+
+        for (int i = 0; i < RGY_CSP_PLANES[frame.csp]; i++) {
+            const auto plane = getPlane(&frame, (RGY_PLANE)i);
+            cl_mem image;
+            auto err = createImageFromPlane(image,
+                (cl_image2d_from_buffer_support) ? (cl_mem)plane.ptr[0] : nullptr,
+                RGY_CSP_BIT_DEPTH[frame.csp], CL_R, normalized,
+                (cl_image2d_from_buffer_support) ? plane.pitch[0] : 0,
+                plane.width, plane.height,
+                (cl_image2d_from_buffer_support) ? flags : CL_MEM_READ_WRITE);
+            if (err != CL_SUCCESS) {
+                CL_LOG(RGY_LOG_ERROR, _T("Failed to create image from buffer memory: %s\n"), cl_errmes(err));
+                for (int j = i-1; j >= 0; j--) {
+                    if (frameImage.ptr[j] != nullptr) {
+                        clReleaseMemObject((cl_mem)frameImage.ptr[j]);
+                        frameImage.ptr[j] = nullptr;
+                    }
                 }
+                return err_cl_to_rgy(err);
             }
-            return std::unique_ptr<RGYCLFrame>();
+            frameImage.ptr[i] = (uint8_t *)image;
         }
-        frameImage.ptr[i] = (uint8_t *)image;
+        imgFrame = std::make_unique<RGYCLFrame>(frameImage, flags);
     }
-    return std::make_unique<RGYCLFrame>(frameImage, flags);
+    if (!cl_image2d_from_buffer_support) {
+        // メモリコピーが必要
+        auto err = copyFrame(&imgFrame->frame, &frame);
+        if (err != RGY_ERR_NONE) {
+            imgFrame.reset();
+            return err_cl_to_rgy(err);
+        }
+        copyFrameProp(&imgFrame->frame, &frame);
+    }
+    return RGY_ERR_NONE;
 }
 
-std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const int width, const int height, const RGY_CSP csp, const int bitdepth, const cl_mem_flags flags, const bool use_host_ptr) {
+std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const int width, const int height, const RGY_CSP csp, const int bitdepth, const cl_mem_flags flags) {
     RGYFrameInfo info(width, height, csp, bitdepth);
-    return createFrameBuffer(info, flags, use_host_ptr);
+    return createFrameBuffer(info, flags);
 }
 
-std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const RGYFrameInfo& frame, const cl_mem_flags flags, const bool use_host_ptr) {
+std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const RGYFrameInfo& frame, cl_mem_flags flags) {
     cl_int err = CL_SUCCESS;
-    if (use_host_ptr && (flags & CL_MEM_USE_HOST_PTR) != 0) {
-        CL_LOG(RGY_LOG_ERROR, _T("use_host_ptr = true, but CL_MEM_USE_HOST_PTR flag not set!\n"));
-        return std::unique_ptr<RGYCLFrame>();
-    }
     int pixsize = (RGY_CSP_BIT_DEPTH[frame.csp] + 7) / 8;
     switch (frame.csp) {
     case RGY_CSP_RGB24R:
@@ -2453,29 +2477,24 @@ std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const RGYFrameIn
     default:
         break;
     }
+
+    int image_pitch_alignment = m_platform->dev(0).info().image_pitch_alignment;
+    if (image_pitch_alignment == 0) {
+        image_pitch_alignment = 256;
+    }
+
     RGYFrameInfo clframe = frame;
     clframe.mem_type = RGY_MEM_TYPE_GPU;
     for (int i = 0; i < _countof(clframe.ptr); i++) {
         clframe.ptr[i] = nullptr;
         clframe.pitch[i] = 0;
     }
-
-    RGYFrameInfo hostframe = frame;
-    hostframe.mem_type = RGY_MEM_TYPE_CPU;
-    for (int i = 0; i < _countof(hostframe.ptr); i++) {
-        hostframe.ptr[i] = nullptr;
-        hostframe.pitch[i] = 0;
-    }
     for (int i = 0; i < RGY_CSP_PLANES[frame.csp]; i++) {
         const auto plane = getPlane(&clframe, (RGY_PLANE)i);
         const int widthByte = plane.width * pixsize;
-        const int memPitch = ALIGN(widthByte, 256);
+        const int memPitch = ALIGN(widthByte, image_pitch_alignment);
         const int size = memPitch * plane.height;
-        std::unique_ptr<void, aligned_malloc_deleter> host_ptr;
-        if (use_host_ptr) {
-            host_ptr.reset(_aligned_malloc(size, 4096));
-        }
-        cl_mem mem = clCreateBuffer(m_context.get(), flags, size, host_ptr.get(), &err);
+        cl_mem mem = clCreateBuffer(m_context.get(), flags, size, nullptr, &err);
         if (err != CL_SUCCESS) {
             CL_LOG(RGY_LOG_ERROR, _T("Failed to allocate memory: %s\n"), cl_errmes(err));
             for (int j = i-1; j >= 0; j--) {
@@ -2484,20 +2503,12 @@ std::unique_ptr<RGYCLFrame> RGYOpenCLContext::createFrameBuffer(const RGYFrameIn
                     clframe.ptr[j] = nullptr;
                 }
             }
-            for (int j = i-1; j >= 0; j--) {
-                if (hostframe.ptr[j] != nullptr) {
-                    _aligned_free(hostframe.ptr[j]);
-                    hostframe.ptr[j] = nullptr;
-                }
-            }
             return std::unique_ptr<RGYCLFrame>();
         }
         clframe.pitch[i] = memPitch;
         clframe.ptr[i] = (uint8_t *)mem;
-        hostframe.pitch[i] = memPitch;
-        hostframe.ptr[i] = (uint8_t *)host_ptr.release();
     }
-    return std::make_unique<RGYCLFrame>(clframe, hostframe, flags);
+    return std::make_unique<RGYCLFrame>(clframe, flags);
 }
 
 std::unique_ptr<RGYCLFrameInterop> RGYOpenCLContext::createFrameFromD3D9Surface(void *surf, HANDLE shared_handle, const RGYFrameInfo &frame, RGYOpenCLQueue& queue, cl_mem_flags flags) {
