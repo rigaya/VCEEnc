@@ -49,6 +49,7 @@ const char *get_encoder_version();
 #define ENCODER_QSV    0
 #define ENCODER_NVENC  0
 #define ENCODER_VCEENC 1
+#define CLFILTERS_AUF  0
 
 #if defined(_WIN32) || defined(_WIN64)
 
