@@ -415,7 +415,6 @@ public:
     }
     void reset() {
         if (*event_ != nullptr) {
-            event_.reset();
             event_ = std::shared_ptr<cl_event>(new cl_event, cl_event_deleter());
         }
         *event_ = nullptr;
@@ -1041,6 +1040,8 @@ public:
     RGYOpenCLQueue& queue(int idx=0) { return m_queue[idx]; };
     RGYOpenCLPlatform *platform() const { return m_platform.get(); };
 
+    void setModuleHandle(const HMODULE hmodule) { m_hmodule = hmodule; }
+    HMODULE getModuleHandle() const { return m_hmodule; }
     std::unique_ptr<RGYOpenCLProgram> build(const std::string& source, const char *options);
     std::unique_ptr<RGYOpenCLProgram> buildFile(const tstring filename, const std::string options);
     std::unique_ptr<RGYOpenCLProgram> buildResource(const tstring name, const tstring type, const std::string options);
