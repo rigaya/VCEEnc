@@ -1098,6 +1098,7 @@ protected:
     std::vector<RGYOpenCLQueue> m_queue;
     std::shared_ptr<RGYLog> m_log;
     std::unordered_map<std::string, RGYOpenCLProgramAsync> m_copy;
+    HMODULE m_hmodule;
 };
 
 class RGYOpenCL {
