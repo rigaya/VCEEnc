@@ -589,17 +589,14 @@ enum RGYCLFrameInteropType {
 struct RGYCLFrame {
 public:
     RGYFrameInfo frame;
-    RGYFrameInfo host_frame; // USE_HOST_PTR用
     cl_mem_flags flags;
     std::unique_ptr<RGYCLFrameMap> m_mapped;
     RGYCLFrame()
-        : frame(), host_frame(), flags(0), m_mapped() {
+        : frame(), flags(0), m_mapped() {
     };
     RGYCLFrame(const RGYFrameInfo &info_, cl_mem_flags flags_ = CL_MEM_READ_WRITE)
-        : frame(info_), host_frame(), flags(flags_), m_mapped() {
+        : frame(info_), flags(flags_), m_mapped() {
     };
-    RGYCLFrame(const RGYFrameInfo &info_, const RGYFrameInfo &host_frame_, cl_mem_flags flags_ = CL_MEM_READ_WRITE)
-        : frame(info_), host_frame(host_frame_), flags(flags_), m_mapped() {};
     RGY_ERR queueMapBuffer(RGYOpenCLQueue &queue, cl_map_flags map_flags, const std::vector<RGYOpenCLEvent> &wait_events = {}, const RGYCLMapBlock block_map = RGY_CL_MAP_BLOCK_NONE);
     RGY_ERR unmapBuffer();
     RGY_ERR unmapBuffer(RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events = {});

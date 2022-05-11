@@ -1729,13 +1729,6 @@ RGY_ERR RGYCLFrame::unmapBuffer(RGYOpenCLQueue &queue, const std::vector<RGYOpen
 }
 void RGYCLFrame::clear() {
     m_mapped.reset();
-    for (int i = 0; i < _countof(host_frame.ptr); i++) {
-        if (host_frame.ptr[i] != nullptr) {
-            _aligned_free(host_frame.ptr[i]);
-        }
-        host_frame.ptr[i] = nullptr;
-        host_frame.pitch[i] = 0;
-    }
     for (int i = 0; i < _countof(frame.ptr); i++) {
         if (mem(i)) {
             clReleaseMemObject(mem(i));
