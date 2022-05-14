@@ -92,6 +92,17 @@ jobs:
           copy _build\${{ matrix.platform }}\RelStatic\*.dll VCEEncC_Release
           7z a -mx9 VCEEncC_${{ needs.get_version_name.outputs.version_name }}_${{ matrix.platform }}.7z .\VCEEncC_Release\*
 
+      - name: Check dll
+        run: |
+          if ("${{ matrix.platform }}" == "x64")   "VCEEncC_Release\VCEEncC64.exe" --check-avcodec-dll
+          if ("${{ matrix.platform }}" == "Win32") "VCEEncC_Release\VCEEncC.exe" --check-avcodec-dll
+
+      - name: Check Version
+        if: startsWith(github.ref, 'refs/tags/')
+        id: check_ver
+        run: |
+          powershell "$ver = (Get-ItemProperty .\VCEEncC_Release\VCEEncC*.exe).VersionInfo.FileVersion; if ($ver -eq '${{ needs.get_version_name.outputs.version_name }}') { exit 0; } exit 1;"
+
       - name: Upload Release Asset
         id: upload-release-asset 
         uses: softprops/action-gh-release@v1
@@ -100,3 +111,106 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: .\VCEEncC_${{ needs.get_version_name.outputs.version_name }}_${{ matrix.platform }}.7z
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: VCEEncC_release_${{ needs.get_version_name.outputs.version_name }}_${{ matrix.platform }}
+          path: .\VCEEncC_${{ needs.get_version_name.outputs.version_name }}_${{ matrix.platform }}.7z
+
+
+  upload_aviutl_release:
+    name: Upload Aviutl Release Asset
+    runs-on: windows-2022
+    needs: [ get_version_name, build ]
+
+    defaults:
+      run:
+        shell: cmd
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Checkout dependencies
+        run: |
+          curl -s -o ffmpeg_lgpl_20220302.zip -L https://github.com/rigaya/ffmpeg5_dlls_for_hwenc/archive/refs/tags/20220302.zip
+          7z x -y ffmpeg_lgpl_20220302.zip
+          move ffmpeg5* ffmpeg_lgpl
+          git clone https://github.com/AviSynth/AviSynthPlus.git ..\AviSynthPlus
+          git clone https://github.com/vapoursynth/vapoursynth.git ..\vapoursynth
+          git clone https://github.com/KhronosGroup/OpenCL-Headers.git ..\openclheaders
+          git clone https://github.com/maki-rxrz/Caption2Ass_PCR.git ..\caption2ass
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.1
+        with:
+          msbuild-architecture: Win32
+
+      - name: MSBuild
+        run: |
+          set AVISYNTH_SDK=${{ github.workspace }}\..\AviSynthPlus\avs_core
+          set VAPOURSYNTH_SDK=${{ github.workspace }}\..\vapoursynth
+          set OPENCL_HEADERS=${{ github.workspace }}\..\openclheaders
+          set CAPTION2ASS_SRC=${{ github.workspace }}\..\caption2ass\src
+          msbuild VCEEnc.sln /t:build /p:configuration=Release /p:Platform=Win32 -maxcpucount
+
+      - name: Download auo_setup
+        id: download_auosetup
+        run: |
+          curl -o auo_setup.zip -L https://github.com/rigaya/auo_setup/releases/download/2.01/auo_setup_2.01.zip
+
+      - name: Download VCEEncC Win32
+        uses: actions/download-artifact@v3
+        with:
+          name: VCEEncC_release_${{ needs.get_version_name.outputs.version_name }}_Win32
+          path: VCEEncC_${{ needs.get_version_name.outputs.version_name }}_Win32.7z
+
+      - name: Download VCEEncC x64
+        uses: actions/download-artifact@v3
+        with:
+          name: VCEEncC_release_${{ needs.get_version_name.outputs.version_name }}_x64
+          path: VCEEncC_${{ needs.get_version_name.outputs.version_name }}_x64.7z
+          
+      - name: Create package
+        id: archieve
+        run: |
+          mkdir Aviutl_VCEEnc_release
+          7z x -oAviutl_VCEEnc_release\ auo_setup.zip
+          mkdir Aviutl_VCEEnc_release\exe_files\VCEEncC
+          mkdir Aviutl_VCEEnc_release\exe_files\VCEEncC\x86
+          mkdir Aviutl_VCEEnc_release\exe_files\VCEEncC\x64
+          7z x -oAviutl_VCEEnc_release\exe_files\VCEEncC\x86\ VCEEncC_${{ needs.get_version_name.outputs.version_name }}_Win32.7z
+          7z x -oAviutl_VCEEnc_release\exe_files\VCEEncC\x64\ VCEEncC_${{ needs.get_version_name.outputs.version_name }}_x64.7z
+          copy /y _build\Win32\Release\VCEEnc.auo Aviutl_VCEEnc_release\plugins\
+          copy /y VCEEnc\VCEEnc.ini Aviutl_VCEEnc_release\plugins\
+          copy /y VCEEnc\auo_setup.ini Aviutl_VCEEnc_release\exe_files\
+          copy /y VCEEnc\VCEEnc_readme.txt Aviutl_VCEEnc_release\
+          echo D | xcopy /y /e VCEEnc\stg Aviutl_VCEEnc_release\plugins\VCEEnc_stg
+          dir /b /s Aviutl_VCEEnc_release\
+          7z a -mx9 Aviutl_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.zip .\Aviutl_VCEEnc_release\*
+
+      - name: Check Version
+        id: check_ver
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          powershell "$ver = (Get-ItemProperty .\Aviutl_VCEEnc_release\plugins\VCEEnc.auo).VersionInfo.FileVersion; if ($ver -eq '${{ needs.get_version_name.outputs.version_name }}') { exit 0; } exit 1;"
+
+      - name: Check dll
+        id: check_dll
+        run: |
+          "Aviutl_VCEEnc_release\exe_files\VCEEncC\x86\VCEEncC.exe" --check-avcodec-dll
+          "Aviutl_VCEEnc_release\exe_files\VCEEncC\x64\VCEEncC64.exe" --check-avcodec-dll
+
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: .\Aviutl_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.zip
