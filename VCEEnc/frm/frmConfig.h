@@ -5181,6 +5181,7 @@ private: System::Windows::Forms::NumericUpDown^  fcgNUVppDenoiseConv3DThreshYSpa
             this->fcgTXCustomAudioTempDir->Name = L"fcgTXCustomAudioTempDir";
             this->fcgTXCustomAudioTempDir->Size = System::Drawing::Size(245, 23);
             this->fcgTXCustomAudioTempDir->TabIndex = 68;
+            this->fcgTXCustomAudioTempDir->TextChanged += gcnew System::EventHandler(this, &frmConfig::fcgTXCustomAudioTempDir_TextChanged);
             // 
             // fcgBTCustomAudioTempDir
             // 
