@@ -189,7 +189,7 @@
       <DisableSpecificWarnings>4505;4564;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ExceptionHandling>Async</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/MP /FS %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/MP /FS %(AdditionalOptions) /execution-charset:shift_jis</AdditionalOptions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
@@ -283,6 +283,7 @@ exit /B 0</Command>
       <ExceptionHandling>Async</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions> /execution-charset:shift_jis</AdditionalOptions>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>.\;.\encode;.\prm;.\frm;..\VCECore;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -360,7 +361,7 @@ exit /B 0</Command>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalOptions>/MP /FS %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/MP /FS %(AdditionalOptions) /execution-charset:shift_jis</AdditionalOptions>
       <Optimization>MinSpace</Optimization>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -412,7 +413,7 @@ exit /B 0</Command>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/MP %(AdditionalOptions) /execution-charset:shift_jis</AdditionalOptions>
       <Optimization>MinSpace</Optimization>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
