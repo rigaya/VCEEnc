@@ -3007,7 +3007,7 @@ RGY_ERR VCECore::run() {
     deque<unique_ptr<RGYFrame>> dqInFrames;
     deque<unique_ptr<RGYFrame>> dqEncFrames;
     for (int nFilterFrame = 0; m_state == RGY_STATE_RUNNING && !bInputEmpty && !bFilterEmpty; ) {
-        if (m_pAbortByUser && *m_pAbortByUser) {
+        if ((m_pAbortByUser && *m_pAbortByUser) || stdInAbort()) {
             m_state = RGY_STATE_ABORT;
             break;
         }
