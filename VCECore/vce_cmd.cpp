@@ -756,7 +756,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         return 0;
     }
 
-    auto ret = parse_one_input_option(option_name, strInput, i, nArgNum, &pParams->input, argData);
+    auto ret = parse_one_input_option(option_name, strInput, i, nArgNum, &pParams->input, &pParams->inprm, argData);
     if (ret >= 0) return ret;
 
     ret = parse_one_common_option(option_name, strInput, i, nArgNum, &pParams->common, argData);
@@ -1012,7 +1012,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_NUM(_T("-d"), deviceID);
     cmd << _T(" -c ") << get_chr_from_value(list_codec, pParams->codec);
 
-    cmd << gen_cmd(&pParams->input, &encPrmDefault.input, save_disabled_prm);
+    cmd << gen_cmd(&pParams->input, &encPrmDefault.input, &pParams->inprm, &encPrmDefault.inprm, save_disabled_prm);
     if (save_disabled_prm) {
         if (pParams->rateControl == get_codec_cqp(pParams->codec)) {
             cmd << _T(" --vbr ") << pParams->nBitrate;

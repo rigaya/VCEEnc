@@ -43,6 +43,7 @@ VCEParamPA::VCEParamPA() :
 
 VCEParam::VCEParam() :
     input(),
+    inprm(),
     common(),
     ctrl(),
     vpp(),
