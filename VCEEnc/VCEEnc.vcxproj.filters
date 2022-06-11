@@ -221,6 +221,12 @@
     <ClInclude Include="encode\auo_convert.h">
       <Filter>ヘッダー ファイル\encode</Filter>
     </ClInclude>
+    <ClInclude Include="frm\ComboBoxFolderBrowser.h">
+      <Filter>フォーム</Filter>
+    </ClInclude>
+    <ClInclude Include="frm\frmNewFolderName.h">
+      <Filter>フォーム</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="auo_version.rc">
