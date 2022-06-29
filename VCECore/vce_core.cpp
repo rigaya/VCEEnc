@@ -108,6 +108,8 @@ VCECore::VCECore() :
     m_hdr10plus(),
     m_hdrsei(),
     m_trimParam(),
+    m_poolPkt(),
+    m_poolFrame(),
     m_pFileReader(),
     m_AudioReaders(),
     m_pFileWriter(),
@@ -402,10 +404,14 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCE
         return RGY_ERR_UNSUPPORTED;
     }
 
+    m_poolPkt = std::make_unique<RGYPoolAVPacket>();
+    m_poolFrame = std::make_unique<RGYPoolAVFrame>();
+
     const bool vpp_rff = false; // inputParam->vpp.rff;
     auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, inputCspOfRawReader,
         m_pStatus, &inputParam->common, &inputParam->ctrl, HWDecCodecCsp, subburnTrackId,
-        inputParam->vpp.afs.enable, vpp_rff, nullptr, m_pPerfMonitor.get(), m_pLog);
+        inputParam->vpp.afs.enable, vpp_rff,
+        m_poolPkt.get(), m_poolFrame.get(), nullptr, m_pPerfMonitor.get(), m_pLog);
     if (err != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("failed to initialize file reader(s).\n"));
         return err;
@@ -632,7 +638,8 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
 
     auto err = initWriters(m_pFileWriter, m_pFileWriterListAudio, m_pFileReader, m_AudioReaders,
         &inputParams->common, &inputParams->input, &inputParams->ctrl, outputVideoInfo,
-        m_trimParam, m_outputTimebase, m_Chapters, m_hdrsei.get(), nullptr, nullptr, false, false, m_pStatus, m_pPerfMonitor, m_pLog);
+        m_trimParam, m_outputTimebase, m_Chapters, m_hdrsei.get(), nullptr, nullptr, false, false,
+        m_poolPkt.get(), m_poolFrame.get(), m_pStatus, m_pPerfMonitor, m_pLog);
     if (err != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("failed to initialize file reader(s).\n"));
         return err;
@@ -1211,6 +1218,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
                 param->frameIn = inputFrame;
                 param->frameOut = inputFrame;
                 param->baseFps = m_encFps;
+                param->poolPkt = m_poolPkt.get();
                 param->crop = inputParam->input.crop;
                 auto sts = filter->init(param, m_pLog);
                 if (sts != RGY_ERR_NONE) {
@@ -2676,7 +2684,7 @@ RGY_ERR VCECore::run() {
         const int droppedInAviutl = 0;
 #endif
 
-        vector<AVPacket> packetList = m_pFileReader->GetStreamDataPackets(inputFrames + droppedInAviutl);
+        vector<AVPacket*> packetList = m_pFileReader->GetStreamDataPackets(inputFrames + droppedInAviutl);
 
         //音声ファイルリーダーからのトラックを結合する
         for (const auto &reader : m_AudioReaders) {
@@ -2684,10 +2692,10 @@ RGY_ERR VCECore::run() {
         }
         //パケットを各Writerに分配する
         for (uint32_t i = 0; i < packetList.size(); i++) {
-            const int nTrackId = packetList[i].flags >> 16;
+            const int nTrackId = packetList[i]->flags >> 16;
             const bool sendToFilter = pFilterForStreams.count(nTrackId) > 0;
             const bool sendToWriter = pWriterForAudioStreams.count(nTrackId) > 0;
-            AVPacket *pkt = &packetList[i];
+            AVPacket *pkt = packetList[i];
             if (sendToFilter) {
                 AVPacket *pktToFilter = nullptr;
                 if (sendToWriter) {

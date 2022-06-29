@@ -166,6 +166,8 @@ protected:
     unique_ptr<HEVCHDRSei>        m_hdrsei;
 
     sTrimParam m_trimParam;
+    std::unique_ptr<RGYPoolAVPacket> m_poolPkt;
+    std::unique_ptr<RGYPoolAVFrame> m_poolFrame;
     shared_ptr<RGYInput> m_pFileReader;
     vector<shared_ptr<RGYInput>> m_AudioReaders;
     shared_ptr<RGYOutput> m_pFileWriter;
