@@ -751,6 +751,8 @@ RGY_ERR VCECore::initConverter(VCEParam *prm) {
         return err_to_rgy(res);
     }
     PrintMes(RGY_LOG_DEBUG, _T("initialized converter.\n"));
+#else
+    UNREFERENCED_PARAMETER(prm);
 #endif
     return RGY_ERR_NONE;
 }
@@ -2299,6 +2301,8 @@ RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList,
     return RGY_ERR_NONE;
 }
 
+#pragma warning(push)
+#pragma warning(disable: 4127) //C4127: 条件式が定数です。
 RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId) {
     if (VULKAN_DEFAULT_DEVICE_ONLY && deviceId > 0) {
         PrintMes(RGY_LOG_ERROR, _T("Currently default device is always used when using vulkan!: selected device = %d\n"), deviceId);
@@ -2317,6 +2321,7 @@ RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, in
     m_dev = std::move(*gpu);
     return RGY_ERR_NONE;
 }
+#pragma warning(pop)
 
 RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
     if (prm->common.metric.enabled()) {
@@ -2812,7 +2817,7 @@ RGY_ERR VCECore::run() {
         return outFrames;
     };
 
-    auto filter_frame = [&](int &nFilterFrame, unique_ptr<RGYFrame> &inframe, deque<unique_ptr<RGYFrame>> &dqEncFrames, bool &bDrain) {
+    auto filter_frame = [&](unique_ptr<RGYFrame> &inframe, deque<unique_ptr<RGYFrame>> &dqEncFrames, bool &bDrain) {
 
         deque<std::pair<RGYFrameInfo, uint32_t>> filterframes;
 
@@ -3014,7 +3019,7 @@ RGY_ERR VCECore::run() {
     int nInputFrame = 0;
     deque<unique_ptr<RGYFrame>> dqInFrames;
     deque<unique_ptr<RGYFrame>> dqEncFrames;
-    for (int nFilterFrame = 0; m_state == RGY_STATE_RUNNING && !bInputEmpty && !bFilterEmpty; ) {
+    for (; m_state == RGY_STATE_RUNNING && !bInputEmpty && !bFilterEmpty; ) {
         if ((m_pAbortByUser && *m_pAbortByUser) || stdInAbort()) {
             m_state = RGY_STATE_ABORT;
             break;
@@ -3134,7 +3139,7 @@ RGY_ERR VCECore::run() {
                 inframe = std::move(dqInFrames.front());
             }
             bool bDrainFin = bDrain;
-            RGY_ERR err = filter_frame(nFilterFrame, inframe, dqEncFrames, bDrainFin);
+            RGY_ERR err = filter_frame(inframe, dqEncFrames, bDrainFin);
             if (err != RGY_ERR_NONE) {
                 res = err;
                 m_state = RGY_STATE_ERROR;
