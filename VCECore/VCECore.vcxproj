@@ -702,7 +702,7 @@
       <DisableSpecificWarnings>4505;4564;</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalOptions>/MP /execution-charset:shift_jis %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/execution-charset:shift_jis </AdditionalOptions>
     </ClCompile>
     <PreBuildEvent>
       <Command>@set REV=0
@@ -731,6 +731,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
       <DisableSpecificWarnings>4505;4564;</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/execution-charset:shift_jis </AdditionalOptions>
     </ClCompile>
     <PreBuildEvent>
       <Command>@set REV=0
@@ -758,7 +759,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
       <DisableSpecificWarnings>4505;4564;</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalOptions>/MP /execution-charset:shift_jis %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/execution-charset:shift_jis </AdditionalOptions>
     </ClCompile>
     <PreBuildEvent>
       <Command>@set REV=0
@@ -786,6 +787,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
       <DisableSpecificWarnings>4505;4564;</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/execution-charset:shift_jis </AdditionalOptions>
     </ClCompile>
     <PreBuildEvent>
       <Command>@set REV=0
@@ -801,7 +803,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalOptions>/MP /execution-charset:shift_jis %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/execution-charset:shift_jis </AdditionalOptions>
       <Optimization>MinSpace</Optimization>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -836,7 +838,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalOptions>/MP /execution-charset:shift_jis %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/execution-charset:shift_jis </AdditionalOptions>
       <Optimization>MinSpace</Optimization>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -872,7 +874,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelStatic|Win32'">
     <ClCompile>
-      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/execution-charset:shift_jis </AdditionalOptions>
       <Optimization>MinSpace</Optimization>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -908,7 +910,7 @@ if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Comma
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelStatic|x64'">
     <ClCompile>
-      <AdditionalOptions>/MP %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/execution-charset:shift_jis </AdditionalOptions>
       <Optimization>MinSpace</Optimization>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
