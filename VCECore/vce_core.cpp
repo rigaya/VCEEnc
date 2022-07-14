@@ -1590,8 +1590,10 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (prm->pa.enable) {
             bool preAnalysisSupported = false;
             encoderCaps->GetProperty(AMF_PARAM_CAP_PRE_ANALYSIS(prm->codec), &preAnalysisSupported);
-            PrintMes(RGY_LOG_WARN, _T("Pre-analysis is not supported on this device, disabled.\n"));
-            prm->pa.enable = false;
+            if (!preAnalysisSupported) {
+                PrintMes(RGY_LOG_WARN, _T("Pre-analysis is not supported on this device, disabled.\n"));
+                prm->pa.enable = false;
+            }
         }
 
         amf::AMFIOCapsPtr inputCaps;
@@ -1782,8 +1784,11 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_GOP_SIZE(prm->codec),                       (amf_int64)nGOPLen);
 
     m_params.SetParam(AMF_PARAM_PREENCODE_ENABLE(prm->codec), prm->pe);
-    if (prm->pa.enable && prm->rateControl != get_codec_vbr(prm->codec)) {
-        PrintMes(RGY_LOG_WARN, _T("Pre analysis is currently supported only with VBR mode.\n"));
+    if (prm->pa.enable &&
+        (   prm->rateControl != get_codec_vbr(prm->codec)
+         && prm->rateControl != get_codec_vbr_lat(prm->codec)
+         && prm->rateControl != get_codec_qvbr(prm->codec))) {
+        PrintMes(RGY_LOG_WARN, _T("Pre analysis is currently supported only with VBR/QVBR mode.\n"));
         PrintMes(RGY_LOG_WARN, _T("Currenlty %s mode is selected, so pre analysis will be disabled.\n"), get_cx_desc(get_rc_method(prm->codec), prm->rateControl));
         prm->pa.enable = false;
     }
@@ -3386,7 +3391,7 @@ tstring VCECore::GetEncoderParam() {
                 GetPropertyInt(AMF_PARAM_TARGET_BITRATE(m_encCodec)) / 1000);
         }
         if (GetPropertyInt(AMF_PARAM_RATE_CONTROL_METHOD(m_encCodec)) == AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR) {
-            mes += strsprintf(_T("QVBR level:   %d\n"), GetPropertyInt(AMF_VIDEO_ENCODER_QVBR_QUALITY_LEVEL));
+            mes += strsprintf(_T("QVBR level:    %d\n"), GetPropertyInt(AMF_VIDEO_ENCODER_QVBR_QUALITY_LEVEL));
         }
         mes += strsprintf(_T("Max bitrate:   %d kbps\n"), GetPropertyInt(AMF_PARAM_PEAK_BITRATE(m_encCodec)) / 1000);
         mes += strsprintf(_T("QP:            Min: %d, Max: %d\n"),
