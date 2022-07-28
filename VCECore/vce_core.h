@@ -162,6 +162,7 @@ protected:
     vector<unique_ptr<AVChapter>> m_Chapters;            //ファイルから読み込んだチャプター
 #endif //#if ENABLE_AVSW_READER
     unique_ptr<RGYTimecode>       m_timecode;
+    bool                          m_hdr10plusCopy;
     unique_ptr<RGYHDR10Plus>      m_hdr10plus;
     unique_ptr<HEVCHDRSei>        m_hdrsei;
 
@@ -174,6 +175,7 @@ protected:
     vector<shared_ptr<RGYOutput>> m_pFileWriterListAudio;
     shared_ptr<EncodeStatus> m_pStatus;
     shared_ptr<CPerfMonitor> m_pPerfMonitor;
+    RGYQueueMPMP<RGYFrameData*> m_queueFrameData;
 
     int                m_pipelineDepth;
     int                m_nProcSpeedLimit;       //処理速度制限 (0で制限なし)

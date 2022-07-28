@@ -105,6 +105,7 @@ VCECore::VCECore() :
     m_Chapters(),
 #endif
     m_timecode(),
+    m_hdr10plusCopy(false),
     m_hdr10plus(),
     m_hdrsei(),
     m_trimParam(),
@@ -116,6 +117,7 @@ VCECore::VCECore() :
     m_pFileWriterListAudio(),
     m_pStatus(),
     m_pPerfMonitor(),
+    m_queueFrameData(),
     m_pipelineDepth(2),
     m_nProcSpeedLimit(0),
     m_nAVSyncMode(RGY_AVSYNC_ASSUME_CFR),
@@ -200,6 +202,7 @@ void VCECore::Terminate() {
     m_Chapters.clear();
     m_keyFile.clear();
     m_hdr10plus.reset();
+    m_queueFrameData.clear([](RGYFrameData **data) { if (*data) delete *data; });
     m_pPerfMonitor.reset();
     m_pStatus.reset();
     m_tracer.reset();
@@ -489,16 +492,25 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCE
         }
         PrintMes(RGY_LOG_DEBUG, _T("vfr mode automatically enabled with timebase %d/%d\n"), m_outputTimebase.n(), m_outputTimebase.d());
     }
-#endif
-#if ENCODER_NVENC
+#endif // #if ENABLE_AVSW_READER
     if (inputParam->common.dynamicHdr10plusJson.length() > 0) {
-        m_hdr10plus = initDynamicHDR10Plus(inputParam->common.dynamicHdr10plusJson, m_pNVLog);
+        m_hdr10plus = initDynamicHDR10Plus(inputParam->common.dynamicHdr10plusJson, m_pLog);
         if (!m_hdr10plus) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to initialize hdr10plus reader.\n"));
+            return RGY_ERR_INVALID_PARAM;
+        }
+    } else if (inputParam->common.hdr10plusMetadataCopy) {
+        m_hdr10plusCopy = true;
+    }
+#if ENABLE_DOVI_METADATA_OPTIONS
+    if (inputParam->common.doviRpuFile.length() > 0) {
+        m_dovirpu = std::make_unique<DOVIRpu>();
+        if (m_dovirpu->init(inputParam->common.doviRpuFile.c_str()) != 0) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to open dovi rpu \"%s\".\n"), inputParam->common.doviRpuFile.c_str());
             return NV_ENC_ERR_GENERIC;
         }
     }
-#endif
+#endif // #if ENABLE_DOVI_METADATA_OPTIONS
     return RGY_ERR_NONE;
 #else
     return RGY_ERR_UNSUPPORTED;
@@ -2497,6 +2509,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
 }
 
 RGY_ERR VCECore::run_decode() {
+    m_queueFrameData.init(256);
 #if THREAD_DEC_USE_FUTURE
     m_thDecoder = std::async(std::launch::async, [this]() {
 #else
@@ -2516,6 +2529,15 @@ RGY_ERR VCECore::run_decode() {
                 && sts != RGY_ERR_MORE_DATA) {
                 m_state = RGY_STATE_ERROR;
                 break;
+            }
+
+            for (auto& frameData : bitstream.getFrameDataList()) {
+                if (frameData->dataType() == RGY_FRAME_DATA_HDR10PLUS) {
+                    auto ptr = dynamic_cast<RGYFrameDataHDR10plus*>(frameData);
+                    if (ptr) {
+                        m_queueFrameData.push(new RGYFrameDataHDR10plus(*ptr));
+                    }
+                }
             }
 
             amf::AMFBufferPtr pictureBuffer;
@@ -2606,6 +2628,12 @@ RGY_ERR VCECore::run_output() {
             uint32_t value32 = 0;
             if (buffer->GetProperty(AMF_PARAM_STATISTIC_AVERAGE_QP(m_encCodec), &value32) == AMF_OK) {
                 output.setAvgQP(value32);
+            }
+            if (buffer->HasProperty(AMF_VIDEO_ENCODER_HEVC_INPUT_HDR_METADATA)) {
+                amf::AMFVariant hdr10MetadataBuffer;
+                if (buffer->GetProperty(AMF_VIDEO_ENCODER_HEVC_INPUT_HDR_METADATA, &hdr10MetadataBuffer) == AMF_OK) {
+                    hdr10MetadataBuffer.Clear();
+                }
             }
             if (m_ssim) {
                 if (!m_ssim->decodeStarted()) {
@@ -2736,6 +2764,31 @@ RGY_ERR VCECore::run() {
             }
         }
         return RGY_ERR_NONE;
+    };
+
+    auto getHDR10plusMetadata = [this](int64_t timestamp) {
+        std::shared_ptr<RGYFrameData> frameData;
+        RGYFrameData *frameDataPtr = nullptr;
+        while (m_queueFrameData.front_copy_no_lock(&frameDataPtr)) {
+            auto ptr = dynamic_cast<RGYFrameDataHDR10plus*>(frameDataPtr);
+            if (ptr && ptr->timestamp() < timestamp) {
+                m_queueFrameData.pop();
+                delete frameDataPtr;
+            } else {
+                break;
+            }
+        }
+        size_t queueSize = m_queueFrameData.size();
+        for (uint32_t i = 0; i < queueSize; i++) {
+            if (m_queueFrameData.copy(&frameDataPtr, i, &queueSize)) {
+                auto ptr = dynamic_cast<RGYFrameDataHDR10plus*>(frameDataPtr);
+                if (ptr && ptr->timestamp() == timestamp) {
+                    frameData = std::make_shared<RGYFrameDataHDR10plus>(*ptr);
+                    break;
+                }
+            }
+        }
+        return frameData;
     };
 
     const AVStream *pStreamIn = nullptr;
@@ -2963,6 +3016,7 @@ RGY_ERR VCECore::run() {
                 encSurface->setPicstruct(encSurfaceInfo.picstruct);
                 encSurface->setInputFrameId(encSurfaceInfo.inputFrameId);
                 encSurface->setFlags(encSurfaceInfo.flags);
+                encSurface->setDataList(encSurfaceInfo.dataList, m_dev->context());
                 dqEncFrames.push_back(std::move(encSurface));
             }
         }
@@ -2970,8 +3024,14 @@ RGY_ERR VCECore::run() {
     };
 
     auto send_encoder = [this](unique_ptr<RGYFrame>& encFrame) {
+        const auto inputFrameId = encFrame->inputFrameId();
+        if (inputFrameId < 0) {
+            PrintMes(RGY_LOG_ERROR, _T("Invalid input frame ID %d sent to encoder.\n"), inputFrameId);
+            return RGY_ERR_INVALID_PARAM;
+        }
         int64_t pts = encFrame->timestamp();
         int64_t duration = encFrame->duration();
+        const auto frameDataList = encFrame->dataList();
         amf::AMFSurfacePtr pSurface = encFrame->detachSurface();
         //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
         pSurface->SetFrameType(amf::AMF_FRAME_PROGRESSIVE);
@@ -2987,6 +3047,39 @@ RGY_ERR VCECore::run() {
         pSurface->SetProperty(RGY_PROP_DURATION, duration);
 
         pSurface->SetProperty(AMF_PARAM_STATISTICS_FEEDBACK(m_encCodec), true);
+
+        if (m_encCodec == RGY_CODEC_HEVC) {
+            std::vector<uint8_t> dhdr10plus_sei;
+            if (m_hdr10plus) {
+                const auto data = m_hdr10plus->getData(inputFrameId);
+                if (data && data->size() > 0) {
+                    dhdr10plus_sei = *data;
+                }
+            } else if (frameDataList.size() > 0) {
+                auto data = std::find_if(frameDataList.begin(), frameDataList.end(), [](const std::shared_ptr<RGYFrameData>& frameData) {
+                    return frameData->dataType() == RGY_FRAME_DATA_HDR10PLUS;
+                });
+                if (data != frameDataList.end()) {
+                    auto hdr10plus = dynamic_cast<RGYFrameDataHDR10plus *>(data->get());
+                    if (hdr10plus && hdr10plus->getData().size() > 0) {
+                        dhdr10plus_sei = hdr10plus->getData();
+                    }
+                }
+            }
+            if (dhdr10plus_sei.size() > 0) {
+                amf::AMFBufferPtr hdr10MetadataBuffer;
+                auto ar = m_dev->context()->AllocBuffer(amf::AMF_MEMORY_HOST, dhdr10plus_sei.size(), &hdr10MetadataBuffer);
+                if (ar != AMF_OK) {
+                    PrintMes(RGY_LOG_ERROR, _T("Failed to allocate buffer for sending hdr10plus metadata to encoder.\n"));
+                    return err_to_rgy(ar);
+                }
+                memcpy(hdr10MetadataBuffer->GetNative(), dhdr10plus_sei.data(), dhdr10plus_sei.size());
+                if ((ar = pSurface->SetProperty(AMF_VIDEO_ENCODER_HEVC_INPUT_HDR_METADATA, hdr10MetadataBuffer)) != AMF_OK) {
+                    PrintMes(RGY_LOG_ERROR, _T("Failed to set hdr10plus metadata to encoder.\n"));
+                    return err_to_rgy(ar);
+                }
+            }
+        }
 
         if (m_timecode) {
             m_timecode->write(pts, m_outputTimebase);
@@ -3111,6 +3204,9 @@ RGY_ERR VCECore::run() {
                 break;
             }
             inputFrame = std::make_unique<RGYFrame>(surf);
+            if (auto frameData = getHDR10plusMetadata(inputFrame->timestamp()); frameData) {
+                inputFrame->setData(frameData, m_dev->context());
+            }
         }
         if (!bInputEmpty) {
             inputFrame->setInputFrameId(nInputFrame);
@@ -3452,6 +3548,11 @@ tstring VCECore::GetEncoderParam() {
         if (maxcll.length() > 0) {
             mes += strsprintf(_T("MaxCLL/MaxFALL:%s\n"), char_to_tstring(maxcll).c_str());
         }
+    }
+    if (m_hdr10plus) {
+        mes += strsprintf(_T("Dynamic HDR10:     %s\n"), m_hdr10plus->inputJson().c_str());
+    } else if (m_hdr10plusCopy) {
+        mes += strsprintf(_T("Dynamic HDR10:     copy\n"), m_hdr10plus->inputJson().c_str());
     }
     tstring others;
     if (GetPropertyBool(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(m_encCodec))) {

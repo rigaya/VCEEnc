@@ -41,6 +41,7 @@ RGY_DISABLE_WARNING_STR("-Wclass-memaccess")
 RGY_DISABLE_WARNING_POP
 #pragma warning(pop)
 #include "convert_csp.h"
+#include "rgy_frame.h"
 #include "rgy_opencl.h"
 
 class RGYFrameData;
@@ -354,10 +355,24 @@ public:
     }
     ~RGYFrame() {
         clbuf.reset();
+        clearAmfPtr();
     }
     bool isempty() const {
         return amfptr == nullptr && clbuf == nullptr;
     }
+    void clearAmfPtr() {
+        if (amfptr == nullptr) return;
+
+        if (amfptr->HasProperty(AMF_VIDEO_ENCODER_HEVC_INPUT_HDR_METADATA)) {
+            amf::AMFVariant hdr10MetadataBuffer;
+            const auto ar = amfptr->GetProperty(AMF_VIDEO_ENCODER_HEVC_INPUT_HDR_METADATA, &hdr10MetadataBuffer);
+            if (ar == AMF_OK) {
+                hdr10MetadataBuffer.Clear();
+            }
+        }
+
+    }
+
     const amf::AMFSurfacePtr &amf() const {
         return amfptr;
     }
@@ -511,20 +526,53 @@ public:
             clbuf->frame.flags = flags;
         }
     }
-    const std::vector<std::shared_ptr<RGYFrameData>>& dataList() const {
+public:
+    std::vector<std::shared_ptr<RGYFrameData>> dataList() {
+        std::vector<std::shared_ptr<RGYFrameData>> datalist;
         if (clbuf) {
-            return clbuf->frame.dataList;
-        } else {
-            return dummy;
+            datalist = clbuf->frame.dataList;
+        } else if (amfptr) {
+            datalist = getAmfDataList();
         }
+        return datalist;
     };
-    std::vector<std::shared_ptr<RGYFrameData>>& dataList() {
+    void setDataList(std::vector<std::shared_ptr<RGYFrameData>>& dataList, amf::AMFContextPtr amfCtx) {
+        for (auto data : dataList) {
+            setData(data, amfCtx);
+        }
+    }
+    void setData(std::shared_ptr<RGYFrameData>& data, amf::AMFContextPtr amfCtx) {
         if (clbuf) {
-            return clbuf->frame.dataList;
-        } else {
-            return dummy;
+            clbuf->frame.dataList.push_back(data);
+        } else if (amfptr) {
+            if (auto dataPtr = dynamic_cast<RGYFrameDataMetadata*>(data.get()); dataPtr) {
+                if (data->dataType() == RGY_FRAME_DATA_HDR10PLUS) {
+                    amf::AMFBufferPtr hdr10MetadataBuffer;
+                    const auto ar = amfCtx->AllocBuffer(amf::AMF_MEMORY_HOST, dataPtr->getData().size(), &hdr10MetadataBuffer);
+                    if (ar == AMF_OK) {
+                        memcpy(hdr10MetadataBuffer->GetNative(), dataPtr->getData().data(), dataPtr->getData().size());
+                        amfptr->SetProperty(AMF_VIDEO_ENCODER_HEVC_INPUT_HDR_METADATA, hdr10MetadataBuffer);
+                    }
+                }
+            }
         }
-    };
+    }
+private:
+    std::vector<std::shared_ptr<RGYFrameData>> getAmfDataList() {
+        std::vector<std::shared_ptr<RGYFrameData>> datalist;
+        if (amfptr) {
+            if (amfptr->HasProperty(AMF_VIDEO_ENCODER_HEVC_INPUT_HDR_METADATA)) {
+                amf::AMFVariant varBuf;
+                const auto ar = amfptr->GetProperty(AMF_VIDEO_ENCODER_HEVC_INPUT_HDR_METADATA, &varBuf);
+                if (ar == AMF_OK) {
+                    amf::AMFBufferPtr hdr10MetadataBuffer(varBuf.pInterface);
+                    auto data = std::make_shared<RGYFrameDataHDR10plus>((const uint8_t *)hdr10MetadataBuffer->GetNative(), hdr10MetadataBuffer->GetSize(), timestamp());
+                    datalist.push_back(data);
+                }
+            }
+        }
+        return datalist;
+    }
 };
 #else
 typedef void RGYFrame;
