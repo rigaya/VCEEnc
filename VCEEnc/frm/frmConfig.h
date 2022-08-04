@@ -603,6 +603,7 @@ private: System::Windows::Forms::NumericUpDown^  fcgNUQPI;
 private: System::Windows::Forms::Label^  fcgLBBitrate2;
 private: System::Windows::Forms::NumericUpDown^  fcgNUBitrate;
 private: System::Windows::Forms::Label^  fcgLBBitrate;
+private: System::Windows::Forms::TabPage^  tabPageVpp;
 
 
 
@@ -628,13 +629,13 @@ private: System::Windows::Forms::Label^  fcgLBBitrate;
 
 
 
-private: System::Windows::Forms::TabPage^  tabPageExOpt;
-private: System::Windows::Forms::Label^  fcgLBTempDir;
 
-private: System::Windows::Forms::Button^  fcgBTCustomTempDir;
-private: System::Windows::Forms::TextBox^  fcgTXCustomTempDir;
 
-private: System::Windows::Forms::ComboBox^  fcgCXTempDir;
+
+
+
+
+
 
 
 private: System::Windows::Forms::Label^  fcgLBGOPLengthAuto;
@@ -779,7 +780,7 @@ private: System::Windows::Forms::PictureBox^  fcgpictureBoxVCEDisabled;
 
 
 private: System::Windows::Forms::PictureBox^  fcgpictureBoxVCEEnabled;
-private: System::Windows::Forms::CheckBox^  fcgCBAuoTcfileout;
+
 
 private: System::Windows::Forms::Label^  fcgLBDeblock;
 
@@ -879,7 +880,7 @@ private: System::Windows::Forms::Label^  fcgLBResize;
 private: System::Windows::Forms::NumericUpDown^  fcgNUResizeH;
 
 private: System::Windows::Forms::NumericUpDown^  fcgNUResizeW;
-private: System::Windows::Forms::CheckBox^  fcgCBTimerPeriodTuning;
+
 private: System::Windows::Forms::Button^  fcgBTVideoEncoderPath;
 private: System::Windows::Forms::TextBox^  fcgTXVideoEncoderPath;
 private: System::Windows::Forms::Label^  fcgLBVideoEncoderPath;
@@ -1073,6 +1074,15 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseConv3DThreshYSpatial;
 private: System::Windows::Forms::NumericUpDown^  fcgNUVppDenoiseConv3DThreshYTemporal;
 private: System::Windows::Forms::NumericUpDown^  fcgNUVppDenoiseConv3DThreshYSpatial;
 private: System::Windows::Forms::Panel^  fcgPNHideToolStripBorder;
+private: System::Windows::Forms::TabPage^  tabPageExOpt;
+private: System::Windows::Forms::CheckBox^  fcgCBTimerPeriodTuning;
+private: System::Windows::Forms::CheckBox^  fcgCBAuoTcfileout;
+private: System::Windows::Forms::Label^  fcgLBTempDir;
+private: System::Windows::Forms::Button^  fcgBTCustomTempDir;
+private: System::Windows::Forms::TextBox^  fcgTXCustomTempDir;
+private: System::Windows::Forms::ComboBox^  fcgCXTempDir;
+private: System::Windows::Forms::GroupBox^  fcggroupBoxCmdEx;
+private: System::Windows::Forms::TextBox^  fcgTXCmdEx;
 
 
 
@@ -1355,7 +1365,7 @@ private: System::Windows::Forms::Panel^  fcgPNHideToolStripBorder;
             this->fcgPNH264Features = (gcnew System::Windows::Forms::Panel());
             this->fcgLBVBAQ = (gcnew System::Windows::Forms::Label());
             this->fcgCBVBAQ = (gcnew System::Windows::Forms::CheckBox());
-            this->tabPageExOpt = (gcnew System::Windows::Forms::TabPage());
+            this->tabPageVpp = (gcnew System::Windows::Forms::TabPage());
             this->fcgCBVppDebandEnable = (gcnew System::Windows::Forms::CheckBox());
             this->fcggroupBoxVppDeband = (gcnew System::Windows::Forms::GroupBox());
             this->fcgCBVppDebandRandEachFrame = (gcnew System::Windows::Forms::CheckBox());
@@ -1496,18 +1506,12 @@ private: System::Windows::Forms::Panel^  fcgPNHideToolStripBorder;
             this->fcgCXVppNnediNsize = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBVppNnediNns = (gcnew System::Windows::Forms::Label());
             this->fcgCXVppNnediNns = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgCBTimerPeriodTuning = (gcnew System::Windows::Forms::CheckBox());
             this->fcgCBVppResize = (gcnew System::Windows::Forms::CheckBox());
             this->fcggroupBoxResize = (gcnew System::Windows::Forms::GroupBox());
             this->fcgCXVppResizeAlg = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBResize = (gcnew System::Windows::Forms::Label());
             this->fcgNUResizeH = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgNUResizeW = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgCBAuoTcfileout = (gcnew System::Windows::Forms::CheckBox());
-            this->fcgLBTempDir = (gcnew System::Windows::Forms::Label());
-            this->fcgBTCustomTempDir = (gcnew System::Windows::Forms::Button());
-            this->fcgTXCustomTempDir = (gcnew System::Windows::Forms::TextBox());
-            this->fcgCXTempDir = (gcnew System::Windows::Forms::ComboBox());
             this->fcgCSExeFiles = (gcnew System::Windows::Forms::ContextMenuStrip(this->components));
             this->fcgTSExeFileshelp = (gcnew System::Windows::Forms::ToolStripMenuItem());
             this->fcgLBguiExBlog = (gcnew System::Windows::Forms::LinkLabel());
@@ -1557,6 +1561,15 @@ private: System::Windows::Forms::Panel^  fcgPNHideToolStripBorder;
             this->fcgCXAudioPriority = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBAudioPriority = (gcnew System::Windows::Forms::Label());
             this->fcgPNHideToolStripBorder = (gcnew System::Windows::Forms::Panel());
+            this->tabPageExOpt = (gcnew System::Windows::Forms::TabPage());
+            this->fcgCBTimerPeriodTuning = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgCBAuoTcfileout = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgLBTempDir = (gcnew System::Windows::Forms::Label());
+            this->fcgBTCustomTempDir = (gcnew System::Windows::Forms::Button());
+            this->fcgTXCustomTempDir = (gcnew System::Windows::Forms::TextBox());
+            this->fcgCXTempDir = (gcnew System::Windows::Forms::ComboBox());
+            this->fcggroupBoxCmdEx = (gcnew System::Windows::Forms::GroupBox());
+            this->fcgTXCmdEx = (gcnew System::Windows::Forms::TextBox());
             this->fcgtoolStripSettings->SuspendLayout();
             this->fcgtabControlMux->SuspendLayout();
             this->fcgtabPageMP4->SuspendLayout();
@@ -1592,7 +1605,7 @@ private: System::Windows::Forms::Panel^  fcgPNHideToolStripBorder;
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBRefDeltaQP))->BeginInit();
             this->fcgPNHEVCLevelProfile->SuspendLayout();
             this->fcgPNH264Features->SuspendLayout();
-            this->tabPageExOpt->SuspendLayout();
+            this->tabPageVpp->SuspendLayout();
             this->fcggroupBoxVppDeband->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDebandDitherC))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDebandDitherY))->BeginInit();
@@ -1665,6 +1678,8 @@ private: System::Windows::Forms::Panel^  fcgPNHideToolStripBorder;
             this->fcgPNAudioExt->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrate))->BeginInit();
             this->fcgtabPageAudioOther->SuspendLayout();
+            this->tabPageExOpt->SuspendLayout();
+            this->fcggroupBoxCmdEx->SuspendLayout();
             this->SuspendLayout();
             // 
             // fcgtoolStripSettings
@@ -2478,6 +2493,7 @@ private: System::Windows::Forms::Panel^  fcgPNHideToolStripBorder;
             // fcgtabControlVCE
             // 
             this->fcgtabControlVCE->Controls->Add(this->tabPageVideoEnc);
+            this->fcgtabControlVCE->Controls->Add(this->tabPageVpp);
             this->fcgtabControlVCE->Controls->Add(this->tabPageExOpt);
             this->fcgtabControlVCE->Location = System::Drawing::Point(4, 31);
             this->fcgtabControlVCE->Name = L"fcgtabControlVCE";
@@ -3442,31 +3458,25 @@ private: System::Windows::Forms::Panel^  fcgPNHideToolStripBorder;
             this->fcgCBVBAQ->Tag = L"reCmd";
             this->fcgCBVBAQ->UseVisualStyleBackColor = true;
             // 
-            // tabPageExOpt
+            // tabPageVpp
             // 
-            this->tabPageExOpt->Controls->Add(this->fcgCBVppDebandEnable);
-            this->tabPageExOpt->Controls->Add(this->fcggroupBoxVppDeband);
-            this->tabPageExOpt->Controls->Add(this->fcggroupBoxVppDetailEnahance);
-            this->tabPageExOpt->Controls->Add(this->fcggroupBoxVppDenoise);
-            this->tabPageExOpt->Controls->Add(this->fcgCBPSNR);
-            this->tabPageExOpt->Controls->Add(this->fcgCBSSIM);
-            this->tabPageExOpt->Controls->Add(this->fcggroupBoxVppDeinterlace);
-            this->tabPageExOpt->Controls->Add(this->fcgCBTimerPeriodTuning);
-            this->tabPageExOpt->Controls->Add(this->fcgCBVppResize);
-            this->tabPageExOpt->Controls->Add(this->fcggroupBoxResize);
-            this->tabPageExOpt->Controls->Add(this->fcgCBAuoTcfileout);
-            this->tabPageExOpt->Controls->Add(this->fcgLBTempDir);
-            this->tabPageExOpt->Controls->Add(this->fcgBTCustomTempDir);
-            this->tabPageExOpt->Controls->Add(this->fcgTXCustomTempDir);
-            this->tabPageExOpt->Controls->Add(this->fcgCXTempDir);
-            this->tabPageExOpt->Font = (gcnew System::Drawing::Font(L"Meiryo UI", 8.25F, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
+            this->tabPageVpp->Controls->Add(this->fcgCBVppDebandEnable);
+            this->tabPageVpp->Controls->Add(this->fcggroupBoxVppDeband);
+            this->tabPageVpp->Controls->Add(this->fcggroupBoxVppDetailEnahance);
+            this->tabPageVpp->Controls->Add(this->fcggroupBoxVppDenoise);
+            this->tabPageVpp->Controls->Add(this->fcgCBPSNR);
+            this->tabPageVpp->Controls->Add(this->fcgCBSSIM);
+            this->tabPageVpp->Controls->Add(this->fcggroupBoxVppDeinterlace);
+            this->tabPageVpp->Controls->Add(this->fcgCBVppResize);
+            this->tabPageVpp->Controls->Add(this->fcggroupBoxResize);
+            this->tabPageVpp->Font = (gcnew System::Drawing::Font(L"Meiryo UI", 8.25F, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
                 static_cast<System::Byte>(128)));
-            this->tabPageExOpt->Location = System::Drawing::Point(4, 24);
-            this->tabPageExOpt->Name = L"tabPageExOpt";
-            this->tabPageExOpt->Size = System::Drawing::Size(608, 481);
-            this->tabPageExOpt->TabIndex = 1;
-            this->tabPageExOpt->Text = L"その他";
-            this->tabPageExOpt->UseVisualStyleBackColor = true;
+            this->tabPageVpp->Location = System::Drawing::Point(4, 24);
+            this->tabPageVpp->Name = L"tabPageVpp";
+            this->tabPageVpp->Size = System::Drawing::Size(608, 481);
+            this->tabPageVpp->TabIndex = 1;
+            this->tabPageVpp->Text = L"フィルタ";
+            this->tabPageVpp->UseVisualStyleBackColor = true;
             // 
             // fcgCBVppDebandEnable
             // 
@@ -4982,17 +4992,6 @@ private: System::Windows::Forms::Panel^  fcgPNHideToolStripBorder;
             this->fcgCXVppNnediNns->TabIndex = 1;
             this->fcgCXVppNnediNns->Tag = L"reCmd";
             // 
-            // fcgCBTimerPeriodTuning
-            // 
-            this->fcgCBTimerPeriodTuning->AutoSize = true;
-            this->fcgCBTimerPeriodTuning->Location = System::Drawing::Point(361, 350);
-            this->fcgCBTimerPeriodTuning->Name = L"fcgCBTimerPeriodTuning";
-            this->fcgCBTimerPeriodTuning->Size = System::Drawing::Size(92, 18);
-            this->fcgCBTimerPeriodTuning->TabIndex = 14;
-            this->fcgCBTimerPeriodTuning->Tag = L"chValue";
-            this->fcgCBTimerPeriodTuning->Text = L"高精度タイマー";
-            this->fcgCBTimerPeriodTuning->UseVisualStyleBackColor = true;
-            // 
             // fcgCBVppResize
             // 
             this->fcgCBVppResize->AutoSize = true;
@@ -5059,55 +5058,6 @@ private: System::Windows::Forms::Panel^  fcgPNHideToolStripBorder;
             this->fcgNUResizeW->TabIndex = 0;
             this->fcgNUResizeW->Tag = L"reCmd";
             this->fcgNUResizeW->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
-            // fcgCBAuoTcfileout
-            // 
-            this->fcgCBAuoTcfileout->AutoSize = true;
-            this->fcgCBAuoTcfileout->Location = System::Drawing::Point(360, 374);
-            this->fcgCBAuoTcfileout->Name = L"fcgCBAuoTcfileout";
-            this->fcgCBAuoTcfileout->Size = System::Drawing::Size(98, 18);
-            this->fcgCBAuoTcfileout->TabIndex = 15;
-            this->fcgCBAuoTcfileout->Tag = L"chValue";
-            this->fcgCBAuoTcfileout->Text = L"タイムコード出力";
-            this->fcgCBAuoTcfileout->UseVisualStyleBackColor = true;
-            // 
-            // fcgLBTempDir
-            // 
-            this->fcgLBTempDir->AutoSize = true;
-            this->fcgLBTempDir->Location = System::Drawing::Point(352, 403);
-            this->fcgLBTempDir->Name = L"fcgLBTempDir";
-            this->fcgLBTempDir->Size = System::Drawing::Size(60, 14);
-            this->fcgLBTempDir->TabIndex = 10;
-            this->fcgLBTempDir->Text = L"一時フォルダ";
-            // 
-            // fcgBTCustomTempDir
-            // 
-            this->fcgBTCustomTempDir->Location = System::Drawing::Point(552, 452);
-            this->fcgBTCustomTempDir->Name = L"fcgBTCustomTempDir";
-            this->fcgBTCustomTempDir->Size = System::Drawing::Size(29, 23);
-            this->fcgBTCustomTempDir->TabIndex = 13;
-            this->fcgBTCustomTempDir->Text = L"...";
-            this->fcgBTCustomTempDir->UseVisualStyleBackColor = true;
-            this->fcgBTCustomTempDir->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTCustomTempDir_Click);
-            // 
-            // fcgTXCustomTempDir
-            // 
-            this->fcgTXCustomTempDir->Location = System::Drawing::Point(367, 453);
-            this->fcgTXCustomTempDir->Name = L"fcgTXCustomTempDir";
-            this->fcgTXCustomTempDir->Size = System::Drawing::Size(182, 21);
-            this->fcgTXCustomTempDir->TabIndex = 12;
-            this->fcgTXCustomTempDir->Tag = L"";
-            this->fcgTXCustomTempDir->TextChanged += gcnew System::EventHandler(this, &frmConfig::fcgTXCustomTempDir_TextChanged);
-            // 
-            // fcgCXTempDir
-            // 
-            this->fcgCXTempDir->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXTempDir->FormattingEnabled = true;
-            this->fcgCXTempDir->Location = System::Drawing::Point(355, 425);
-            this->fcgCXTempDir->Name = L"fcgCXTempDir";
-            this->fcgCXTempDir->Size = System::Drawing::Size(209, 22);
-            this->fcgCXTempDir->TabIndex = 11;
-            this->fcgCXTempDir->Tag = L"chValue";
             // 
             // fcgCSExeFiles
             // 
@@ -5638,6 +5588,103 @@ private: System::Windows::Forms::Panel^  fcgPNHideToolStripBorder;
             this->fcgPNHideToolStripBorder->TabIndex = 52;
             this->fcgPNHideToolStripBorder->Visible = false;
             // 
+            // tabPageExOpt
+            // 
+            this->tabPageExOpt->Controls->Add(this->fcggroupBoxCmdEx);
+            this->tabPageExOpt->Controls->Add(this->fcgCBTimerPeriodTuning);
+            this->tabPageExOpt->Controls->Add(this->fcgCBAuoTcfileout);
+            this->tabPageExOpt->Controls->Add(this->fcgLBTempDir);
+            this->tabPageExOpt->Controls->Add(this->fcgBTCustomTempDir);
+            this->tabPageExOpt->Controls->Add(this->fcgTXCustomTempDir);
+            this->tabPageExOpt->Controls->Add(this->fcgCXTempDir);
+            this->tabPageExOpt->Location = System::Drawing::Point(4, 24);
+            this->tabPageExOpt->Name = L"tabPageExOpt";
+            this->tabPageExOpt->Size = System::Drawing::Size(608, 481);
+            this->tabPageExOpt->TabIndex = 2;
+            this->tabPageExOpt->Text = L"その他";
+            this->tabPageExOpt->UseVisualStyleBackColor = true;
+            // 
+            // fcgCBTimerPeriodTuning
+            // 
+            this->fcgCBTimerPeriodTuning->AutoSize = true;
+            this->fcgCBTimerPeriodTuning->Location = System::Drawing::Point(15, 9);
+            this->fcgCBTimerPeriodTuning->Name = L"fcgCBTimerPeriodTuning";
+            this->fcgCBTimerPeriodTuning->Size = System::Drawing::Size(98, 19);
+            this->fcgCBTimerPeriodTuning->TabIndex = 20;
+            this->fcgCBTimerPeriodTuning->Tag = L"chValue";
+            this->fcgCBTimerPeriodTuning->Text = L"高精度タイマー";
+            this->fcgCBTimerPeriodTuning->UseVisualStyleBackColor = true;
+            // 
+            // fcgCBAuoTcfileout
+            // 
+            this->fcgCBAuoTcfileout->AutoSize = true;
+            this->fcgCBAuoTcfileout->Location = System::Drawing::Point(14, 33);
+            this->fcgCBAuoTcfileout->Name = L"fcgCBAuoTcfileout";
+            this->fcgCBAuoTcfileout->Size = System::Drawing::Size(103, 19);
+            this->fcgCBAuoTcfileout->TabIndex = 21;
+            this->fcgCBAuoTcfileout->Tag = L"chValue";
+            this->fcgCBAuoTcfileout->Text = L"タイムコード出力";
+            this->fcgCBAuoTcfileout->UseVisualStyleBackColor = true;
+            // 
+            // fcgLBTempDir
+            // 
+            this->fcgLBTempDir->AutoSize = true;
+            this->fcgLBTempDir->Location = System::Drawing::Point(364, 9);
+            this->fcgLBTempDir->Name = L"fcgLBTempDir";
+            this->fcgLBTempDir->Size = System::Drawing::Size(66, 15);
+            this->fcgLBTempDir->TabIndex = 16;
+            this->fcgLBTempDir->Text = L"一時フォルダ";
+            // 
+            // fcgBTCustomTempDir
+            // 
+            this->fcgBTCustomTempDir->Location = System::Drawing::Point(564, 58);
+            this->fcgBTCustomTempDir->Name = L"fcgBTCustomTempDir";
+            this->fcgBTCustomTempDir->Size = System::Drawing::Size(29, 23);
+            this->fcgBTCustomTempDir->TabIndex = 19;
+            this->fcgBTCustomTempDir->Text = L"...";
+            this->fcgBTCustomTempDir->UseVisualStyleBackColor = true;
+            this->fcgBTCustomTempDir->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTCustomTempDir_Click);
+            // 
+            // fcgTXCustomTempDir
+            // 
+            this->fcgTXCustomTempDir->Location = System::Drawing::Point(379, 59);
+            this->fcgTXCustomTempDir->Name = L"fcgTXCustomTempDir";
+            this->fcgTXCustomTempDir->Size = System::Drawing::Size(182, 23);
+            this->fcgTXCustomTempDir->TabIndex = 18;
+            this->fcgTXCustomTempDir->Tag = L"";
+            // 
+            // fcgCXTempDir
+            // 
+            this->fcgCXTempDir->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXTempDir->FormattingEnabled = true;
+            this->fcgCXTempDir->Location = System::Drawing::Point(367, 31);
+            this->fcgCXTempDir->Name = L"fcgCXTempDir";
+            this->fcgCXTempDir->Size = System::Drawing::Size(209, 23);
+            this->fcgCXTempDir->TabIndex = 17;
+            this->fcgCXTempDir->Tag = L"chValue";
+            // 
+            // fcggroupBoxCmdEx
+            // 
+            this->fcggroupBoxCmdEx->Controls->Add(this->fcgTXCmdEx);
+            this->fcggroupBoxCmdEx->Location = System::Drawing::Point(10, 239);
+            this->fcggroupBoxCmdEx->Name = L"fcggroupBoxCmdEx";
+            this->fcggroupBoxCmdEx->Size = System::Drawing::Size(589, 233);
+            this->fcggroupBoxCmdEx->TabIndex = 61;
+            this->fcggroupBoxCmdEx->TabStop = false;
+            this->fcggroupBoxCmdEx->Text = L"追加コマンド";
+            // 
+            // fcgTXCmdEx
+            // 
+            this->fcgTXCmdEx->AllowDrop = true;
+            this->fcgTXCmdEx->Font = (gcnew System::Drawing::Font(L"ＭＳ ゴシック", 9, System::Drawing::FontStyle::Regular, System::Drawing::GraphicsUnit::Point,
+                static_cast<System::Byte>(128)));
+            this->fcgTXCmdEx->Location = System::Drawing::Point(6, 20);
+            this->fcgTXCmdEx->Multiline = true;
+            this->fcgTXCmdEx->Name = L"fcgTXCmdEx";
+            this->fcgTXCmdEx->Size = System::Drawing::Size(577, 202);
+            this->fcgTXCmdEx->TabIndex = 0;
+            this->fcgTXCmdEx->Tag = L"chValue";
+            // 
             // frmConfig
             // 
             this->AutoScaleDimensions = System::Drawing::SizeF(96, 96);
@@ -5713,8 +5760,8 @@ private: System::Windows::Forms::Panel^  fcgPNHideToolStripBorder;
             this->fcgPNHEVCLevelProfile->PerformLayout();
             this->fcgPNH264Features->ResumeLayout(false);
             this->fcgPNH264Features->PerformLayout();
-            this->tabPageExOpt->ResumeLayout(false);
-            this->tabPageExOpt->PerformLayout();
+            this->tabPageVpp->ResumeLayout(false);
+            this->tabPageVpp->PerformLayout();
             this->fcggroupBoxVppDeband->ResumeLayout(false);
             this->fcggroupBoxVppDeband->PerformLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDebandDitherC))->EndInit();
@@ -5804,6 +5851,10 @@ private: System::Windows::Forms::Panel^  fcgPNHideToolStripBorder;
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrate))->EndInit();
             this->fcgtabPageAudioOther->ResumeLayout(false);
             this->fcgtabPageAudioOther->PerformLayout();
+            this->tabPageExOpt->ResumeLayout(false);
+            this->tabPageExOpt->PerformLayout();
+            this->fcggroupBoxCmdEx->ResumeLayout(false);
+            this->fcggroupBoxCmdEx->PerformLayout();
             this->ResumeLayout(false);
             this->PerformLayout();
 

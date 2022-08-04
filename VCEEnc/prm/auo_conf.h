@@ -93,7 +93,8 @@ typedef struct {
     int codec;
     int reserved[128];
     char cmd[3072];
-    char reserved2[1024];
+    char cmdex[512];
+    char reserved2[512];
 } CONF_VCE;
 
 typedef struct {
