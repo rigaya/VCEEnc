@@ -49,6 +49,7 @@ Debian/Ubuntu系 (VCEEncC)
 | VCEEnc 6.13以降 | AMD ドライバ 21.6.1 以降 |
 | VCEEnc 6.17以降 | AMD ドライバ 21.12.1 以降 |
 | VCEEnc 7.00以降 | AMD ドライバ 22.3.1 以降 |
+| VCEEnc 7.03以降 | AMD ドライバ 22.7.1 以降 |
 
 ## VCEEncCの使用方法とオプション  
 [VCEEncCのオプションの説明](./VCEEncC_Options.ja.md)
