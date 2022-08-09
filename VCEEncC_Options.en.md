@@ -48,7 +48,9 @@
 - [Encode Mode Options](#encode-mode-options)
   - [--cqp &lt;int&gt; or &lt;int&gt;:&lt;int&gt;:&lt;int&gt;](#--cqp-int-or-intintint)
   - [--cbr &lt;int&gt;](#--cbr-int)
+  - [--cbrhq &lt;int&gt; [H.264 only]](#--cbrhq-int-h264-only)
   - [--vbr &lt;int&gt;](#--vbr-int)
+  - [--vbrhq &lt;int&gt; [H.264 only]](#--vbrhq-int-h264-only)
   - [--qvbr &lt;int&gt; [H.264 only]](#--qvbr-int-h264-only)
 - [Other Options for Encoder](#other-options-for-encoder)
   - [-u, --preset](#-u---preset)
@@ -71,13 +73,7 @@
   - [--filler](#--filler)
   - [--motion-est &lt;string&gt;](#--motion-est-string)
   - [--pe](#--pe)
-  - [--pa](#--pa)
-  - [--pa-sc &lt;string&gt;](#--pa-sc-string)
-  - [--pa-ss &lt;string&gt;](#--pa-ss-string)
-  - [--pa-activity-type &lt;string&gt;](#--pa-activity-type-string)
-  - [--pa-caq-strength &lt;string&gt;](#--pa-caq-strength-string)
-  - [--pa-initqpsc &lt;int&gt;](#--pa-initqpsc-int)
-  - [--pa-fskip-maxqp &lt;int&gt;](#--pa-fskip-maxqp-int)
+  - [--pa  [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]](#--pa--param1value1param2value2)
   - [--slices &lt;int&gt;](#--slices-int)
   - [--level &lt;string&gt;](#--level-string)
   - [--profile &lt;string&gt;](#--profile-string)
@@ -434,7 +430,9 @@ Set the QP value of &lt;I frame&gt;:&lt;P frame&gt;:&lt;B frame&gt;
 Generally, it is recommended to set the QP value to be I &lt; P &lt; B.
 
 ### --cbr &lt;int&gt;
+### --cbrhq &lt;int&gt; [H.264 only]
 ### --vbr &lt;int&gt;
+### --vbrhq &lt;int&gt; [H.264 only]
 ### --qvbr &lt;int&gt; [H.264 only]
 Set bitrate in kbps.
 
@@ -513,31 +511,66 @@ Motion vector accuracy / default: auto
 ### --pe
 Enable pre-encode assisted rate control. (default: off)  
 
-### --pa
+### --pa  [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]  
 Enable pre analysis to enahance quality, supports VBR mode only. (default: off)  
-Can be adjusted by "--pa-xxx" options below.
 
-### --pa-sc &lt;string&gt;
-Sensitivity of scenechange detection. (default: medium)
- none, low, medium, high
+- **params**
+  - sc=&lt;string&gt;  
+    Sensitivity of scene change detection
+    - none
+    - low
+    - medium (default)
+    - high
 
-### --pa-ss &lt;string&gt;
-Sensitivity of static scene detection. (default: high)
- none, low, medium, high
+  - ss=&lt;string&gt;  
+    Sensitivity of static scene detection
+    - none
+    - low
+    - medium
+    - high (default)
 
-### --pa-activity-type &lt;string&gt;
-Block activity calcualtion mode. (default: y)
- y, yuv
+  - activity-type=&lt;string&gt;  
+    Block activity calcualtion mode
+    - y (default)
+    - yuv
 
-### --pa-caq-strength &lt;string&gt;
-Content Adaptive Quantization (CAQ) strength. (default: medium)
- low, medium, high
+  - caq-strength=&lt;string&gt;  
+    Content Adaptive Quantization (CAQ) strength
+    - low
+    - medium (default)
+    - high
 
-### --pa-initqpsc &lt;int&gt;
-Initial qp after scene change. (default: -1 ( = auto))
+  - initqpsc=&lt;int&gt;  
+    Initial qp after scene change (default: -1 = auto)
 
-### --pa-fskip-maxqp &lt;int&gt;
-Threshold to insert skip frame on static scene. (default: 35)
+  - fskip-maxqp=&lt;int&gt;  
+    Threshold to insert skip frame on static scene. (default: 35)
+
+  - lookahead=&lt;int&gt;  
+    Lookahead buffer size.
+
+  - ltr=&lt;bool&gt;  
+    enable automatic LTR frame management
+
+  - paq=&lt;string&gt;  
+    Perceptual AQ mode
+    - none
+    - caq
+
+  - taq=&lt;string&gt;  
+    Temporal AQ mode
+    - off
+    - on
+
+  - motion-quality=&lt;string&gt;  
+    High motion quality boost mode
+    - none
+    - auto
+    
+- example
+  ```
+  --pa sc=high,ss=high,activity-type=yuv,paq=caq,taq=on,lookahead=32
+  ```
 
 ### --slices &lt;int&gt;
 Set number of slices.

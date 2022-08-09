@@ -160,6 +160,15 @@ Radeon RX460
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2022.08.10 (7.03)
+[VCEEncC]
+- AMF 1.4.26に対応。
+  AMD Radeon Software Adrenalin Edition 22.7.1 以降が必要。
+- --pa に新たなオプションを追加。
+  taq, paq, ltr, lookahead, motion-quality
+- H.264エンコードに --vbrhq, --cbrhq を追加。
+
+
 2022.08.04 (7.02)
 [VCEEnc.auo]
 追加コマンドの設定欄を追加。

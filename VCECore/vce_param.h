@@ -204,6 +204,24 @@ const CX_DESC list_pa_caq_strength[] = {
     { NULL, 0 }
 };
 
+const CX_DESC list_pa_paq_mode[] = {
+    { _T("none"), AMF_PA_PAQ_MODE_NONE },
+    { _T("caq"),  AMF_PA_PAQ_MODE_CAQ  },
+    { NULL, 0 }
+};
+
+const CX_DESC list_pa_taq_mode[] = {
+    { _T("off"), AMF_PA_TAQ_MODE_NONE },
+    { _T("on"),  AMF_PA_TAQ_MODE_1  },
+    { NULL, 0 }
+};
+
+const CX_DESC list_pa_motion_quality_mode[] = {
+    { _T("none"), AMF_PA_HIGH_MOTION_QUALITY_BOOST_MODE_NONE  },
+    { _T("auto"), AMF_PA_HIGH_MOTION_QUALITY_BOOST_MODE_AUTO  },
+    { NULL, 0 }
+};
+
 const CX_DESC list_vce_quality_preset_h264[] = {
     { _T("balanced"), AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED },
     { _T("fast"),     AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED },
@@ -334,7 +352,16 @@ struct VCEParamPA {
     AMF_PA_ACTIVITY_TYPE_ENUM activityType;
     int initQPSC;
     int maxQPBeforeForceSkip;
+    bool ltrEnable;
     AMF_PA_CAQ_STRENGTH_ENUM CAQStrength;
+    AMF_PA_PAQ_MODE_ENUM PAQMode;
+    AMF_PA_TAQ_MODE_ENUM TAQMode;
+    AMF_PA_HIGH_MOTION_QUALITY_BOOST_MODE_ENUM motionQualityBoost;
+    int lookaheadDepth;
+
+    bool operator==(const VCEParamPA &x) const;
+    bool operator!=(const VCEParamPA &x) const;
+
     VCEParamPA();
 };
 
@@ -560,6 +587,7 @@ public:
     RGY_ERR SetParamTypeCodec(const RGY_CODEC codec);
     RGY_ERR SetParamTypeAVC();
     RGY_ERR SetParamTypeHEVC();
+    RGY_ERR SetParamTypePA();
 
     RGY_ERR SetParam(const std::wstring &name, amf::AMFVariantStruct value);
 

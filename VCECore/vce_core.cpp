@@ -1797,11 +1797,16 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         m_params.SetParam(AMF_PA_SCENE_CHANGE_DETECTION_ENABLE, prm->pa.sc);
         if (prm->pa.sc) m_params.SetParam(AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY, (amf_int64)prm->pa.scSensitivity);
         m_params.SetParam(AMF_PA_STATIC_SCENE_DETECTION_ENABLE, prm->pa.ss);
-        if (prm->pa.ss)  m_params.SetParam(AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY, (amf_int64)prm->pa.ssSensitivity);
+        if (prm->pa.ss) m_params.SetParam(AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY, (amf_int64)prm->pa.ssSensitivity);
         m_params.SetParam(AMF_PA_ACTIVITY_TYPE, (amf_int64)prm->pa.activityType);
         if (prm->pa.initQPSC > AMF_PA_INITQPSC_AUTO) m_params.SetParam(AMF_PA_INITIAL_QP_AFTER_SCENE_CHANGE, (amf_int64)prm->pa.initQPSC); //設定しなければ自動
         m_params.SetParam(AMF_PA_MAX_QP_BEFORE_FORCE_SKIP, (amf_int64)prm->pa.maxQPBeforeForceSkip);
+        m_params.SetParam(AMF_PA_LTR_ENABLE, prm->pa.ltrEnable);
         m_params.SetParam(AMF_PA_CAQ_STRENGTH, (amf_int64)prm->pa.CAQStrength);
+        m_params.SetParam(AMF_PA_PAQ_MODE, (amf_int64)prm->pa.PAQMode);
+        m_params.SetParam(AMF_PA_TAQ_MODE, (amf_int64)prm->pa.TAQMode);
+        m_params.SetParam(AMF_PA_HIGH_MOTION_QUALITY_BOOST_MODE, (amf_int64)prm->pa.motionQualityBoost);
+        m_params.SetParam(AMF_PA_LOOKAHEAD_BUFFER_DEPTH, (amf_uint64)prm->pa.lookaheadDepth);
     }
 
     //m_params.SetParam(AMF_PARAM_INPUT_COLOR_PROFILE(prm->codec),           AMF_VIDEO_CONVERTER_COLOR_PROFILE_UNKNOWN);
@@ -3419,8 +3424,14 @@ tstring VCECore::GetEncoderParam() {
         if (GetPropertyBool(AMF_PA_STATIC_SCENE_DETECTION_ENABLE)) {
             pa_str += _T("ss ") + getPropertyDesc(AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY, list_pa_ss_sensitivity) + _T(", ");
         }
-        pa_str += _T("activity ") + getPropertyDesc(AMF_PA_ACTIVITY_TYPE, list_pa_activity) + _T(", ");
+        pa_str += _T("activity ") + getPropertyDesc(AMF_PA_ACTIVITY_TYPE, list_pa_activity) + _T("\n");
+        pa_str += _T("               ");
+        pa_str += strsprintf(_T("lookahead %d, "), GetPropertyInt(AMF_PA_LOOKAHEAD_BUFFER_DEPTH));
         pa_str += _T("caq ") + getPropertyDesc(AMF_PA_CAQ_STRENGTH, list_pa_caq_strength) + _T(", ");
+        pa_str += _T("paq ") + getPropertyDesc(AMF_PA_PAQ_MODE, list_pa_paq_mode) + _T(", ");
+        pa_str += _T("taq ") + getPropertyDesc(AMF_PA_TAQ_MODE, list_pa_taq_mode) + _T(", ");
+        pa_str += _T("motion-qual ") + getPropertyDesc(AMF_PA_HIGH_MOTION_QUALITY_BOOST_MODE, list_pa_motion_quality_mode) + _T(", ");
+        pa_str += _T("ltr ") + tstring(GetPropertyInt(AMF_PA_LTR_ENABLE) ? _T("on") : _T("off")) + _T(", ");
         mes += pa_str.substr(0, pa_str.length()-2) + _T("\n");
     } else {
         mes += _T("off\n");

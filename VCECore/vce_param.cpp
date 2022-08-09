@@ -37,9 +37,34 @@ VCEParamPA::VCEParamPA() :
     activityType(AMF_PA_ACTIVITY_Y),
     initQPSC(AMF_PA_INITQPSC_AUTO),
     maxQPBeforeForceSkip(35),
-    CAQStrength(AMF_PA_CAQ_STRENGTH_MEDIUM) {
-
+    ltrEnable(false),
+    CAQStrength(AMF_PA_CAQ_STRENGTH_MEDIUM),
+    PAQMode(AMF_PA_PAQ_MODE_NONE),
+    TAQMode(AMF_PA_TAQ_MODE_NONE),
+    motionQualityBoost(AMF_PA_HIGH_MOTION_QUALITY_BOOST_MODE_NONE),
+    lookaheadDepth(0) {
 };
+
+
+bool VCEParamPA::operator==(const VCEParamPA& x) const {
+    return enable == x.enable
+        && sc == x.sc
+        && scSensitivity == x.scSensitivity
+        && ss == x.ss
+        && ssSensitivity == x.ssSensitivity
+        && activityType == x.activityType
+        && initQPSC == x.initQPSC
+        && maxQPBeforeForceSkip == x.maxQPBeforeForceSkip
+        && ltrEnable == x.ltrEnable
+        && CAQStrength == x.CAQStrength
+        && PAQMode == x.PAQMode
+        && TAQMode == x.TAQMode
+        && motionQualityBoost == x.motionQualityBoost
+        && lookaheadDepth == x.lookaheadDepth;
+}
+bool VCEParamPA::operator!=(const VCEParamPA& x) const {
+    return !(*this == x);
+}
 
 VCEParam::VCEParam() :
     input(),
@@ -174,6 +199,32 @@ RGY_ERR AMFParams::SetParamTypeCodec(const RGY_CODEC codec) {
     return RGY_ERR_NONE;
 }
 
+RGY_ERR AMFParams::SetParamTypePA() {
+    // ------------- PA parameters ---------------
+    SetParamType(AMF_VIDEO_ENCODER_PRE_ANALYSIS_ENABLE, AMF_PARAM_STATIC, L"Enable PA (true, false default =  false)");
+
+    SetParamType(AMF_PA_ENGINE_TYPE, AMF_PARAM_STATIC, L"Engine Type (DX11, OPENCL default = OPENCL)");
+
+    SetParamType(AMF_PA_SCENE_CHANGE_DETECTION_ENABLE, AMF_PARAM_DYNAMIC, L"Scene Change Detection Enable (true, false default =  true)");
+    SetParamType(AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY, AMF_PARAM_DYNAMIC, L"Scene Change Detection Sensitivity (LOW, MEDIUM, HIGH default = MEDIUM)");
+    SetParamType(AMF_PA_STATIC_SCENE_DETECTION_ENABLE, AMF_PARAM_DYNAMIC, L"Static Scene Detection Enable (true, false default =  true)");
+    SetParamType(AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY, AMF_PARAM_DYNAMIC, L"Scene Change Detection Sensitivity (LOW, MEDIUM, HIGH default = HIGH)");
+    SetParamType(AMF_PA_ACTIVITY_TYPE, AMF_PARAM_DYNAMIC, L"Activity Type (Y, YUV default = Y)");
+
+    SetParamType(AMF_PA_INITIAL_QP_AFTER_SCENE_CHANGE, AMF_PARAM_DYNAMIC, L"QP After Scene Change (integer 0-51, default = 0)");
+    SetParamType(AMF_PA_MAX_QP_BEFORE_FORCE_SKIP, AMF_PARAM_DYNAMIC, L"Max QP Before Force Skip (integer 0-51, default = 35)");
+
+    SetParamType(AMF_PA_LTR_ENABLE, AMF_PARAM_DYNAMIC, L"Enable Automatic Long Term Reference frame management");
+    SetParamType(AMF_PA_LOOKAHEAD_BUFFER_DEPTH, AMF_PARAM_DYNAMIC, L"PA lookahead buffer size (default : 0)           Values: [0, MAX_LOOKAHEAD_DEPTH]");
+    SetParamType(AMF_PA_PAQ_MODE, AMF_PARAM_DYNAMIC, L"Perceptual AQ mode (default : AMF_PA_PAQ_MODE_NONE)");
+    SetParamType(AMF_PA_TAQ_MODE, AMF_PARAM_DYNAMIC, L"Temporal AQ mode (default: AMF_PA_TAQ_MODE_NONE)");
+    SetParamType(AMF_PA_HIGH_MOTION_QUALITY_BOOST_MODE, AMF_PARAM_DYNAMIC, L"High motion quality boost mode (default: None)");
+    //  SetParamType(AMF_IN_FRAME_QP_FILTERING_STRENGTH, AMF_PARAM_DYNAMIC, L"In Frame QP Filtering Strength (integer 0-255, default = 0)");
+    //  SetParamType(AMF_BETWEEN_FRAME_QP_FILTERING_STRENGTH, AMF_PARAM_DYNAMIC, L"Between Frame QP Filtering Strength (integer 0-255, default = 0)");
+    SetParamType(AMF_PA_CAQ_STRENGTH, AMF_PARAM_DYNAMIC, L"CAQ Strength (LOW, MEDIUM, HIGH default = MEDIUM)");
+    return RGY_ERR_NONE;
+}
+
 RGY_ERR AMFParams::SetParamTypeAVC() {
     SetParamType(SETFRAMEPARAMFREQ_PARAM_NAME, AMF_PARAM_COMMON, L"Frequency of applying frame parameters (in frames, default = 0 )");
     SetParamType(SETDYNAMICPARAMFREQ_PARAM_NAME, AMF_PARAM_COMMON, L"Frequency of applying dynamic parameters. (in frames, default = 0 )");
@@ -271,22 +322,7 @@ RGY_ERR AMFParams::SetParamTypeAVC() {
     SetParamType(AMF_VIDEO_ENCODER_STATISTICS_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to collect and feedback statistics");
     SetParamType(AMF_VIDEO_ENCODER_BLOCK_QP_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to collect and feedback block level QP values");
 
-    // ------------- PA parameters ---------------
-    SetParamType(AMF_VIDEO_ENCODER_PRE_ANALYSIS_ENABLE, AMF_PARAM_STATIC, L"Enable PA (true, false default =  false)");
-
-    SetParamType(AMF_PA_ENGINE_TYPE, AMF_PARAM_STATIC, L"Engine Type (DX11, OPENCL default = OPENCL)");
-
-    SetParamType(AMF_PA_SCENE_CHANGE_DETECTION_ENABLE, AMF_PARAM_DYNAMIC, L"Scene Change Detection Enable (true, false default =  true)");
-    SetParamType(AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY, AMF_PARAM_DYNAMIC, L"Scene Change Detection Sensitivity (LOW, MEDIUM, HIGH default = MEDIUM)");
-    SetParamType(AMF_PA_STATIC_SCENE_DETECTION_ENABLE, AMF_PARAM_DYNAMIC, L"Static Scene Detection Enable (true, false default =  true)");
-    SetParamType(AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY, AMF_PARAM_DYNAMIC, L"Scene Change Detection Sensitivity (LOW, MEDIUM, HIGH default = HIGH)");
-    SetParamType(AMF_PA_ACTIVITY_TYPE, AMF_PARAM_DYNAMIC, L"Activity Type (Y, YUV default = Y)");
-
-    SetParamType(AMF_PA_INITIAL_QP_AFTER_SCENE_CHANGE, AMF_PARAM_DYNAMIC, L"QP After Scene Change (integer 0-51, default = 0)");
-    SetParamType(AMF_PA_MAX_QP_BEFORE_FORCE_SKIP, AMF_PARAM_DYNAMIC, L"Max QP Before Force Skip (integer 0-51, default = 35)");
-    //  SetParamType(AMF_IN_FRAME_QP_FILTERING_STRENGTH, AMF_PARAM_DYNAMIC, L"In Frame QP Filtering Strength (integer 0-255, default = 0)");
-    //  SetParamType(AMF_BETWEEN_FRAME_QP_FILTERING_STRENGTH, AMF_PARAM_DYNAMIC, L"Between Frame QP Filtering Strength (integer 0-255, default = 0)");
-    SetParamType(AMF_PA_CAQ_STRENGTH, AMF_PARAM_DYNAMIC, L"CAQ Strength (LOW, MEDIUM, HIGH default = MEDIUM)");
+    SetParamTypePA();
 
     return RGY_ERR_NONE;
 }
@@ -383,21 +419,7 @@ RGY_ERR AMFParams::SetParamTypeHEVC() {
     SetParamType(AMF_VIDEO_ENCODER_HEVC_PSNR_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to calculate PSNR score");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_SSIM_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to calculate SSIM score");
 
-    // ------------- PA parameters ---------------
-    SetParamType(AMF_VIDEO_ENCODER_HEVC_PRE_ANALYSIS_ENABLE, AMF_PARAM_STATIC, L"Enable PA (true, false default =  false)");
+    SetParamTypePA();
 
-    SetParamType(AMF_PA_ENGINE_TYPE, AMF_PARAM_STATIC, L"Engine Type (DX11, OPENCL default = OPENCL)");
-
-    SetParamType(AMF_PA_SCENE_CHANGE_DETECTION_ENABLE, AMF_PARAM_DYNAMIC, L"Scene Change Detection Enable (true, false default =  true)");
-    SetParamType(AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY, AMF_PARAM_DYNAMIC, L"Scene Change Detection Sensitivity (LOW, MEDIUM, HIGH default = MEDIUM)");
-    SetParamType(AMF_PA_STATIC_SCENE_DETECTION_ENABLE, AMF_PARAM_DYNAMIC, L"Static Scene Detection Enable (true, false default =  true)");
-    SetParamType(AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY, AMF_PARAM_DYNAMIC, L"Scene Change Detection Sensitivity (LOW, MEDIUM, HIGH default = HIGH)");
-    SetParamType(AMF_PA_ACTIVITY_TYPE, AMF_PARAM_DYNAMIC, L"Activity Type (Y, YUV default = Y)");
-
-    SetParamType(AMF_PA_INITIAL_QP_AFTER_SCENE_CHANGE, AMF_PARAM_DYNAMIC, L"QP After Scene Change (integer 0-51, default = 0)");
-    SetParamType(AMF_PA_MAX_QP_BEFORE_FORCE_SKIP, AMF_PARAM_DYNAMIC, L"Max QP Before Force Skip (integer 0-51, default = 35)");
-    //  SetParamType(AMF_IN_FRAME_QP_FILTERING_STRENGTH, AMF_PARAM_DYNAMIC, L"In Frame QP Filtering Strength (integer 0-255, default = 0)");
-    //  SetParamType(AMF_BETWEEN_FRAME_QP_FILTERING_STRENGTH, AMF_PARAM_DYNAMIC, L"Between Frame QP Filtering Strength (integer 0-255, default = 0)");
-    SetParamType(AMF_PA_CAQ_STRENGTH, AMF_PARAM_DYNAMIC, L"CAQ Strength (LOW, MEDIUM, HIGH default = MEDIUM)");
     return RGY_ERR_NONE;
 }

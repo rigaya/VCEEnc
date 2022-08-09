@@ -435,7 +435,9 @@ CQP(固定量子化量)でエンコードを行う。&lt;Iフレーム&gt;:&lt;P
 基本的にQP値は I &lt; P &lt; B になるように設定することをおすすめ。
 
 ### --cbr &lt;int&gt;   (固定ビットレート)
+### --cbrhq &lt;int&gt;   (固定ビットレート (高品質)) [H.264のみ]
 ### --vbr &lt;int&gt;   (可変ビットレート)
+### --vbrhq &lt;int&gt;   (可変ビットレート (高品質)) [H.264のみ]
 ### --qvbr &lt;int&gt;   (可変ビットレート) [H.264のみ]
 ビットレートをkbps単位で指定してエンコードを行う。
 
@@ -518,31 +520,66 @@ fillerデータを出力し、(名目上の)ビットレートを調整する。
 ### --pe
 pre-encodeによるレート制御を使用する。
 
-### --pa
+### --pa  [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]  
 Pre-Analysisを有効にして、品質向上を図る。VBR時のみ使用可能。 (デフォルト:オフ)  
-効き目は以下の"--pa-xxx"のオプションで調整可能。
 
-### --pa-sc &lt;string&gt;
-シーンチェンジ検出の感度。 (デフォルト: medium)
- none, low, medium, high
+- **params**
+  - sc=&lt;string&gt;
+    シーンチェンジ検出の感度。
+    - none
+    - low
+    - medium (default)
+    - high
 
-### --pa-ss &lt;string&gt;
-静止したシーンの検出感度。 (デフォルト: high)
- none, low, medium, high
+  - ss=&lt;string&gt;  
+    静止したシーンの検出感度。
+    - none
+    - low
+    - medium
+    - high (default)
 
-### --pa-activity-type &lt;string&gt;
-ブロックの動きの検出モード。 (デフォルト: y)
- y, yuv
+  - activity-type=&lt;string&gt;  
+    ブロックの動きの検出モード。
+    - y (default)
+    - yuv
 
-### --pa-caq-strength &lt;string&gt;
-Content Adaptive Quantization (CAQ) の強さ。 (デフォルト: medium)
- low, medium, high
+  - caq-strength=&lt;string&gt;  
+    Content Adaptive Quantization (CAQ) の強さ。
+    - low
+    - medium (default)
+    - high
 
-### --pa-initqpsc &lt;int&gt;
-シーンチェンジ検出検出後に適用する初期QP。 (デフォルト: -1 ( = 自動))
+  - initqpsc=&lt;int&gt;  
+    シーンチェンジ検出検出後に適用する初期QP。 (デフォルト: -1 ( = 自動))
 
-### --pa-fskip-maxqp &lt;int&gt;
-静止したシーンでスキップフレームを挿入するQPの閾値。 (デフォルト: 35)
+  - fskip-maxqp=&lt;int&gt;  
+    静止したシーンでスキップフレームを挿入するQPの閾値。 (デフォルト: 35)
+
+  - lookahead=&lt;int&gt;  
+    先行探索に使用するバッファサイズを指定する。
+
+  - ltr=&lt;bool&gt;  
+    LTRフレームの自動管理を有効/無効にする。
+
+  - paq=&lt;string&gt;  
+    視覚適応的QP調整モードを指定する。
+    - none
+    - caq
+
+  - taq=&lt;string&gt;  
+    時間適応的QP調整モードを指定する。
+    - off
+    - on
+
+  - motion-quality=&lt;string&gt;  
+    動き品質の向上モードを指定する。
+    - none
+    - auto
+    
+- 使用例
+  ```
+  --pa sc=high,ss=high,activity-type=yuv,paq=caq,taq=on,lookahead=32
+  ```
 
 ### --slices &lt;int&gt;
 スライス数。指定なし、あるいは0で自動。

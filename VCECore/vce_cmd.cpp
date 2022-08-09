@@ -182,17 +182,27 @@ tstring encoder_help() {
         _T("   --gop-len <int>              set length of gop (default: auto)\n")
         _T("   --vbaq                       enable VBAQ\n")
         _T("   --pe                         enable Pre Encode\n")
-        _T("   --pa                         enable Pre Analysis\n")
-        _T("   --pa-sc <string>             sensitivity of scenechange detection\n")
+        _T("   --pa [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     enable Pre Analysis\n")
+        _T("    params\n")
+        _T("      sc=<string>               sensitivity of scenechange detection\n")
         _T("                                 - none, low, medium(default), high\n")
-        _T("   --pa-ss <string>             sensitivity of static scene detection\n")
+        _T("      ss=<string>               sensitivity of static scene detection\n")
         _T("                                 - none, low, medium(default), high\n")
-        _T("   --pa-activity-type <string>  block activity calcualtion mode\n")
-        _T("                                 - y (default, yuv)\n")
-        _T("   --pa-caq-strength <string>   Content Adaptive Quantization (CAQ) strength\n")
+        _T("      activity-type=<string>    block activity calcualtion mode\n")
+        _T("                                 - y (default), yuv\n")
+        _T("      caq-strength=<string>     Content Adaptive Quantization (CAQ) strength\n")
         _T("                                 - low, medium(default), high\n")
-        _T("   --pa-initqpsc <int>          initial qp after scene change\n")
-        _T("   --pa-fskip-maxqp <int>       threshold to insert skip frame on static scene\n"),
+        _T("      initqpsc=<int>            initial qp after scene change\n")
+        _T("      fskip-maxqp=<int>         threshold to insert skip frame on static scene\n")
+        _T("      lookahead=<int>           lookahead buffer size\n")
+        _T("      ltr=<bool>                enable automatic LTR frame management\n")
+        _T("      paq=<string>              perceptual AQ mode\n")
+        _T("                                 - none, caq\n")
+        _T("      taq=<string>              temporal AQ mode\n")
+        _T("                                 - off, on\n")
+        _T("      motion-quality=<string>   high motion quality boost mode\n")
+        _T("                                 - none, auto\n"),
         VCE_DEFAULT_QPI, VCE_DEFAULT_QPP, VCE_DEFAULT_QPB, VCE_DEFAULT_BFRAMES,
         VCE_DEFAULT_REF_FRAMES, VCE_DEFAULT_LTR_FRAMES,
         VCE_DEFAULT_MAX_BITRATE, VCE_DEFAULT_VBV_BUFSIZE, VCE_DEFAULT_SLICES
@@ -704,11 +714,158 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->pa.enable = false;
         return 0;
     }
-    if (IS_OPTION("pa")
-        || IS_OPTION("pre-analysis")) {
+    if (IS_OPTION("pa") && ENABLE_VPP_FILTER_SMOOTH) {
         pParams->pa.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+        const auto paramList = std::vector<std::string>{
+            "quality", "qp", "use_qp_table" /*, "strength", "threshold", "bratio", "prec", "max_error"*/ };
+        for (const auto &param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos + 1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    if (param_val == _T("true")) {
+                        pParams->pa.enable = true;
+                    } else if (param_val == _T("false")) {
+                        pParams->pa.enable = false;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("sc")) {
+                    int value = 0;
+                    if (get_list_value(list_pa_sc_sensitivity, param_val.c_str(), &value)) {
+                        if (value == AMF_PA_STATIC_SCENE_DETECTION_NONE) {
+                            pParams->pa.sc = false;
+                        } else {
+                            pParams->pa.sc = true;
+                            pParams->pa.scSensitivity = (AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_ENUM)value;
+                        }
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_pa_sc_sensitivity);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("ss")) {
+                    int value = 0;
+                    if (get_list_value(list_pa_ss_sensitivity, param_val.c_str(), &value)) {
+                        if (value == AMF_PA_STATIC_SCENE_DETECTION_NONE) {
+                            pParams->pa.ss = false;
+                        } else {
+                            pParams->pa.ss = true;
+                            pParams->pa.ssSensitivity = (AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY_ENUM)value;
+                        }
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_pa_ss_sensitivity);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("activity-type")) {
+                    int value = 0;
+                    if (get_list_value(list_pa_activity, param_val.c_str(), &value)) {
+                        pParams->pa.activityType = (AMF_PA_ACTIVITY_TYPE_ENUM)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_pa_activity);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("caq-strength")) {
+                    int value = 0;
+                    if (get_list_value(list_pa_caq_strength, param_val.c_str(), &value)) {
+                        pParams->pa.CAQStrength = (AMF_PA_CAQ_STRENGTH_ENUM)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_pa_caq_strength);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("initqpsc")) {
+                    try {
+                        pParams->pa.initQPSC = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("fskip-maxqp")) {
+                    try {
+                        pParams->pa.maxQPBeforeForceSkip = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("ltr")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->pa.ltrEnable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("paq")) {
+                    int value = 0;
+                    if (get_list_value(list_pa_paq_mode, param_val.c_str(), &value)) {
+                        pParams->pa.PAQMode = (AMF_PA_PAQ_MODE_ENUM)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_pa_paq_mode);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("taq")) {
+                    int value = 0;
+                    if (get_list_value(list_pa_taq_mode, param_val.c_str(), &value)) {
+                        pParams->pa.TAQMode = (AMF_PA_TAQ_MODE_ENUM)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_pa_taq_mode);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("motion-quality")) {
+                    int value = 0;
+                    if (get_list_value(list_pa_motion_quality_mode, param_val.c_str(), &value)) {
+                        pParams->pa.motionQualityBoost = (AMF_PA_HIGH_MOTION_QUALITY_BOOST_MODE_ENUM)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_pa_motion_quality_mode);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("lookahead")) {
+                    try {
+                        pParams->pa.lookaheadDepth = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
         return 0;
     }
+
     if (IS_OPTION("pa-sc")) {
         i++;
         int value;
@@ -993,6 +1150,7 @@ int parse_cmd(VCEParam *pParams, const char *cmda, bool ignore_parse_err) {
 #pragma warning (disable: 4127)
 tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     std::basic_stringstream<TCHAR> cmd;
+    std::basic_stringstream<TCHAR> tmp;
     VCEParam encPrmDefault;
 
 #define OPT_FLOAT(str, opt, prec) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << (str) << _T(" ") << std::setprecision(prec) << (pParams->opt);
@@ -1044,6 +1202,11 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
 #define OPT_STR(str, opt) if (pParams->opt.length() > 0) cmd << _T(" ") << str << _T(" ") << (pParams->opt.c_str());
 #define OPT_CHAR_PATH(str, opt) if ((pParams->opt) && _tcslen(pParams->opt)) cmd << _T(" ") << str << _T(" \"") << (pParams->opt) << _T("\"");
 #define OPT_STR_PATH(str, opt) if (pParams->opt.length() > 0) cmd << _T(" ") << str << _T(" \"") << (pParams->opt.c_str()) << _T("\"");
+
+#define ADD_NUM(str, opt) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << (pParams->opt);
+#define ADD_LST(str, opt, list) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << get_chr_from_value(list, (int)(pParams->opt));
+#define ADD_BOOL(str, opt) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << ((pParams->opt) ? (_T("true")) : (_T("false")));
+
 
     OPT_NUM(_T("-d"), deviceID);
     cmd << _T(" -c ") << get_chr_from_value(list_codec, pParams->codec);
@@ -1114,21 +1277,39 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     }
 
     OPT_BOOL(_T("--pe"), _T("--no-pe"), pe);
-    OPT_BOOL(_T("--pa"), _T("--no-pa"), pa.enable);
-    if (pParams->pa.sc) {
-        OPT_LST(_T("pa-sc"), pa.scSensitivity, list_pa_sc_sensitivity);
-    } else {
-        cmd << _T("--pa-sc ") << get_chr_from_value(list_pa_sc_sensitivity, AMF_PA_SCENE_CHANGE_DETECTION_NONE);
+
+    if (pParams->pa != encPrmDefault.pa) {
+        tmp.str(tstring());
+        if (!pParams->pa.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (pParams->pa.enable || save_disabled_prm) {
+            if (pParams->pa.sc) {
+                ADD_LST(_T("sc"), pa.scSensitivity, list_pa_sc_sensitivity);
+            } else if (pParams->pa.sc != encPrmDefault.pa.sc || save_disabled_prm) {
+                tmp << _T("sc=") << get_chr_from_value(list_pa_sc_sensitivity, AMF_PA_SCENE_CHANGE_DETECTION_NONE);
+            }
+            if (pParams->pa.ss) {
+                ADD_LST(_T("ss"), pa.ssSensitivity, list_pa_ss_sensitivity);
+            } else if (pParams->pa.ss != encPrmDefault.pa.ss || save_disabled_prm) {
+                tmp << _T("ss=") << get_chr_from_value(list_pa_ss_sensitivity, AMF_PA_STATIC_SCENE_DETECTION_NONE);
+            }
+            ADD_LST(_T("activity-type"), pa.activityType, list_pa_activity);
+            ADD_LST(_T("caq-strength"), pa.CAQStrength, list_pa_caq_strength);
+            ADD_NUM(_T("initqpsc"), pa.initQPSC);
+            ADD_NUM(_T("fskip-maxqp"), pa.maxQPBeforeForceSkip);
+            ADD_BOOL(_T("ltr"), pa.ltrEnable);
+            ADD_LST(_T("paq"), pa.PAQMode, list_pa_paq_mode);
+            ADD_LST(_T("taq"), pa.TAQMode, list_pa_taq_mode);
+            ADD_LST(_T("motion-quality"), pa.motionQualityBoost, list_pa_motion_quality_mode);
+            ADD_NUM(_T("lookahead"), pa.lookaheadDepth);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --pa ") << tmp.str().substr(1);
+        } else if (pParams->pa.enable) {
+            cmd << _T(" --pa");
+        }
     }
-    if (pParams->pa.ss) {
-        OPT_LST(_T("pa-ss"), pa.ssSensitivity, list_pa_ss_sensitivity);
-    } else {
-        cmd << _T("--pa-ss ") << get_chr_from_value(list_pa_ss_sensitivity, AMF_PA_STATIC_SCENE_DETECTION_NONE);
-    }
-    OPT_LST(_T("pa-activity-type"), pa.activityType, list_pa_activity);
-    OPT_LST(_T("pa-caq-strength"), pa.CAQStrength, list_pa_caq_strength);
-    OPT_NUM(_T("pa-initqpsc"), pa.initQPSC);
-    OPT_NUM(_T("pa-fskip-maxqp"), pa.maxQPBeforeForceSkip);
 
     cmd << gen_cmd(&pParams->common, &encPrmDefault.common, save_disabled_prm);
 

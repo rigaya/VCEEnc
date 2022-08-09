@@ -778,6 +778,14 @@ System::Void frmConfig::InitComboBox() {
     setComboBox(fcgCXVppDenoiseMethod, list_vpp_denoise);
     setComboBox(fcgCXVppDetailEnhance, list_vpp_detail_enahance);
 
+    setComboBox(fcgCXPASC,            list_pa_sc_sensitivity);
+    setComboBox(fcgCXPASS,            list_pa_ss_sensitivity);
+    setComboBox(fcgCXPAActivityType,  list_pa_activity);
+    setComboBox(fcgCXPACAQ,           list_pa_caq_strength);
+    setComboBox(fcgCXPAPAQ,           list_pa_paq_mode);
+    setComboBox(fcgCXPATAQ,           list_pa_taq_mode);
+    setComboBox(fcgCXPAMotionQuality, list_pa_motion_quality_mode);
+
     setComboBox(fcgCXAudioTempDir,  list_audtempdir);
     setComboBox(fcgCXMP4BoxTempDir, list_mp4boxtempdir);
     setComboBox(fcgCXTempDir,       list_tempdir);
@@ -912,6 +920,10 @@ System::Void frmConfig::fcgCXCodec_SelectedIndexChanged(System::Object^  sender,
 
     this->ResumeLayout();
     this->PerformLayout();
+}
+
+System::Void frmConfig::fcgCBPreAnalysis_CheckedChanged(System::Object^  sender, System::EventArgs^  e) {
+    fcggroupBoxPreAnalysis->Enabled = fcgCBPreAnalysis->Checked;
 }
 
 System::Void frmConfig::fcgChangeMuxerVisible(System::Object^  sender, System::EventArgs^  e) {
@@ -1076,10 +1088,22 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetCXIndex(fcgCXTransfer,           get_cx_index(list_transfer, vce.common.out_vui.transfer));
     SetCXIndex(fcgCXColorPrim,          get_cx_index(list_colorprim, vce.common.out_vui.colorprim));
     SetCXIndex(fcgCXVideoFormat,        get_cx_index(list_videoformat, vce.common.out_vui.format));
-    fcgCBPreAnalysis->Checked         = vce.pa.enable;
 
     SetCXIndex(fcgCXMotionEst,          get_cx_index(list_mv_presicion, vce.nMotionEst));
 
+    //tab(2)
+    fcgCBPreEncode->Checked           = vce.pe;
+    fcgCBPreAnalysis->Checked         = vce.pa.enable;
+    SetCXIndex(fcgCXPASC,               get_cx_index(list_pa_sc_sensitivity, vce.pa.scSensitivity));
+    SetCXIndex(fcgCXPASS,               get_cx_index(list_pa_ss_sensitivity, vce.pa.ssSensitivity));
+    SetCXIndex(fcgCXPAActivityType,     get_cx_index(list_pa_activity, vce.pa.activityType));
+    SetCXIndex(fcgCXPACAQ,              get_cx_index(list_pa_caq_strength, vce.pa.CAQStrength));
+    SetCXIndex(fcgCXPAPAQ,              get_cx_index(list_pa_paq_mode, vce.pa.PAQMode));
+    SetCXIndex(fcgCXPATAQ,              get_cx_index(list_pa_taq_mode, vce.pa.TAQMode));
+    SetNUValue(fcgNUPALookahead,        vce.pa.lookaheadDepth);
+    SetCXIndex(fcgCXPAMotionQuality,    get_cx_index(list_pa_motion_quality_mode, vce.pa.motionQualityBoost));
+
+    //vpp
     SetCXIndex(fcgCXVppResizeAlg, get_cx_index(list_vpp_resize, vce.vpp.resize_algo));
 
 
@@ -1276,12 +1300,26 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     vce.common.out_vui.colorprim                = (CspColorprim)list_colorprim[fcgCXColorPrim->SelectedIndex].value;
     vce.common.out_vui.format                   = list_videoformat[fcgCXVideoFormat->SelectedIndex].value;
     vce.common.out_vui.descriptpresent          = 1;
-    vce.pa.enable                               = fcgCBPreAnalysis->Checked;
 
     vce.nMotionEst                              = list_mv_presicion[fcgCXMotionEst->SelectedIndex].value;
 
     vce.bTimerPeriodTuning                      = fcgCBTimerPeriodTuning->Checked;
 
+    // tab(2)
+    vce.pe                                      = fcgCBPreEncode->Checked;
+    vce.pa.enable                               = fcgCBPreAnalysis->Checked;
+    vce.pa.scSensitivity                        = (AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_ENUM)list_pa_sc_sensitivity[fcgCXPASC->SelectedIndex].value;
+    vce.pa.sc                                   = vce.pa.scSensitivity != AMF_PA_SCENE_CHANGE_DETECTION_NONE;
+    vce.pa.ssSensitivity                        = (AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY_ENUM)list_pa_sc_sensitivity[fcgCXPASS->SelectedIndex].value;
+    vce.pa.ss                                   = vce.pa.ssSensitivity != AMF_PA_STATIC_SCENE_DETECTION_NONE;
+    vce.pa.activityType                         = (AMF_PA_ACTIVITY_TYPE_ENUM)list_pa_activity[fcgCXPAActivityType->SelectedIndex].value;
+    vce.pa.CAQStrength                          = (AMF_PA_CAQ_STRENGTH_ENUM)list_pa_caq_strength[fcgCXPACAQ->SelectedIndex].value;
+    vce.pa.PAQMode                              =  (AMF_PA_PAQ_MODE_ENUM)list_pa_paq_mode[fcgCXPAPAQ->SelectedIndex].value;
+    vce.pa.TAQMode                              = (AMF_PA_TAQ_MODE_ENUM)list_pa_taq_mode[fcgCXPATAQ->SelectedIndex].value;
+    vce.pa.lookaheadDepth                       = (int)fcgNUPALookahead->Value;
+    vce.pa.motionQualityBoost                   = (AMF_PA_HIGH_MOTION_QUALITY_BOOST_MODE_ENUM)list_pa_motion_quality_mode[fcgCXPAMotionQuality->SelectedIndex].value;
+
+    // vpp
     vce.vpp.resize_algo                 = (RGY_VPP_RESIZE_ALGO)list_vpp_resize[fcgCXVppResizeAlg->SelectedIndex].value;
 
     vce.vpp.knn.enable = fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("knn"));
