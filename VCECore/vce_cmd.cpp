@@ -157,6 +157,8 @@ tstring encoder_help() {
         _T("         <int>:<int>:<int>      set qp value for i:p:b frame\n")
         _T("   --cbr <int>                  set bitrate in CBR mode (kbps)\n")
         _T("   --vbr <int>                  set bitrate in VBR mode (kbps)\n")
+        _T("   --cbrhq <int>                set bitrate in High Quality CBR mode (kbps)\n")
+        _T("   --vbrhq <int>                set bitrate in High Quality VBR mode (kbps)\n")
         _T("   --qvbr <int>                 set bitrate in QVBR mode (kbps)\n")
         _T("   --output-depth <int>         set output bit depth\n")
         _T("   --qp-max <int>               set max qp\n")
@@ -432,6 +434,34 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             return 1;
         }
         pParams->rateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR;
+        pParams->nBitrate = value;
+        return 0;
+    }
+    if (IS_OPTION("vbrhq")) {
+        i++;
+        int value = 0;
+        if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
+        } else if (value < 0) {
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("bitrate should be positive value."));
+            return 1;
+        }
+        pParams->rateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR;
+        pParams->nBitrate = value;
+        return 0;
+    }
+    if (IS_OPTION("cbrhq")) {
+        i++;
+        int value = 0;
+        if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
+        } else if (value < 0) {
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("bitrate should be positive value."));
+            return 1;
+        }
+        pParams->rateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR;
         pParams->nBitrate = value;
         return 0;
     }
@@ -892,11 +922,17 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR:
                 pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR;
                 break;
+            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR:
+                fprintf(stderr, "CBR-HQ unsupported for HEVC encoding!\n");
+                abort();
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR:
                 pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR;
                 break;
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR:
                 fprintf(stderr, "QVBR unsupported for HEVC encoding!\n");
+                abort();
+            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR:
+                fprintf(stderr, "VBR-HQ unsupported for HEVC encoding!\n");
                 abort();
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP:
             default:
