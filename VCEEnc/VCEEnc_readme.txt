@@ -167,7 +167,7 @@ Radeon RX460
 - --pa に新たなオプションを追加。
   taq, paq, ltr, lookahead, motion-quality
 - H.264エンコードに --vbrhq, --cbrhq を追加。
-
+- downmix時に音量が小さくなってしまうのを回避。
 
 2022.08.04 (7.02)
 [VCEEnc.auo]
