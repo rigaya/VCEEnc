@@ -45,7 +45,7 @@ const int guiEx_config::conf_block_data[CONF_BLOCK_COUNT] = {
 };
 
 const size_t guiEx_config::conf_block_pointer[CONF_BLOCK_COUNT] = {
-    offsetof(CONF_GUIEX, vce),
+    offsetof(CONF_GUIEX, enc),
     offsetof(CONF_GUIEX, vid),
     offsetof(CONF_GUIEX, aud),
     offsetof(CONF_GUIEX, mux),

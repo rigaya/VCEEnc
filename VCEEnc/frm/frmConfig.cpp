@@ -1044,162 +1044,162 @@ System::Void frmConfig::InitForm() {
 System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     this->SuspendLayout();
 
-    VCEParam vce;
-    parse_cmd(&vce, cnf->vce.cmd);
+    VCEParam enc;
+    parse_cmd(&enc, cnf->enc.cmd);
 
-    SetCXIndex(fcgCXCodec,             get_cx_index(list_codec, vce.codec));
-    SetCXIndex(fcgCXEncMode,           get_cx_index(get_rc_method(vce.codec), vce.rateControl));
-    SetCXIndex(fcgCXQualityPreset,     get_cx_index(get_quality_preset(vce.codec), vce.qualityPreset));
-    SetNUValue(fcgNUBitrate,           vce.nBitrate);
-    SetNUValue(fcgNUMaxkbps,           vce.nMaxBitrate);
-    SetNUValue(fcgNUVBVBufSize,        vce.nVBVBufferSize);
-    SetNUValue(fcgNUQPI,               vce.nQPI);
-    SetNUValue(fcgNUQPP,               vce.nQPP);
-    SetNUValue(fcgNUQPB,               vce.nQPB);
-    SetNUValue(fcgNUGopLength,         vce.nGOPLen);
-    SetNUValue(fcgNUBframes,           vce.nBframes);
-    fcgCBBPyramid->Checked           = vce.bBPyramid != 0;
-    SetCXIndex(fcgCXCodecLevel,        get_cx_index(list_avc_level, vce.codecParam[RGY_CODEC_H264].nLevel));
-    SetCXIndex(fcgCXCodecProfile,      get_cx_index(list_avc_profile, vce.codecParam[RGY_CODEC_H264].nProfile));
-    SetCXIndex(fcgCXHEVCLevel,         get_cx_index(list_hevc_level, vce.codecParam[RGY_CODEC_HEVC].nLevel));
-    SetCXIndex(fcgCXHEVCProfile,       get_cx_index(list_hevc_profile, vce.codecParam[RGY_CODEC_HEVC].nProfile));
-    SetCXIndex(fcgCXInterlaced,        get_cx_index(list_interlaced, vce.input.picstruct));
-    if (vce.par[0] * vce.par[1] <= 0)
-        vce.par[0] = vce.par[1] = 0;
-    SetCXIndex(fcgCXBitdepth,          get_cx_index(list_hevc_bitdepth, vce.outputDepth));
-    SetCXIndex(fcgCXAspectRatio, (vce.par[0] < 0));
-    SetNUValue(fcgNUAspectRatioX, abs(vce.par[0]));
-    SetNUValue(fcgNUAspectRatioY, abs(vce.par[1]));
+    SetCXIndex(fcgCXCodec,             get_cx_index(list_codec, enc.codec));
+    SetCXIndex(fcgCXEncMode,           get_cx_index(get_rc_method(enc.codec), enc.rateControl));
+    SetCXIndex(fcgCXQualityPreset,     get_cx_index(get_quality_preset(enc.codec), enc.qualityPreset));
+    SetNUValue(fcgNUBitrate,           enc.nBitrate);
+    SetNUValue(fcgNUMaxkbps,           enc.nMaxBitrate);
+    SetNUValue(fcgNUVBVBufSize,        enc.nVBVBufferSize);
+    SetNUValue(fcgNUQPI,               enc.nQPI);
+    SetNUValue(fcgNUQPP,               enc.nQPP);
+    SetNUValue(fcgNUQPB,               enc.nQPB);
+    SetNUValue(fcgNUGopLength,         enc.nGOPLen);
+    SetNUValue(fcgNUBframes,           enc.nBframes);
+    fcgCBBPyramid->Checked           = enc.bBPyramid != 0;
+    SetCXIndex(fcgCXCodecLevel,        get_cx_index(list_avc_level, enc.codecParam[RGY_CODEC_H264].nLevel));
+    SetCXIndex(fcgCXCodecProfile,      get_cx_index(list_avc_profile, enc.codecParam[RGY_CODEC_H264].nProfile));
+    SetCXIndex(fcgCXHEVCLevel,         get_cx_index(list_hevc_level, enc.codecParam[RGY_CODEC_HEVC].nLevel));
+    SetCXIndex(fcgCXHEVCProfile,       get_cx_index(list_hevc_profile, enc.codecParam[RGY_CODEC_HEVC].nProfile));
+    SetCXIndex(fcgCXInterlaced,        get_cx_index(list_interlaced, enc.input.picstruct));
+    if (enc.par[0] * enc.par[1] <= 0)
+        enc.par[0] = enc.par[1] = 0;
+    SetCXIndex(fcgCXBitdepth,          get_cx_index(list_hevc_bitdepth, enc.outputDepth));
+    SetCXIndex(fcgCXAspectRatio, (enc.par[0] < 0));
+    SetNUValue(fcgNUAspectRatioX, abs(enc.par[0]));
+    SetNUValue(fcgNUAspectRatioY, abs(enc.par[1]));
 
-    SetNUValue(fcgNUQPMax,               vce.nQPMax);
-    SetNUValue(fcgNUQPMin,               vce.nQPMin);
-    SetNUValue(fcgNUBDeltaQP,            vce.nDeltaQPBFrame);
-    SetNUValue(fcgNUBRefDeltaQP,         vce.nDeltaQPBFrameRef);
+    SetNUValue(fcgNUQPMax,               enc.nQPMax);
+    SetNUValue(fcgNUQPMin,               enc.nQPMin);
+    SetNUValue(fcgNUBDeltaQP,            enc.nDeltaQPBFrame);
+    SetNUValue(fcgNUBRefDeltaQP,         enc.nDeltaQPBFrameRef);
 
-    SetNUValue(fcgNUSlices,             vce.nSlices);
-    SetNUValue(fcgNURefFrames,          vce.nRefFrames);
+    SetNUValue(fcgNUSlices,             enc.nSlices);
+    SetNUValue(fcgNURefFrames,          enc.nRefFrames);
 
-    fcgCBDeblock->Checked             = vce.bDeblockFilter;
-    fcgCBSkipFrame->Checked           = vce.bEnableSkipFrame;
-    fcgCBTimerPeriodTuning->Checked   = vce.bTimerPeriodTuning;
-    fcgCBVBAQ->Checked                = vce.bVBAQ;
-    fcgCBFullrange->Checked           = vce.common.out_vui.colorrange == RGY_COLORRANGE_FULL;
-    SetCXIndex(fcgCXColorMatrix,        get_cx_index(list_colormatrix, vce.common.out_vui.matrix));
-    SetCXIndex(fcgCXTransfer,           get_cx_index(list_transfer, vce.common.out_vui.transfer));
-    SetCXIndex(fcgCXColorPrim,          get_cx_index(list_colorprim, vce.common.out_vui.colorprim));
-    SetCXIndex(fcgCXVideoFormat,        get_cx_index(list_videoformat, vce.common.out_vui.format));
+    fcgCBDeblock->Checked             = enc.bDeblockFilter;
+    fcgCBSkipFrame->Checked           = enc.bEnableSkipFrame;
+    fcgCBTimerPeriodTuning->Checked   = enc.bTimerPeriodTuning;
+    fcgCBVBAQ->Checked                = enc.bVBAQ;
+    fcgCBFullrange->Checked           = enc.common.out_vui.colorrange == RGY_COLORRANGE_FULL;
+    SetCXIndex(fcgCXColorMatrix,        get_cx_index(list_colormatrix, enc.common.out_vui.matrix));
+    SetCXIndex(fcgCXTransfer,           get_cx_index(list_transfer, enc.common.out_vui.transfer));
+    SetCXIndex(fcgCXColorPrim,          get_cx_index(list_colorprim, enc.common.out_vui.colorprim));
+    SetCXIndex(fcgCXVideoFormat,        get_cx_index(list_videoformat, enc.common.out_vui.format));
 
-    SetCXIndex(fcgCXMotionEst,          get_cx_index(list_mv_presicion, vce.nMotionEst));
+    SetCXIndex(fcgCXMotionEst,          get_cx_index(list_mv_presicion, enc.nMotionEst));
 
     //tab(2)
-    fcgCBPreEncode->Checked           = vce.pe;
-    fcgCBPreAnalysis->Checked         = vce.pa.enable;
-    SetCXIndex(fcgCXPASC,               get_cx_index(list_pa_sc_sensitivity, vce.pa.scSensitivity));
-    SetCXIndex(fcgCXPASS,               get_cx_index(list_pa_ss_sensitivity, vce.pa.ssSensitivity));
-    SetCXIndex(fcgCXPAActivityType,     get_cx_index(list_pa_activity, vce.pa.activityType));
-    SetCXIndex(fcgCXPACAQ,              get_cx_index(list_pa_caq_strength, vce.pa.CAQStrength));
-    SetCXIndex(fcgCXPAPAQ,              get_cx_index(list_pa_paq_mode, vce.pa.PAQMode));
-    SetCXIndex(fcgCXPATAQ,              get_cx_index(list_pa_taq_mode, vce.pa.TAQMode));
-    SetNUValue(fcgNUPALookahead,        vce.pa.lookaheadDepth);
-    SetCXIndex(fcgCXPAMotionQuality,    get_cx_index(list_pa_motion_quality_mode, vce.pa.motionQualityBoost));
+    fcgCBPreEncode->Checked           = enc.pe;
+    fcgCBPreAnalysis->Checked         = enc.pa.enable;
+    SetCXIndex(fcgCXPASC,               get_cx_index(list_pa_sc_sensitivity, enc.pa.scSensitivity));
+    SetCXIndex(fcgCXPASS,               get_cx_index(list_pa_ss_sensitivity, enc.pa.ssSensitivity));
+    SetCXIndex(fcgCXPAActivityType,     get_cx_index(list_pa_activity, enc.pa.activityType));
+    SetCXIndex(fcgCXPACAQ,              get_cx_index(list_pa_caq_strength, enc.pa.CAQStrength));
+    SetCXIndex(fcgCXPAPAQ,              get_cx_index(list_pa_paq_mode, enc.pa.PAQMode));
+    SetCXIndex(fcgCXPATAQ,              get_cx_index(list_pa_taq_mode, enc.pa.TAQMode));
+    SetNUValue(fcgNUPALookahead,        enc.pa.lookaheadDepth);
+    SetCXIndex(fcgCXPAMotionQuality,    get_cx_index(list_pa_motion_quality_mode, enc.pa.motionQualityBoost));
 
     //vpp
-    SetCXIndex(fcgCXVppResizeAlg, get_cx_index(list_vpp_resize, vce.vpp.resize_algo));
+    SetCXIndex(fcgCXVppResizeAlg, get_cx_index(list_vpp_resize, enc.vpp.resize_algo));
 
 
         int denoise_idx = 0;
-        if (vce.vpp.knn.enable) {
+        if (enc.vpp.knn.enable) {
             denoise_idx = get_cx_index(list_vpp_denoise, _T("knn"));
-        } else if (vce.vpp.pmd.enable) {
+        } else if (enc.vpp.pmd.enable) {
             denoise_idx = get_cx_index(list_vpp_denoise, _T("pmd"));
-        } else if (vce.vpp.smooth.enable) {
+        } else if (enc.vpp.smooth.enable) {
             denoise_idx = get_cx_index(list_vpp_denoise, _T("smooth"));
-        } else if (vce.vpp.convolution3d.enable) {
+        } else if (enc.vpp.convolution3d.enable) {
             denoise_idx = get_cx_index(list_vpp_denoise, _T("convolution3d"));
         }
         SetCXIndex(fcgCXVppDenoiseMethod, denoise_idx);
 
         int detail_enahance_idx = 0;
-        if (vce.vpp.unsharp.enable) {
+        if (enc.vpp.unsharp.enable) {
             detail_enahance_idx = get_cx_index(list_vpp_detail_enahance, _T("unsharp"));
-        } else if (vce.vpp.edgelevel.enable) {
+        } else if (enc.vpp.edgelevel.enable) {
             detail_enahance_idx = get_cx_index(list_vpp_detail_enahance, _T("edgelevel"));
-        } else if (vce.vpp.warpsharp.enable) {
+        } else if (enc.vpp.warpsharp.enable) {
             detail_enahance_idx = get_cx_index(list_vpp_detail_enahance, _T("warpsharp"));
         }
         SetCXIndex(fcgCXVppDetailEnhance, detail_enahance_idx);
 
         int deinterlacer_idx = 0;
-        if (vce.vpp.afs.enable) {
+        if (enc.vpp.afs.enable) {
             deinterlacer_idx = get_cx_index(list_vpp_deinterlacer, L"自動フィールドシフト");
-        } else if (vce.vpp.nnedi.enable) {
+        } else if (enc.vpp.nnedi.enable) {
             deinterlacer_idx = get_cx_index(list_vpp_deinterlacer, L"nnedi");
-        }// else if (vce.vpp.yadif.enable) {
+        }// else if (enc.vpp.yadif.enable) {
          //   deinterlacer_idx = get_cx_index(list_vpp_deinterlacer, L"yadif");
         //}
         SetCXIndex(fcgCXVppDeinterlace,          deinterlacer_idx);
 
-        SetNUValue(fcgNUVppDenoiseKnnRadius,     vce.vpp.knn.radius);
-        SetNUValue(fcgNUVppDenoiseKnnStrength,   vce.vpp.knn.strength);
-        SetNUValue(fcgNUVppDenoiseKnnThreshold,  vce.vpp.knn.lerp_threshold);
-        SetNUValue(fcgNUVppDenoisePmdApplyCount, vce.vpp.pmd.applyCount);
-        SetNUValue(fcgNUVppDenoisePmdStrength,   vce.vpp.pmd.strength);
-        SetNUValue(fcgNUVppDenoisePmdThreshold,  vce.vpp.pmd.threshold);
-        SetNUValue(fcgNUVppDenoiseSmoothQuality, vce.vpp.smooth.quality);
-        SetNUValue(fcgNUVppDenoiseSmoothQP,      vce.vpp.smooth.qp);
-        SetCXIndex(fcgCXVppDenoiseConv3DMatrix, get_cx_index(list_vpp_convolution3d_matrix, (int)vce.vpp.convolution3d.matrix));
-        SetNUValue(fcgNUVppDenoiseConv3DThreshYSpatial, vce.vpp.convolution3d.threshYspatial);
-        SetNUValue(fcgNUVppDenoiseConv3DThreshCSpatial, vce.vpp.convolution3d.threshCspatial);
-        SetNUValue(fcgNUVppDenoiseConv3DThreshYTemporal, vce.vpp.convolution3d.threshYtemporal);
-        SetNUValue(fcgNUVppDenoiseConv3DThreshCTemporal, vce.vpp.convolution3d.threshCtemporal);
-        fcgCBVppDebandEnable->Checked          = vce.vpp.deband.enable;
-        SetNUValue(fcgNUVppDebandRange,          vce.vpp.deband.range);
-        SetNUValue(fcgNUVppDebandThreY,          vce.vpp.deband.threY);
-        SetNUValue(fcgNUVppDebandThreCb,         vce.vpp.deband.threCb);
-        SetNUValue(fcgNUVppDebandThreCr,         vce.vpp.deband.threCr);
-        SetNUValue(fcgNUVppDebandDitherY,        vce.vpp.deband.ditherY);
-        SetNUValue(fcgNUVppDebandDitherC,        vce.vpp.deband.ditherC);
-        SetCXIndex(fcgCXVppDebandSample,         vce.vpp.deband.sample);
-        fcgCBVppDebandBlurFirst->Checked       = vce.vpp.deband.blurFirst;
-        fcgCBVppDebandRandEachFrame->Checked   = vce.vpp.deband.randEachFrame;
-        SetNUValue(fcgNUVppUnsharpRadius,        vce.vpp.unsharp.radius);
-        SetNUValue(fcgNUVppUnsharpWeight,        vce.vpp.unsharp.weight);
-        SetNUValue(fcgNUVppUnsharpThreshold,     vce.vpp.unsharp.threshold);
-        SetNUValue(fcgNUVppEdgelevelStrength,    vce.vpp.edgelevel.strength);
-        SetNUValue(fcgNUVppEdgelevelThreshold,   vce.vpp.edgelevel.threshold);
-        SetNUValue(fcgNUVppEdgelevelBlack,       vce.vpp.edgelevel.black);
-        SetNUValue(fcgNUVppEdgelevelWhite,       vce.vpp.edgelevel.white);
-        SetNUValue(fcgNUVppWarpsharpBlur,        vce.vpp.warpsharp.blur);
-        SetNUValue(fcgNUVppWarpsharpThreshold,   vce.vpp.warpsharp.threshold);
-        SetNUValue(fcgNUVppWarpsharpType,        vce.vpp.warpsharp.type);
-        SetNUValue(fcgNUVppWarpsharpDepth,       vce.vpp.warpsharp.depth);
+        SetNUValue(fcgNUVppDenoiseKnnRadius,     enc.vpp.knn.radius);
+        SetNUValue(fcgNUVppDenoiseKnnStrength,   enc.vpp.knn.strength);
+        SetNUValue(fcgNUVppDenoiseKnnThreshold,  enc.vpp.knn.lerp_threshold);
+        SetNUValue(fcgNUVppDenoisePmdApplyCount, enc.vpp.pmd.applyCount);
+        SetNUValue(fcgNUVppDenoisePmdStrength,   enc.vpp.pmd.strength);
+        SetNUValue(fcgNUVppDenoisePmdThreshold,  enc.vpp.pmd.threshold);
+        SetNUValue(fcgNUVppDenoiseSmoothQuality, enc.vpp.smooth.quality);
+        SetNUValue(fcgNUVppDenoiseSmoothQP,      enc.vpp.smooth.qp);
+        SetCXIndex(fcgCXVppDenoiseConv3DMatrix, get_cx_index(list_vpp_convolution3d_matrix, (int)enc.vpp.convolution3d.matrix));
+        SetNUValue(fcgNUVppDenoiseConv3DThreshYSpatial, enc.vpp.convolution3d.threshYspatial);
+        SetNUValue(fcgNUVppDenoiseConv3DThreshCSpatial, enc.vpp.convolution3d.threshCspatial);
+        SetNUValue(fcgNUVppDenoiseConv3DThreshYTemporal, enc.vpp.convolution3d.threshYtemporal);
+        SetNUValue(fcgNUVppDenoiseConv3DThreshCTemporal, enc.vpp.convolution3d.threshCtemporal);
+        fcgCBVppDebandEnable->Checked          = enc.vpp.deband.enable;
+        SetNUValue(fcgNUVppDebandRange,          enc.vpp.deband.range);
+        SetNUValue(fcgNUVppDebandThreY,          enc.vpp.deband.threY);
+        SetNUValue(fcgNUVppDebandThreCb,         enc.vpp.deband.threCb);
+        SetNUValue(fcgNUVppDebandThreCr,         enc.vpp.deband.threCr);
+        SetNUValue(fcgNUVppDebandDitherY,        enc.vpp.deband.ditherY);
+        SetNUValue(fcgNUVppDebandDitherC,        enc.vpp.deband.ditherC);
+        SetCXIndex(fcgCXVppDebandSample,         enc.vpp.deband.sample);
+        fcgCBVppDebandBlurFirst->Checked       = enc.vpp.deband.blurFirst;
+        fcgCBVppDebandRandEachFrame->Checked   = enc.vpp.deband.randEachFrame;
+        SetNUValue(fcgNUVppUnsharpRadius,        enc.vpp.unsharp.radius);
+        SetNUValue(fcgNUVppUnsharpWeight,        enc.vpp.unsharp.weight);
+        SetNUValue(fcgNUVppUnsharpThreshold,     enc.vpp.unsharp.threshold);
+        SetNUValue(fcgNUVppEdgelevelStrength,    enc.vpp.edgelevel.strength);
+        SetNUValue(fcgNUVppEdgelevelThreshold,   enc.vpp.edgelevel.threshold);
+        SetNUValue(fcgNUVppEdgelevelBlack,       enc.vpp.edgelevel.black);
+        SetNUValue(fcgNUVppEdgelevelWhite,       enc.vpp.edgelevel.white);
+        SetNUValue(fcgNUVppWarpsharpBlur,        enc.vpp.warpsharp.blur);
+        SetNUValue(fcgNUVppWarpsharpThreshold,   enc.vpp.warpsharp.threshold);
+        SetNUValue(fcgNUVppWarpsharpType,        enc.vpp.warpsharp.type);
+        SetNUValue(fcgNUVppWarpsharpDepth,       enc.vpp.warpsharp.depth);
 
-        SetNUValue(fcgNUVppAfsUp,                vce.vpp.afs.clip.top);
-        SetNUValue(fcgNUVppAfsBottom,            vce.vpp.afs.clip.bottom);
-        SetNUValue(fcgNUVppAfsLeft,              vce.vpp.afs.clip.left);
-        SetNUValue(fcgNUVppAfsRight,             vce.vpp.afs.clip.right);
-        SetNUValue(fcgNUVppAfsMethodSwitch,      vce.vpp.afs.method_switch);
-        SetNUValue(fcgNUVppAfsCoeffShift,        vce.vpp.afs.coeff_shift);
-        SetNUValue(fcgNUVppAfsThreShift,         vce.vpp.afs.thre_shift);
-        SetNUValue(fcgNUVppAfsThreDeint,         vce.vpp.afs.thre_deint);
-        SetNUValue(fcgNUVppAfsThreYMotion,       vce.vpp.afs.thre_Ymotion);
-        SetNUValue(fcgNUVppAfsThreCMotion,       vce.vpp.afs.thre_Cmotion);
-        SetCXIndex(fcgCXVppAfsAnalyze,           vce.vpp.afs.analyze);
-        fcgCBVppAfsShift->Checked              = vce.vpp.afs.shift != 0;
-        fcgCBVppAfsDrop->Checked               = vce.vpp.afs.drop != 0;
-        fcgCBVppAfsSmooth->Checked             = vce.vpp.afs.smooth != 0;
-        fcgCBVppAfs24fps->Checked              = vce.vpp.afs.force24 != 0;
-        fcgCBVppAfsTune->Checked               = vce.vpp.afs.tune != 0;
-        SetCXIndex(fcgCXVppNnediNsize,           get_cx_index(list_vpp_nnedi_nsize, vce.vpp.nnedi.nsize));
-        SetCXIndex(fcgCXVppNnediNns,             get_cx_index(list_vpp_nnedi_nns, vce.vpp.nnedi.nns));
-        SetCXIndex(fcgCXVppNnediPrec,            get_cx_index(list_vpp_fp_prec, vce.vpp.nnedi.precision));
-        SetCXIndex(fcgCXVppNnediPrescreen,       get_cx_index(list_vpp_nnedi_pre_screen_gui, vce.vpp.nnedi.pre_screen));
-        SetCXIndex(fcgCXVppNnediQual,            get_cx_index(list_vpp_nnedi_quality, vce.vpp.nnedi.quality));
-        SetCXIndex(fcgCXVppNnediErrorType,       get_cx_index(list_vpp_nnedi_error_type, vce.vpp.nnedi.errortype));
-        //SetCXIndex(fcgCXVppYadifMode,            get_cx_index(list_vpp_yadif_mode_gui, vce.vpp.yadif.mode));
+        SetNUValue(fcgNUVppAfsUp,                enc.vpp.afs.clip.top);
+        SetNUValue(fcgNUVppAfsBottom,            enc.vpp.afs.clip.bottom);
+        SetNUValue(fcgNUVppAfsLeft,              enc.vpp.afs.clip.left);
+        SetNUValue(fcgNUVppAfsRight,             enc.vpp.afs.clip.right);
+        SetNUValue(fcgNUVppAfsMethodSwitch,      enc.vpp.afs.method_switch);
+        SetNUValue(fcgNUVppAfsCoeffShift,        enc.vpp.afs.coeff_shift);
+        SetNUValue(fcgNUVppAfsThreShift,         enc.vpp.afs.thre_shift);
+        SetNUValue(fcgNUVppAfsThreDeint,         enc.vpp.afs.thre_deint);
+        SetNUValue(fcgNUVppAfsThreYMotion,       enc.vpp.afs.thre_Ymotion);
+        SetNUValue(fcgNUVppAfsThreCMotion,       enc.vpp.afs.thre_Cmotion);
+        SetCXIndex(fcgCXVppAfsAnalyze,           enc.vpp.afs.analyze);
+        fcgCBVppAfsShift->Checked              = enc.vpp.afs.shift != 0;
+        fcgCBVppAfsDrop->Checked               = enc.vpp.afs.drop != 0;
+        fcgCBVppAfsSmooth->Checked             = enc.vpp.afs.smooth != 0;
+        fcgCBVppAfs24fps->Checked              = enc.vpp.afs.force24 != 0;
+        fcgCBVppAfsTune->Checked               = enc.vpp.afs.tune != 0;
+        SetCXIndex(fcgCXVppNnediNsize,           get_cx_index(list_vpp_nnedi_nsize, enc.vpp.nnedi.nsize));
+        SetCXIndex(fcgCXVppNnediNns,             get_cx_index(list_vpp_nnedi_nns, enc.vpp.nnedi.nns));
+        SetCXIndex(fcgCXVppNnediPrec,            get_cx_index(list_vpp_fp_prec, enc.vpp.nnedi.precision));
+        SetCXIndex(fcgCXVppNnediPrescreen,       get_cx_index(list_vpp_nnedi_pre_screen_gui, enc.vpp.nnedi.pre_screen));
+        SetCXIndex(fcgCXVppNnediQual,            get_cx_index(list_vpp_nnedi_quality, enc.vpp.nnedi.quality));
+        SetCXIndex(fcgCXVppNnediErrorType,       get_cx_index(list_vpp_nnedi_error_type, enc.vpp.nnedi.errortype));
+        //SetCXIndex(fcgCXVppYadifMode,            get_cx_index(list_vpp_yadif_mode_gui, enc.vpp.yadif.mode));
 
-        fcgCBSSIM->Checked                     = vce.ssim;
-        fcgCBPSNR->Checked                     = vce.psnr;
+        fcgCBSSIM->Checked                     = enc.ssim;
+        fcgCBPSNR->Checked                     = enc.psnr;
 
         //SetCXIndex(fcgCXX264Priority,        cnf->vid.priority);
         SetCXIndex(fcgCXTempDir,             cnf->oth.temp_dir);
@@ -1252,7 +1252,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
         fcgTXBatBeforePath->Text           = String(cnf->oth.batfile.before_process).ToString();
         fcgTXBatAfterPath->Text            = String(cnf->oth.batfile.after_process).ToString();
 
-        fcgTXCmdEx->Text = String(cnf->vce.cmdex).ToString();
+        fcgTXCmdEx->Text = String(cnf->enc.cmdex).ToString();
 
         SetfcgTSLSettingsNotes(cnf->oth.notes);
 
@@ -1262,155 +1262,155 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
 
 System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     //これもひたすら書くだけ。めんどい
-    VCEParam vce;
-    vce.codec                                   = (RGY_CODEC)list_codec[fcgCXCodec->SelectedIndex].value;
-    conf->vce.codec = vce.codec;
-    vce.rateControl                             = get_rc_method(vce.codec)[fcgCXEncMode->SelectedIndex].value;
-    vce.qualityPreset                           = get_quality_preset(vce.codec)[fcgCXQualityPreset->SelectedIndex].value;
-    vce.codecParam[RGY_CODEC_H264].nProfile     = list_avc_profile[fcgCXCodecProfile->SelectedIndex].value;
-    vce.codecParam[RGY_CODEC_H264].nLevel       = list_avc_level[fcgCXCodecLevel->SelectedIndex].value;
-    vce.codecParam[RGY_CODEC_HEVC].nProfile     = list_hevc_profile[fcgCXHEVCProfile->SelectedIndex].value;
-    vce.codecParam[RGY_CODEC_HEVC].nLevel       = list_hevc_level[fcgCXHEVCLevel->SelectedIndex].value;
-    vce.outputDepth                             = list_hevc_bitdepth[fcgCXBitdepth->SelectedIndex].value;
-    vce.nBitrate                                = (int)fcgNUBitrate->Value;
-    vce.nMaxBitrate                             = (int)fcgNUMaxkbps->Value;
-    vce.nVBVBufferSize                          = (int)fcgNUVBVBufSize->Value;
-    vce.nGOPLen                                 = (int)fcgNUGopLength->Value;
-    vce.nQPI                                    = (int)fcgNUQPI->Value;
-    vce.nQPP                                    = (int)fcgNUQPP->Value;
-    vce.nQPB                                    = (int)fcgNUQPB->Value;
-    vce.nQPMax                                  = (int)fcgNUQPMax->Value;
-    vce.nQPMin                                  = (int)fcgNUQPMin->Value;
+    VCEParam enc;
+    enc.codec                                   = (RGY_CODEC)list_codec[fcgCXCodec->SelectedIndex].value;
+    conf->enc.codec = enc.codec;
+    enc.rateControl                             = get_rc_method(enc.codec)[fcgCXEncMode->SelectedIndex].value;
+    enc.qualityPreset                           = get_quality_preset(enc.codec)[fcgCXQualityPreset->SelectedIndex].value;
+    enc.codecParam[RGY_CODEC_H264].nProfile     = list_avc_profile[fcgCXCodecProfile->SelectedIndex].value;
+    enc.codecParam[RGY_CODEC_H264].nLevel       = list_avc_level[fcgCXCodecLevel->SelectedIndex].value;
+    enc.codecParam[RGY_CODEC_HEVC].nProfile     = list_hevc_profile[fcgCXHEVCProfile->SelectedIndex].value;
+    enc.codecParam[RGY_CODEC_HEVC].nLevel       = list_hevc_level[fcgCXHEVCLevel->SelectedIndex].value;
+    enc.outputDepth                             = list_hevc_bitdepth[fcgCXBitdepth->SelectedIndex].value;
+    enc.nBitrate                                = (int)fcgNUBitrate->Value;
+    enc.nMaxBitrate                             = (int)fcgNUMaxkbps->Value;
+    enc.nVBVBufferSize                          = (int)fcgNUVBVBufSize->Value;
+    enc.nGOPLen                                 = (int)fcgNUGopLength->Value;
+    enc.nQPI                                    = (int)fcgNUQPI->Value;
+    enc.nQPP                                    = (int)fcgNUQPP->Value;
+    enc.nQPB                                    = (int)fcgNUQPB->Value;
+    enc.nQPMax                                  = (int)fcgNUQPMax->Value;
+    enc.nQPMin                                  = (int)fcgNUQPMin->Value;
 
-    vce.nBframes                                = (int)fcgNUBframes->Value;
-    vce.bBPyramid                               = fcgCBBPyramid->Checked;
-    vce.nDeltaQPBFrame                          = (int)fcgNUBDeltaQP->Value;
-    vce.nDeltaQPBFrameRef                       = (int)fcgNUBRefDeltaQP->Value;
+    enc.nBframes                                = (int)fcgNUBframes->Value;
+    enc.bBPyramid                               = fcgCBBPyramid->Checked;
+    enc.nDeltaQPBFrame                          = (int)fcgNUBDeltaQP->Value;
+    enc.nDeltaQPBFrameRef                       = (int)fcgNUBRefDeltaQP->Value;
 
-    vce.input.picstruct                         = (RGY_PICSTRUCT)list_interlaced[fcgCXInterlaced->SelectedIndex].value;
-    vce.nSlices                                 = (int)fcgNUSlices->Value;
-    vce.nRefFrames                              = (int)fcgNURefFrames->Value;
+    enc.input.picstruct                         = (RGY_PICSTRUCT)list_interlaced[fcgCXInterlaced->SelectedIndex].value;
+    enc.nSlices                                 = (int)fcgNUSlices->Value;
+    enc.nRefFrames                              = (int)fcgNURefFrames->Value;
 
-    vce.bDeblockFilter                          = fcgCBDeblock->Checked;
-    vce.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;
-    vce.bVBAQ                                   = fcgCBVBAQ->Checked;
-    vce.common.out_vui.colorrange               = fcgCBFullrange->Checked ? RGY_COLORRANGE_FULL : RGY_COLORRANGE_UNSPECIFIED;
-    vce.common.out_vui.matrix                   = (CspMatrix)list_colormatrix[fcgCXColorMatrix->SelectedIndex].value;
-    vce.common.out_vui.transfer                 = (CspTransfer)list_transfer[fcgCXTransfer->SelectedIndex].value;
-    vce.common.out_vui.colorprim                = (CspColorprim)list_colorprim[fcgCXColorPrim->SelectedIndex].value;
-    vce.common.out_vui.format                   = list_videoformat[fcgCXVideoFormat->SelectedIndex].value;
-    vce.common.out_vui.descriptpresent          = 1;
+    enc.bDeblockFilter                          = fcgCBDeblock->Checked;
+    enc.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;
+    enc.bVBAQ                                   = fcgCBVBAQ->Checked;
+    enc.common.out_vui.colorrange               = fcgCBFullrange->Checked ? RGY_COLORRANGE_FULL : RGY_COLORRANGE_UNSPECIFIED;
+    enc.common.out_vui.matrix                   = (CspMatrix)list_colormatrix[fcgCXColorMatrix->SelectedIndex].value;
+    enc.common.out_vui.transfer                 = (CspTransfer)list_transfer[fcgCXTransfer->SelectedIndex].value;
+    enc.common.out_vui.colorprim                = (CspColorprim)list_colorprim[fcgCXColorPrim->SelectedIndex].value;
+    enc.common.out_vui.format                   = list_videoformat[fcgCXVideoFormat->SelectedIndex].value;
+    enc.common.out_vui.descriptpresent          = 1;
 
-    vce.nMotionEst                              = list_mv_presicion[fcgCXMotionEst->SelectedIndex].value;
+    enc.nMotionEst                              = list_mv_presicion[fcgCXMotionEst->SelectedIndex].value;
 
-    vce.bTimerPeriodTuning                      = fcgCBTimerPeriodTuning->Checked;
+    enc.bTimerPeriodTuning                      = fcgCBTimerPeriodTuning->Checked;
 
     // tab(2)
-    vce.pe                                      = fcgCBPreEncode->Checked;
-    vce.pa.enable                               = fcgCBPreAnalysis->Checked;
-    vce.pa.scSensitivity                        = (AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_ENUM)list_pa_sc_sensitivity[fcgCXPASC->SelectedIndex].value;
-    vce.pa.sc                                   = vce.pa.scSensitivity != AMF_PA_SCENE_CHANGE_DETECTION_NONE;
-    vce.pa.ssSensitivity                        = (AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY_ENUM)list_pa_sc_sensitivity[fcgCXPASS->SelectedIndex].value;
-    vce.pa.ss                                   = vce.pa.ssSensitivity != AMF_PA_STATIC_SCENE_DETECTION_NONE;
-    vce.pa.activityType                         = (AMF_PA_ACTIVITY_TYPE_ENUM)list_pa_activity[fcgCXPAActivityType->SelectedIndex].value;
-    vce.pa.CAQStrength                          = (AMF_PA_CAQ_STRENGTH_ENUM)list_pa_caq_strength[fcgCXPACAQ->SelectedIndex].value;
-    vce.pa.PAQMode                              =  (AMF_PA_PAQ_MODE_ENUM)list_pa_paq_mode[fcgCXPAPAQ->SelectedIndex].value;
-    vce.pa.TAQMode                              = (AMF_PA_TAQ_MODE_ENUM)list_pa_taq_mode[fcgCXPATAQ->SelectedIndex].value;
-    vce.pa.lookaheadDepth                       = (int)fcgNUPALookahead->Value;
-    vce.pa.motionQualityBoost                   = (AMF_PA_HIGH_MOTION_QUALITY_BOOST_MODE_ENUM)list_pa_motion_quality_mode[fcgCXPAMotionQuality->SelectedIndex].value;
+    enc.pe                                      = fcgCBPreEncode->Checked;
+    enc.pa.enable                               = fcgCBPreAnalysis->Checked;
+    enc.pa.scSensitivity                        = (AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_ENUM)list_pa_sc_sensitivity[fcgCXPASC->SelectedIndex].value;
+    enc.pa.sc                                   = enc.pa.scSensitivity != AMF_PA_SCENE_CHANGE_DETECTION_NONE;
+    enc.pa.ssSensitivity                        = (AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY_ENUM)list_pa_sc_sensitivity[fcgCXPASS->SelectedIndex].value;
+    enc.pa.ss                                   = enc.pa.ssSensitivity != AMF_PA_STATIC_SCENE_DETECTION_NONE;
+    enc.pa.activityType                         = (AMF_PA_ACTIVITY_TYPE_ENUM)list_pa_activity[fcgCXPAActivityType->SelectedIndex].value;
+    enc.pa.CAQStrength                          = (AMF_PA_CAQ_STRENGTH_ENUM)list_pa_caq_strength[fcgCXPACAQ->SelectedIndex].value;
+    enc.pa.PAQMode                              =  (AMF_PA_PAQ_MODE_ENUM)list_pa_paq_mode[fcgCXPAPAQ->SelectedIndex].value;
+    enc.pa.TAQMode                              = (AMF_PA_TAQ_MODE_ENUM)list_pa_taq_mode[fcgCXPATAQ->SelectedIndex].value;
+    enc.pa.lookaheadDepth                       = (int)fcgNUPALookahead->Value;
+    enc.pa.motionQualityBoost                   = (AMF_PA_HIGH_MOTION_QUALITY_BOOST_MODE_ENUM)list_pa_motion_quality_mode[fcgCXPAMotionQuality->SelectedIndex].value;
 
     // vpp
-    vce.vpp.resize_algo                 = (RGY_VPP_RESIZE_ALGO)list_vpp_resize[fcgCXVppResizeAlg->SelectedIndex].value;
+    enc.vpp.resize_algo                 = (RGY_VPP_RESIZE_ALGO)list_vpp_resize[fcgCXVppResizeAlg->SelectedIndex].value;
 
-    vce.vpp.knn.enable = fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("knn"));
-    vce.vpp.knn.radius = (int)fcgNUVppDenoiseKnnRadius->Value;
-    vce.vpp.knn.strength = (float)fcgNUVppDenoiseKnnStrength->Value;
-    vce.vpp.knn.lerp_threshold = (float)fcgNUVppDenoiseKnnThreshold->Value;
+    enc.vpp.knn.enable = fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("knn"));
+    enc.vpp.knn.radius = (int)fcgNUVppDenoiseKnnRadius->Value;
+    enc.vpp.knn.strength = (float)fcgNUVppDenoiseKnnStrength->Value;
+    enc.vpp.knn.lerp_threshold = (float)fcgNUVppDenoiseKnnThreshold->Value;
 
-    vce.vpp.pmd.enable = fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("pmd"));
-    vce.vpp.pmd.applyCount = (int)fcgNUVppDenoisePmdApplyCount->Value;
-    vce.vpp.pmd.strength = (float)fcgNUVppDenoisePmdStrength->Value;
-    vce.vpp.pmd.threshold = (float)fcgNUVppDenoisePmdThreshold->Value;
+    enc.vpp.pmd.enable = fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("pmd"));
+    enc.vpp.pmd.applyCount = (int)fcgNUVppDenoisePmdApplyCount->Value;
+    enc.vpp.pmd.strength = (float)fcgNUVppDenoisePmdStrength->Value;
+    enc.vpp.pmd.threshold = (float)fcgNUVppDenoisePmdThreshold->Value;
 
-    vce.vpp.smooth.enable = fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("smooth"));
-    vce.vpp.smooth.quality = (int)fcgNUVppDenoiseSmoothQuality->Value;
-    vce.vpp.smooth.qp = (int)fcgNUVppDenoiseSmoothQP->Value;
+    enc.vpp.smooth.enable = fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("smooth"));
+    enc.vpp.smooth.quality = (int)fcgNUVppDenoiseSmoothQuality->Value;
+    enc.vpp.smooth.qp = (int)fcgNUVppDenoiseSmoothQP->Value;
 
-    vce.vpp.convolution3d.enable = fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("convolution3d"));
-    vce.vpp.convolution3d.matrix = (VppConvolution3dMatrix)list_vpp_convolution3d_matrix[fcgCXVppDenoiseConv3DMatrix->SelectedIndex].value;;
-    vce.vpp.convolution3d.threshYspatial = (int)fcgNUVppDenoiseConv3DThreshYSpatial->Value;
-    vce.vpp.convolution3d.threshCspatial = (int)fcgNUVppDenoiseConv3DThreshCSpatial->Value;
-    vce.vpp.convolution3d.threshYtemporal = (int)fcgNUVppDenoiseConv3DThreshYTemporal->Value;
-    vce.vpp.convolution3d.threshCtemporal = (int)fcgNUVppDenoiseConv3DThreshCTemporal->Value;
+    enc.vpp.convolution3d.enable = fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("convolution3d"));
+    enc.vpp.convolution3d.matrix = (VppConvolution3dMatrix)list_vpp_convolution3d_matrix[fcgCXVppDenoiseConv3DMatrix->SelectedIndex].value;;
+    enc.vpp.convolution3d.threshYspatial = (int)fcgNUVppDenoiseConv3DThreshYSpatial->Value;
+    enc.vpp.convolution3d.threshCspatial = (int)fcgNUVppDenoiseConv3DThreshCSpatial->Value;
+    enc.vpp.convolution3d.threshYtemporal = (int)fcgNUVppDenoiseConv3DThreshYTemporal->Value;
+    enc.vpp.convolution3d.threshCtemporal = (int)fcgNUVppDenoiseConv3DThreshCTemporal->Value;
 
-    vce.vpp.unsharp.enable = fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("unsharp"));
-    vce.vpp.unsharp.radius = (int)fcgNUVppUnsharpRadius->Value;
-    vce.vpp.unsharp.weight = (float)fcgNUVppUnsharpWeight->Value;
-    vce.vpp.unsharp.threshold = (float)fcgNUVppUnsharpThreshold->Value;
+    enc.vpp.unsharp.enable = fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("unsharp"));
+    enc.vpp.unsharp.radius = (int)fcgNUVppUnsharpRadius->Value;
+    enc.vpp.unsharp.weight = (float)fcgNUVppUnsharpWeight->Value;
+    enc.vpp.unsharp.threshold = (float)fcgNUVppUnsharpThreshold->Value;
 
-    vce.vpp.edgelevel.enable = fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("edgelevel"));
-    vce.vpp.edgelevel.strength = (float)fcgNUVppEdgelevelStrength->Value;
-    vce.vpp.edgelevel.threshold = (float)fcgNUVppEdgelevelThreshold->Value;
-    vce.vpp.edgelevel.black = (float)fcgNUVppEdgelevelBlack->Value;
-    vce.vpp.edgelevel.white = (float)fcgNUVppEdgelevelWhite->Value;
+    enc.vpp.edgelevel.enable = fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("edgelevel"));
+    enc.vpp.edgelevel.strength = (float)fcgNUVppEdgelevelStrength->Value;
+    enc.vpp.edgelevel.threshold = (float)fcgNUVppEdgelevelThreshold->Value;
+    enc.vpp.edgelevel.black = (float)fcgNUVppEdgelevelBlack->Value;
+    enc.vpp.edgelevel.white = (float)fcgNUVppEdgelevelWhite->Value;
 
-    vce.vpp.warpsharp.enable = fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("warpsharp"));
-    vce.vpp.warpsharp.blur = (int)fcgNUVppWarpsharpBlur->Value;
-    vce.vpp.warpsharp.threshold = (float)fcgNUVppWarpsharpThreshold->Value;
-    vce.vpp.warpsharp.type = (int)fcgNUVppWarpsharpType->Value;
-    vce.vpp.warpsharp.depth = (float)fcgNUVppWarpsharpDepth->Value;
+    enc.vpp.warpsharp.enable = fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("warpsharp"));
+    enc.vpp.warpsharp.blur = (int)fcgNUVppWarpsharpBlur->Value;
+    enc.vpp.warpsharp.threshold = (float)fcgNUVppWarpsharpThreshold->Value;
+    enc.vpp.warpsharp.type = (int)fcgNUVppWarpsharpType->Value;
+    enc.vpp.warpsharp.depth = (float)fcgNUVppWarpsharpDepth->Value;
 
-    vce.vpp.deband.enable = fcgCBVppDebandEnable->Checked;
-    vce.vpp.deband.range = (int)fcgNUVppDebandRange->Value;
-    vce.vpp.deband.threY = (int)fcgNUVppDebandThreY->Value;
-    vce.vpp.deband.threCb = (int)fcgNUVppDebandThreCb->Value;
-    vce.vpp.deband.threCr = (int)fcgNUVppDebandThreCr->Value;
-    vce.vpp.deband.ditherY = (int)fcgNUVppDebandDitherY->Value;
-    vce.vpp.deband.ditherC = (int)fcgNUVppDebandDitherC->Value;
-    vce.vpp.deband.sample = fcgCXVppDebandSample->SelectedIndex;
-    vce.vpp.deband.blurFirst = fcgCBVppDebandBlurFirst->Checked;
-    vce.vpp.deband.randEachFrame = fcgCBVppDebandRandEachFrame->Checked;
+    enc.vpp.deband.enable = fcgCBVppDebandEnable->Checked;
+    enc.vpp.deband.range = (int)fcgNUVppDebandRange->Value;
+    enc.vpp.deband.threY = (int)fcgNUVppDebandThreY->Value;
+    enc.vpp.deband.threCb = (int)fcgNUVppDebandThreCb->Value;
+    enc.vpp.deband.threCr = (int)fcgNUVppDebandThreCr->Value;
+    enc.vpp.deband.ditherY = (int)fcgNUVppDebandDitherY->Value;
+    enc.vpp.deband.ditherC = (int)fcgNUVppDebandDitherC->Value;
+    enc.vpp.deband.sample = fcgCXVppDebandSample->SelectedIndex;
+    enc.vpp.deband.blurFirst = fcgCBVppDebandBlurFirst->Checked;
+    enc.vpp.deband.randEachFrame = fcgCBVppDebandRandEachFrame->Checked;
 
-    vce.vpp.afs.enable             = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"自動フィールドシフト"));
-    vce.vpp.afs.timecode           = false;
-    vce.vpp.afs.clip.top           = (int)fcgNUVppAfsUp->Value;
-    vce.vpp.afs.clip.bottom        = (int)fcgNUVppAfsBottom->Value;
-    vce.vpp.afs.clip.left          = (int)fcgNUVppAfsLeft->Value;
-    vce.vpp.afs.clip.right         = (int)fcgNUVppAfsRight->Value;
-    vce.vpp.afs.method_switch      = (int)fcgNUVppAfsMethodSwitch->Value;
-    vce.vpp.afs.coeff_shift        = (int)fcgNUVppAfsCoeffShift->Value;
-    vce.vpp.afs.thre_shift         = (int)fcgNUVppAfsThreShift->Value;
-    vce.vpp.afs.thre_deint         = (int)fcgNUVppAfsThreDeint->Value;
-    vce.vpp.afs.thre_Ymotion       = (int)fcgNUVppAfsThreYMotion->Value;
-    vce.vpp.afs.thre_Cmotion       = (int)fcgNUVppAfsThreCMotion->Value;
-    vce.vpp.afs.analyze            = fcgCXVppAfsAnalyze->SelectedIndex;
-    vce.vpp.afs.shift              = fcgCBVppAfsShift->Checked;
-    vce.vpp.afs.drop               = fcgCBVppAfsDrop->Checked;
-    vce.vpp.afs.smooth             = fcgCBVppAfsSmooth->Checked;
-    vce.vpp.afs.force24            = fcgCBVppAfs24fps->Checked;
-    vce.vpp.afs.tune               = fcgCBVppAfsTune->Checked;
+    enc.vpp.afs.enable             = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"自動フィールドシフト"));
+    enc.vpp.afs.timecode           = false;
+    enc.vpp.afs.clip.top           = (int)fcgNUVppAfsUp->Value;
+    enc.vpp.afs.clip.bottom        = (int)fcgNUVppAfsBottom->Value;
+    enc.vpp.afs.clip.left          = (int)fcgNUVppAfsLeft->Value;
+    enc.vpp.afs.clip.right         = (int)fcgNUVppAfsRight->Value;
+    enc.vpp.afs.method_switch      = (int)fcgNUVppAfsMethodSwitch->Value;
+    enc.vpp.afs.coeff_shift        = (int)fcgNUVppAfsCoeffShift->Value;
+    enc.vpp.afs.thre_shift         = (int)fcgNUVppAfsThreShift->Value;
+    enc.vpp.afs.thre_deint         = (int)fcgNUVppAfsThreDeint->Value;
+    enc.vpp.afs.thre_Ymotion       = (int)fcgNUVppAfsThreYMotion->Value;
+    enc.vpp.afs.thre_Cmotion       = (int)fcgNUVppAfsThreCMotion->Value;
+    enc.vpp.afs.analyze            = fcgCXVppAfsAnalyze->SelectedIndex;
+    enc.vpp.afs.shift              = fcgCBVppAfsShift->Checked;
+    enc.vpp.afs.drop               = fcgCBVppAfsDrop->Checked;
+    enc.vpp.afs.smooth             = fcgCBVppAfsSmooth->Checked;
+    enc.vpp.afs.force24            = fcgCBVppAfs24fps->Checked;
+    enc.vpp.afs.tune               = fcgCBVppAfsTune->Checked;
 
-    vce.vpp.nnedi.enable           = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"nnedi"));
-    vce.vpp.nnedi.nsize            = (VppNnediNSize)list_vpp_nnedi_nsize[fcgCXVppNnediNsize->SelectedIndex].value;
-    vce.vpp.nnedi.nns              = list_vpp_nnedi_nns[fcgCXVppNnediNns->SelectedIndex].value;
-    vce.vpp.nnedi.quality          = (VppNnediQuality)list_vpp_nnedi_quality[fcgCXVppNnediQual->SelectedIndex].value;
-    vce.vpp.nnedi.precision        = (VppFpPrecision)list_vpp_fp_prec[fcgCXVppNnediPrec->SelectedIndex].value;
-    vce.vpp.nnedi.pre_screen       = (VppNnediPreScreen)list_vpp_nnedi_pre_screen_gui[fcgCXVppNnediPrescreen->SelectedIndex].value;
-    vce.vpp.nnedi.errortype        = (VppNnediErrorType)list_vpp_nnedi_error_type[fcgCXVppNnediErrorType->SelectedIndex].value;
+    enc.vpp.nnedi.enable           = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"nnedi"));
+    enc.vpp.nnedi.nsize            = (VppNnediNSize)list_vpp_nnedi_nsize[fcgCXVppNnediNsize->SelectedIndex].value;
+    enc.vpp.nnedi.nns              = list_vpp_nnedi_nns[fcgCXVppNnediNns->SelectedIndex].value;
+    enc.vpp.nnedi.quality          = (VppNnediQuality)list_vpp_nnedi_quality[fcgCXVppNnediQual->SelectedIndex].value;
+    enc.vpp.nnedi.precision        = (VppFpPrecision)list_vpp_fp_prec[fcgCXVppNnediPrec->SelectedIndex].value;
+    enc.vpp.nnedi.pre_screen       = (VppNnediPreScreen)list_vpp_nnedi_pre_screen_gui[fcgCXVppNnediPrescreen->SelectedIndex].value;
+    enc.vpp.nnedi.errortype        = (VppNnediErrorType)list_vpp_nnedi_error_type[fcgCXVppNnediErrorType->SelectedIndex].value;
 
-    //vce.vpp.yadif.enable = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"yadif"));
-    //vce.vpp.yadif.mode = (VppYadifMode)list_vpp_yadif_mode_gui[fcgCXVppYadifMode->SelectedIndex].value;
+    //enc.vpp.yadif.enable = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"yadif"));
+    //enc.vpp.yadif.mode = (VppYadifMode)list_vpp_yadif_mode_gui[fcgCXVppYadifMode->SelectedIndex].value;
 
-    vce.ssim                       = fcgCBSSIM->Checked;
-    vce.psnr                       = fcgCBPSNR->Checked;
+    enc.ssim                       = fcgCBSSIM->Checked;
+    enc.psnr                       = fcgCBPSNR->Checked;
 
     cnf->vid.afs                    = fcgCBAFS->Checked;
     cnf->vid.auo_tcfile_out         = fcgCBAuoTcfileout->Checked;
-    vce.par[0]                      = (int)fcgNUAspectRatioX->Value;
-    vce.par[1]                      = (int)fcgNUAspectRatioY->Value;
+    enc.par[0]                      = (int)fcgNUAspectRatioX->Value;
+    enc.par[1]                      = (int)fcgNUAspectRatioY->Value;
     if (fcgCXAspectRatio->SelectedIndex == 1) {
-        vce.par[0] *= -1;
-        vce.par[1] *= -1;
+        enc.par[0] *= -1;
+        enc.par[1] *= -1;
     }
 
     //拡張部
@@ -1468,10 +1468,10 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
 
     GetfcgTSLSettingsNotes(cnf->oth.notes, sizeof(cnf->oth.notes));
 
-    GetCHARfromString(cnf->vce.cmdex, sizeof(cnf->vce.cmdex), fcgTXCmdEx->Text);
-    strcpy_s(cnf->vce.cmd, gen_cmd(&vce, true).c_str());
+    GetCHARfromString(cnf->enc.cmdex, sizeof(cnf->enc.cmdex), fcgTXCmdEx->Text);
+    strcpy_s(cnf->enc.cmd, gen_cmd(&enc, true).c_str());
 
-    return String(gen_cmd(&vce, false).c_str()).ToString();
+    return String(gen_cmd(&enc, false).c_str()).ToString();
 }
 
 System::Void frmConfig::GetfcgTSLSettingsNotes(char *notes, int nSize) {

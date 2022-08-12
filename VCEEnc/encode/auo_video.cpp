@@ -87,7 +87,7 @@ int get_aviutl_color_format(int use_highbit, RGY_CSP csp) {
 
 void get_csp_and_bitdepth(bool& use_highbit, RGY_CSP& csp, const CONF_GUIEX *conf) {
     VCEParam enc_prm;
-    parse_cmd(&enc_prm, conf->vce.cmd);
+    parse_cmd(&enc_prm, conf->enc.cmd);
     use_highbit = enc_prm.outputDepth > 8;
     if (use_highbit) {
         //csp = (enc_prm.yuv444) ? RGY_CSP_YUV444_16 : RGY_CSP_P010;
@@ -193,8 +193,8 @@ static void build_full_cmd(char *cmd, size_t nSize, const CONF_GUIEX *conf, cons
     //GUI部のコマンドライン生成
     strcpy_s(cmd, nSize, gen_cmd(encPrm, false).c_str());
     //cmdexの処理
-    char cmdex[sizeof(conf->vce.cmdex)];
-    strcpy_s(cmdex, conf->vce.cmdex);
+    char cmdex[sizeof(conf->enc.cmdex)];
+    strcpy_s(cmdex, conf->enc.cmdex);
     cmd_replace(cmdex, sizeof(cmdex), pe, sys_dat, conf, oip);
     replace_cmd_CRLF_to_Space(cmdex, sizeof(cmdex) - 1);
     sprintf_s(cmd + strlen(cmd), nSize - strlen(cmd), " %s", cmdex);
@@ -484,7 +484,7 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
         return AUO_RESULT_SUCCESS;
 
     VCEParam enc_prm;
-    parse_cmd(&enc_prm, conf->vce.cmd);
+    parse_cmd(&enc_prm, conf->enc.cmd);
     enc_prm.common.disableMp4Opt = pe->muxer_to_be_used != MUXER_DISABLED;
     enc_prm.common.AVSyncMode = conf->vid.afs ? RGY_AVSYNC_VFR : RGY_AVSYNC_ASSUME_CFR;
     if (conf->vid.resize_enable) {
