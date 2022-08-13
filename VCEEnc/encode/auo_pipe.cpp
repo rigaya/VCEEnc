@@ -50,7 +50,7 @@ static int StartPipes(PIPE_SET *pipes) {
     int ret = RP_USE_NO_PIPE;
     SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
     if (pipes->stdOut.mode) {
-        if (!CreatePipe(&pipes->stdOut.h_read, &pipes->stdOut.h_write, &sa, pipes->stdOut.bufferSize) || 
+        if (!CreatePipe(&pipes->stdOut.h_read, &pipes->stdOut.h_write, &sa, pipes->stdOut.bufferSize) ||
             !SetHandleInformation(pipes->stdOut.h_read, HANDLE_FLAG_INHERIT, 0))
             return RP_ERROR_OPEN_PIPE;
         ret = RP_SUCCESS;
@@ -145,7 +145,7 @@ void CloseStdIn(PIPE_SET *pipes) {
 }
 
 //PeekNamedPipeが失敗→プロセスが終了していたら-1
-static int read_from_pipe(PIPE_SET *pipes, BOOL fromStdErr) {
+int read_from_pipe(PIPE_SET *pipes, BOOL fromStdErr) {
     DWORD pipe_read = 0;
     HANDLE h_read = (fromStdErr) ? pipes->stdErr.h_read : pipes->stdOut.h_read;
     if (!PeekNamedPipe(h_read, NULL, 0, NULL, &pipe_read, NULL))
