@@ -16,11 +16,11 @@ if [ -e /etc/lsb-release ]; then
     PACKAGE_OS="_${PACKAGE_OS_ID}${PACKAGE_OS_VER}"
     if [ "${PACKAGE_OS_CODENAME}" = "focal" ]; then
         PACKAGE_DEPENDS="libc6(>=2.29),libstdc++6(>=6)"
-        PACKAGE_DEPENDS="${PACKAGE_DEPENDS},ocl-icd-opencl-dev,amf-amdgpu-pro"
+        PACKAGE_DEPENDS="${PACKAGE_DEPENDS},amf-amdgpu-pro,ocl-icd-libopencl1"
         PACKAGE_DEPENDS="${PACKAGE_DEPENDS},libavcodec58,libavutil56,libavformat58,libswresample3,libavfilter7,libass9"
     elif [ "${PACKAGE_OS_CODENAME}" = "jammy" ]; then
         PACKAGE_DEPENDS="libc6(>=2.29),libstdc++6(>=6)"
-        PACKAGE_DEPENDS="${PACKAGE_DEPENDS},ocl-icd-opencl-dev,amf-amdgpu-pro"
+        PACKAGE_DEPENDS="${PACKAGE_DEPENDS},amf-amdgpu-pro,ocl-icd-libopencl1"
         PACKAGE_DEPENDS="${PACKAGE_DEPENDS},libavcodec58,libavutil56,libavformat58,libswresample3,libavfilter7,libass9"
     else
         echo "${PACKAGE_OS_ID}${PACKAGE_OS_VER} ${PACKAGE_OS_CODENAME} not supported in this script!"

@@ -22,13 +22,14 @@ VCEEncC could be run directly from the extracted directory.
 ### 1. Install AMD Graphics driver  
 Download AMD Graphics driver packages for Ubuntu 20.04 from [the webpage of AMD](https://support.amd.com/en-us/download).
 
-Extract and run amdgpu-pro-install to install the driver.
+Extract and run amdgpu-install to install the driver.
 
 ```Shell
 cd ~/Downloads
-tar -xf amdgpu-pro-*.tar.xz
-cd amdgpu-pro-*
-sudo ./amdgpu-pro-install --pro --opencl=rocr,legacy --no-32
+sudo apt-get install ./amdgpu-install-VERSION.deb
+sudo apt-get update
+sudo amdgpu-install -y --accept-eula --usecase=graphics,amf,opencl --opencl=rocr,legacy --no-32
+sudo reboot
 ```
 
 ### 2. Add user to proper group to use OpenCL
@@ -37,11 +38,11 @@ sudo ./amdgpu-pro-install --pro --opencl=rocr,legacy --no-32
 sudo gpasswd -a ${USER} render
 ```
 
-### 3. Install VCEEncc
+### 3. Install VCEEncC
 Download deb package from [this link](https://github.com/rigaya/VCEEnc/releases), and install running the following command line. Please note "x.xx" should be replaced to the target version name.
 
 ```Shell
-sudo apt install ./VCEEncc_x.xx_Ubuntu20.04_amd64.deb
+sudo apt install ./VCEEncC_x.xx_Ubuntu20.04_amd64.deb
 ```
 
 ### 4. Addtional Tools
@@ -55,7 +56,7 @@ There are some features which require additional installations.
 
 ### 5. Others
 
-- Error: "Failed to load OpenCL." when running VCEEncc  
+- Error: "Failed to load OpenCL." when running VCEEncC  
   Please check if /lib/x86_64-linux-gnu/libOpenCL.so exists. There are some cases that only libOpenCL.so.1 exists. In that case, please create a link using following command line.
   
   ```Shell
@@ -68,13 +69,13 @@ There are some features which require additional installations.
 ### 1. Install AMD Graphics driver  
 Download AMD Graphics driver packages for CentOS 8 from [the webpage of AMD](https://support.amd.com/en-us/download).
 
-Extract and run amdgpu-pro-install to install the driver.
+Extract and run amdgpu-install to install the driver.
 
 ```Shell
 cd ~/Downloads
-tar -xf amdgpu-pro-*.tar.xz
-cd amdgpu-pro-*
-sudo ./amdgpu-pro-install --pro --opencl=rocr,legacy --no-32
+sudo yum install ./amdgpu-install-VERSION.rpm
+sudo amdgpu-install -y --accept-eula --usecase=graphics,amf,opencl --opencl=rocr,legacy --no-32
+sudo reboot
 ```
 
 ### 2. Add user to proper group to use OpenCL

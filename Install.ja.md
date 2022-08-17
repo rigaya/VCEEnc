@@ -22,13 +22,14 @@
 ### 1. AMD ドライバのインストール  
 [AMDのWebページ](https://www.amd.com/ja/support)からUbuntu 20.04向けのドライバをダウンロードします。
 
-その後、パッケージを展開し、amdgpu-pro-installを下記のように実行してドライバをインストールします。
+その後、パッケージを展開し、amdgpu-installを下記のように実行してドライバをインストールし、再起動します。
 
 ```Shell
 cd ~/Downloads
-tar -xf amdgpu-pro-*.tar.xz
-cd amdgpu-pro-*
-sudo ./amdgpu-pro-install --pro --opencl=rocr,legacy --no-32
+sudo apt-get install ./amdgpu-install-VERSION.deb
+sudo apt-get update
+sudo amdgpu-install -y --accept-eula --usecase=graphics,amf,opencl --opencl=rocr,legacy --no-32
+sudo reboot
 ```
 
 ### 2. OpenCLの使用のため、ユーザーを下記グループに追加
@@ -37,13 +38,13 @@ sudo ./amdgpu-pro-install --pro --opencl=rocr,legacy --no-32
 sudo gpasswd -a ${USER} render
 ```
 
-### 3. VCEEnccのインストール
-VCEEnccのdebファイルを[こちら](https://github.com/rigaya/VCEEnc/releases)からダウンロードします。
+### 3. VCEEncCのインストール
+VCEEncCのdebファイルを[こちら](https://github.com/rigaya/VCEEnc/releases)からダウンロードします。
 
 その後、下記のようにインストールします。"x.xx"はインストールするバージョンに置き換えてください。
 
 ```Shell
-sudo apt install ./VCEEncc_x.xx_Ubuntu20.04_amd64.deb
+sudo apt install ./VCEEncC_x.xx_Ubuntu20.04_amd64.deb
 ```
 
 ### 4. 追加オプション
@@ -70,13 +71,13 @@ sudo apt install ./VCEEncc_x.xx_Ubuntu20.04_amd64.deb
 ### 1. AMD ドライバのインストール  
 [AMDのWebページ](https://www.amd.com/ja/support)からCentOS 8向けのドライバをダウンロードします。
 
-その後、パッケージを展開し、amdgpu-pro-installを下記のように実行してドライバをインストールします。
+その後、パッケージを展開し、amdgpu-installを下記のように実行してドライバをインストールし、再起動します。
 
 ```Shell
 cd ~/Downloads
-tar -xf amdgpu-pro-*.tar.xz
-cd amdgpu-pro-*
-sudo ./amdgpu-pro-install --pro --opencl=rocr,legacy --no-32
+sudo yum install ./amdgpu-install-VERSION.rpm
+sudo amdgpu-install -y --accept-eula --usecase=graphics,amf,opencl --opencl=rocr,legacy --no-32
+sudo reboot
 ```
 
 ### 2. OpenCLの使用のため、ユーザーを下記グループに追加
