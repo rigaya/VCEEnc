@@ -41,12 +41,14 @@
   - [--crop &lt;int&gt;,&lt;int&gt;,&lt;int&gt;,&lt;int&gt;](#--crop-intintintint)
   - [--fps &lt;int&gt;/&lt;int&gt; or &lt;float&gt;](#--fps-intint-or-float)
   - [--input-res &lt;int&gt;x&lt;int&gt;](#--input-res-intxint)
-  - [--output-res &lt;int&gt;x&lt;int&gt;](#--output-res-intxint)
+  - [--output-res &lt;int&gt;x&lt;int&gt;[,&lt;string&gt;=&lt;string&gt;]](#--output-res-intxintstringstring)
   - [--input-csp &lt;string&gt;](#--input-csp-string)
 - [エンコードモードのオプション](#エンコードモードのオプション)
   - [--cqp &lt;int&gt; or &lt;int&gt;:&lt;int&gt;:&lt;int&gt;　(固定量子化量)](#--cqp-int-or-intintint固定量子化量)
   - [--cbr &lt;int&gt;   (固定ビットレート)](#--cbr-int---固定ビットレート)
+  - [--cbrhq &lt;int&gt;   (固定ビットレート (高品質)) [H.264のみ]](#--cbrhq-int---固定ビットレート-高品質-h264のみ)
   - [--vbr &lt;int&gt;   (可変ビットレート)](#--vbr-int---可変ビットレート)
+  - [--vbrhq &lt;int&gt;   (可変ビットレート (高品質)) [H.264のみ]](#--vbrhq-int---可変ビットレート-高品質-h264のみ)
   - [--qvbr &lt;int&gt;   (可変ビットレート) [H.264のみ]](#--qvbr-int---可変ビットレート-h264のみ)
 - [その他のオプション](#その他のオプション)
   - [-u, --preset](#-u---preset)
@@ -69,13 +71,7 @@
   - [--filler](#--filler)
   - [--motion-est &lt;string&gt;](#--motion-est-string)
   - [--pe](#--pe)
-  - [--pa](#--pa)
-  - [--pa-sc &lt;string&gt;](#--pa-sc-string)
-  - [--pa-ss &lt;string&gt;](#--pa-ss-string)
-  - [--pa-activity-type &lt;string&gt;](#--pa-activity-type-string)
-  - [--pa-caq-strength &lt;string&gt;](#--pa-caq-strength-string)
-  - [--pa-initqpsc &lt;int&gt;](#--pa-initqpsc-int)
-  - [--pa-fskip-maxqp &lt;int&gt;](#--pa-fskip-maxqp-int)
+  - [--pa  [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]](#--pa--param1value1param2value2)
   - [--slices &lt;int&gt;](#--slices-int)
   - [--level &lt;string&gt;](#--level-string)
   - [--profile &lt;string&gt;](#--profile-string)
@@ -143,6 +139,7 @@
   - [--vpp-delogo &lt;string&gt;,&lt;param1&gt;=&lt;value1&gt;...](#--vpp-delogo-stringparam1value1)
   - [--vpp-afs [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]](#--vpp-afs-param1value1param2value2)
   - [--vpp-nnedi [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]](#--vpp-nnedi-param1value1param2value2)
+  - [--vpp-yadif [&lt;param1&gt;=&lt;value1&gt;]](#--vpp-yadif-param1value1)
   - [--vpp-decimate [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]](#--vpp-decimate-param1value1param2value2)
   - [--vpp-mpdecimate [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]](#--vpp-mpdecimate-param1value1param2value2)
   - [--vpp-rotate &lt;int&gt;](#--vpp-rotate-int)
@@ -1213,6 +1210,7 @@ vppフィルタの適用順は固定で、コマンドラインの順序によ�
   - [--vpp-delogo](#--vpp-delogo-stringparam1value1param2value2)
   - [--vpp-afs](#--vpp-afs-param1value1param2value2)
   - [--vpp-nnedi](#--vpp-nnedi-param1value1param2value2)
+  - [--vpp-yadif](#--vpp-yadif-param1value1)
   - [--vpp-transform/rotate](#--vpp-rotate-int)
   - [--vpp-decimate](#--vpp-decimate-param1value1param2value2)
   - [--vpp-mpdecimate](#--vpp-mpdecimate-param1value1param2value2)
@@ -1576,6 +1574,24 @@ nnediによるインタレ解除を行う。基本的には片方フィールド
   例: --vpp-nnedi field=auto,nns=64,nsize=32x6,quality=slow,prescreen=none,prec=fp32
   ```
 
+### --vpp-yadif [&lt;param1&gt;=&lt;value1&gt;]
+yadifによるインタレ解除を行う。
+
+**パラメータ**
+- mode
+
+  - auto (default)  
+    維持するフィールドを自動的に選択。
+  - tff  
+    トップフィールド維持。
+  - bff  
+    ボトムフィールド維持。
+  - bob   
+    60fps化を行う(field順は自動選択)。
+  - bob_tff   
+    60fps化を行う(tff)。
+  - bob_bff   
+    60fps化を行う(bff)。
 
 ### --vpp-decimate [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]  
 重複フレームを削除します。

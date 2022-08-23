@@ -46,6 +46,7 @@
 #include "rgy_filter_colorspace.h"
 #include "rgy_filter_afs.h"
 #include "rgy_filter_nnedi.h"
+#include "rgy_filter_yadif.h"
 #include "rgy_filter_convolution3d.h"
 #include "rgy_filter_delogo.h"
 #include "rgy_filter_denoise_knn.h"
@@ -814,7 +815,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     int deinterlacer = 0;
     if (inputParam->vpp.afs.enable) deinterlacer++;
     if (inputParam->vpp.nnedi.enable) deinterlacer++;
-    //if (inputParam->vpp.yadif.enable) deinterlacer++;
+    if (inputParam->vpp.yadif.enable) deinterlacer++;
     if (deinterlacer >= 2) {
         PrintMes(RGY_LOG_ERROR, _T("Activating 2 or more deinterlacer is not supported.\n"));
         return RGY_ERR_UNSUPPORTED;
@@ -830,6 +831,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         || inputParam->vpp.colorspace.enable
         || inputParam->vpp.afs.enable
         || inputParam->vpp.nnedi.enable
+        || inputParam->vpp.yadif.enable
         || inputParam->vpp.decimate.enable
         || inputParam->vpp.mpdecimate.enable
         || inputParam->vpp.pad.enable
@@ -1010,6 +1012,32 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             unique_ptr<RGYFilter> filter(new RGYFilterNnedi(m_dev->cl()));
             shared_ptr<RGYFilterParamNnedi> param(new RGYFilterParamNnedi());
             param->nnedi = inputParam->vpp.nnedi;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
+            param->bOutOverwrite = false;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //フィルタチェーンに追加
+            m_vpFilters.push_back(std::move(filter));
+            //パラメータ情報を更新
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+        }
+        //yadif
+        if (inputParam->vpp.yadif.enable) {
+            if ((inputParam->input.picstruct & (RGY_PICSTRUCT_TFF | RGY_PICSTRUCT_BFF)) == 0) {
+                PrintMes(RGY_LOG_ERROR, _T("Please set input interlace field order (--interlace tff/bff) for vpp-yadif.\n"));
+                return RGY_ERR_INVALID_PARAM;
+            }
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterYadif(m_dev->cl()));
+            shared_ptr<RGYFilterParamYadif> param(new RGYFilterParamYadif());
+            param->yadif = inputParam->vpp.yadif;
             param->frameIn = inputFrame;
             param->frameOut = inputFrame;
             param->baseFps = m_encFps;
@@ -2111,7 +2139,8 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
             const bool interlacedEncoding =
                 (prm->input.picstruct & RGY_PICSTRUCT_INTERLACED)
                 && !prm->vpp.afs.enable
-                && !prm->vpp.nnedi.enable;
+                && !prm->vpp.nnedi.enable
+                && !prm->vpp.yadif.enable;
             if (interlacedEncoding
                 && !outputCaps->IsInterlacedSupported()) {
                 message += strsprintf(_T("GPU #%d (%s) does not support %s interlaced encoding.\n"),

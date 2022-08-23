@@ -889,7 +889,7 @@ System::Void frmConfig::fcgChangeEnabled(System::Object^  sender, System::EventA
     fcgPNVppWarpsharp->Visible = (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("warpsharp")));
     fcgPNVppAfs->Visible = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"自動フィールドシフト"));
     fcgPNVppNnedi->Visible = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"nnedi"));
-    fcgPNVppYadif->Visible = false; // (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"yadif"));
+    fcgPNVppYadif->Visible = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"yadif"));
     fcggroupBoxVppDeband->Enabled = fcgCBVppDebandEnable->Checked;
 
     this->ResumeLayout();
@@ -1134,9 +1134,9 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
             deinterlacer_idx = get_cx_index(list_vpp_deinterlacer, L"自動フィールドシフト");
         } else if (enc.vpp.nnedi.enable) {
             deinterlacer_idx = get_cx_index(list_vpp_deinterlacer, L"nnedi");
-        }// else if (enc.vpp.yadif.enable) {
-         //   deinterlacer_idx = get_cx_index(list_vpp_deinterlacer, L"yadif");
-        //}
+        } else if (enc.vpp.yadif.enable) {
+           deinterlacer_idx = get_cx_index(list_vpp_deinterlacer, L"yadif");
+        }
         SetCXIndex(fcgCXVppDeinterlace,          deinterlacer_idx);
 
         SetNUValue(fcgNUVppDenoiseKnnRadius,     enc.vpp.knn.radius);
@@ -1196,7 +1196,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
         SetCXIndex(fcgCXVppNnediPrescreen,       get_cx_index(list_vpp_nnedi_pre_screen_gui, enc.vpp.nnedi.pre_screen));
         SetCXIndex(fcgCXVppNnediQual,            get_cx_index(list_vpp_nnedi_quality, enc.vpp.nnedi.quality));
         SetCXIndex(fcgCXVppNnediErrorType,       get_cx_index(list_vpp_nnedi_error_type, enc.vpp.nnedi.errortype));
-        //SetCXIndex(fcgCXVppYadifMode,            get_cx_index(list_vpp_yadif_mode_gui, enc.vpp.yadif.mode));
+        SetCXIndex(fcgCXVppYadifMode,            get_cx_index(list_vpp_yadif_mode_gui, enc.vpp.yadif.mode));
 
         fcgCBSSIM->Checked                     = enc.ssim;
         fcgCBPSNR->Checked                     = enc.psnr;
@@ -1398,8 +1398,8 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     enc.vpp.nnedi.pre_screen       = (VppNnediPreScreen)list_vpp_nnedi_pre_screen_gui[fcgCXVppNnediPrescreen->SelectedIndex].value;
     enc.vpp.nnedi.errortype        = (VppNnediErrorType)list_vpp_nnedi_error_type[fcgCXVppNnediErrorType->SelectedIndex].value;
 
-    //enc.vpp.yadif.enable = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"yadif"));
-    //enc.vpp.yadif.mode = (VppYadifMode)list_vpp_yadif_mode_gui[fcgCXVppYadifMode->SelectedIndex].value;
+    enc.vpp.yadif.enable = (fcgCXVppDeinterlace->SelectedIndex == get_cx_index(list_vpp_deinterlacer, L"yadif"));
+    enc.vpp.yadif.mode = (VppYadifMode)list_vpp_yadif_mode_gui[fcgCXVppYadifMode->SelectedIndex].value;
 
     enc.ssim                       = fcgCBSSIM->Checked;
     enc.psnr                       = fcgCBPSNR->Checked;

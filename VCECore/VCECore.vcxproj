@@ -177,6 +177,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="rgy_filter_yadif.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="rgy_frame.cpp" />
     <ClCompile Include="rgy_hdr10plus.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -478,6 +484,7 @@
     <ClInclude Include="rgy_filter_decimate.h" />
     <ClInclude Include="rgy_filter_delogo.h" />
     <ClInclude Include="rgy_filter_mpdecimate.h" />
+    <ClInclude Include="rgy_filter_yadif.h" />
     <ClInclude Include="rgy_frame.h" />
     <ClInclude Include="rgy_hdr10plus.h" />
     <ClInclude Include="rgy_ini.h" />
@@ -571,6 +578,7 @@
     <None Include="rgy_filter_tweak.cl" />
     <None Include="rgy_filter_unsharp.cl" />
     <None Include="rgy_filter_warpsharp.cl" />
+    <None Include="rgy_filter_yadif.cl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{06E67B5B-0DA2-4503-A1CA-D75F94BD977A}</ProjectGuid>

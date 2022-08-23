@@ -282,6 +282,9 @@
     <ClCompile Include="rgy_filter_convolution3d.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="rgy_filter_yadif.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu_info.h">
@@ -533,6 +536,9 @@
     <ClInclude Include="rgy_filter_convolution3d.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="rgy_filter_yadif.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="rgy_filter.cl">
@@ -611,6 +617,9 @@
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="rgy_filter_convolution3d.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="rgy_filter_yadif.cl">
       <Filter>ソース ファイル</Filter>
     </None>
   </ItemGroup>

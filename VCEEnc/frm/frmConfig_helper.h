@@ -142,6 +142,7 @@ static const wchar_t *const list_vpp_deinterlacer[] = {
     L"なし",
     L"自動フィールドシフト",
     L"nnedi",
+    L"yadif",
     NULL
 };
 
@@ -164,8 +165,8 @@ const CX_DESC list_vpp_nnedi_pre_screen_gui[] = {
 };
 
 const CX_DESC list_vpp_yadif_mode_gui[] = {
-    //{ _T("normal"),        VPP_YADIF_MODE_AUTO },
-    //{ _T("bob"),           VPP_YADIF_MODE_BOB_AUTO },
+    { _T("normal"),        VPP_YADIF_MODE_AUTO },
+    { _T("bob"),           VPP_YADIF_MODE_BOB_AUTO },
     { NULL, NULL }
 };
 

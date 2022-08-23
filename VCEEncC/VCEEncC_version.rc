@@ -48,6 +48,8 @@ RGY_FILTER_NNEDI_K1_CL     EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_nnedi_k
 RGY_FILTER_NNEDI_COMMON_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_nnedi_common.cl"
 NNEDI_WEIGHTBIN            EXE_DATA DISCARDABLE "..\\resource\\nnedi3_weights.bin"
 
+RGY_FILTER_YADIF_CL        EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_yadif.cl"
+
 RGY_FILTER_SSIM_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_ssim.cl"
 
 APP_OSCODEPAGE_MANIFEST EXE_DATA DISCARDABLE "VCEEncC.oscodepage.manifest"
