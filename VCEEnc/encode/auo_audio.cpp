@@ -206,8 +206,9 @@ static size_t write_file(aud_data_t *aud_dat, const PRM_ENC *pe, const void *buf
         memset(&overlapped, 0, sizeof(overlapped));
         overlapped.hEvent = aud_dat->he_ov_aud_namedpipe;
         DWORD sizeWritten = 0;
+        //非同期処理中は0を返すことがある
         WriteFile(aud_dat->h_aud_namedpipe, buf, size, &sizeWritten, &overlapped);
-        while (WaitForSingleObject(overlapped.hEvent, 1000) != WAIT_OBJECT_0) {
+        while (WaitForSingleObject(aud_dat->he_ov_aud_namedpipe, 1000) != WAIT_OBJECT_0) {
             if (pe->aud_parallel.abort) {
                 return 0;
             }
@@ -311,7 +312,7 @@ static void show_audio_enc_info(const AUDIO_SETTINGS *aud_stg, const CONF_AUDIO_
     write_log_auo_line_fmt(LOG_INFO, "%s%s で音声エンコードを行います。%s%s%s", aud_stg->dispname, ver_str.c_str(), aud_stg->mode[cnf_aud->enc_mode].name, bitrate, use2pass);
     show_audio_delay_cut_info(cnf_aud->delay_cut, pe);
     if (strlen(aud_dat->args) > 0) {
-        write_log_auo_line(LOG_MORE, aud_dat->args);
+        write_log_auo_line(LOG_DEBUG, aud_dat->args);
     }
 }
 
