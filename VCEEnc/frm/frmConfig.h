@@ -6138,7 +6138,6 @@ private: System::Windows::Forms::CheckBox^  fcgCBPreEncode;
         System::Int32 GetCurrentAudioDefaultBitrate();
         delegate System::Void qualityTimerChangeDelegate();
         System::Void InitComboBox();
-        bool AudioIntEncoderEnabled(const AUDIO_SETTINGS *astg, bool isAuoLinkMode);
         System::Void setAudioExtDisplay();
         System::Void AudioExtEncodeModeChanged();
         System::Void setAudioIntDisplay();
@@ -6304,11 +6303,7 @@ private: System::Windows::Forms::CheckBox^  fcgCBPreEncode;
             fcgCXAudioEncoderInternal->BeginUpdate();
             fcgCXAudioEncoderInternal->Items->Clear();
             for (int i = 0; i < sys_dat->exstg->s_aud_int_count; i++) {
-                if (AudioIntEncoderEnabled(&sys_dat->exstg->s_aud_int[i], false)) {
-                    fcgCXAudioEncoderInternal->Items->Add(String(sys_dat->exstg->s_aud_int[i].dispname).ToString());
-                } else {
-                    fcgCXAudioEncoderInternal->Items->Add(String(L"-----").ToString());
-                }
+                fcgCXAudioEncoderInternal->Items->Add(String(sys_dat->exstg->s_aud_int[i].dispname).ToString());
             }
             fcgCXAudioEncoderInternal->EndUpdate();
         }

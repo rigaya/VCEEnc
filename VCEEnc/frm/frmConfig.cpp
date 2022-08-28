@@ -536,29 +536,12 @@ System::Void frmConfig::fcgCXAudioEncModeInternal_SelectedIndexChanged(System::O
     AudioIntEncodeModeChanged();
 }
 
-bool frmConfig::AudioIntEncoderEnabled(const AUDIO_SETTINGS *astg, bool isAuoLinkMode) {
-    if (isAuoLinkMode && astg->auolink_only < 0) {
-        return false;
-    } else if (!isAuoLinkMode && astg->auolink_only > 0) {
-        return false;
-    }
-    return true;
-}
-
 System::Void frmConfig::setAudioIntDisplay() {
     AUDIO_SETTINGS *astg = &sys_dat->exstg->s_aud_int[fcgCXAudioEncoderInternal->SelectedIndex];
-    if (!AudioIntEncoderEnabled(astg, false)) {
-        fcgCXAudioEncoderInternal->SelectedIndex = DEFAULT_AUDIO_ENCODER_IN;
-        astg = &sys_dat->exstg->s_aud_int[fcgCXAudioEncoderInternal->SelectedIndex];
-    }
     fcgCXAudioEncModeInternal->BeginUpdate();
     fcgCXAudioEncModeInternal->Items->Clear();
-    if (AudioIntEncoderEnabled(astg, false)) {
-        for (int i = 0; i < astg->mode_count; i++) {
-            fcgCXAudioEncModeInternal->Items->Add(String(astg->mode[i].name).ToString());
-        }
-    } else {
-        fcgCXAudioEncModeInternal->Items->Add(String(L"-----").ToString());
+    for (int i = 0; i < astg->mode_count; i++) {
+        fcgCXAudioEncModeInternal->Items->Add(String(astg->mode[i].name).ToString());
     }
     fcgCXAudioEncModeInternal->EndUpdate();
     if (fcgCXAudioEncModeInternal->Items->Count > 0)
@@ -1242,8 +1225,8 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
         fcgCBMPGMuxerExt->Checked          = cnf->mux.disable_mpgext == 0;
         SetCXIndex(fcgCXMPGCmdEx,            cnf->mux.mpg_mode);
         fcgCBMuxMinimize->Checked          = cnf->mux.minimized != 0;
-        SetCXIndex(fcgCXInternalCmdEx,       cnf->mux.internal_mode);
         SetCXIndex(fcgCXMuxPriority,         cnf->mux.priority);
+        SetCXIndex(fcgCXInternalCmdEx,       cnf->mux.internal_mode);
 
         fcgCBRunBatBefore->Checked         =(cnf->oth.run_bat & RUN_BAT_BEFORE_PROCESS) != 0;
         fcgCBRunBatAfter->Checked          =(cnf->oth.run_bat & RUN_BAT_AFTER_PROCESS) != 0;
@@ -1853,6 +1836,8 @@ System::Void frmConfig::ShowExehelp(String^ ExePath, String^ args) {
                     sw = gcnew System::IO::StreamWriter(String(file_path).ToString(), true, System::Text::Encoding::GetEncoding("shift_jis"));
                     sw->WriteLine();
                     sw->WriteLine();
+                } catch (...) {
+                    //ファイルオープンに失敗…初回のget_exe_message_to_fileでエラーとなるため、おそらく起こらない
                 } finally {
                     if (sw != nullptr) { sw->Close(); }
                 }
