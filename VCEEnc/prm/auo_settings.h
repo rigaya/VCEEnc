@@ -246,7 +246,6 @@ typedef struct {
 
 typedef struct {
     BOOL minimized;                        //最小化で起動
-
     int  log_level;                        //ログ出力のレベル
     BOOL transparent;                      //半透明で表示
     int  transparency;                     //透過度
