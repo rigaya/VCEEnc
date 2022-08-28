@@ -440,7 +440,7 @@ AUO_RESULT mux(const CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_ENC *pe, cons
     BOOL  enable_vid_mux = TRUE;
     DWORD enable_aud_mux = check_for_aud_mux(oip->flag, sys_dat->exstg->s_mux[pe->muxer_to_be_used].aud_cmd, pe);
 #if 1
-    //常にremuxerを使用するようにして、NVEncCでmp4コンテナに設定した「エンコードライブラリの情報」をmux後も保持するようにする
+    //常にremuxerを使用するようにして、mp4コンテナに設定した「エンコードライブラリの情報」やafs使用時のタイムコードをmux後も保持するようにする
     BOOL  aud_use_remuxer = TRUE;
 #else
     BOOL  aud_use_remuxer = (!!enable_aud_mux && sys_dat->exstg->s_aud[conf->aud.encoder].mode[conf->aud.enc_mode].use_remuxer)
@@ -487,7 +487,7 @@ AUO_RESULT mux(const CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_ENC *pe, cons
         }
     }
 #if 0 //afsなどの時にフレームレート情報を維持するため、動画に対してはremuxerのみを使用するように変更
-    else if (pe->muxer_to_be_used == MUXER_MP4 && !(conf->vid.afs || aud_use_remuxer) && str_has_char(sys_dat->exstg->s_mux[MUXER_MP4_RAW].base_cmd)) {
+    else if (pe->muxer_to_be_used == MUXER_MP4 && !(true || conf->vid.afs || aud_use_remuxer) && str_has_char(sys_dat->exstg->s_mux[MUXER_MP4_RAW].base_cmd)) {
         //自動フィールドシフト(timelineeditor)使用時以外は、remuxerを使用しなくても良くなった
         //なので、単純に使用するmuxerをmuxer.exeに切り替え
         pe->muxer_to_be_used = MUXER_MP4_RAW;
