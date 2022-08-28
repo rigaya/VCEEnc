@@ -55,7 +55,6 @@
 #include "auo_error.h"
 #include "auo_audio.h"
 #include "auo_faw2aac.h"
-#include "cpu_info.h"
 #include "rgy_env.h"
 #include "rgy_filesystem.h"
 
@@ -870,8 +869,8 @@ static void replace_aspect_ratio(char *cmd, size_t nSize, const CONF_GUIEX *conf
     const int w = oip->w;
     const int h = oip->h;
 
-    int sar_x = conf->qsv.nPAR[0];
-    int sar_y = conf->qsv.nPAR[1];
+    int sar_x = conf->enc.nPAR[0];
+    int sar_y = conf->enc.nPAR[1];
     int dar_x = 0;
     int dar_y = 0;
     if (sar_x * sar_y > 0) {
@@ -1088,6 +1087,10 @@ DWORD GetExePriority(DWORD set, HANDLE h_aviutl) {
 int check_video_ouput(const char *filename) {
     if (check_ext(filename, ".mp4"))  return VIDEO_OUTPUT_MP4;
     if (check_ext(filename, ".mkv"))  return VIDEO_OUTPUT_MKV;
+#if ENCODER_QSV    
+    if (check_ext(filename, ".mpg"))  return VIDEO_OUTPUT_MPEG2;
+    if (check_ext(filename, ".mpeg")) return VIDEO_OUTPUT_MPEG2;
+#endif
     return VIDEO_OUTPUT_RAW;
 }
 
