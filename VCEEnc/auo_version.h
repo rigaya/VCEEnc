@@ -35,6 +35,7 @@
 #define AUO_NAME_WITHOUT_EXT "VCEEnc"
 #define AUO_NAME             "VCEEnc.auo"
 #define AUO_NAME_W          L"VCEEnc.auo"
+#define AUO_NAME_R            VCEEnc
 #define AUO_FULL_NAME        "拡張 VCE 出力"
 #define AUO_VERSION_NAME     "拡張 VCE 出力 " AUO_VERSION_STR
 #define AUO_VERSION_INFO     AUO_VERSION_NAME" by rigaya"

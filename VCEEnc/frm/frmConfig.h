@@ -53,7 +53,7 @@ using namespace System::IO;
 using namespace System::Threading::Tasks;
 
 
-namespace VCEEnc {
+namespace AUO_NAME_R {
 
     /// <summary>
     /// frmConfig の概要

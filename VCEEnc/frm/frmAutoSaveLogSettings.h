@@ -40,7 +40,7 @@ using namespace System::Drawing;
 using namespace System::IO;
 
 
-namespace VCEEnc {
+namespace AUO_NAME_R {
 
     /// <summary>
     /// frmAutoSaveLogSettings の概要
