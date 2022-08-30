@@ -111,6 +111,20 @@ Debian/Ubuntu系 (VCEEncC)
       - edgelevel (エッジレベル調整)
       - warpsharp
 
+## サポートされるHWエンコード
+
+| GPU Arch | GPU Gen          | dGPU     | iGPU | VCE/VCN Gen | H.264 | HEVC | AV1 | 
+|:--   |:--                   |:--       |:--   |:--:         |:--:   |:--   |:--  |
+| GCN  | Southern/Sea Islands | HD7xxx, RX2xx | | VCE1, VCE2  | 8bit  |       |    |
+|      | Volcanic Islands     | RX3xx         | | VCE3        | 8bit  |       |    |
+|      | Polaris       | RX4xx, RX5xx  |        | VCE3.4      | 8bit  |  8bit |    |
+|      | Vega          | Vega          |        | VCE4        | 8bit  |  8bit |    |
+|      | Vega          |  | RyzenAPU(2xxx-3xxx) | VCN1        | 8bit  |  8bit |    |
+|      | Vega          |  | RyzenAPU(4xxx-5xxx) | VCN2        | 8bit  | 10bit |    |
+| RDNA | RDNA1         | RX5xxx      |          | VCN2        | 8bit  | 10bit |    |
+|      | RDNA2         | RX6xxx      | Zen4 APU | VCN3        | 8bit  | 10bit |    |
+|      | RDNA3         | RX7xxx      |          | VCN4        | 8bit? | 10bit?| ?  |
+
 ## マルチGPU環境でのGPU自動選択
 VCEEncCでは、VCE/VCNを実行可能なGPUが複数存在する場合、
 指定されたオプションをもとに実行時に最適なGPUを自動選択します。

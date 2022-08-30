@@ -105,6 +105,21 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 - Mux audio and chapter
 - afs (Automatic field shift) support
   
+
+## Supported HW Encode Codecs
+
+| GPU Arch | GPU Gen          | dGPU     | iGPU | VCE/VCN Gen | H.264 | HEVC | AV1 | 
+|:--   |:--                   |:--       |:--   |:--:         |:--:   |:--   |:--  |
+| GCN  | Southern/Sea Islands | HD7xxx, RX2xx | | VCE1, VCE2  | 8bit  |       |    |
+|      | Volcanic Islands     | RX3xx         | | VCE3        | 8bit  |       |    |
+|      | Polaris       | RX4xx, RX5xx  |        | VCE3.4      | 8bit  |  8bit |    |
+|      | Vega          | Vega          |        | VCE4        | 8bit  |  8bit |    |
+|      | Vega          |  | RyzenAPU(2xxx-3xxx) | VCN1        | 8bit  |  8bit |    |
+|      | Vega          |  | RyzenAPU(4xxx-5xxx) | VCN2        | 8bit  | 10bit |    |
+| RDNA | RDNA1         | RX5xxx      |          | VCN2        | 8bit  | 10bit |    |
+|      | RDNA2         | RX6xxx      | Zen4 APU | VCN3        | 8bit  | 10bit |    |
+|      | RDNA3         | RX7xxx      |          | VCN4        | 8bit? | 10bit?| ?  |
+
 ## Auto GPU selection in multi GPU envinronment
 VCEEncC will automatically select a GPU depending on the options used,
 when there are multiple GPUs available which support VCE/VCN.
