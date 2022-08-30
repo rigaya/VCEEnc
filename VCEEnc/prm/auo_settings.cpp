@@ -41,7 +41,6 @@
 #include "auo_util.h"
 #include "auo_settings.h"
 #include "auo_version.h"
-#include "rgy_util.h"
 
 static const int INI_SECTION_BUFSIZE = 32768;
 static const int INI_KEY_MAX_LEN = 256;
@@ -274,8 +273,6 @@ void guiEx_settings::load_encode_stg() {
 }
 
 void guiEx_settings::load_vid() {
-    char key[INI_KEY_MAX_LEN];
-
     clear_vid();
 
     s_vid_mc.init(ini_filesize);
@@ -639,7 +636,6 @@ void guiEx_settings::save_local() {
 
 void guiEx_settings::save_log_win() {
     WritePrivateProfileIntWithDefault(   ini_section_main, "log_start_minimized",   s_log.minimized,          DEFAULT_LOG_START_MINIMIZED,  conf_fileName);
-
     WritePrivateProfileIntWithDefault(   ini_section_main, "log_level",             s_log.log_level,          DEFAULT_LOG_LEVEL,            conf_fileName);
     WritePrivateProfileIntWithDefault(   ini_section_main, "log_transparent",       s_log.transparent,        DEFAULT_LOG_TRANSPARENT,      conf_fileName);
     WritePrivateProfileIntWithDefault(   ini_section_main, "log_transparency",      s_log.transparency,       DEFAULT_LOG_TRANSPARENCY,     conf_fileName);
