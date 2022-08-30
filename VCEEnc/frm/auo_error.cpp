@@ -53,7 +53,7 @@ void warning_unable_to_open_tempfile(const char *dir) {
 }
 
 void warning_no_temp_root(const char *dir) {
-    write_log_auo_line_fmt(LOG_WARNING, 
+    write_log_auo_line_fmt(LOG_WARNING,
         "指定された一時フォルダ \"%s\" が存在しません。一時フォルダ指定を解除しました。",
         dir);
 }
