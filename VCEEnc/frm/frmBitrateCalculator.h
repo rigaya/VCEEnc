@@ -313,7 +313,7 @@ namespace VCEEnc {
             // fbcNUBitrateAudio
             // 
             this->fbcNUBitrateAudio->Location = System::Drawing::Point(132, 156);
-            this->fbcNUBitrateAudio->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 13824, 0, 0, 0 });
+            this->fbcNUBitrateAudio->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 13892, 0, 0, 0 });
             this->fbcNUBitrateAudio->Name = L"fbcNUBitrateAudio";
             this->fbcNUBitrateAudio->Size = System::Drawing::Size(65, 21);
             this->fbcNUBitrateAudio->TabIndex = 5;
