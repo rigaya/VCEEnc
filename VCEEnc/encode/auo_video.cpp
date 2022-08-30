@@ -379,7 +379,7 @@ static int send_frame(
                 //SIMDの要求する値で割り切れない場合は、一時バッファを使用してpitchがあるようにする
                 tempBufForNonModWidthPitch = ALIGN(oip->w, 128) * ((input_csp == RGY_CSP_YC48) ? 6 : 2);
                 tempBufForNonModWidth = std::unique_ptr<uint8_t, aligned_malloc_deleter>(
-                    (uint8_t*)_aligned_malloc(tempBufForNonModWidthPitch * oip->h, 128), aligned_malloc_deleter());;
+                    (uint8_t*)_aligned_malloc(tempBufForNonModWidthPitch * oip->h, 128), aligned_malloc_deleter());
             }
         }
         if (convert->getFunc(input_csp, prmsm->csp, false, simd) == nullptr) {
