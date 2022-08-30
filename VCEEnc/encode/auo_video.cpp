@@ -76,6 +76,7 @@ int get_aviutl_color_format(int use_highbit, RGY_CSP csp) {
     }
 
     switch (chromafmt) {
+    case RGY_CHROMAFMT_YUVA444:
     case RGY_CHROMAFMT_YUV444:
         return CF_YC48;
     case RGY_CHROMAFMT_YUV420:
@@ -103,7 +104,7 @@ static int calc_input_frame_size(int width, int height, int color_format, int& b
     //widthが割り切れない場合、多めにアクセスが発生するので、そのぶんを確保しておく
     const DWORD pixel_size = COLORFORMATS[color_format].size;
     const RGY_SIMD simd_check = get_availableSIMD();
-    const DWORD align_size = ((simd_check & RGY_SIMD::SSE2) == RGY_SIMD::SSE2) ? ((simd_check & RGY_SIMD::AVX2) == RGY_SIMD::AVX2 ? 64 : 32) : 1;
+    const DWORD align_size = ((simd_check & RGY_SIMD::SSE2) == RGY_SIMD::SSE2) ? (((simd_check & RGY_SIMD::AVX2) == RGY_SIMD::AVX2) ? 64 : 32) : 1;
 #define ALIGN_NEXT(i, align) (((i) + (align-1)) & (~(align-1))) //alignは2の累乗(1,2,4,8,16,32...)
     buf_size = ALIGN_NEXT(width * height * pixel_size + (ALIGN_NEXT(width, align_size / pixel_size) - width) * 2 * pixel_size, align_size);
 #undef ALIGN_NEXT
@@ -159,7 +160,9 @@ DWORD tcfile_out(int *jitter, int frame_n, double fps, BOOL afs, const PRM_ENC *
     //ファイル名作成
     apply_appendix(auotcfile, sizeof(auotcfile), pe->temp_filename, pe->append.tc);
 
-    if (fopen_s(&tcfile, auotcfile, "wb") == NULL) {
+    if (NULL != fopen_s(&tcfile, auotcfile, "wb")) {
+        ret |= AUO_RESULT_ERROR; warning_auo_tcfile_failed();
+    } else {
         fprintf(tcfile, "# timecode format v2\r\n");
         if (afs) {
             int time_additional_frame = 0;
@@ -176,12 +179,11 @@ DWORD tcfile_out(int *jitter, int frame_n, double fps, BOOL afs, const PRM_ENC *
                 if (jitter[i] != DROP_FRAME_FLAG)
                     fprintf(tcfile, "%.6lf\r\n", (i * 4 + jitter[i] + time_additional_frame) * tm_multi);
         } else {
+            frame_n += pe->delay_cut_additional_vframe;
             for (int i = 0; i < frame_n; i++)
                 fprintf(tcfile, "%.6lf\r\n", i * tm_multi);
         }
         fclose(tcfile);
-    } else {
-        ret |= AUO_RESULT_ERROR; warning_auo_tcfile_failed();
     }
     return ret;
 }
@@ -754,7 +756,7 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
         release_audio_parallel_events(pe);
 
         //タイムコード出力
-        if (!ret && (afs && pe->muxer_to_be_used != MUXER_DISABLED) || conf->vid.auo_tcfile_out)
+        if (!ret && ((afs && pe->muxer_to_be_used != MUXER_DISABLED) || conf->vid.auo_tcfile_out))
             tcfile_out(jitter, oip->n, (double)oip->rate / (double)oip->scale, afs, pe);
 
         //エンコーダ終了待機
