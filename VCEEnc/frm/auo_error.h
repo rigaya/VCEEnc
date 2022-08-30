@@ -49,7 +49,6 @@ void warning_use_default_audio_encoder(const char *name);
 void error_invalid_ini_file();
 void error_unsupported_audio_format_by_muxer(const int video_out_type, const char *selected_aud, const char *default_aud);
 void info_use_exe_found(const char *target, const char *path);
-void error_mp4_muxer_unmatch_of_ini_and_exe(BOOL exe_file_is_lsmash);
 void warning_auto_afs_disable();
 void error_afs_setup(BOOL afs, BOOL auto_afs_disable);
 void error_run_process(const char *exe_name, int rp_ret);
