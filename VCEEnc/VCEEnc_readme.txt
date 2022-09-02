@@ -157,7 +157,7 @@ Radeon RX460
 32GB RAM
 
 【検証環境 2022.09】
-Win11 x64
+Win10 x64
 Core i7 7700K + Asrock Z270 Gaming-ITX/ac
 Radeon RX5500XT
 8GB RAM
@@ -166,7 +166,7 @@ Radeon RX5500XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
-2022.09.02 (7.09)
+2022.09.03 (7.09)
 [VCEEncC]
 - HEVC 10bit hwデコードの検出ミスを修正。
 - デバッグ用にHEVC bsfを切り替えるオプションを追加。(--input-hevc-bsf)
