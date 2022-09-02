@@ -303,7 +303,7 @@ amf::AMFCapsPtr VCEDevice::getDecCaps(RGY_CODEC codec) {
                 if (codec_uvd_10bit_name != nullptr) {
                     amf::AMFCapsPtr decodeCaps10bit;
                     amf::AMFComponentPtr p_decode10bit;
-                    if (m_factory->CreateComponent(m_context, codec_uvd_name, &p_decode10bit) == AMF_OK
+                    if (m_factory->CreateComponent(m_context, codec_uvd_10bit_name, &p_decode10bit) == AMF_OK
                         && p_decode10bit->GetCaps(&decodeCaps10bit) == AMF_OK) {
                         decodeCaps->SetProperty(CAP_10BITDEPTH, true);
                         p_decode10bit->Terminate();
