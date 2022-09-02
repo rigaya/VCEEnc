@@ -1203,6 +1203,16 @@ Example3: set metadata
 ### --timecode [&lt;string&gt;]  
   Write timecode file to the specified path. If the path is not set, it will be written to "&lt;output file path&gt;.timecode.txt".
 
+### --input-hevc-bsf &lt;string&gt;  
+switch hevc bitstream filter used for hw decoder input. (for debug purpose)
+- Parameters
+
+  - internal  
+    use internal implementation. (default)
+
+  - libavcodec  
+    use hevc_mp4toannexb bitstream filter.
+
 ## Vpp Options
 
 These options will apply filters before encoding.

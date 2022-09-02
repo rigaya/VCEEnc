@@ -1197,6 +1197,16 @@ mux時にオプションパラメータを渡す。&lt;string1&gt;にオプシ�
 ### --timecode [&lt;string&gt;]  
   指定のパスにtimecodeファイルを出力する。パスを省略した場合には、"&lt;出力ファイル名&gt;.timecode.txt"に出力する。
 
+### --input-hevc-bsf &lt;string&gt;  
+switch hevc bitstream filter used for hw decoder input. (for debug purpose)
+- パラメータ
+
+  - internal
+    内蔵の実装を使用する。 (default)
+
+  - libavcodec
+    libavcodec の hevc_mp4toannexb bitstream filter を使用する。
+
 ## vppオプション
 
 エンコード前にフィルタ処理を追加するオプションです。
