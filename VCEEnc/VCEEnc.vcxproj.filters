@@ -102,6 +102,9 @@
     <ClCompile Include="encode\convert_avx2.cpp">
       <Filter>ソース ファイル\encode</Filter>
     </ClCompile>
+    <ClCompile Include="frm\auo_mes.cpp">
+      <Filter>ソース ファイル\frm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="VCEEnc.def">
@@ -214,6 +217,9 @@
     </ClInclude>
     <ClInclude Include="frm\frmNewFolderName.h">
       <Filter>フォーム</Filter>
+    </ClInclude>
+    <ClInclude Include="frm\auo_mes.h">
+      <Filter>ヘッダー ファイル\frm</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
