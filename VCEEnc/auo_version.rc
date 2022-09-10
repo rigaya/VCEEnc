@@ -28,6 +28,9 @@
 #include <winver.h>
 #include "auo_version.h"
 
+VCEENC_JA_LNG EXE_DATA DISCARDABLE "VCEEnc.ja.lng"
+VCEENC_EN_LNG EXE_DATA DISCARDABLE "VCEEnc.en.lng"
+
 
 //
 // Version Information

@@ -60,6 +60,7 @@
 #include "auo_convert.h"
 #include "auo_video.h"
 #include "auo_audio_parallel.h"
+#include "auo_mes.h"
 
 #include "cpu_info.h"
 #include "rgy_input_sm.h"
@@ -155,10 +156,10 @@ DWORD tcfile_out(int *jitter, int frame_n, double fps, BOOL afs, const PRM_ENC *
 
     if (afs)
         fps *= 4; //afsなら4倍精度
-    double tm_multi = 1000.0 / fps;
+    const double tm_multi = 1000.0 / fps;
 
     //ファイル名作成
-    apply_appendix(auotcfile, sizeof(auotcfile), pe->temp_filename, pe->append.tc);
+    apply_appendix(auotcfile, _countof(auotcfile), pe->temp_filename, pe->append.tc);
 
     if (NULL != fopen_s(&tcfile, auotcfile, "wb")) {
         ret |= AUO_RESULT_ERROR; warning_auo_tcfile_failed();
@@ -203,9 +204,8 @@ static void build_full_cmd(char *cmd, size_t nSize, const CONF_GUIEX *conf, cons
 
     //メッセージの発行
     if (encPrm->nVBVBufferSize != 0) {
-        write_log_auo_line(LOG_INFO, "自動フィールドシフト使用時はvbv設定は正確に反映されません。");
+        write_log_auo_line(LOG_INFO, g_auo_mes.get(AUO_VIDEO_AFS_VBV_WARN));
     }
-    //キーフレーム検出を行い、そのQPファイルが存在し、かつ--qpfileの指定がなければ、それをqpfileで読み込む
     //出力ファイル
     sprintf_s(cmd + strlen(cmd), nSize - strlen(cmd), " -o \"%s\"", pe->temp_filename);
     //入力
@@ -256,11 +256,11 @@ static AUO_RESULT finish_aud_parallel_task(const OUTPUT_INFO *oip, PRM_ENC *pe, 
     //エラーが発生していたら音声出力ループをとめる
     pe->aud_parallel.abort |= (vid_ret != AUO_RESULT_SUCCESS);
     if (pe->aud_parallel.th_aud) {
-        write_log_auo_line(LOG_INFO, "音声処理の終了を待機しています...");
-        set_window_title("音声処理の終了を待機しています...", PROGRESSBAR_MARQUEE);
+        write_log_auo_line(LOG_INFO, g_auo_mes.get(AUO_VIDEO_AUDIO_PROC_WAIT));
+        set_window_title(g_auo_mes.get(AUO_VIDEO_AUDIO_PROC_WAIT), PROGRESSBAR_MARQUEE);
         while (pe->aud_parallel.he_vid_start)
             vid_ret |= aud_parallel_task(oip, pe, use_internal);
-        set_window_title(AUO_FULL_NAME, PROGRESSBAR_DISABLED);
+        set_window_title(g_auo_mes.get(AUO_GUIEX_FULL_NAME), PROGRESSBAR_DISABLED);
     }
     return vid_ret;
 }
@@ -276,7 +276,7 @@ static AUO_RESULT exit_audio_parallel_control(const OUTPUT_INFO *oip, PRM_ENC *p
         BOOL wait_for_audio = FALSE;
         while (WaitForSingleObject(pe->aud_parallel.th_aud, LOG_UPDATE_INTERVAL) == WAIT_TIMEOUT) {
             if (!wait_for_audio) {
-                set_window_title("音声処理の終了を待機しています...", PROGRESSBAR_MARQUEE);
+                set_window_title(g_auo_mes.get(AUO_VIDEO_AUDIO_PROC_WAIT), PROGRESSBAR_MARQUEE);
                 wait_for_audio = !wait_for_audio;
             }
             pe->aud_parallel.abort |= oip->func_is_abort();
@@ -284,7 +284,7 @@ static AUO_RESULT exit_audio_parallel_control(const OUTPUT_INFO *oip, PRM_ENC *p
         }
         flush_audio_log();
         if (wait_for_audio)
-            set_window_title(AUO_FULL_NAME, PROGRESSBAR_DISABLED);
+            set_window_title(g_auo_mes.get(AUO_GUIEX_FULL_NAME), PROGRESSBAR_DISABLED);
 
         DWORD exit_code = 0;
         //GetExitCodeThreadの返り値がNULLならエラー
@@ -389,10 +389,10 @@ static int send_frame(
             return AUO_RESULT_ERROR;
         }
         if (sendFrame == 0) {
-            write_log_auo_line_fmt(RGY_LOG_INFO, "Convert %s -> %s [%s]",
-                RGY_CSP_NAMES[convert->getFunc()->csp_from],
-                RGY_CSP_NAMES[convert->getFunc()->csp_to],
-                get_simd_str(convert->getFunc()->simd));
+            write_log_auo_line_fmt(RGY_LOG_INFO, L"Convert %s -> %s [%s]",
+                tchar_to_wstring(RGY_CSP_NAMES[convert->getFunc()->csp_from]).c_str(),
+                tchar_to_wstring(RGY_CSP_NAMES[convert->getFunc()->csp_to]).c_str(),
+                tchar_to_wstring(get_simd_str(convert->getFunc()->simd)).c_str());
         }
     }
     dst_array[0] = inputbuf->ptr();
@@ -487,13 +487,18 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
 
     VCEParam enc_prm;
     parse_cmd(&enc_prm, conf->enc.cmd);
+
+    enc_prm.common.AVSyncMode = (conf->vid.afs) ? RGY_AVSYNC_VFR : RGY_AVSYNC_ASSUME_CFR;
     enc_prm.common.disableMp4Opt = pe->muxer_to_be_used != MUXER_DISABLED;
-    enc_prm.common.AVSyncMode = conf->vid.afs ? RGY_AVSYNC_VFR : RGY_AVSYNC_ASSUME_CFR;
     if (conf->vid.resize_enable) {
         enc_prm.input.dstWidth = conf->vid.resize_width;
         enc_prm.input.dstHeight = conf->vid.resize_height;
     }
-
+    if (conf->vid.afs && enc_prm.vpp.afs.enable) {
+        write_log_auo_line(LOG_ERROR, g_auo_mes.get(AUO_VIDEO_AFS_AVIUTL_AND_VPP_CONFLICT1));
+        write_log_auo_line(LOG_ERROR, g_auo_mes.get(AUO_VIDEO_AFS_AVIUTL_AND_VPP_CONFLICT2));
+        return AUO_RESULT_ERROR;
+    }
 
     if ((oip->flag & OUTPUT_INFO_FLAG_AUDIO) && conf->aud.use_internal) {
         if_valid_wait_for_single_object(pe->aud_parallel.he_vid_start, INFINITE);
@@ -546,7 +551,7 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
 
     //プロセス用情報準備
     if (!PathFileExists(sys_dat->exstg->s_vid.fullpath)) {
-        ret |= AUO_RESULT_ERROR; error_no_exe_file(ENCODER_NAME, sys_dat->exstg->s_vid.fullpath);
+        ret |= AUO_RESULT_ERROR; error_no_exe_file(ENCODER_NAME_W, sys_dat->exstg->s_vid.fullpath);
         return ret;
     }
     PathGetDirectory(exe_dir, _countof(exe_dir), sys_dat->exstg->s_vid.fullpath);
@@ -568,7 +573,7 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
 
     //コマンドライン生成
     build_full_cmd(exe_cmd, _countof(exe_cmd), conf, &enc_prm, oip, pe, sys_dat, PIPE_FN);
-    write_log_auo_line(LOG_INFO, "VCEEncC options...");
+    write_log_auo_line_fmt(LOG_INFO, L"%s options...", ENCODER_APP_NAME_W);
     write_args(exe_cmd);
     sprintf_s(exe_args, _countof(exe_args), "\"%s\" %s", sys_dat->exstg->s_vid.fullpath, exe_cmd);
     remove(pe->temp_filename); //ファイルサイズチェックの時に旧ファイルを参照してしまうのを回避
@@ -576,8 +581,7 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
     //パイプの設定
     pipes.stdErr.mode = AUO_PIPE_ENABLE;
 
-    DWORD tm_start = timeGetTime();
-    set_window_title("VCE エンコード", PROGRESSBAR_CONTINUOUS);
+    set_window_title(g_auo_mes.get(AUO_GUIEX_FULL_NAME), PROGRESSBAR_CONTINUOUS);
     log_process_events();
 
     HANDLE heBufEmpty[2] = { NULL, NULL }, heBufFilled[2] = { NULL, NULL };
@@ -599,8 +603,7 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
     } else if ((prmSM = video_create_param_mem(oip, afs, rgy_output_csp, enc_prm.input.picstruct, heBufEmpty, heBufFilled)) == nullptr || !prmSM->is_open()) {
         ret |= AUO_RESULT_ERROR; error_video_create_param_mem();
     } else if ((rp_ret = RunProcess(exe_args, exe_dir, &pi_enc, &pipes, GetPriorityClass(pe->h_p_aviutl), TRUE, FALSE)) != RP_SUCCESS) {
-        ret |= AUO_RESULT_ERROR; error_run_process("VCEEncC", rp_ret);
-
+        ret |= AUO_RESULT_ERROR; error_run_process(ENCODER_APP_NAME_W, rp_ret);
     } else {
         //全て正常
         int i = 0;
@@ -633,7 +636,7 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
 
         //ログウィンドウ側から制御を可能に
         DWORD tm_vid_enc_start = timeGetTime();
-        enable_enc_control(&enc_pause, afs, TRUE, tm_vid_enc_start, oip->n);
+        enable_enc_control(nullptr, &enc_pause, afs, TRUE, tm_vid_enc_start, oip->n);
 
         //------------メインループ------------
         for (i = 0, next_jitter = jitter + 1, pe->drop_count = 0; i < oip->n; i++, next_jitter++) {
@@ -774,13 +777,13 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
         while (ReadLogEnc(&pipes, pe->drop_count, i) > 0);
 
         if (!(ret & AUO_RESULT_ERROR) && afs)
-            write_log_auo_line_fmt(LOG_INFO, "drop %d / %d frames", pe->drop_count, i);
+            write_log_auo_line_fmt(LOG_INFO, L"drop %d / %d frames", pe->drop_count, i);
 
-        write_log_auo_line_fmt(LOG_INFO, "CPU使用率: Aviutl: %.2f%% / VCE: %.2f%%", GetProcessAvgCPUUsage(pe->h_p_aviutl, &time_aviutl), GetProcessAvgCPUUsage(pi_enc.hProcess));
-        if (i > 0) write_log_auo_line_fmt(LOG_INFO, "Aviutl 平均フレーム取得時間: %.3f ms", time_get_frame * 1000.0 / i);
-        write_log_auo_enc_time("VCEエンコード時間", tm_vid_enc_fin - tm_vid_enc_start);
+        write_log_auo_line_fmt(LOG_INFO, L"%s: Aviutl: %.2f%% / %s: %.2f%%", g_auo_mes.get(AUO_VIDEO_CPU_USAGE), GetProcessAvgCPUUsage(pe->h_p_aviutl, &time_aviutl), ENCODER_APP_NAME_W, GetProcessAvgCPUUsage(pi_enc.hProcess));
+        if (i > 0) write_log_auo_line_fmt(LOG_INFO, L"Aviutl %s: %.3f ms", g_auo_mes.get(AUO_VIDEO_AVIUTL_PROC_AVG_TIME), time_get_frame * 1000.0 / i);
+        write_log_auo_enc_time(g_auo_mes.get(AUO_VIDEO_ENCODE_TIME), tm_vid_enc_fin - tm_vid_enc_start);
     }
-    set_window_title(AUO_FULL_NAME, PROGRESSBAR_DISABLED);
+    set_window_title(g_auo_mes.get(AUO_GUIEX_FULL_NAME), PROGRESSBAR_DISABLED);
 
     for (int i = 0; i < 2; i++) {
         if (heBufEmpty[i]) CloseHandle(heBufEmpty[i]);

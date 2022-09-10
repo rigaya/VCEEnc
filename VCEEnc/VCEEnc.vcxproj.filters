@@ -111,6 +111,11 @@
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="VCEEnc.ini" />
+    <None Include="VCEEnc.en.lng" />
+    <None Include="VCEEnc.ja.lng" />
+    <None Include="VCEEnc.zh.lng" />
+    <None Include="VCEEnc.en.ini" />
+    <None Include="VCEEnc.zh.ini" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="auo.h">
