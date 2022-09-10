@@ -188,6 +188,7 @@ jobs:
           7z x -oAviutl_VCEEnc_release\exe_files\VCEEncC\x64\ VCEEncC_${{ needs.get_version_name.outputs.version_name }}_x64.7z
           copy /y _build\Win32\Release\VCEEnc.auo Aviutl_VCEEnc_release\plugins\
           copy /y VCEEnc\VCEEnc.ini Aviutl_VCEEnc_release\plugins\
+          copy /y VCEEnc\VCEEnc.en.ini Aviutl_VCEEnc_release\plugins\
           copy /y VCEEnc\auo_setup.ini Aviutl_VCEEnc_release\exe_files\
           copy /y VCEEnc\VCEEnc_readme.txt Aviutl_VCEEnc_release\
           echo D | xcopy /y /e VCEEnc\stg Aviutl_VCEEnc_release\plugins\VCEEnc_stg
