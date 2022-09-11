@@ -930,6 +930,7 @@ enum AuoMes {
             AuofrmTTfcgCXAudioEncoder,
             AuofrmTTfcgCBAudioOnly,
             AuofrmTTfcgCBFAWCheck,
+            AuofrmTTfcgCBAudioUseExt,
             AuofrmTTfcgBTAudioEncoderPath,
             AuofrmTTfcgCXAudioEncMode,
             AuofrmTTfcgCBAudio2pass,
