@@ -209,6 +209,19 @@ VCEEnc の Aviutl から削除するには、"plugins" フォルダ内の下記�
 
 ![削除](./data/VCEEnc_7_00_uninstall_01.png)
 
+## 多言語対応
+
+現在、日本語、英語の切り替えに対応しています。
+
+他の言語については、VCEEnc.auoと同じフォルダに下記2ファイルを置くことで、新たな言語を追加できます。
+
+| ファイル名 | 翻訳元 |
+|:---        |:---   |
+| VCEEnc.<2文字の言語コード>.lng | VCEEnc.ja.lng |
+| VCEEnc.<2文字の言語コード>.ini | VCEEnc.ja.ini |
+
+いずれもUTF-8で保存してください。
+
 ## ソースコードについて
 - MITライセンスです。
 - 本ソフトウェアは[AMD Media Framework](https://github.com/GPUOpen-LibrariesAndSDKs/AMF)のサンプルコードをベースに作成されており、

@@ -72,10 +72,12 @@ Debian/Ubuntu系 (VCEEncC)
 - 参照距離の設定
 - Bフレーム数の設定
 
-#### VCEEnc (Aviutlプラグイン)
+#### VCEEnc.auo (Aviutlプラグイン)
 - 音声エンコード
 - 音声及びチャプターとのmux機能
 - 自動フィールドシフト対応
+
+![VCEEnc.auo](./data/VCEEnc_auo_stg_window_ja.png)
 
 #### VCEEncC
 - avs, vpy, y4m, rawなど各種形式に対応

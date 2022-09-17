@@ -104,6 +104,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 - Audio encoding
 - Mux audio and chapter
 - afs (Automatic field shift) support
+
+![VCEEnc.auo](./data/VCEEnc_auo_stg_window_en.png)
   
 
 ## Supported HW Encode Codecs
