@@ -1328,6 +1328,11 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             this->fcgTTEx = (gcnew System::Windows::Forms::ToolTip(this->components));
             this->fcgtabControlVCE = (gcnew System::Windows::Forms::TabControl());
             this->tabPageVideoEnc = (gcnew System::Windows::Forms::TabPage());
+            this->fcgPNHEVCLevelProfile = (gcnew System::Windows::Forms::Panel());
+            this->fcgCXHEVCLevel = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgCXHEVCProfile = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgLBHEVCLevel = (gcnew System::Windows::Forms::Label());
+            this->fcgLBHEVCProfile = (gcnew System::Windows::Forms::Label());
             this->fcgCXBitdepth = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBBitdepth = (gcnew System::Windows::Forms::Label());
             this->fcgPNQP = (gcnew System::Windows::Forms::Panel());
@@ -1408,11 +1413,6 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             this->fcgNUBDeltaQP = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgLBBRefDeltaQP = (gcnew System::Windows::Forms::Label());
             this->fcgNUBRefDeltaQP = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgPNHEVCLevelProfile = (gcnew System::Windows::Forms::Panel());
-            this->fcgCXHEVCLevel = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgCXHEVCProfile = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgLBHEVCLevel = (gcnew System::Windows::Forms::Label());
-            this->fcgLBHEVCProfile = (gcnew System::Windows::Forms::Label());
             this->fcgPNH264Features = (gcnew System::Windows::Forms::Panel());
             this->fcgLBVBAQ = (gcnew System::Windows::Forms::Label());
             this->fcgCBVBAQ = (gcnew System::Windows::Forms::CheckBox());
@@ -1647,6 +1647,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             this->fcgtabPageInternal->SuspendLayout();
             this->fcgtabControlVCE->SuspendLayout();
             this->tabPageVideoEnc->SuspendLayout();
+            this->fcgPNHEVCLevelProfile->SuspendLayout();
             this->fcgPNQP->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPI))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPP))->BeginInit();
@@ -1670,7 +1671,6 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBframes))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBDeltaQP))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBRefDeltaQP))->BeginInit();
-            this->fcgPNHEVCLevelProfile->SuspendLayout();
             this->fcgPNH264Features->SuspendLayout();
             this->tabPageVideoEnc2->SuspendLayout();
             this->fcggroupBoxPreAnalysis->SuspendLayout();
@@ -2649,6 +2649,55 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             this->tabPageVideoEnc->Text = L"動画エンコード";
             this->tabPageVideoEnc->UseVisualStyleBackColor = true;
             // 
+            // fcgPNHEVCLevelProfile
+            // 
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCLevel);
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCProfile);
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCLevel);
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCProfile);
+            this->fcgPNHEVCLevelProfile->Location = System::Drawing::Point(346, 135);
+            this->fcgPNHEVCLevelProfile->Name = L"fcgPNHEVCLevelProfile";
+            this->fcgPNHEVCLevelProfile->Size = System::Drawing::Size(255, 63);
+            this->fcgPNHEVCLevelProfile->TabIndex = 110;
+            // 
+            // fcgCXHEVCLevel
+            // 
+            this->fcgCXHEVCLevel->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXHEVCLevel->FormattingEnabled = true;
+            this->fcgCXHEVCLevel->Location = System::Drawing::Point(112, 36);
+            this->fcgCXHEVCLevel->Name = L"fcgCXHEVCLevel";
+            this->fcgCXHEVCLevel->Size = System::Drawing::Size(121, 22);
+            this->fcgCXHEVCLevel->TabIndex = 104;
+            this->fcgCXHEVCLevel->Tag = L"reCmd";
+            // 
+            // fcgCXHEVCProfile
+            // 
+            this->fcgCXHEVCProfile->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXHEVCProfile->FormattingEnabled = true;
+            this->fcgCXHEVCProfile->Location = System::Drawing::Point(112, 4);
+            this->fcgCXHEVCProfile->Name = L"fcgCXHEVCProfile";
+            this->fcgCXHEVCProfile->Size = System::Drawing::Size(121, 22);
+            this->fcgCXHEVCProfile->TabIndex = 102;
+            this->fcgCXHEVCProfile->Tag = L"reCmd";
+            // 
+            // fcgLBHEVCLevel
+            // 
+            this->fcgLBHEVCLevel->AutoSize = true;
+            this->fcgLBHEVCLevel->Location = System::Drawing::Point(13, 39);
+            this->fcgLBHEVCLevel->Name = L"fcgLBHEVCLevel";
+            this->fcgLBHEVCLevel->Size = System::Drawing::Size(33, 14);
+            this->fcgLBHEVCLevel->TabIndex = 103;
+            this->fcgLBHEVCLevel->Text = L"レベル";
+            // 
+            // fcgLBHEVCProfile
+            // 
+            this->fcgLBHEVCProfile->AutoSize = true;
+            this->fcgLBHEVCProfile->Location = System::Drawing::Point(13, 7);
+            this->fcgLBHEVCProfile->Name = L"fcgLBHEVCProfile";
+            this->fcgLBHEVCProfile->Size = System::Drawing::Size(53, 14);
+            this->fcgLBHEVCProfile->TabIndex = 101;
+            this->fcgLBHEVCProfile->Text = L"プロファイル";
+            // 
             // fcgCXBitdepth
             // 
             this->fcgCXBitdepth->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
@@ -3445,55 +3494,6 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             this->fcgNUBRefDeltaQP->TabIndex = 58;
             this->fcgNUBRefDeltaQP->Tag = L"reCmd";
             this->fcgNUBRefDeltaQP->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            // 
-            // fcgPNHEVCLevelProfile
-            // 
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCLevel);
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCProfile);
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCLevel);
-            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCProfile);
-            this->fcgPNHEVCLevelProfile->Location = System::Drawing::Point(346, 135);
-            this->fcgPNHEVCLevelProfile->Name = L"fcgPNHEVCLevelProfile";
-            this->fcgPNHEVCLevelProfile->Size = System::Drawing::Size(255, 63);
-            this->fcgPNHEVCLevelProfile->TabIndex = 110;
-            // 
-            // fcgCXHEVCLevel
-            // 
-            this->fcgCXHEVCLevel->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXHEVCLevel->FormattingEnabled = true;
-            this->fcgCXHEVCLevel->Location = System::Drawing::Point(112, 36);
-            this->fcgCXHEVCLevel->Name = L"fcgCXHEVCLevel";
-            this->fcgCXHEVCLevel->Size = System::Drawing::Size(121, 22);
-            this->fcgCXHEVCLevel->TabIndex = 104;
-            this->fcgCXHEVCLevel->Tag = L"reCmd";
-            // 
-            // fcgCXHEVCProfile
-            // 
-            this->fcgCXHEVCProfile->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXHEVCProfile->FormattingEnabled = true;
-            this->fcgCXHEVCProfile->Location = System::Drawing::Point(112, 4);
-            this->fcgCXHEVCProfile->Name = L"fcgCXHEVCProfile";
-            this->fcgCXHEVCProfile->Size = System::Drawing::Size(121, 22);
-            this->fcgCXHEVCProfile->TabIndex = 102;
-            this->fcgCXHEVCProfile->Tag = L"reCmd";
-            // 
-            // fcgLBHEVCLevel
-            // 
-            this->fcgLBHEVCLevel->AutoSize = true;
-            this->fcgLBHEVCLevel->Location = System::Drawing::Point(13, 39);
-            this->fcgLBHEVCLevel->Name = L"fcgLBHEVCLevel";
-            this->fcgLBHEVCLevel->Size = System::Drawing::Size(33, 14);
-            this->fcgLBHEVCLevel->TabIndex = 103;
-            this->fcgLBHEVCLevel->Text = L"レベル";
-            // 
-            // fcgLBHEVCProfile
-            // 
-            this->fcgLBHEVCProfile->AutoSize = true;
-            this->fcgLBHEVCProfile->Location = System::Drawing::Point(13, 7);
-            this->fcgLBHEVCProfile->Name = L"fcgLBHEVCProfile";
-            this->fcgLBHEVCProfile->Size = System::Drawing::Size(53, 14);
-            this->fcgLBHEVCProfile->TabIndex = 101;
-            this->fcgLBHEVCProfile->Text = L"プロファイル";
             // 
             // fcgPNH264Features
             // 
@@ -4734,10 +4734,10 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgTBVppAfsThreCMotion
             // 
             this->fcgTBVppAfsThreCMotion->AutoSize = false;
-            this->fcgTBVppAfsThreCMotion->Location = System::Drawing::Point(60, 179);
+            this->fcgTBVppAfsThreCMotion->Location = System::Drawing::Point(70, 179);
             this->fcgTBVppAfsThreCMotion->Maximum = 1024;
             this->fcgTBVppAfsThreCMotion->Name = L"fcgTBVppAfsThreCMotion";
-            this->fcgTBVppAfsThreCMotion->Size = System::Drawing::Size(115, 18);
+            this->fcgTBVppAfsThreCMotion->Size = System::Drawing::Size(112, 18);
             this->fcgTBVppAfsThreCMotion->TabIndex = 24;
             this->fcgTBVppAfsThreCMotion->TickStyle = System::Windows::Forms::TickStyle::None;
             this->fcgTBVppAfsThreCMotion->Scroll += gcnew System::EventHandler(this, &frmConfig::fcgTBVppAfsScroll);
@@ -4745,7 +4745,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgLBVppAfsThreCMotion
             // 
             this->fcgLBVppAfsThreCMotion->AutoSize = true;
-            this->fcgLBVppAfsThreCMotion->Location = System::Drawing::Point(9, 179);
+            this->fcgLBVppAfsThreCMotion->Location = System::Drawing::Point(5, 179);
             this->fcgLBVppAfsThreCMotion->Name = L"fcgLBVppAfsThreCMotion";
             this->fcgLBVppAfsThreCMotion->Size = System::Drawing::Size(33, 14);
             this->fcgLBVppAfsThreCMotion->TabIndex = 23;
@@ -4754,10 +4754,10 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgTBVppAfsThreYMotion
             // 
             this->fcgTBVppAfsThreYMotion->AutoSize = false;
-            this->fcgTBVppAfsThreYMotion->Location = System::Drawing::Point(60, 154);
+            this->fcgTBVppAfsThreYMotion->Location = System::Drawing::Point(70, 154);
             this->fcgTBVppAfsThreYMotion->Maximum = 1024;
             this->fcgTBVppAfsThreYMotion->Name = L"fcgTBVppAfsThreYMotion";
-            this->fcgTBVppAfsThreYMotion->Size = System::Drawing::Size(115, 18);
+            this->fcgTBVppAfsThreYMotion->Size = System::Drawing::Size(112, 18);
             this->fcgTBVppAfsThreYMotion->TabIndex = 21;
             this->fcgTBVppAfsThreYMotion->TickStyle = System::Windows::Forms::TickStyle::None;
             this->fcgTBVppAfsThreYMotion->Scroll += gcnew System::EventHandler(this, &frmConfig::fcgTBVppAfsScroll);
@@ -4765,7 +4765,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgLBVppAfsThreYmotion
             // 
             this->fcgLBVppAfsThreYmotion->AutoSize = true;
-            this->fcgLBVppAfsThreYmotion->Location = System::Drawing::Point(9, 154);
+            this->fcgLBVppAfsThreYmotion->Location = System::Drawing::Point(5, 154);
             this->fcgLBVppAfsThreYmotion->Name = L"fcgLBVppAfsThreYmotion";
             this->fcgLBVppAfsThreYmotion->Size = System::Drawing::Size(33, 14);
             this->fcgLBVppAfsThreYmotion->TabIndex = 20;
@@ -4774,10 +4774,10 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgTBVppAfsThreDeint
             // 
             this->fcgTBVppAfsThreDeint->AutoSize = false;
-            this->fcgTBVppAfsThreDeint->Location = System::Drawing::Point(60, 129);
+            this->fcgTBVppAfsThreDeint->Location = System::Drawing::Point(70, 129);
             this->fcgTBVppAfsThreDeint->Maximum = 1024;
             this->fcgTBVppAfsThreDeint->Name = L"fcgTBVppAfsThreDeint";
-            this->fcgTBVppAfsThreDeint->Size = System::Drawing::Size(115, 18);
+            this->fcgTBVppAfsThreDeint->Size = System::Drawing::Size(112, 18);
             this->fcgTBVppAfsThreDeint->TabIndex = 18;
             this->fcgTBVppAfsThreDeint->TickStyle = System::Windows::Forms::TickStyle::None;
             this->fcgTBVppAfsThreDeint->Scroll += gcnew System::EventHandler(this, &frmConfig::fcgTBVppAfsScroll);
@@ -4785,7 +4785,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgLBVppAfsThreDeint
             // 
             this->fcgLBVppAfsThreDeint->AutoSize = true;
-            this->fcgLBVppAfsThreDeint->Location = System::Drawing::Point(9, 129);
+            this->fcgLBVppAfsThreDeint->Location = System::Drawing::Point(5, 129);
             this->fcgLBVppAfsThreDeint->Name = L"fcgLBVppAfsThreDeint";
             this->fcgLBVppAfsThreDeint->Size = System::Drawing::Size(50, 14);
             this->fcgLBVppAfsThreDeint->TabIndex = 17;
@@ -4794,10 +4794,10 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgTBVppAfsThreShift
             // 
             this->fcgTBVppAfsThreShift->AutoSize = false;
-            this->fcgTBVppAfsThreShift->Location = System::Drawing::Point(60, 104);
+            this->fcgTBVppAfsThreShift->Location = System::Drawing::Point(70, 104);
             this->fcgTBVppAfsThreShift->Maximum = 1024;
             this->fcgTBVppAfsThreShift->Name = L"fcgTBVppAfsThreShift";
-            this->fcgTBVppAfsThreShift->Size = System::Drawing::Size(115, 18);
+            this->fcgTBVppAfsThreShift->Size = System::Drawing::Size(112, 18);
             this->fcgTBVppAfsThreShift->TabIndex = 15;
             this->fcgTBVppAfsThreShift->TickStyle = System::Windows::Forms::TickStyle::None;
             this->fcgTBVppAfsThreShift->Scroll += gcnew System::EventHandler(this, &frmConfig::fcgTBVppAfsScroll);
@@ -4805,7 +4805,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgLBVppAfsThreShift
             // 
             this->fcgLBVppAfsThreShift->AutoSize = true;
-            this->fcgLBVppAfsThreShift->Location = System::Drawing::Point(9, 104);
+            this->fcgLBVppAfsThreShift->Location = System::Drawing::Point(5, 104);
             this->fcgLBVppAfsThreShift->Name = L"fcgLBVppAfsThreShift";
             this->fcgLBVppAfsThreShift->Size = System::Drawing::Size(46, 14);
             this->fcgLBVppAfsThreShift->TabIndex = 14;
@@ -4814,10 +4814,10 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgTBVppAfsCoeffShift
             // 
             this->fcgTBVppAfsCoeffShift->AutoSize = false;
-            this->fcgTBVppAfsCoeffShift->Location = System::Drawing::Point(60, 79);
+            this->fcgTBVppAfsCoeffShift->Location = System::Drawing::Point(70, 79);
             this->fcgTBVppAfsCoeffShift->Maximum = 256;
             this->fcgTBVppAfsCoeffShift->Name = L"fcgTBVppAfsCoeffShift";
-            this->fcgTBVppAfsCoeffShift->Size = System::Drawing::Size(115, 18);
+            this->fcgTBVppAfsCoeffShift->Size = System::Drawing::Size(112, 18);
             this->fcgTBVppAfsCoeffShift->TabIndex = 12;
             this->fcgTBVppAfsCoeffShift->TickStyle = System::Windows::Forms::TickStyle::None;
             this->fcgTBVppAfsCoeffShift->Scroll += gcnew System::EventHandler(this, &frmConfig::fcgTBVppAfsScroll);
@@ -4825,7 +4825,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgLBVppAfsCoeffShift
             // 
             this->fcgLBVppAfsCoeffShift->AutoSize = true;
-            this->fcgLBVppAfsCoeffShift->Location = System::Drawing::Point(9, 79);
+            this->fcgLBVppAfsCoeffShift->Location = System::Drawing::Point(5, 79);
             this->fcgLBVppAfsCoeffShift->Name = L"fcgLBVppAfsCoeffShift";
             this->fcgLBVppAfsCoeffShift->Size = System::Drawing::Size(40, 14);
             this->fcgLBVppAfsCoeffShift->TabIndex = 11;
@@ -4834,7 +4834,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgLBVppAfsRight
             // 
             this->fcgLBVppAfsRight->AutoSize = true;
-            this->fcgLBVppAfsRight->Location = System::Drawing::Point(163, 29);
+            this->fcgLBVppAfsRight->Location = System::Drawing::Point(168, 29);
             this->fcgLBVppAfsRight->Name = L"fcgLBVppAfsRight";
             this->fcgLBVppAfsRight->Size = System::Drawing::Size(18, 14);
             this->fcgLBVppAfsRight->TabIndex = 6;
@@ -4843,7 +4843,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgLBVppAfsLeft
             // 
             this->fcgLBVppAfsLeft->AutoSize = true;
-            this->fcgLBVppAfsLeft->Location = System::Drawing::Point(57, 29);
+            this->fcgLBVppAfsLeft->Location = System::Drawing::Point(62, 29);
             this->fcgLBVppAfsLeft->Name = L"fcgLBVppAfsLeft";
             this->fcgLBVppAfsLeft->Size = System::Drawing::Size(18, 14);
             this->fcgLBVppAfsLeft->TabIndex = 4;
@@ -4852,7 +4852,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgLBVppAfsBottom
             // 
             this->fcgLBVppAfsBottom->AutoSize = true;
-            this->fcgLBVppAfsBottom->Location = System::Drawing::Point(163, 4);
+            this->fcgLBVppAfsBottom->Location = System::Drawing::Point(168, 4);
             this->fcgLBVppAfsBottom->Name = L"fcgLBVppAfsBottom";
             this->fcgLBVppAfsBottom->Size = System::Drawing::Size(18, 14);
             this->fcgLBVppAfsBottom->TabIndex = 2;
@@ -4861,7 +4861,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgLBVppAfsUp
             // 
             this->fcgLBVppAfsUp->AutoSize = true;
-            this->fcgLBVppAfsUp->Location = System::Drawing::Point(57, 4);
+            this->fcgLBVppAfsUp->Location = System::Drawing::Point(62, 4);
             this->fcgLBVppAfsUp->Name = L"fcgLBVppAfsUp";
             this->fcgLBVppAfsUp->Size = System::Drawing::Size(18, 14);
             this->fcgLBVppAfsUp->TabIndex = 0;
@@ -4870,7 +4870,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgNUVppAfsRight
             // 
             this->fcgNUVppAfsRight->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 8, 0, 0, 0 });
-            this->fcgNUVppAfsRight->Location = System::Drawing::Point(181, 27);
+            this->fcgNUVppAfsRight->Location = System::Drawing::Point(186, 27);
             this->fcgNUVppAfsRight->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 8192, 0, 0, 0 });
             this->fcgNUVppAfsRight->Name = L"fcgNUVppAfsRight";
             this->fcgNUVppAfsRight->Size = System::Drawing::Size(60, 21);
@@ -4881,7 +4881,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgNUVppAfsLeft
             // 
             this->fcgNUVppAfsLeft->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 8, 0, 0, 0 });
-            this->fcgNUVppAfsLeft->Location = System::Drawing::Point(77, 27);
+            this->fcgNUVppAfsLeft->Location = System::Drawing::Point(82, 27);
             this->fcgNUVppAfsLeft->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 8192, 0, 0, 0 });
             this->fcgNUVppAfsLeft->Name = L"fcgNUVppAfsLeft";
             this->fcgNUVppAfsLeft->Size = System::Drawing::Size(60, 21);
@@ -4892,7 +4892,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgNUVppAfsBottom
             // 
             this->fcgNUVppAfsBottom->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 8, 0, 0, 0 });
-            this->fcgNUVppAfsBottom->Location = System::Drawing::Point(181, 2);
+            this->fcgNUVppAfsBottom->Location = System::Drawing::Point(186, 2);
             this->fcgNUVppAfsBottom->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 4096, 0, 0, 0 });
             this->fcgNUVppAfsBottom->Name = L"fcgNUVppAfsBottom";
             this->fcgNUVppAfsBottom->Size = System::Drawing::Size(60, 21);
@@ -4903,7 +4903,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgNUVppAfsUp
             // 
             this->fcgNUVppAfsUp->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 8, 0, 0, 0 });
-            this->fcgNUVppAfsUp->Location = System::Drawing::Point(77, 2);
+            this->fcgNUVppAfsUp->Location = System::Drawing::Point(82, 2);
             this->fcgNUVppAfsUp->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 4096, 0, 0, 0 });
             this->fcgNUVppAfsUp->Name = L"fcgNUVppAfsUp";
             this->fcgNUVppAfsUp->Size = System::Drawing::Size(60, 21);
@@ -4914,10 +4914,10 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgTBVppAfsMethodSwitch
             // 
             this->fcgTBVppAfsMethodSwitch->AutoSize = false;
-            this->fcgTBVppAfsMethodSwitch->Location = System::Drawing::Point(60, 54);
+            this->fcgTBVppAfsMethodSwitch->Location = System::Drawing::Point(70, 54);
             this->fcgTBVppAfsMethodSwitch->Maximum = 256;
             this->fcgTBVppAfsMethodSwitch->Name = L"fcgTBVppAfsMethodSwitch";
-            this->fcgTBVppAfsMethodSwitch->Size = System::Drawing::Size(115, 18);
+            this->fcgTBVppAfsMethodSwitch->Size = System::Drawing::Size(112, 18);
             this->fcgTBVppAfsMethodSwitch->TabIndex = 9;
             this->fcgTBVppAfsMethodSwitch->TickStyle = System::Windows::Forms::TickStyle::None;
             this->fcgTBVppAfsMethodSwitch->Scroll += gcnew System::EventHandler(this, &frmConfig::fcgTBVppAfsScroll);
@@ -4980,7 +4980,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgLBVppAfsAnalyze
             // 
             this->fcgLBVppAfsAnalyze->AutoSize = true;
-            this->fcgLBVppAfsAnalyze->Location = System::Drawing::Point(9, 207);
+            this->fcgLBVppAfsAnalyze->Location = System::Drawing::Point(5, 207);
             this->fcgLBVppAfsAnalyze->Name = L"fcgLBVppAfsAnalyze";
             this->fcgLBVppAfsAnalyze->Size = System::Drawing::Size(41, 14);
             this->fcgLBVppAfsAnalyze->TabIndex = 26;
@@ -4988,7 +4988,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // 
             // fcgNUVppAfsThreCMotion
             // 
-            this->fcgNUVppAfsThreCMotion->Location = System::Drawing::Point(181, 179);
+            this->fcgNUVppAfsThreCMotion->Location = System::Drawing::Point(186, 179);
             this->fcgNUVppAfsThreCMotion->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1024, 0, 0, 0 });
             this->fcgNUVppAfsThreCMotion->Name = L"fcgNUVppAfsThreCMotion";
             this->fcgNUVppAfsThreCMotion->Size = System::Drawing::Size(60, 21);
@@ -4999,7 +4999,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // 
             // fcgNUVppAfsThreShift
             // 
-            this->fcgNUVppAfsThreShift->Location = System::Drawing::Point(181, 104);
+            this->fcgNUVppAfsThreShift->Location = System::Drawing::Point(186, 104);
             this->fcgNUVppAfsThreShift->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1024, 0, 0, 0 });
             this->fcgNUVppAfsThreShift->Name = L"fcgNUVppAfsThreShift";
             this->fcgNUVppAfsThreShift->Size = System::Drawing::Size(60, 21);
@@ -5010,7 +5010,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // 
             // fcgNUVppAfsThreDeint
             // 
-            this->fcgNUVppAfsThreDeint->Location = System::Drawing::Point(181, 129);
+            this->fcgNUVppAfsThreDeint->Location = System::Drawing::Point(186, 129);
             this->fcgNUVppAfsThreDeint->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1024, 0, 0, 0 });
             this->fcgNUVppAfsThreDeint->Name = L"fcgNUVppAfsThreDeint";
             this->fcgNUVppAfsThreDeint->Size = System::Drawing::Size(60, 21);
@@ -5021,7 +5021,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // 
             // fcgNUVppAfsThreYMotion
             // 
-            this->fcgNUVppAfsThreYMotion->Location = System::Drawing::Point(181, 154);
+            this->fcgNUVppAfsThreYMotion->Location = System::Drawing::Point(186, 154);
             this->fcgNUVppAfsThreYMotion->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1024, 0, 0, 0 });
             this->fcgNUVppAfsThreYMotion->Name = L"fcgNUVppAfsThreYMotion";
             this->fcgNUVppAfsThreYMotion->Size = System::Drawing::Size(60, 21);
@@ -5033,7 +5033,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // fcgLBVppAfsMethodSwitch
             // 
             this->fcgLBVppAfsMethodSwitch->AutoSize = true;
-            this->fcgLBVppAfsMethodSwitch->Location = System::Drawing::Point(9, 54);
+            this->fcgLBVppAfsMethodSwitch->Location = System::Drawing::Point(5, 54);
             this->fcgLBVppAfsMethodSwitch->Name = L"fcgLBVppAfsMethodSwitch";
             this->fcgLBVppAfsMethodSwitch->Size = System::Drawing::Size(40, 14);
             this->fcgLBVppAfsMethodSwitch->TabIndex = 8;
@@ -5043,15 +5043,15 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // 
             this->fcgCXVppAfsAnalyze->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
             this->fcgCXVppAfsAnalyze->FormattingEnabled = true;
-            this->fcgCXVppAfsAnalyze->Location = System::Drawing::Point(60, 204);
+            this->fcgCXVppAfsAnalyze->Location = System::Drawing::Point(70, 204);
             this->fcgCXVppAfsAnalyze->Name = L"fcgCXVppAfsAnalyze";
-            this->fcgCXVppAfsAnalyze->Size = System::Drawing::Size(181, 22);
+            this->fcgCXVppAfsAnalyze->Size = System::Drawing::Size(176, 22);
             this->fcgCXVppAfsAnalyze->TabIndex = 27;
             this->fcgCXVppAfsAnalyze->Tag = L"reCmd";
             // 
             // fcgNUVppAfsCoeffShift
             // 
-            this->fcgNUVppAfsCoeffShift->Location = System::Drawing::Point(181, 79);
+            this->fcgNUVppAfsCoeffShift->Location = System::Drawing::Point(186, 79);
             this->fcgNUVppAfsCoeffShift->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 256, 0, 0, 0 });
             this->fcgNUVppAfsCoeffShift->Name = L"fcgNUVppAfsCoeffShift";
             this->fcgNUVppAfsCoeffShift->Size = System::Drawing::Size(60, 21);
@@ -5062,7 +5062,7 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             // 
             // fcgNUVppAfsMethodSwitch
             // 
-            this->fcgNUVppAfsMethodSwitch->Location = System::Drawing::Point(181, 54);
+            this->fcgNUVppAfsMethodSwitch->Location = System::Drawing::Point(186, 54);
             this->fcgNUVppAfsMethodSwitch->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 256, 0, 0, 0 });
             this->fcgNUVppAfsMethodSwitch->Name = L"fcgNUVppAfsMethodSwitch";
             this->fcgNUVppAfsMethodSwitch->Size = System::Drawing::Size(60, 21);
@@ -5972,6 +5972,8 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             this->fcgtabControlVCE->ResumeLayout(false);
             this->tabPageVideoEnc->ResumeLayout(false);
             this->tabPageVideoEnc->PerformLayout();
+            this->fcgPNHEVCLevelProfile->ResumeLayout(false);
+            this->fcgPNHEVCLevelProfile->PerformLayout();
             this->fcgPNQP->ResumeLayout(false);
             this->fcgPNQP->PerformLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPI))->EndInit();
@@ -6000,8 +6002,6 @@ private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBframes))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBDeltaQP))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUBRefDeltaQP))->EndInit();
-            this->fcgPNHEVCLevelProfile->ResumeLayout(false);
-            this->fcgPNHEVCLevelProfile->PerformLayout();
             this->fcgPNH264Features->ResumeLayout(false);
             this->fcgPNH264Features->PerformLayout();
             this->tabPageVideoEnc2->ResumeLayout(false);
