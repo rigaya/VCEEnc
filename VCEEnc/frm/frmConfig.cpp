@@ -2001,8 +2001,8 @@ System::Void frmConfig::SetHelpToolTips() {
         + LOAD_CLI_STRING(aspect_desc[1].mes) + L"\n"
         + L"   " + LOAD_CLI_STRING(AuofrmTTfcgCXAspectRatioDAR) + L"\n"
     );
-    SET_TOOL_TIP_EX(fcgNUAspectRatioX, fcgNUAspectRatioX);
-    SET_TOOL_TIP_EX(fcgNUAspectRatioY, fcgNUAspectRatioY);
+    SET_TOOL_TIP_EX(fcgNUAspectRatioX);
+    SET_TOOL_TIP_EX(fcgNUAspectRatioY);
 
     //フィルタ
     SET_TOOL_TIP_EX(fcgCBVppResize);
