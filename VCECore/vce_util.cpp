@@ -278,7 +278,7 @@ VideoInfo videooutputinfo(
     info.codec = codec;
     info.codecLevel = prm.get<int>(AMF_PARAM_PROFILE_LEVEL(codec));
     info.codecProfile = prm.get<int>(AMF_PARAM_PROFILE(codec));
-    info.videoDelay = ((bframes > 0) + (bframes > 2));
+    info.videoDelay = (codec == RGY_CODEC_AV1) ? 0 : ((bframes > 0) + (bframes > 2));
     info.dstWidth = prm.get<int>(VCE_PARAM_KEY_OUTPUT_WIDTH);
     info.dstHeight = prm.get<int>(VCE_PARAM_KEY_OUTPUT_HEIGHT);
     info.fpsN = prm.get<AMFRate>(AMF_PARAM_FRAMERATE(codec)).num;
