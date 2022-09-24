@@ -163,7 +163,7 @@ protected:
 #endif //#if ENABLE_AVSW_READER
     unique_ptr<RGYTimecode>       m_timecode;
     unique_ptr<RGYHDR10Plus>      m_hdr10plus;
-    unique_ptr<HEVCHDRSei>        m_hdrsei;
+    unique_ptr<RGYHDRMetadata>        m_hdrsei;
 
     sTrimParam m_trimParam;
     std::unique_ptr<RGYPoolAVPacket> m_poolPkt;
