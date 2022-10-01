@@ -161,9 +161,12 @@ protected:
     vector<int>                   m_keyFile;             //キーフレームの指定
     vector<unique_ptr<AVChapter>> m_Chapters;            //ファイルから読み込んだチャプター
 #endif //#if ENABLE_AVSW_READER
-    unique_ptr<RGYTimecode>       m_timecode;
-    unique_ptr<RGYHDR10Plus>      m_hdr10plus;
-    unique_ptr<RGYHDRMetadata>        m_hdrsei;
+    std::unique_ptr<RGYTimecode>     m_timecode;
+    std::unique_ptr<RGYHDR10Plus>    m_hdr10plus;
+    bool                             m_hdr10plusMetadataCopy;
+    std::unique_ptr<RGYHDRMetadata>  m_hdrsei;
+    std::unique_ptr<DOVIRpu>         m_dovirpu;
+    std::unique_ptr<RGYTimestamp>    m_encTimestamp;
 
     sTrimParam m_trimParam;
     std::unique_ptr<RGYPoolAVPacket> m_poolPkt;

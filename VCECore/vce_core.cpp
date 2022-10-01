@@ -107,7 +107,10 @@ VCECore::VCECore() :
 #endif
     m_timecode(),
     m_hdr10plus(),
+    m_hdr10plusMetadataCopy(false),
     m_hdrsei(),
+    m_dovirpu(),
+    m_encTimestamp(),
     m_trimParam(),
     m_poolPkt(),
     m_poolFrame(),
@@ -201,6 +204,9 @@ void VCECore::Terminate() {
     m_Chapters.clear();
     m_keyFile.clear();
     m_hdr10plus.reset();
+    m_hdrsei.reset();
+    m_dovirpu.reset();
+    m_encTimestamp.reset();
     m_pPerfMonitor.reset();
     m_pStatus.reset();
     m_tracer.reset();
@@ -491,19 +497,38 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCE
         PrintMes(RGY_LOG_DEBUG, _T("vfr mode automatically enabled with timebase %d/%d\n"), m_outputTimebase.n(), m_outputTimebase.d());
     }
 #endif
-#if ENCODER_NVENC
     if (inputParam->common.dynamicHdr10plusJson.length() > 0) {
-        m_hdr10plus = initDynamicHDR10Plus(inputParam->common.dynamicHdr10plusJson, m_pNVLog);
+        m_hdr10plus = initDynamicHDR10Plus(inputParam->common.dynamicHdr10plusJson, m_pLog);
         if (!m_hdr10plus) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to initialize hdr10plus reader.\n"));
-            return NV_ENC_ERR_GENERIC;
+            return RGY_ERR_UNKNOWN;
         }
+    } else if (inputParam->common.hdr10plusMetadataCopy) {
+        m_hdr10plusMetadataCopy = true;
+        if (pAVCodecReader != nullptr) {
+            const auto timestamp_status = pAVCodecReader->GetFramePosList()->getStreamPtsStatus();
+            if ((timestamp_status & (~RGY_PTS_NORMAL)) != 0) {
+                PrintMes(RGY_LOG_ERROR, _T("HDR10+ dynamic metadata cannot be copied from input file using avhw reader, as timestamp was not properly got from input file.\n"));
+                PrintMes(RGY_LOG_ERROR, _T("Please consider using avsw reader.\n"));
+                return RGY_ERR_UNSUPPORTED;
+            }
+        }
+    }
+    if (inputParam->common.doviRpuFile.length() > 0) {
+        m_dovirpu = std::make_unique<DOVIRpu>();
+        if (m_dovirpu->init(inputParam->common.doviRpuFile.c_str()) != 0) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to open dovi rpu \"%s\".\n"), inputParam->common.doviRpuFile.c_str());
+            return RGY_ERR_FILE_OPEN;
+        }
+    }
+
+    m_hdrsei = createHEVCHDRSei(inputParam->common.maxCll, inputParam->common.masterDisplay, inputParam->common.atcSei, m_pFileReader.get());
+    if (!m_hdrsei) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to parse HEVC HDR10 metadata.\n"));
+        return RGY_ERR_UNSUPPORTED;
     }
 #endif
     return RGY_ERR_NONE;
-#else
-    return RGY_ERR_UNSUPPORTED;
-#endif //#if ENABLE_RAW_READER
 }
 
 RGY_ERR VCECore::checkParam(VCEParam *prm) {
@@ -639,7 +664,7 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
 
     auto err = initWriters(m_pFileWriter, m_pFileWriterListAudio, m_pFileReader, m_AudioReaders,
         &inputParams->common, &inputParams->input, &inputParams->ctrl, outputVideoInfo,
-        m_trimParam, m_outputTimebase, m_Chapters, m_hdrsei.get(), nullptr, nullptr, false, false,
+        m_trimParam, m_outputTimebase, m_Chapters, m_hdrsei.get(), m_dovirpu.get(), m_encTimestamp.get(), false, false,
         m_poolPkt.get(), m_poolFrame.get(), m_pStatus, m_pPerfMonitor, m_pLog);
     if (err != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("failed to initialize file reader(s).\n"));
@@ -2503,6 +2528,8 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
+    m_encTimestamp = std::make_unique<RGYTimestamp>();
+
     if (RGY_ERR_NONE != (ret = initPowerThrottoling(prm))) {
         return ret;
     }
@@ -3009,6 +3036,8 @@ RGY_ERR VCECore::run() {
         int64_t pts = encFrame->timestamp();
         int64_t duration = encFrame->duration();
         amf::AMFSurfacePtr pSurface = encFrame->detachSurface();
+        auto frameDataList = encFrame->dataList();
+        const auto inputFrameId = encFrame->inputFrameId();
         //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
         pSurface->SetFrameType(amf::AMF_FRAME_PROGRESSIVE);
         //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
@@ -3024,9 +3053,30 @@ RGY_ERR VCECore::run() {
 
         pSurface->SetProperty(AMF_PARAM_STATISTICS_FEEDBACK(m_encCodec), true);
 
+        std::vector<std::shared_ptr<RGYFrameData>> metadatalist;
+        if (m_encCodec == RGY_CODEC_HEVC || m_encCodec == RGY_CODEC_AV1) {
+            if (m_hdr10plus) {
+                if (const auto data = m_hdr10plus->getData(inputFrameId); data) {
+                    metadatalist.push_back(std::make_shared<RGYFrameDataHDR10plus>(data->data(), data->size(), pts));
+                }
+            } else if (frameDataList.size() > 0) {
+                if (auto data = std::find_if(frameDataList.begin(), frameDataList.end(), [](const std::shared_ptr<RGYFrameData>& frameData) {
+                    return frameData->dataType() == RGY_FRAME_DATA_HDR10PLUS;
+                }); data != frameDataList.end()) {
+                    metadatalist.push_back(*data);
+                }
+            }
+            if (auto data = std::find_if(frameDataList.begin(), frameDataList.end(), [](const std::shared_ptr<RGYFrameData>& frameData) {
+                return frameData->dataType() == RGY_FRAME_DATA_DOVIRPU;
+            }); data != frameDataList.end()) {
+                metadatalist.push_back(*data);
+            }
+        }
+
         if (m_timecode) {
             m_timecode->write(pts, m_outputTimebase);
         }
+        m_encTimestamp->add(pts, inputFrameId, duration, metadatalist);
 
         auto ar = AMF_OK;
         do {
@@ -3476,6 +3526,11 @@ tstring VCECore::GetEncoderParam() {
     if (vui_str.length() > 0) {
         mes += strsprintf(_T("VUI:              %s\n"), vui_str.c_str());
     }
+    }
+    if (m_hdr10plus) {
+        mes += strsprintf( _T("Dynamic HDR10     %s\n"), m_hdr10plus->inputJson().c_str());
+    } else if (m_hdr10plusMetadataCopy) {
+        mes += strsprintf( _T("Dynamic HDR10     copy\n"));
     }
     if (m_hdrsei) {
         const auto masterdisplay = m_hdrsei->print_masterdisplay();
