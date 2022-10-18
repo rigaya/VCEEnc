@@ -3032,7 +3032,8 @@ RGY_ERR VCECore::run() {
         return RGY_ERR_NONE;
     };
 
-    auto send_encoder = [this](unique_ptr<RGYFrame>& encFrame) {
+    int64_t encodeFrameId = 0;
+    auto send_encoder = [&](unique_ptr<RGYFrame>& encFrame) {
         int64_t pts = encFrame->timestamp();
         int64_t duration = encFrame->duration();
         amf::AMFSurfacePtr pSurface = encFrame->detachSurface();
@@ -3076,7 +3077,8 @@ RGY_ERR VCECore::run() {
         if (m_timecode) {
             m_timecode->write(pts, m_outputTimebase);
         }
-        m_encTimestamp->add(pts, inputFrameId, duration, metadatalist);
+        m_encTimestamp->add(pts, inputFrameId, encodeFrameId, duration, metadatalist);
+        encodeFrameId++;
 
         auto ar = AMF_OK;
         do {
