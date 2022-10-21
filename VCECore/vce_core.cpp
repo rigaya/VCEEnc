@@ -3054,9 +3054,9 @@ RGY_ERR VCECore::run() {
     auto send_encoder = [&](unique_ptr<RGYFrame>& encFrame) {
         int64_t pts = encFrame->timestamp();
         int64_t duration = encFrame->duration();
-        amf::AMFSurfacePtr pSurface = encFrame->detachSurface();
         auto frameDataList = encFrame->dataList();
         const auto inputFrameId = encFrame->inputFrameId();
+        amf::AMFSurfacePtr pSurface = encFrame->detachSurface();
         //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
         pSurface->SetFrameType(amf::AMF_FRAME_PROGRESSIVE);
         //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
