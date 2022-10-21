@@ -1642,6 +1642,13 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             return RGY_ERR_UNSUPPORTED;
         }
 
+        if (   prm->rateControl == get_codec_hqvbr(prm->codec)
+            || prm->rateControl == get_codec_hqcbr(prm->codec)
+            || prm->rateControl == get_codec_qvbr(prm->codec)) {
+            PrintMes(RGY_LOG_INFO, _T("Pre-analysis will be enabled for %s mode.\n"), get_cx_desc(get_rc_method(prm->codec), prm->rateControl));
+            prm->pa.enable = true;
+        }
+
         if (prm->pa.enable) {
             bool preAnalysisSupported = false;
             encoderCaps->GetProperty(AMF_PARAM_CAP_PRE_ANALYSIS(prm->codec), &preAnalysisSupported);
@@ -1834,16 +1841,17 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
     m_params.SetParam(AMF_PARAM_ENFORCE_HRD(prm->codec),        prm->bEnforceHRD != 0);
     m_params.SetParam(AMF_PARAM_FILLER_DATA_ENABLE(prm->codec), prm->bFiller != 0);
-    if (prm->bVBAQ) m_params.SetParam(AMF_PARAM_ENABLE_VBAQ(prm->codec), true);
     m_params.SetParam(AMF_PARAM_SLICES_PER_FRAME(prm->codec),               (amf_int64)prm->nSlices);
     m_params.SetParam(AMF_PARAM_GOP_SIZE(prm->codec),                       (amf_int64)nGOPLen);
 
-    m_params.SetParam(AMF_PARAM_PREENCODE_ENABLE(prm->codec), prm->pe);
     if (prm->pa.enable &&
         (   prm->rateControl != get_codec_vbr(prm->codec)
+         && prm->rateControl != get_codec_hqvbr(prm->codec)
          && prm->rateControl != get_codec_vbr_lat(prm->codec)
+         && prm->rateControl != get_codec_cbr(prm->codec)
+         && prm->rateControl != get_codec_hqcbr(prm->codec)
          && prm->rateControl != get_codec_qvbr(prm->codec))) {
-        PrintMes(RGY_LOG_WARN, _T("Pre analysis is currently supported only with VBR/QVBR mode.\n"));
+        PrintMes(RGY_LOG_WARN, _T("Pre analysis is currently supported only with CBR/VBR/QVBR mode.\n"));
         PrintMes(RGY_LOG_WARN, _T("Currenlty %s mode is selected, so pre analysis will be disabled.\n"), get_cx_desc(get_rc_method(prm->codec), prm->rateControl));
         prm->pa.enable = false;
     }
@@ -1862,7 +1870,17 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         m_params.SetParam(AMF_PA_TAQ_MODE, (amf_int64)prm->pa.TAQMode);
         m_params.SetParam(AMF_PA_HIGH_MOTION_QUALITY_BOOST_MODE, (amf_int64)prm->pa.motionQualityBoost);
         m_params.SetParam(AMF_PA_LOOKAHEAD_BUFFER_DEPTH, (amf_uint64)prm->pa.lookaheadDepth);
+        if (prm->pe) {
+            PrintMes(RGY_LOG_WARN, _T("Pre analysis cannot be used with pre encode, pre encode will be disabled.\n"));
+            prm->pe = false;
+        }
+        if (prm->bVBAQ) {
+            PrintMes(RGY_LOG_WARN, _T("Pre analysis cannot be used with VBAQ, VBAQ will be disabled.\n"));
+            prm->bVBAQ = false;
+        }
     }
+    m_params.SetParam(AMF_PARAM_PREENCODE_ENABLE(prm->codec), prm->pe);
+    if (prm->bVBAQ) m_params.SetParam(AMF_PARAM_ENABLE_VBAQ(prm->codec), true);
 
     //m_params.SetParam(AMF_PARAM_INPUT_COLOR_PROFILE(prm->codec),           AMF_VIDEO_CONVERTER_COLOR_PROFILE_UNKNOWN);
     //m_params.SetParam(AMF_PARAM_INPUT_TRANSFER_CHARACTERISTIC(prm->codec), AMF_COLOR_TRANSFER_CHARACTERISTIC_UNDEFINED);

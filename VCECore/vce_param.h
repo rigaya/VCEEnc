@@ -298,6 +298,18 @@ static inline int get_codec_vbr(RGY_CODEC codec) {
     return codec_vbr;
 }
 
+static inline int get_codec_hqvbr(RGY_CODEC codec) {
+    int codec_vbr = 0;
+    switch (codec) {
+    case RGY_CODEC_HEVC: codec_vbr = -1; break;
+    case RGY_CODEC_H264: codec_vbr = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR; break;
+    default:
+        fprintf(stderr, "Unsupported codec!\n");
+        abort();
+    }
+    return codec_vbr;
+}
+
 static inline int get_codec_vbr_lat(RGY_CODEC codec) {
     int codec_vbr = 0;
     switch (codec) {
@@ -315,6 +327,18 @@ static inline int get_codec_cbr(RGY_CODEC codec) {
     switch (codec) {
     case RGY_CODEC_HEVC: codec_cbr = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR; break;
     case RGY_CODEC_H264: codec_cbr = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR; break;
+    default:
+        fprintf(stderr, "Unsupported codec!\n");
+        abort();
+    }
+    return codec_cbr;
+}
+
+static inline int get_codec_hqcbr(RGY_CODEC codec) {
+    int codec_cbr = 0;
+    switch (codec) {
+    case RGY_CODEC_HEVC: codec_cbr = -1; break;
+    case RGY_CODEC_H264: codec_cbr = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR; break;
     default:
         fprintf(stderr, "Unsupported codec!\n");
         abort();
