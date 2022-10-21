@@ -87,6 +87,7 @@ namespace VCEEnc {
 
     value struct VidEncInfo {
         bool hwencAvail;
+        List<String^>^ deviceNames;
     };
 };
 
@@ -97,6 +98,11 @@ const int fcgTBQualityTimerPeriod = 40;
 const int fcgTXCmdfulloffset = 57;
 const int fcgCXAudioEncModeSmallWidth = 189;
 const int fcgCXAudioEncModeLargeWidth = 237;
+
+const CX_DESC list_device_auto_only[] = {
+    { _T("auto"), -1 },
+    { NULL, 0 }
+};
 
 static const ENC_OPTION_STR aspect_desc[] = {
     { NULL, AUO_CONFIG_CX_ASPECT_SAR, L"SAR比を指定 (デフォルト)" },

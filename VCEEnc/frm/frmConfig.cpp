@@ -831,6 +831,7 @@ System::Void frmConfig::InitData(CONF_GUIEX *set_config, const SYSTEM_DATA *syst
 
 System::Void frmConfig::InitComboBox() {
     //コンボボックスに値を設定する
+    setComboBox(fcgCXEncCodec,      list_device_auto_only);
     setComboBox(fcgCXEncCodec,      list_codec);
     setComboBox(fcgCXEncMode,       get_rc_method(RGY_CODEC_H264));
     setComboBox(fcgCXQualityPreset, get_quality_preset(RGY_CODEC_H264));
@@ -1346,6 +1347,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     VCEParam enc;
     parse_cmd(&enc, cnf->enc.cmd);
 
+    SetCXIndex(fcgCXDevice,            enc.deviceID+1 /*先頭はAutoなので*/);
     SetCXIndex(fcgCXEncCodec,          get_cx_index(list_codec, enc.codec));
     SetCXIndex(fcgCXEncMode,           get_cx_index(get_rc_method(enc.codec), enc.rateControl));
     SetCXIndex(fcgCXQualityPreset,     get_cx_index(get_quality_preset(enc.codec), enc.qualityPreset));
@@ -1562,6 +1564,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
 System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     //これもひたすら書くだけ。めんどい
     VCEParam enc;
+    enc.deviceID                                = fcgCXDevice->SelectedIndex - 1; // 先頭はAutoなので
     enc.codec                                   = (RGY_CODEC)list_codec[fcgCXEncCodec->SelectedIndex].value;
     conf->enc.codec = enc.codec;
     enc.rateControl                             = get_rc_method(enc.codec)[fcgCXEncMode->SelectedIndex].value;
@@ -2178,6 +2181,16 @@ System::Void frmConfig::SetVidEncInfo(VidEncInfo info) {
         this->Invoke(gcnew SetVidEncInfoDelegate(this, &frmConfig::SetVidEncInfo), info);
     } else {
         fcgpictureBoxVCEEnabled->Visible = encInfo.hwencAvail;
+
+        int oldIdx = fcgCXDevice->SelectedIndex;
+        fcgCXDevice->Items->Clear();
+        fcgCXDevice->Items->Add(String(_T(L"Auto")).ToString());
+        //適当に追加しておく
+        //あとでデバイス情報を追加してから修正する
+        for (int i = 0; i < info.deviceNames->Count; i++) {
+            fcgCXDevice->Items->Add(info.deviceNames[i]);
+        }
+        SetCXIndex(fcgCXDevice, oldIdx);
         fcgCXCodec_SelectedIndexChanged(nullptr, nullptr);
         fcgRebuildCmd(nullptr, nullptr);
     }
@@ -2189,6 +2202,7 @@ VidEncInfo frmConfig::GetVidEncInfo() {
 
     VidEncInfo info;
     info.hwencAvail = false;
+    info.deviceNames = gcnew List<String^>();
 
     if (File::Exists(LocalStg.vidEncPath)) {
         GetCHARfromString(exe_path, sizeof(exe_path), LocalStg.vidEncPath);
@@ -2203,6 +2217,8 @@ VidEncInfo frmConfig::GetVidEncInfo() {
         for (int i = 0; i < lines->Length; i++) {
             if (lines[i]->Contains("VCE available")) {
                 info.hwencAvail = true;
+            } else if (info.hwencAvail && lines[i]->StartsWith(L"device #")) {
+                info.deviceNames->Add(lines[i]->Substring(String(L"device ").Length));
             }
         }
     }
