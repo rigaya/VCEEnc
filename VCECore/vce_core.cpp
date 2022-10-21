@@ -77,8 +77,8 @@
 #include "VideoConverter.h"
 #include "Factory.h"
 
-#include "h264_level.h"
-#include "hevc_level.h"
+#include "rgy_level_h264.h"
+#include "rgy_level_hevc.h"
 
 void VCECore::PrintMes(RGYLogLevel log_level, const TCHAR *format, ...) {
     if (m_pLog.get() == nullptr || log_level < m_pLog->getLogLevel(RGY_LOGT_CORE)) {
@@ -1729,7 +1729,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
     if (prm->codec == RGY_CODEC_HEVC && prm->codecParam[prm->codec].nTier == AMF_VIDEO_ENCODER_HEVC_TIER_HIGH) {
         if (prm->codecParam[prm->codec].nLevel != 0
-            && !is_avail_hevc_high_tier(prm->codecParam[prm->codec].nLevel)) {
+            && !is_avail_high_tier_hevc(prm->codecParam[prm->codec].nLevel)) {
             PrintMes(RGY_LOG_WARN, _T("HEVC Level %s does not support High tier, switching to Main tier.\n"), get_cx_desc(get_level_list(prm->codec), prm->codecParam[prm->codec].nLevel));
             prm->codecParam[prm->codec].nTier = AMF_VIDEO_ENCODER_HEVC_TIER_MAIN;
         }
@@ -1766,19 +1766,19 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (prm->codec == RGY_CODEC_H264) {
             const int profile = prm->codecParam[prm->codec].nProfile;
             if (level == 0) {
-                level = calc_h264_auto_level(m_encWidth, m_encHeight, prm->nRefFrames, false,
+                level = calc_auto_level_h264(m_encWidth, m_encHeight, prm->nRefFrames, false,
                     m_encFps.n(), m_encFps.d(), profile, max_bitrate_kbps, vbv_bufsize_kbps);
                 //なんかLevel4.0以上でないと設定に失敗する場合がある
                 level = std::max(level, 40);
             }
-            get_h264_vbv_value(&max_bitrate_kbps, &vbv_bufsize_kbps, level, profile);
+            get_vbv_value_h264(&max_bitrate_kbps, &vbv_bufsize_kbps, level, profile);
         } else if (prm->codec == RGY_CODEC_HEVC) {
             const bool high_tier = prm->codecParam[prm->codec].nTier == AMF_VIDEO_ENCODER_HEVC_TIER_HIGH;
             if (level == 0) {
-                level = calc_hevc_auto_level(m_encWidth, m_encHeight, prm->nRefFrames,
+                level = calc_auto_level_hevc(m_encWidth, m_encHeight, prm->nRefFrames,
                     m_encFps.n(), m_encFps.d(), high_tier, max_bitrate_kbps);
             }
-            max_bitrate_kbps = get_hevc_max_bitrate(level, high_tier);
+            max_bitrate_kbps = get_max_bitrate_hevc(level, high_tier);
             vbv_bufsize_kbps = max_bitrate_kbps;
         } else {
             max_bitrate_kbps = VCE_DEFAULT_MAX_BITRATE;

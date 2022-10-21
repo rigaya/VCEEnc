@@ -25,11 +25,11 @@
 //
 // --------------------------------------------------------------------------------------------
 
-#ifndef __HEVC_LEVEL_H__
-#define __HEVC_LEVEL_H__
+#ifndef __RGY_LEVEL_AV1_H__
+#define __RGY_LEVEL_AV1_H__
 
-int calc_hevc_auto_level(int width, int height, int ref, int fps_num, int fps_den, bool high_tier, int max_bitrate);
-int get_hevc_max_bitrate(int level, bool high_tier);
-bool is_avail_hevc_high_tier(int level);
+int calc_auto_level_av1(int width, int height, int ref, int fps_num, int fps_den, int profile, int max_bitrate, int tile_col, int tile_row);
+int get_max_bitrate_av1(int level, int profile);
+bool is_avail_high_profile_av1(int level);
 
-#endif //__HEVC_LEVEL_H__
+#endif //__RGY_LEVEL_AV1_H__
