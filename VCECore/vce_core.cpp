@@ -2354,13 +2354,13 @@ RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList,
     for (const auto &gpu : gpuList) {
         auto counters = RGYGPUCounterWinEntries(entries).filter_luid(gpu->luid()).get();
         auto ve_utilization = std::max(
-            RGYGPUCounterWinEntries(counters).filter_type(L"codec").sum(), //vce
-            RGYGPUCounterWinEntries(counters).filter_type(L"encode").sum());
+            RGYGPUCounterWinEntries(counters).filter_type(L"codec").max(), //vce
+            RGYGPUCounterWinEntries(counters).filter_type(L"encode").max());
         auto gpu_utilization = std::max(std::max(std::max(
-            RGYGPUCounterWinEntries(counters).filter_type(L"cuda").sum(), //nvenc
-            RGYGPUCounterWinEntries(counters).filter_type(L"compute").sum()), //vce-opencl
-            RGYGPUCounterWinEntries(counters).filter_type(L"3d").sum()), //qsv
-            RGYGPUCounterWinEntries(counters).filter_type(L"videoprocessing").sum());
+            RGYGPUCounterWinEntries(counters).filter_type(L"cuda").max(), //nvenc
+            RGYGPUCounterWinEntries(counters).filter_type(L"compute").max()), //vce-opencl
+            RGYGPUCounterWinEntries(counters).filter_type(L"3d").max()), //qsv
+            RGYGPUCounterWinEntries(counters).filter_type(L"videoprocessing").max());
         double core_score = 0.0;
         double cc_score = 0.0;
         double ve_score = 100.0 * (1.0 - std::pow(ve_utilization / 100.0, 1.0)) * prm->ctrl.gpuSelect.ve;
