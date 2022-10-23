@@ -831,7 +831,7 @@ System::Void frmConfig::InitData(CONF_GUIEX *set_config, const SYSTEM_DATA *syst
 
 System::Void frmConfig::InitComboBox() {
     //コンボボックスに値を設定する
-    setComboBox(fcgCXEncCodec,      list_device_auto_only);
+    setComboBox(fcgCXDevice,        list_device_auto_only);
     setComboBox(fcgCXEncCodec,      list_codec);
     setComboBox(fcgCXEncMode,       get_rc_method(RGY_CODEC_H264));
     setComboBox(fcgCXQualityPreset, get_quality_preset(RGY_CODEC_H264));
