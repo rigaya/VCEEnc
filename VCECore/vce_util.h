@@ -345,10 +345,10 @@ private:
     const wchar_t *PROP_FLAGS = L"RGYFrameFlags";
     amf::AMFSurfacePtr amfptr;
     unique_ptr<RGYCLFrame> clbuf;
-    std::vector<std::shared_ptr<RGYFrameData>> dummy;
+    std::vector<std::shared_ptr<RGYFrameData>> amfDataList;
 public:
     RGYFrame() : amfptr(), clbuf() {};
-    RGYFrame(const amf::AMFSurfacePtr &pSurface) : amfptr(std::move(pSurface)), clbuf(), dummy() {
+    RGYFrame(const amf::AMFSurfacePtr &pSurface) : amfptr(std::move(pSurface)), clbuf(), amfDataList() {
     }
     RGYFrame(unique_ptr<RGYCLFrame> clframe) : amfptr(), clbuf(std::move(clframe)) {
     }
@@ -419,6 +419,7 @@ private:
         if (amfptr->GetProperty(PROP_FLAGS, &value) == AMF_OK) {
             info.flags = (RGY_FRAME_FLAGS)value;
         }
+        info.dataList = amfDataList;
         return info;
     }
     RGYFrameInfo infoCL() const {
@@ -515,16 +516,23 @@ public:
         if (clbuf) {
             return clbuf->frame.dataList;
         } else {
-            return dummy;
+            return amfDataList;
         }
     };
     std::vector<std::shared_ptr<RGYFrameData>>& dataList() {
         if (clbuf) {
             return clbuf->frame.dataList;
         } else {
-            return dummy;
+            return amfDataList;
         }
     };
+    void setDataList(std::vector<std::shared_ptr<RGYFrameData>>& dataList) {
+        if (clbuf) {
+            clbuf->frame.dataList = dataList;
+        } else {
+            amfDataList = dataList;
+        }
+    }
 };
 #else
 typedef void RGYFrame;

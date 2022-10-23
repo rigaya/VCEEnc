@@ -3044,6 +3044,7 @@ RGY_ERR VCECore::run() {
                 encSurface->setPicstruct(encSurfaceInfo.picstruct);
                 encSurface->setInputFrameId(encSurfaceInfo.inputFrameId);
                 encSurface->setFlags(encSurfaceInfo.flags);
+                encSurface->setDataList(encSurfaceInfo.dataList);
                 dqEncFrames.push_back(std::move(encSurface));
             }
         }
