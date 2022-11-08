@@ -2974,12 +2974,24 @@ RGY_ERR VCECore::run() {
                     }
                     return RGY_ERR_NONE;
                 }
-                filterframes.pop_front();
                 bDrain = false; //途中でフレームが出てきたら、drain完了していない
 
-                //最初に出てきたフレームは先頭に追加する
-                for (int jframe = nOutFrames-1; jframe >= 0; jframe--) {
-                    filterframes.push_front(std::make_pair(*outInfo[jframe], ifilter+1));
+                // 上書きするタイプのフィルタの場合、pop_front -> push_front は不要
+                if (m_vpFilters[ifilter]->GetFilterParam()->bOutOverwrite
+                    && filterframes.front().first.ptr
+                    && filterframes.front().first.ptr == outInfo[0]->ptr) {
+                    // 上書きするタイプのフィルタが複数のフレームを返すのはサポートしない
+                    if (nOutFrames > 1) {
+                        PrintMes(RGY_LOG_ERROR, _T("bOutOverwrite = true but nOutFrames = %d at filter[%d][%s].\n"),
+                            nOutFrames, ifilter, m_vpFilters[ifilter]->name().c_str());
+                        return RGY_ERR_UNSUPPORTED;
+                    }
+                } else {
+                    filterframes.pop_front();
+                    //最初に出てきたフレームは先頭に追加する
+                    for (int jframe = nOutFrames - 1; jframe >= 0; jframe--) {
+                        filterframes.push_front(std::make_pair(*outInfo[jframe], ifilter + 1));
+                    }
                 }
             }
             if (bDrain) {
