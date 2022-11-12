@@ -1761,6 +1761,9 @@ Rather weak noise reduction by modified pmd method, aimed to preserve edge while
   
   - fontsdir=&lt;string&gt;  
     directory with fonts used.
+
+  - forced_subs_only=&lt;bool&gt;  
+    render forced subs only (default: off).
   
 - examples
   ```

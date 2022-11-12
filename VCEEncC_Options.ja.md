@@ -1795,6 +1795,9 @@ yadifによるインタレ解除を行う。
   
   - fontsdir=&lt;string&gt;  
     字幕で使用するフォントの存在するフォルダの指定。
+  
+  - forced_subs_only=&lt;bool&gt;  
+    forced flagのついた字幕のみを焼きこむ。 (デフォルト=off)
 
 - 使用例
   ```
