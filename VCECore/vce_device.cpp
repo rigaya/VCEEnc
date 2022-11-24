@@ -254,7 +254,7 @@ amf::AMFCapsPtr VCEDevice::getEncCaps(RGY_CODEC codec) {
         }
         //10bit深度のチェック
         if (ret == AMF_OK
-            && codec == RGY_CODEC_HEVC) {
+            && (codec == RGY_CODEC_HEVC || codec == RGY_CODEC_AV1)) {
             amf::AMFComponentPtr p_encoder;
             if (m_factory->CreateComponent(m_context, codec_rgy_to_enc(codec), &p_encoder) == AMF_OK) {
                 const int dummy_width = 1920;
@@ -268,8 +268,7 @@ amf::AMFCapsPtr VCEDevice::getEncCaps(RGY_CODEC codec) {
                 params.SetParam(VCE_PARAM_KEY_OUTPUT_HEIGHT, dummy_height);
                 params.SetParam(AMF_PARAM_FRAMESIZE(codec), AMFConstructSize(dummy_width, dummy_height));
                 params.SetParam(AMF_PARAM_FRAMERATE(codec), AMFConstructRate(30, 1));
-
-                params.SetParam(AMF_VIDEO_ENCODER_HEVC_COLOR_BIT_DEPTH, (amf_int64)10);
+                params.SetParam(AMF_PARAM_COLOR_BIT_DEPTH(codec), (amf_int64)10);
 
                 // Usage is preset that will set many parameters
                 params.Apply(p_encoder, AMF_PARAM_ENCODER_USAGE);
@@ -441,10 +440,12 @@ tstring VCEDevice::QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
     encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_BITRATE(codec), &maxBitrate);
     str += strsprintf(_T("max bitrate:     %d kbps\n"), maxBitrate / 1000);
 
-    amf_uint32 maxRef = 0, minRef = 0;
-    encoderCaps->GetProperty(AMF_PARAM_CAP_MIN_REFERENCE_FRAMES(codec), &minRef);
-    encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_REFERENCE_FRAMES(codec), &maxRef);
-    str += strsprintf(_T("ref frames:      %d-%d\n"), minRef, maxRef);
+    if (codec == RGY_CODEC_H264 || codec == RGY_CODEC_HEVC) {
+        amf_uint32 maxRef = 0, minRef = 0;
+        encoderCaps->GetProperty(AMF_PARAM_CAP_MIN_REFERENCE_FRAMES(codec), &minRef);
+        encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_REFERENCE_FRAMES(codec), &maxRef);
+        str += strsprintf(_T("ref frames:      %d-%d\n"), minRef, maxRef);
+    }
 
     if (codec == RGY_CODEC_H264) {
         //amf_uint32 maxTemporalLayers = 0;
@@ -460,6 +461,10 @@ tstring VCEDevice::QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
         str += strsprintf(_T("HW instances:    %d\n"), NumOfHWInstances);
     } else if (codec == RGY_CODEC_HEVC) {
         //いまは特になし
+    } else if (codec == RGY_CODEC_AV1) {
+        amf_uint32 maxTemporalLayers = 0;
+        encoderCaps->GetProperty(AMF_VIDEO_ENCODER_AV1_CAP_MAX_NUM_TEMPORAL_LAYERS, &maxTemporalLayers);
+        str += strsprintf(_T("Temporal layers: %d\n"), maxTemporalLayers);
     }
 
     amf_uint32 maxNumOfStreams = 0;

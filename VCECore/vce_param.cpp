@@ -134,6 +134,9 @@ VCEParam::VCEParam() :
     codecParam[RGY_CODEC_HEVC].nLevel   = 0;
     codecParam[RGY_CODEC_HEVC].nProfile = AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN;
     codecParam[RGY_CODEC_HEVC].nTier    = AMF_VIDEO_ENCODER_HEVC_TIER_MAIN;
+
+    codecParam[RGY_CODEC_AV1].nLevel = -1; // as auto
+    codecParam[RGY_CODEC_AV1].nProfile = AMF_VIDEO_ENCODER_AV1_PROFILE_MAIN;
     par[0] = par[1] = 0;
     input.vui = VideoVUIInfo();
 }
@@ -194,6 +197,7 @@ RGY_ERR AMFParams::SetParamTypeCodec(const RGY_CODEC codec) {
     switch (codec) {
     case RGY_CODEC_H264: SetParamTypeAVC(); break;
     case RGY_CODEC_HEVC: SetParamTypeHEVC(); break;
+    case RGY_CODEC_AV1: SetParamTypeAV1(); break;
     default: return RGY_ERR_UNSUPPORTED;
     }
     return RGY_ERR_NONE;
@@ -418,6 +422,121 @@ RGY_ERR AMFParams::SetParamTypeHEVC() {
     SetParamType(AMF_VIDEO_ENCODER_HEVC_REFERENCE_PICTURE, AMF_PARAM_FRAME, L"AMFInterface(AMFSurface); surface used for frame injection");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_PSNR_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to calculate PSNR score");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_SSIM_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to calculate SSIM score");
+
+    SetParamTypePA();
+
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR AMFParams::SetParamTypeAV1() {
+    // Encoder Engine Settings
+    SetParamType(AMF_VIDEO_ENCODER_AV1_ENCODER_INSTANCE_INDEX,                 AMF_PARAM_STATIC, L"amf_int64; default = 0; selected HW instance idx. The number of instances is queried by using AMF_VIDEO_ENCODER_AV1_CAP_NUM_OF_HW_INSTANCES");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_ENCODING_LATENCY_MODE,                  AMF_PARAM_STATIC, L"amf_int64(AMF_VIDEO_ENCODER_AV1_ENCODING_LATENCY_MODE_ENUM); default = depends on USAGE; The encoding latency mode.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_QUERY_TIMEOUT,                          AMF_PARAM_STATIC, L"amf_int64; default = 0 (no wait); timeout for QueryOutput call in ms.");
+
+    // Usage Settings
+    SetParamType(AMF_VIDEO_ENCODER_AV1_USAGE,                                  AMF_PARAM_STATIC, L"amf_int64(AMF_VIDEO_ENCODER_AV1_USAGE_ENUM); default = N/A; Encoder usage. fully configures parameter set.");
+
+    // Session Configuration
+    SetParamType(AMF_VIDEO_ENCODER_AV1_FRAMESIZE,                              AMF_PARAM_STATIC, L"AMFSize; default = 0,0; Frame size");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_COLOR_BIT_DEPTH,                        AMF_PARAM_STATIC, L"amf_int64(AMF_COLOR_BIT_DEPTH_ENUM); default = AMF_COLOR_BIT_DEPTH_8");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_PROFILE,                                AMF_PARAM_STATIC, L"amf_int64(AMF_VIDEO_ENCODER_AV1_PROFILE_ENUM) ; default = depends on USAGE; the codec profile of the coded bitstream");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_LEVEL,                                  AMF_PARAM_STATIC, L"amf_int64 (AMF_VIDEO_ENCODER_AV1_LEVEL_ENUM); default = depends on USAGE; the codec level of the coded bitstream");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_TILES_PER_FRAME,                        AMF_PARAM_STATIC, L"amf_int64; default = 1; Number of tiles Per Frame. This is treated as suggestion. The actual number of tiles might be different due to compliance or encoder limitation.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET,                         AMF_PARAM_STATIC, L"amf_int64(AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_ENUM); default = depends on USAGE; Quality Preset");
+
+    // Codec Configuration
+    SetParamType(AMF_VIDEO_ENCODER_AV1_SCREEN_CONTENT_TOOLS,                   AMF_PARAM_STATIC, L"bool; default = depends on USAGE; If true, allow enabling screen content tools by AMF_VIDEO_ENCODER_AV1_PALETTE_MODE_ENABLE and AMF_VIDEO_ENCODER_AV1_FORCE_INTEGER_MV; if false, all screen content tools are disabled.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_ORDER_HINT,                             AMF_PARAM_STATIC, L"bool; default = depends on USAGE; If true, code order hint; if false, don't code order hint");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_FRAME_ID,                               AMF_PARAM_STATIC, L"bool; default = depends on USAGE; If true, code frame id; if false, don't code frame id");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_TILE_GROUP_OBU,                         AMF_PARAM_STATIC, L"bool; default = depends on USAGE; If true, code FrameHeaderObu + TileGroupObu and each TileGroupObu contains one tile; if false, code FrameObu.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_CDEF_MODE,                              AMF_PARAM_STATIC, L"amd_int64(AMF_VIDEO_ENCODER_AV1_CDEF_MODE_ENUM); default = depends on USAGE; Cdef mode");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_ERROR_RESILIENT_MODE,                   AMF_PARAM_STATIC, L"bool; default = depends on USAGE; If true, enable error resilient mode; if false, disable error resilient mode");
+
+    // Rate Control and Quality Enhancement
+    SetParamType(AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD,                    AMF_PARAM_STATIC, L"amf_int64(AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_ENUM); default = depends on USAGE; Rate Control Method");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_QVBR_QUALITY_LEVEL,                     AMF_PARAM_STATIC, L"amf_int64; default = 23; QVBR quality level; range = 1-51");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_INITIAL_VBV_BUFFER_FULLNESS,            AMF_PARAM_STATIC, L"amf_int64; default = depends on USAGE; Initial VBV Buffer Fullness 0=0% 64=100%");
+
+    // Alignment Mode Configuration
+    SetParamType(AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE,                         AMF_PARAM_STATIC, L"amf_int64(AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE_ENUM); default = AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE_64X16_ONLY; Alignment Mode.");
+
+    SetParamType(AMF_VIDEO_ENCODER_AV1_PRE_ANALYSIS_ENABLE,                    AMF_PARAM_STATIC, L"bool; default = depends on USAGE; If true, enables the pre-analysis module. Refer to AMF Video PreAnalysis API reference for more details. If false, disable the pre-analysis module.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_PREENCODE,                 AMF_PARAM_STATIC, L"bool; default = depends on USAGE; If true, enables pre-encode assist in rate control; if false, disables pre-encode assist in rate control.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_HIGH_MOTION_QUALITY_BOOST,              AMF_PARAM_STATIC, L"bool; default = depends on USAGE; If true, enable high motion quality boost mode; if false, disable high motion quality boost mode.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_AQ_MODE,                                AMF_PARAM_STATIC, L"amd_int64(AMF_VIDEO_ENCODER_AV1_AQ_MODE_ENUM); default = depends on USAGE; AQ mode");
+
+    // Picture Management Configuration
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_NUM_TEMPORAL_LAYERS,                AMF_PARAM_STATIC, L"amf_int64; default = depends on USAGE; Max number of temporal layers might be enabled. The maximum value can be queried from AMF_VIDEO_ENCODER_AV1_CAP_MAX_NUM_TEMPORAL_LAYERS");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_LTR_FRAMES,                         AMF_PARAM_STATIC, L"amf_int64; default = depends on USAGE; Max number of LTR frames. The maximum value can be queried from AMF_VIDEO_ENCODER_AV1_CAP_MAX_NUM_LTR_FRAMES");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_NUM_REFRAMES,                       AMF_PARAM_STATIC, L"amf_int64; default = 1; Maximum number of reference frames");
+
+    // color conversion
+    SetParamType(AMF_VIDEO_ENCODER_AV1_INPUT_HDR_METADATA,                     AMF_PARAM_STATIC, L"AMFBuffer containing AMFHDRMetadata; default NULL");
+
+    // Miscellaneous
+    SetParamType(AMF_VIDEO_ENCODER_AV1_EXTRA_DATA,                             AMF_PARAM_STATIC, L"AMFInterface* - > AMFBuffer*; buffer to retrieve coded sequence header");
+
+    // Dynamic properties - can be set anytime ***
+
+    // Codec Configuration
+    SetParamType(AMF_VIDEO_ENCODER_AV1_PALETTE_MODE,                           AMF_PARAM_DYNAMIC, L"bool; default = depends on USAGE; If true, enable palette mode; if false, disable palette mode. Valid only when AMF_VIDEO_ENCODER_AV1_SCREEN_CONTENT_TOOLS is true.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_FORCE_INTEGER_MV,                       AMF_PARAM_DYNAMIC, L"bool; default = depends on USAGE; If true, enable force integer MV; if false, disable force integer MV. Valid only when AMF_VIDEO_ENCODER_AV1_SCREEN_CONTENT_TOOLS is true.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_CDF_UPDATE,                             AMF_PARAM_DYNAMIC, L"bool; default = depends on USAGE; If true, enable CDF update; if false, disable CDF update.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE,              AMF_PARAM_DYNAMIC, L"amd_int64(AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE_ENUM); default = depends on USAGE; CDF frame end update mode");
+
+
+    // Rate Control and Quality Enhancement
+    SetParamType(AMF_VIDEO_ENCODER_AV1_VBV_BUFFER_SIZE,                        AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; VBV Buffer Size in bits");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_FRAMERATE,                              AMF_PARAM_DYNAMIC, L"AMFRate; default = depends on usage; Frame Rate");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_ENFORCE_HRD,                            AMF_PARAM_DYNAMIC, L"bool; default = depends on USAGE; If true, enforce HRD; if false, HRD is not enforced.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_FILLER_DATA,                            AMF_PARAM_DYNAMIC, L"bool; default = depends on USAGE; If true, code filler data when needed; if false, don't code filler data.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_TARGET_BITRATE,                         AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Target bit rate in bits");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_PEAK_BITRATE,                           AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Peak bit rate in bits");
+
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_COMPRESSED_FRAME_SIZE,              AMF_PARAM_DYNAMIC, L"amf_int64; default = 0; Max compressed frame Size in bits. 0 - no limit");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTRA,                      AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Min QIndex for intra frames; range = 0-255");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTRA,                      AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Max QIndex for intra frames; range = 0-255");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTER,                      AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Min QIndex for inter frames; range = 0-255");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTER,                      AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Max QIndex for inter frames; range = 0-255");
+
+    SetParamType(AMF_VIDEO_ENCODER_AV1_Q_INDEX_INTRA,                          AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; intra-frame QIndex; range = 0-255");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_Q_INDEX_INTER,                          AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; inter-frame QIndex; range = 0-255");
+
+    SetParamType(AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_SKIP_FRAME,                AMF_PARAM_DYNAMIC, L"bool; default = depends on USAGE; If true, rate control may code skip frame when needed; if false, rate control will not code skip frame.");
+
+    // Picture Management Configuration
+    SetParamType(AMF_VIDEO_ENCODER_AV1_GOP_SIZE,                               AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; GOP Size (distance between automatically inserted key frames). If 0, key frame will be inserted at first frame only. Note that GOP may be interrupted by AMF_VIDEO_ENCODER_AV1_FORCE_FRAME_TYPE.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_HEADER_INSERTION_MODE,                  AMF_PARAM_DYNAMIC, L"amf_int64(AMF_VIDEO_ENCODER_AV1_HEADER_INSERTION_MODE_ENUM); default = depends on USAGE; sequence header insertion mode");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_SWITCH_FRAME_INSERTION_MODE,            AMF_PARAM_DYNAMIC, L"amf_int64(AMF_VIDEO_ENCODER_AV1_SWITCH_FRAME_INSERTION_MODE_ENUM); default = depends on USAGE; switch frame insertin mode");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_SWITCH_FRAME_INTERVAL,                  AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; the interval between two inserted switch frames. Valid only when AMF_VIDEO_ENCODER_AV1_SWITCH_FRAME_INSERTION_MODE is AMF_VIDEO_ENCODER_AV1_SWITCH_FRAME_INSERTION_MODE_FIXED_INTERVAL.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_NUM_TEMPORAL_LAYERS,                    AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Number of temporal layers. Can be changed at any time but the change is only applied when encoding next base layer frame.");
+
+    SetParamType(AMF_VIDEO_ENCODER_AV1_INTRA_REFRESH_MODE,                     AMF_PARAM_DYNAMIC, L"amf_int64(AMF_VIDEO_ENCODER_AV1_INTRA_REFRESH_MODE_ENUM); default AMF_VIDEO_ENCODER_AV1_INTRA_REFRESH_MODE__DISABLED");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_INTRAREFRESH_STRIPES,                   AMF_PARAM_DYNAMIC, L"amf_int64; default = N/A; Valid only when intra refresh is enabled.");
+
+    // color conversion
+    SetParamType(AMF_VIDEO_ENCODER_AV1_INPUT_COLOR_PROFILE,                    AMF_PARAM_DYNAMIC, L"amf_int64(AMF_VIDEO_CONVERTER_COLOR_PROFILE_ENUM); default = AMF_VIDEO_CONVERTER_COLOR_PROFILE_UNKNOWN - mean AUTO by size");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_INPUT_TRANSFER_CHARACTERISTIC,          AMF_PARAM_DYNAMIC, L"amf_int64(AMF_COLOR_TRANSFER_CHARACTERISTIC_ENUM); default = AMF_COLOR_TRANSFER_CHARACTERISTIC_UNDEFINED, ISO/IEC 23001-8_2013 section 7.2 See VideoDecoderUVD.h for enum");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_INPUT_COLOR_PRIMARIES,                  AMF_PARAM_DYNAMIC, L"amf_int64(AMF_COLOR_PRIMARIES_ENUM); default = AMF_COLOR_PRIMARIES_UNDEFINED, ISO/IEC 23001-8_2013 section 7.1 See ColorSpace.h for enum");
+
+    SetParamType(AMF_VIDEO_ENCODER_AV1_OUTPUT_COLOR_PROFILE,                   AMF_PARAM_DYNAMIC, L"amf_int64(AMF_VIDEO_CONVERTER_COLOR_PROFILE_ENUM); default = AMF_VIDEO_CONVERTER_COLOR_PROFILE_UNKNOWN - mean AUTO by size");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_OUTPUT_TRANSFER_CHARACTERISTIC,         AMF_PARAM_DYNAMIC, L"amf_int64(AMF_COLOR_TRANSFER_CHARACTERISTIC_ENUM); default = AMF_COLOR_TRANSFER_CHARACTERISTIC_UNDEFINED, ISO/IEC 23001-8_2013 ?7.2 See VideoDecoderUVD.h for enum");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_OUTPUT_COLOR_PRIMARIES,                 AMF_PARAM_DYNAMIC, L"amf_int64(AMF_COLOR_PRIMARIES_ENUM); default = AMF_COLOR_PRIMARIES_UNDEFINED, ISO/IEC 23001-8_2013 section 7.1 See ColorSpace.h for enum");
+
+
+    // Frame encode parameters
+    SetParamType(AMF_VIDEO_ENCODER_AV1_FORCE_FRAME_TYPE,                       AMF_PARAM_FRAME, L"amf_int64(AMF_VIDEO_ENCODER_AV1_FORCE_FRAME_TYPE_ENUM); default = AMF_VIDEO_ENCODER_AV1_FORCE_FRAME_TYPE_NONE; generate particular frame type");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_FORCE_INSERT_SEQUENCE_HEADER,           AMF_PARAM_FRAME, L"bool; default = false; If true, force insert sequence header with current frame;");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MARK_CURRENT_WITH_LTR_INDEX,            AMF_PARAM_FRAME, L"amf_int64; default = N/A; Mark current frame with LTR index");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_FORCE_LTR_REFERENCE_BITFIELD,           AMF_PARAM_FRAME, L"amf_int64; default = 0; force LTR bit-field");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_ROI_DATA,                               AMF_PARAM_FRAME, L"2D AMFSurface, surface format: AMF_SURFACE_GRAY32");
+
+    // Encode output parameters
+    SetParamType(AMF_VIDEO_ENCODER_AV1_OUTPUT_FRAME_TYPE,                      AMF_PARAM_FRAME, L"amf_int64(AMF_VIDEO_ENCODER_AV1_OUTPUT_FRAME_TYPE_ENUM); default = N/A");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_OUTPUT_MARKED_LTR_INDEX,                AMF_PARAM_FRAME, L"amf_int64; default = N/A; Marked LTR index");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_OUTPUT_REFERENCED_LTR_INDEX_BITFIELD,   AMF_PARAM_FRAME, L"amf_int64; default = N/A; referenced LTR bit-field");
+
 
     SetParamTypePA();
 

@@ -34,6 +34,7 @@ RGY_DISABLE_WARNING_PUSH
 RGY_DISABLE_WARNING_STR("-Wclass-memaccess")
 #include "VideoEncoderVCE.h"
 #include "VideoEncoderHEVC.h"
+#include "VideoEncoderAV1.h"
 RGY_DISABLE_WARNING_POP
 #include "rgy_caption.h"
 #include "rgy_prm.h"
@@ -66,6 +67,7 @@ enum : uint8_t {
 const CX_DESC list_codec[] = {
     { _T("h264"), RGY_CODEC_H264 },
     { _T("hevc"), RGY_CODEC_HEVC },
+    { _T("av1"),  RGY_CODEC_AV1  },
     { NULL, 0 }
 };
 const CX_DESC list_codec_all[] = {
@@ -73,6 +75,7 @@ const CX_DESC list_codec_all[] = {
     { _T("avc"),  RGY_CODEC_H264 },
     { _T("h265"), RGY_CODEC_HEVC },
     { _T("hevc"), RGY_CODEC_HEVC },
+    { _T("av1"),  RGY_CODEC_AV1  },
     { NULL, 0 }
 };
 
@@ -139,6 +142,51 @@ const CX_DESC list_hevc_bitdepth[] = {
     { _T("10bit"), 10  },
     { NULL, 0 }
 };
+const CX_DESC list_av1_bitdepth[] = {
+    { _T("8bit"),   8   },
+    { _T("10bit"), 10  },
+    { NULL, 0 }
+};
+
+const CX_DESC list_av1_profile[] = {
+    { _T("main"),     AMF_VIDEO_ENCODER_AV1_PROFILE_MAIN },
+    { NULL, 0 }
+};
+
+const CX_DESC list_av1_tier[] = {
+    { _T("main"),     AMF_VIDEO_ENCODER_HEVC_TIER_MAIN },
+    { _T("high"),     AMF_VIDEO_ENCODER_HEVC_TIER_HIGH },
+    { NULL, 0 }
+};
+
+const CX_DESC list_av1_level[] = {
+    { _T("auto"), -1 },
+    { _T("2"),   AMF_VIDEO_ENCODER_AV1_LEVEL_2_0 },
+    { _T("2.1"), AMF_VIDEO_ENCODER_AV1_LEVEL_2_1 },
+    { _T("2.2"), AMF_VIDEO_ENCODER_AV1_LEVEL_2_2 },
+    { _T("2.3"), AMF_VIDEO_ENCODER_AV1_LEVEL_2_3 },
+    { _T("3"),   AMF_VIDEO_ENCODER_AV1_LEVEL_3_0 },
+    { _T("3.1"), AMF_VIDEO_ENCODER_AV1_LEVEL_3_1 },
+    { _T("3.2"), AMF_VIDEO_ENCODER_AV1_LEVEL_3_2 },
+    { _T("3.3"), AMF_VIDEO_ENCODER_AV1_LEVEL_3_3 },
+    { _T("4"),   AMF_VIDEO_ENCODER_AV1_LEVEL_4_0 },
+    { _T("4.1"), AMF_VIDEO_ENCODER_AV1_LEVEL_4_1 },
+    { _T("4.2"), AMF_VIDEO_ENCODER_AV1_LEVEL_4_2 },
+    { _T("4.3"), AMF_VIDEO_ENCODER_AV1_LEVEL_4_3 },
+    { _T("5"),   AMF_VIDEO_ENCODER_AV1_LEVEL_5_0 },
+    { _T("5.1"), AMF_VIDEO_ENCODER_AV1_LEVEL_5_1 },
+    { _T("5.2"), AMF_VIDEO_ENCODER_AV1_LEVEL_5_2 },
+    { _T("5.3"), AMF_VIDEO_ENCODER_AV1_LEVEL_5_3 },
+    { _T("6"),   AMF_VIDEO_ENCODER_AV1_LEVEL_6_0 },
+    { _T("6.1"), AMF_VIDEO_ENCODER_AV1_LEVEL_6_1 },
+    { _T("6.2"), AMF_VIDEO_ENCODER_AV1_LEVEL_6_2 },
+    { _T("6.3"), AMF_VIDEO_ENCODER_AV1_LEVEL_6_3 },
+    { _T("7"),   AMF_VIDEO_ENCODER_AV1_LEVEL_7_0 },
+    { _T("7.1"), AMF_VIDEO_ENCODER_AV1_LEVEL_7_1 },
+    { _T("7.2"), AMF_VIDEO_ENCODER_AV1_LEVEL_7_2 },
+    { _T("7.3"), AMF_VIDEO_ENCODER_AV1_LEVEL_7_3 },
+    { NULL, 0 }
+};
 
 const CX_DESC list_mv_presicion[] = {
     { _T("full-pel"), VCE_MOTION_EST_FULL   },
@@ -163,6 +211,17 @@ const CX_DESC list_vce_hevc_rc_method[] = {
     { _T("CBR"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR },
     { _T("VBR"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR },
     { _T("VBR_LAT"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR },
+    { NULL, 0 }
+};
+
+const CX_DESC list_vce_av1_rc_method[] = {
+    { _T("CQP"), AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_CONSTANT_QP },
+    { _T("CBR"), AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_CBR },
+    { _T("VBR"), AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR },
+    { _T("VBR_LAT"), AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR },
+    { _T("QVBR"), AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_QUALITY_VBR },
+    { _T("VBR-HQ"), AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR },
+    { _T("CBR-HQ"), AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR },
     { NULL, 0 }
 };
 
@@ -222,10 +281,13 @@ const CX_DESC list_pa_motion_quality_mode[] = {
     { NULL, 0 }
 };
 
+static const int AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY = AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY+1;
+
 const CX_DESC list_vce_quality_preset_h264[] = {
     { _T("balanced"), AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED },
     { _T("fast"),     AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED },
     { _T("slow"),     AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY },
+    { _T("slower"),   AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY },
     { NULL, 0 }
 };
 
@@ -236,17 +298,27 @@ const CX_DESC list_vce_quality_preset_hevc[] = {
     { NULL, 0 }
 };
 
+const CX_DESC list_vce_quality_preset_av1[] = {
+    { _T("balanced"), AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_BALANCED },
+    { _T("fast"),     AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_SPEED },
+    { _T("slow"),     AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_QUALITY },
+    { _T("slower"),   AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_HIGH_QUALITY },
+    { NULL, 0 }
+};
+
 static const CX_DESC *get_quality_preset(RGY_CODEC codec) {
     switch (codec) {
-    case RGY_CODEC_HEVC: return list_vce_quality_preset_hevc;
     case RGY_CODEC_H264: return list_vce_quality_preset_h264;
+    case RGY_CODEC_HEVC: return list_vce_quality_preset_hevc;
+    case RGY_CODEC_AV1:  return list_vce_quality_preset_av1;
     default:             return nullptr;
     }
 }
 static const CX_DESC *get_rc_method(RGY_CODEC codec) {
     switch (codec) {
-    case RGY_CODEC_HEVC: return list_vce_hevc_rc_method;
     case RGY_CODEC_H264: return list_vce_h264_rc_method;
+    case RGY_CODEC_HEVC: return list_vce_hevc_rc_method;
+    case RGY_CODEC_AV1:  return list_vce_av1_rc_method;
     default:             return list_empty;
     }
 }
@@ -255,6 +327,7 @@ static inline const CX_DESC *get_level_list(RGY_CODEC codec) {
     switch (codec) {
     case RGY_CODEC_H264:    return list_avc_level;
     case RGY_CODEC_HEVC:    return list_hevc_level;
+    case RGY_CODEC_AV1:     return list_av1_level;
     default:                return list_empty;
     }
 }
@@ -263,6 +336,7 @@ static inline const CX_DESC *get_profile_list(RGY_CODEC codec) {
     switch (codec) {
     case RGY_CODEC_H264:    return list_avc_profile;
     case RGY_CODEC_HEVC:    return list_hevc_profile;
+    case RGY_CODEC_AV1:     return list_av1_profile;
     default:                return list_empty;
     }
 }
@@ -277,8 +351,9 @@ static inline const CX_DESC *get_tier_list(RGY_CODEC codec) {
 static inline int get_codec_cqp(RGY_CODEC codec) {
     int codec_cqp = 0;
     switch (codec) {
-    case RGY_CODEC_HEVC: codec_cqp = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP; break;
     case RGY_CODEC_H264: codec_cqp = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP; break;
+    case RGY_CODEC_HEVC: codec_cqp = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP; break;
+    case RGY_CODEC_AV1:  codec_cqp = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_CONSTANT_QP; break;
     default:
         fprintf(stderr, "Unsupported codec!\n");
         abort();
@@ -289,8 +364,9 @@ static inline int get_codec_cqp(RGY_CODEC codec) {
 static inline int get_codec_vbr(RGY_CODEC codec) {
     int codec_vbr = 0;
     switch (codec) {
-    case RGY_CODEC_HEVC: codec_vbr = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR; break;
     case RGY_CODEC_H264: codec_vbr = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR; break;
+    case RGY_CODEC_HEVC: codec_vbr = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR; break;
+    case RGY_CODEC_AV1:  codec_vbr = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR; break;
     default:
         fprintf(stderr, "Unsupported codec!\n");
         abort();
@@ -301,8 +377,9 @@ static inline int get_codec_vbr(RGY_CODEC codec) {
 static inline int get_codec_hqvbr(RGY_CODEC codec) {
     int codec_vbr = 0;
     switch (codec) {
-    case RGY_CODEC_HEVC: codec_vbr = -1; break;
     case RGY_CODEC_H264: codec_vbr = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR; break;
+    case RGY_CODEC_HEVC: codec_vbr = -1; break;
+    case RGY_CODEC_AV1:  codec_vbr = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR; break;
     default:
         fprintf(stderr, "Unsupported codec!\n");
         abort();
@@ -313,8 +390,9 @@ static inline int get_codec_hqvbr(RGY_CODEC codec) {
 static inline int get_codec_vbr_lat(RGY_CODEC codec) {
     int codec_vbr = 0;
     switch (codec) {
-    case RGY_CODEC_HEVC: codec_vbr = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR; break;
     case RGY_CODEC_H264: codec_vbr = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR; break;
+    case RGY_CODEC_HEVC: codec_vbr = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR; break;
+    case RGY_CODEC_AV1:  codec_vbr = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR; break;
     default:
         fprintf(stderr, "Unsupported codec!\n");
         abort();
@@ -325,8 +403,9 @@ static inline int get_codec_vbr_lat(RGY_CODEC codec) {
 static inline int get_codec_cbr(RGY_CODEC codec) {
     int codec_cbr = 0;
     switch (codec) {
-    case RGY_CODEC_HEVC: codec_cbr = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR; break;
     case RGY_CODEC_H264: codec_cbr = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR; break;
+    case RGY_CODEC_HEVC: codec_cbr = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR; break;
+    case RGY_CODEC_AV1:  codec_cbr = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_CBR; break;
     default:
         fprintf(stderr, "Unsupported codec!\n");
         abort();
@@ -337,8 +416,9 @@ static inline int get_codec_cbr(RGY_CODEC codec) {
 static inline int get_codec_hqcbr(RGY_CODEC codec) {
     int codec_cbr = 0;
     switch (codec) {
-    case RGY_CODEC_HEVC: codec_cbr = -1; break;
     case RGY_CODEC_H264: codec_cbr = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR; break;
+    case RGY_CODEC_HEVC: codec_cbr = -1; break;
+    case RGY_CODEC_AV1:  codec_cbr = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR; break;
     default:
         fprintf(stderr, "Unsupported codec!\n");
         abort();
@@ -349,8 +429,9 @@ static inline int get_codec_hqcbr(RGY_CODEC codec) {
 static inline int get_codec_qvbr(RGY_CODEC codec) {
     int codec_vbr = 0;
     switch (codec) {
-    case RGY_CODEC_HEVC: codec_vbr = -1; break;
     case RGY_CODEC_H264: codec_vbr = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR; break;
+    case RGY_CODEC_HEVC: codec_vbr = -1; break;
+    case RGY_CODEC_AV1:  codec_vbr = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_QUALITY_VBR; break;
     default:
         fprintf(stderr, "Unsupported codec!\n");
         abort();
@@ -475,9 +556,38 @@ static const int VCE_DEFAULT_AUDIO_IGNORE_DECODE_ERROR = 10;
 #define AMF_PARAM(x) \
 static const wchar_t *AMF_PARAM_##x(RGY_CODEC codec) { \
     switch (codec) { \
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_##x; \
     case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_##x; \
     case RGY_CODEC_H264: \
     default:             return AMF_VIDEO_ENCODER_##x; \
+    } \
+};
+
+#define AMF_PARAM_H264_AV1(x) \
+static const wchar_t *AMF_PARAM_##x(RGY_CODEC codec) { \
+    switch (codec) { \
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_##x; \
+    case RGY_CODEC_H264: \
+    default:             return AMF_VIDEO_ENCODER_##x; \
+    } \
+};
+
+#define AMF_PARAM_H264_HEVC(x) \
+static const wchar_t *AMF_PARAM_##x(RGY_CODEC codec) { \
+    switch (codec) { \
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_##x; \
+    case RGY_CODEC_H264: \
+    default:             return AMF_VIDEO_ENCODER_##x; \
+    } \
+};
+
+#define AMF_PARAM_HEVC_AV1(x) \
+static const wchar_t *AMF_PARAM_##x(RGY_CODEC codec) { \
+    switch (codec) { \
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_##x; \
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_##x; \
+    case RGY_CODEC_H264: \
+    default: nullptr; \
     } \
 };
 
@@ -485,32 +595,28 @@ AMF_PARAM(FRAMESIZE);
 AMF_PARAM(FRAMERATE);
 AMF_PARAM(USAGE);
 AMF_PARAM(PROFILE);
-AMF_PARAM(PROFILE_LEVEL);
 AMF_PARAM(MAX_LTR_FRAMES);
 AMF_PARAM(MAX_NUM_REFRAMES);
 AMF_PARAM(QUALITY_PRESET);
-AMF_PARAM(ASPECT_RATIO);
-AMF_PARAM(SLICES_PER_FRAME);
+AMF_PARAM_H264_HEVC(ASPECT_RATIO);
+AMF_PARAM_H264_HEVC(SLICES_PER_FRAME);
 AMF_PARAM(RATE_CONTROL_METHOD);
 AMF_PARAM(VBV_BUFFER_SIZE);
 AMF_PARAM(INITIAL_VBV_BUFFER_FULLNESS);
-AMF_PARAM(PREENCODE_ENABLE);
 AMF_PARAM(PRE_ANALYSIS_ENABLE);
-AMF_PARAM(ENABLE_VBAQ);
 AMF_PARAM(ENFORCE_HRD);
 AMF_PARAM(TARGET_BITRATE);
-AMF_PARAM(FILLER_DATA_ENABLE);
-AMF_PARAM(LOWLATENCY_MODE);
 AMF_PARAM(PEAK_BITRATE);
-AMF_PARAM(MAX_AU_SIZE);
-AMF_PARAM(QP_I);
-AMF_PARAM(QP_P);
-AMF_PARAM(RATE_CONTROL_SKIP_FRAME_ENABLE);
-AMF_PARAM(MOTION_HALF_PIXEL);
-AMF_PARAM(MOTION_QUARTERPIXEL);
-AMF_PARAM(END_OF_SEQUENCE);
-AMF_PARAM(FORCE_PICTURE_TYPE);
-AMF_PARAM(INSERT_AUD);
+AMF_PARAM_H264_HEVC(ENABLE_VBAQ);
+AMF_PARAM_H264_HEVC(LOWLATENCY_MODE);
+AMF_PARAM_H264_HEVC(MAX_AU_SIZE);
+AMF_PARAM_H264_HEVC(QP_I);
+AMF_PARAM_H264_HEVC(QP_P);
+AMF_PARAM_H264_HEVC(MOTION_HALF_PIXEL);
+AMF_PARAM_H264_HEVC(MOTION_QUARTERPIXEL);
+AMF_PARAM_H264_HEVC(END_OF_SEQUENCE);
+AMF_PARAM_H264_HEVC(FORCE_PICTURE_TYPE);
+AMF_PARAM_H264_HEVC(INSERT_AUD);
 AMF_PARAM(INPUT_COLOR_PROFILE);
 AMF_PARAM(INPUT_TRANSFER_CHARACTERISTIC);
 AMF_PARAM(INPUT_COLOR_PRIMARIES);
@@ -519,31 +625,73 @@ AMF_PARAM(OUTPUT_TRANSFER_CHARACTERISTIC);
 AMF_PARAM(OUTPUT_COLOR_PRIMARIES);
 AMF_PARAM(CAP_MAX_PROFILE);
 AMF_PARAM(CAP_MAX_LEVEL);
-AMF_PARAM(CAP_NUM_OF_STREAMS);
 AMF_PARAM(CAP_MAX_BITRATE);
-AMF_PARAM(CAP_MIN_REFERENCE_FRAMES);
-AMF_PARAM(CAP_MAX_REFERENCE_FRAMES);
 AMF_PARAM(CAP_PRE_ANALYSIS);
-AMF_PARAM(CAP_ROI);
 AMF_PARAM(CAP_MAX_THROUGHPUT);
-AMF_PARAM(OUTPUT_DATA_TYPE);
-AMF_PARAM(STATISTICS_FEEDBACK);
-AMF_PARAM(STATISTIC_FRAME_QP);
-AMF_PARAM(STATISTIC_AVERAGE_QP);
-AMF_PARAM(STATISTIC_MAX_QP);
-AMF_PARAM(STATISTIC_MIN_QP);
-AMF_PARAM(STATISTIC_PIX_NUM_INTRA);
-AMF_PARAM(STATISTIC_PIX_NUM_INTER);
-AMF_PARAM(STATISTIC_PIX_NUM_SKIP);
-AMF_PARAM(STATISTIC_BITCOUNT_RESIDUAL);
-AMF_PARAM(STATISTIC_BITCOUNT_MOTION);
-AMF_PARAM(STATISTIC_BITCOUNT_INTER);
-AMF_PARAM(STATISTIC_BITCOUNT_INTRA);
-AMF_PARAM(STATISTIC_BITCOUNT_ALL_MINUS_HEADER);
-AMF_PARAM(STATISTIC_MV_X);
-AMF_PARAM(STATISTIC_MV_Y);
+AMF_PARAM_H264_HEVC(CAP_MIN_REFERENCE_FRAMES);
+AMF_PARAM_H264_HEVC(CAP_MAX_REFERENCE_FRAMES);
+AMF_PARAM_H264_HEVC(CAP_ROI);
+AMF_PARAM_H264_HEVC(OUTPUT_DATA_TYPE);
+AMF_PARAM_H264_HEVC(STATISTICS_FEEDBACK);
+AMF_PARAM_H264_HEVC(STATISTIC_FRAME_QP);
+AMF_PARAM_H264_HEVC(STATISTIC_AVERAGE_QP);
+AMF_PARAM_H264_HEVC(STATISTIC_MAX_QP);
+AMF_PARAM_H264_HEVC(STATISTIC_MIN_QP);
+AMF_PARAM_H264_HEVC(STATISTIC_PIX_NUM_INTRA);
+AMF_PARAM_H264_HEVC(STATISTIC_PIX_NUM_INTER);
+AMF_PARAM_H264_HEVC(STATISTIC_PIX_NUM_SKIP);
+AMF_PARAM_H264_HEVC(STATISTIC_BITCOUNT_RESIDUAL);
+AMF_PARAM_H264_HEVC(STATISTIC_BITCOUNT_MOTION);
+AMF_PARAM_H264_HEVC(STATISTIC_BITCOUNT_INTER);
+AMF_PARAM_H264_HEVC(STATISTIC_BITCOUNT_INTRA);
+AMF_PARAM_H264_HEVC(STATISTIC_BITCOUNT_ALL_MINUS_HEADER);
+AMF_PARAM_H264_HEVC(STATISTIC_MV_X);
+AMF_PARAM_H264_HEVC(STATISTIC_MV_Y);
+AMF_PARAM_HEVC_AV1(COLOR_BIT_DEPTH);
+AMF_PARAM_H264_AV1(QVBR_QUALITY_LEVEL);
+static const wchar_t *AMF_PARAM_CAP_NUM_OF_STREAMS(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_CAP_NUM_OF_HW_INSTANCES;
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_CAP_NUM_OF_STREAMS;
+    case RGY_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_CAP_NUM_OF_STREAMS;
+    }
+}
+static const wchar_t *AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_SKIP_FRAME;
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_SKIP_FRAME_ENABLE;
+    case RGY_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_RATE_CONTROL_SKIP_FRAME_ENABLE;
+    }
+}
+static const wchar_t *AMF_PARAM_FILLER_DATA_ENABLE(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_FILLER_DATA;
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_FILLER_DATA_ENABLE;
+    case RGY_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_FILLER_DATA_ENABLE;
+    }
+}
+static const wchar_t *AMF_PARAM_PREENCODE_ENABLE(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_PREENCODE;
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_PREENCODE_ENABLE;
+    case RGY_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_PREENCODE_ENABLE;
+    }
+}
+static const wchar_t *AMF_PARAM_PROFILE_LEVEL(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_LEVEL;
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_PROFILE_LEVEL;
+    case RGY_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_PROFILE_LEVEL;
+    }
+}
 static const wchar_t *AMF_PARAM_GOP_SIZE(RGY_CODEC codec) {
     switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_GOP_SIZE;
     case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_GOP_SIZE;
     case RGY_CODEC_H264:
     default:             return AMF_VIDEO_ENCODER_IDR_PERIOD;
@@ -573,6 +721,7 @@ static const wchar_t *AMF_PARAM_CAPS_QUERY_TIMEOUT_SUPPORT(RGY_CODEC codec) {
 
 static int64_t get_encoder_usage(RGY_CODEC codec) {
     switch (codec) {
+    case RGY_CODEC_AV1:  return (int64_t)AMF_VIDEO_ENCODER_AV1_USAGE_TRANSCODING;
     case RGY_CODEC_HEVC: return (int64_t)AMF_VIDEO_ENCODER_HEVC_USAGE_TRANSCONDING;
     case RGY_CODEC_H264:
     default:             return (int64_t)AMF_VIDEO_ENCODER_USAGE_TRANSCONDING;
@@ -611,6 +760,7 @@ public:
     RGY_ERR SetParamTypeCodec(const RGY_CODEC codec);
     RGY_ERR SetParamTypeAVC();
     RGY_ERR SetParamTypeHEVC();
+    RGY_ERR SetParamTypeAV1();
     RGY_ERR SetParamTypePA();
 
     RGY_ERR SetParam(const std::wstring &name, amf::AMFVariantStruct value);

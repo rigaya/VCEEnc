@@ -31,6 +31,7 @@
 #include "vce_param.h"
 #include "VideoEncoderVCE.h"
 #include "VideoEncoderHEVC.h"
+#include "VideoEncoderAV1.h"
 #include "VideoDecoderUVD.h"
 #include "Trace.h"
 #include "Surface.h"
@@ -39,7 +40,8 @@
 static const auto RGY_CODEC_TO_VCE = make_array<std::pair<RGY_CODEC, const wchar_t *>>(
     std::make_pair(RGY_CODEC_UNKNOWN, nullptr),
     std::make_pair(RGY_CODEC_H264,    AMFVideoEncoderVCE_AVC),
-    std::make_pair(RGY_CODEC_HEVC,    AMFVideoEncoder_HEVC)
+    std::make_pair(RGY_CODEC_HEVC,    AMFVideoEncoder_HEVC),
+    std::make_pair(RGY_CODEC_AV1,     AMFVideoEncoder_AV1)
     );
 MAP_PAIR_0_1(codec, rgy, RGY_CODEC, enc, const wchar_t *, RGY_CODEC_TO_VCE, RGY_CODEC_UNKNOWN, nullptr);
 
@@ -49,6 +51,7 @@ static const auto VCE_CODEC_UVD_NAME = make_array<std::pair<RGY_CODEC, const wch
     std::make_pair(RGY_CODEC_VC1,   AMFVideoDecoderUVD_VC1 ),
     //std::make_pair( RGY_CODEC_WMV3,  AMFVideoDecoderUVD_WMV3 ),
     std::make_pair(RGY_CODEC_VP9,   AMFVideoDecoderHW_VP9),
+    std::make_pair(RGY_CODEC_AV1,   AMFVideoDecoderHW_AV1),
     std::make_pair(RGY_CODEC_MPEG2, AMFVideoDecoderUVD_MPEG2 )
 );
 
@@ -56,6 +59,7 @@ MAP_PAIR_0_1(codec, rgy, RGY_CODEC, dec, const wchar_t *, VCE_CODEC_UVD_NAME, RG
 
 const wchar_t * codec_rgy_to_dec_10bit(const RGY_CODEC codec) {
     switch (codec) {
+    case RGY_CODEC_AV1:  return AMFVideoDecoderHW_AV1_12BIT;
     case RGY_CODEC_HEVC: return AMFVideoDecoderHW_H265_MAIN10;
     case RGY_CODEC_VP9:  return AMFVideoDecoderHW_VP9_10BIT;
     default:

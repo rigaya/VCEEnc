@@ -49,10 +49,10 @@
 - [Encode Mode Options](#encode-mode-options)
   - [--cqp &lt;int&gt; or &lt;int&gt;:&lt;int&gt;:&lt;int&gt;](#--cqp-int-or-intintint)
   - [--cbr &lt;int&gt;](#--cbr-int)
-  - [--cbrhq &lt;int&gt; [H.264 only]](#--cbrhq-int-h264-only)
+  - [--cbrhq &lt;int&gt; [H.264/AV1]](#--cbrhq-int-h264av1)
   - [--vbr &lt;int&gt;](#--vbr-int)
-  - [--vbrhq &lt;int&gt; [H.264 only]](#--vbrhq-int-h264-only)
-  - [--qvbr &lt;int&gt; [H.264 only]](#--qvbr-int-h264-only)
+  - [--vbrhq &lt;int&gt; [H.264/AV1]](#--vbrhq-int-h264av1)
+  - [--qvbr &lt;int&gt; [H.264/AV1]](#--qvbr-int-h264av1)
 - [Other Options for Encoder](#other-options-for-encoder)
   - [-u, --preset](#-u---preset)
   - [--output-depth &lt;int&gt;](#--output-depth-int)
@@ -287,6 +287,7 @@ Specify the deviceId to be used with VCEEnc.
 Specify the output codec
  - h264 (default)
  - hevc
+ - av1
 
 ### -o, --output &lt;string&gt;
 Set output file name, pipe output with "-"
@@ -436,10 +437,10 @@ Set the QP value of &lt;I frame&gt;:&lt;P frame&gt;:&lt;B frame&gt;
 Generally, it is recommended to set the QP value to be I &lt; P &lt; B.
 
 ### --cbr &lt;int&gt;
-### --cbrhq &lt;int&gt; [H.264 only]
+### --cbrhq &lt;int&gt; [H.264/AV1]
 ### --vbr &lt;int&gt;
-### --vbrhq &lt;int&gt; [H.264 only]
-### --qvbr &lt;int&gt; [H.264 only]
+### --vbrhq &lt;int&gt; [H.264/AV1]
+### --qvbr &lt;int&gt; [H.264/AV1]
 Set bitrate in kbps.
 
 ## Other Options for Encoder
@@ -449,6 +450,7 @@ Encode qulaity preset.
 - balanced
 - fast
 - slow
+- slower (for AV1 only)
 
 ### --output-depth &lt;int&gt;
 Set output bit depth.
@@ -586,6 +588,7 @@ Specify the Level of the codec to be encoded. If not specified, it will be autom
 ```
 h264: auto, 1, 1 b, 1.1, 1.2, 1.3, 2, 2.1, 2.2, 3, 3.1, 3.2, 4, 4.1, 4.2, 5, 5.1, 5.2
 hevc: auto, 1, 2, 2.1, 3, 3.1, 4, 4.1, 5, 5.1, 5.2, 6, 6.1, 6.2
+av1 :  auto, 2, 2.1, 2.2, 2.3, 3, 3.1, 3.2, 3.3, 4, 4.1, 4.2, 4.3, 5, 5.1, 5.2, 5.3, 6, 6.1, 6.2, 6.3, 7, 7.1, 7.2, 7.3
 ```
 
 ### --profile &lt;string&gt;
@@ -593,6 +596,7 @@ Specify the profile of the codec to be encoded. If not specified, it will be aut
 ```
 h264:  auto, baseline, main, high, high444
 hevc:  auto, main, main10, main444
+av1 :  auto, main
 ```
 
 ### --tier &lt;string&gt;  [HEVC only]

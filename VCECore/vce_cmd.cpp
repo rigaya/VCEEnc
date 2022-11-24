@@ -150,9 +150,10 @@ tstring encoder_help() {
     str += gen_cmd_help_input();
     str += strsprintf(_T("\n")
         _T("-c,--codec <string>             set encode codec\n")
-        _T("                                 - h264(default), hevc\n")
+        _T("                                 - h264(default), hevc, av1\n")
         _T("-u,--preset <string>            set quality preset\n")
         _T("                                 balanced(default), fast, slow\n")
+        _T("                                 slower(for AV1 only)\n")
         _T("   --cqp <int> or               encode in Constant QP, default %d:%d:%d\n")
         _T("         <int>:<int>:<int>      set qp value for i:p:b frame\n")
         _T("   --cbr <int>                  set bitrate in CBR mode (kbps)\n")
@@ -211,10 +212,12 @@ tstring encoder_help() {
     str += PrintMultipleListOptions(_T("--level <string>"), _T("set codec level"),
         { { _T("H.264"), list_avc_level,   0 },
           { _T("HEVC"),  list_hevc_level,  0 },
+          { _T("AV1"),   list_av1_level,  0 },
         });
     str += PrintMultipleListOptions(_T("--profile <string>"), _T("set codec profile"),
         { { _T("H.264"), list_avc_profile,   0 },
           { _T("HEVC"),  list_hevc_profile,  0 },
+          { _T("AV1"),   list_av1_profile,   0 },
         });
     str += PrintMultipleListOptions(_T("--tier <string>"), _T("set codec tier"),
         { { _T("HEVC"),  list_hevc_tier, 0 },
@@ -1041,8 +1044,9 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
         }
         if (!bParsed) {
             print_cmd_error_invalid_value(_T("level"), argsData.cachedlevel.c_str(), std::vector<std::pair<RGY_CODEC, const CX_DESC *>>{
-                { RGY_CODEC_H264, list_avc_level },
-                { RGY_CODEC_HEVC, list_hevc_level }
+                { RGY_CODEC_H264, list_avc_level  },
+                { RGY_CODEC_HEVC, list_hevc_level },
+                { RGY_CODEC_AV1,  list_av1_level  }
             });
             return 1;
         }
@@ -1054,8 +1058,9 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
             pParams->codecParam[pParams->codec].nProfile = value;
         } else {
             print_cmd_error_invalid_value(_T("profile"), argsData.cachedprofile.c_str(), std::vector<std::pair<RGY_CODEC, const CX_DESC *>>{
-                { RGY_CODEC_H264, list_avc_profile },
-                { RGY_CODEC_HEVC, list_hevc_profile }
+                { RGY_CODEC_H264, list_avc_profile  },
+                { RGY_CODEC_HEVC, list_hevc_profile },
+                { RGY_CODEC_AV1,  list_av1_profile  }
             });
             return 1;
         }
@@ -1102,11 +1107,51 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
                 pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_SPEED;
                 break;
             case AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY:
+            case AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY:
                 pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_QUALITY;
                 break;
             case AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED:
             default:
                 pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_BALANCED;
+                break;
+            }
+        } else if (pParams->codec == RGY_CODEC_AV1) {
+            int h264RateControl = pParams->rateControl;
+            switch (h264RateControl) {
+            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR:
+                pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_CBR;
+                break;
+            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR:
+                pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR;
+                break;
+            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR:
+                pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR;
+                break;
+            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR:
+                pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_QUALITY_VBR;
+                break;
+            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR:
+                pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR;
+                break;
+            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP:
+            default:
+                pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_CONSTANT_QP;
+                break;
+            }
+            int h264qualityPreset = pParams->qualityPreset;
+            switch (h264qualityPreset) {
+            case AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED:
+                pParams->qualityPreset = AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_SPEED;
+                break;
+            case AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY:
+                pParams->qualityPreset = AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_QUALITY;
+                break;
+            case AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY:
+                pParams->qualityPreset = AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_HIGH_QUALITY;
+                break;
+            case AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED:
+            default:
+                pParams->qualityPreset = AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_BALANCED;
                 break;
             }
         } else {
@@ -1225,6 +1270,10 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     } else if (pParams->rateControl == get_codec_vbr(pParams->codec)
         || pParams->rateControl == get_codec_vbr_lat(pParams->codec)) {
         cmd << _T(" --vbr ") << pParams->nBitrate;
+    } else if (pParams->rateControl == get_codec_hqcbr(pParams->codec)) {
+        cmd << _T(" --cbrhq ") << pParams->nBitrate;
+    } else if (pParams->rateControl == get_codec_hqvbr(pParams->codec)) {
+        cmd << _T(" --vbrhq ") << pParams->nBitrate;
     } else if (pParams->rateControl == get_codec_cqp(pParams->codec)) {
         OPT_QP(_T("--cqp"), nQPI, nQPP, nQPB, true, true);
     } else if (pParams->rateControl == get_codec_qvbr(pParams->codec)) {
@@ -1266,14 +1315,18 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_BOOL(_T("--filler"), _T(""), bFiller);
     OPT_BOOL(_T("--enforce-hrd"), _T(""), bEnforceHRD);
 
+    if (pParams->codec == RGY_CODEC_H264 || save_disabled_prm) {
+        OPT_LST_H264(_T("--level"), _T(""), nLevel, list_avc_level);
+        OPT_LST_H264(_T("--profile"), _T(""), nProfile, list_avc_profile);
+    }
     if (pParams->codec == RGY_CODEC_HEVC || save_disabled_prm) {
         OPT_LST_HEVC(_T("--level"), _T(""), nLevel, list_hevc_level);
         OPT_LST_HEVC(_T("--profile"), _T(""), nProfile, list_hevc_profile);
         OPT_LST_HEVC(_T("--tier"), _T(""), nTier, list_hevc_tier);
     }
-    if (pParams->codec == RGY_CODEC_H264 || save_disabled_prm) {
-        OPT_LST_H264(_T("--level"), _T(""), nLevel, list_avc_level);
-        OPT_LST_H264(_T("--profile"), _T(""), nProfile, list_avc_profile);
+    if (pParams->codec == RGY_CODEC_AV1 || save_disabled_prm) {
+        OPT_LST_HEVC(_T("--level"), _T(""), nLevel, list_av1_level);
+        OPT_LST_HEVC(_T("--profile"), _T(""), nProfile, list_av1_profile);
     }
 
     OPT_BOOL(_T("--pe"), _T("--no-pe"), pe);

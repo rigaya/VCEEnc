@@ -79,6 +79,7 @@
 
 #include "rgy_level_h264.h"
 #include "rgy_level_hevc.h"
+#include "rgy_level_av1.h"
 
 void VCECore::PrintMes(RGYLogLevel log_level, const TCHAR *format, ...) {
     if (m_pLog.get() == nullptr || log_level < m_pLog->getLogLevel(RGY_LOGT_CORE)) {
@@ -378,7 +379,8 @@ RGY_CSP VCECore::GetEncoderCSP(const VCEParam *inputParam) const {
 int VCECore::GetEncoderBitdepth(const VCEParam *inputParam) const {
     switch (inputParam->codec) {
     case RGY_CODEC_H264: return 8;
-    case RGY_CODEC_HEVC: return inputParam->outputDepth;
+    case RGY_CODEC_HEVC:
+    case RGY_CODEC_AV1:  return inputParam->outputDepth;
     default:
         return 0;
     }
@@ -1637,6 +1639,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
                 PrintMes(RGY_LOG_ERROR, _T("QVBR mode is not supported on HEVC encoding.\n"));
                 return RGY_ERR_UNSUPPORTED;
             }
+        } else if (prm->codec == RGY_CODEC_AV1) {
         } else {
             PrintMes(RGY_LOG_WARN, _T("Unsupported codec.\n"));
             return RGY_ERR_UNSUPPORTED;
@@ -1780,6 +1783,14 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             }
             max_bitrate_kbps = get_max_bitrate_hevc(level, high_tier);
             vbv_bufsize_kbps = max_bitrate_kbps;
+        } else if (prm->codec == RGY_CODEC_AV1) {
+            const int profile = prm->codecParam[prm->codec].nProfile;
+            if (level == 0) {
+                level = calc_auto_level_av1(m_encWidth, m_encHeight, prm->nRefFrames,
+                    m_encFps.n(), m_encFps.d(), profile, max_bitrate_kbps, 1, 1);
+            }
+            max_bitrate_kbps = get_max_bitrate_av1(level, profile);
+            vbv_bufsize_kbps = max_bitrate_kbps;
         } else {
             max_bitrate_kbps = VCE_DEFAULT_MAX_BITRATE;
             vbv_bufsize_kbps = VCE_DEFAULT_VBV_BUFSIZE;
@@ -1820,15 +1831,15 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
     m_params.SetParam(AMF_PARAM_FRAMESIZE(prm->codec),      AMFConstructSize(m_encWidth, m_encHeight));
     m_params.SetParam(AMF_PARAM_FRAMERATE(prm->codec),      AMFConstructRate(m_encFps.n(), m_encFps.d()));
-    if (m_sar.is_valid()) {
-        m_params.SetParam(AMF_PARAM_ASPECT_RATIO(prm->codec), AMFConstructRatio(m_sar.n(), m_sar.d()));
-    }
     m_params.SetParam(AMF_PARAM_USAGE(prm->codec),          (amf_int64)get_encoder_usage(prm->codec));
     m_params.SetParam(AMF_PARAM_PROFILE(prm->codec),        (amf_int64)prm->codecParam[prm->codec].nProfile);
     m_params.SetParam(AMF_PARAM_PROFILE_LEVEL(prm->codec),  (amf_int64)prm->codecParam[prm->codec].nLevel);
     m_params.SetParam(AMF_PARAM_QUALITY_PRESET(prm->codec), (amf_int64)prm->qualityPreset);
-    m_params.SetParam(AMF_PARAM_QP_I(prm->codec),           (amf_int64)prm->nQPI);
-    m_params.SetParam(AMF_PARAM_QP_P(prm->codec),           (amf_int64)prm->nQPP);
+    if (m_encCodec == RGY_CODEC_H264 || m_encCodec == RGY_CODEC_HEVC) {
+        m_params.SetParam(AMF_PARAM_QP_I(prm->codec), (amf_int64)prm->nQPI);
+        m_params.SetParam(AMF_PARAM_QP_P(prm->codec), (amf_int64)prm->nQPP);
+    } else if (m_encCodec == RGY_CODEC_AV1) {
+    }
     m_params.SetParam(AMF_PARAM_TARGET_BITRATE(prm->codec), (amf_int64)prm->nBitrate * 1000);
     m_params.SetParam(AMF_PARAM_PEAK_BITRATE(prm->codec),   (amf_int64)prm->nMaxBitrate * 1000);
     m_params.SetParam(AMF_PARAM_MAX_NUM_REFRAMES(prm->codec), (amf_int64)prm->nRefFrames);
@@ -1837,11 +1848,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_RATE_CONTROL_METHOD(prm->codec),             (amf_int64)prm->rateControl);
     m_params.SetParam(AMF_PARAM_VBV_BUFFER_SIZE(prm->codec),                 (amf_int64)prm->nVBVBufferSize * 1000);
     m_params.SetParam(AMF_PARAM_INITIAL_VBV_BUFFER_FULLNESS(prm->codec),     (amf_int64)prm->nInitialVBVPercent);
-    m_params.SetParam(AMF_PARAM_LOWLATENCY_MODE(prm->codec), prm->ctrl.lowLatency);
 
     m_params.SetParam(AMF_PARAM_ENFORCE_HRD(prm->codec),        prm->bEnforceHRD != 0);
     m_params.SetParam(AMF_PARAM_FILLER_DATA_ENABLE(prm->codec), prm->bFiller != 0);
-    m_params.SetParam(AMF_PARAM_SLICES_PER_FRAME(prm->codec),               (amf_int64)prm->nSlices);
     m_params.SetParam(AMF_PARAM_GOP_SIZE(prm->codec),                       (amf_int64)nGOPLen);
 
     if (prm->pa.enable &&
@@ -1880,7 +1889,6 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         }
     }
     m_params.SetParam(AMF_PARAM_PREENCODE_ENABLE(prm->codec), prm->pe);
-    if (prm->bVBAQ) m_params.SetParam(AMF_PARAM_ENABLE_VBAQ(prm->codec), true);
 
     //m_params.SetParam(AMF_PARAM_INPUT_COLOR_PROFILE(prm->codec),           AMF_VIDEO_CONVERTER_COLOR_PROFILE_UNKNOWN);
     //m_params.SetParam(AMF_PARAM_INPUT_TRANSFER_CHARACTERISTIC(prm->codec), AMF_COLOR_TRANSFER_CHARACTERISTIC_UNDEFINED);
@@ -1890,12 +1898,26 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     //m_params.SetParam(AMF_PARAM_OUTPUT_TRANSFER_CHARACTERISTIC(prm->codec), AMF_COLOR_TRANSFER_CHARACTERISTIC_UNDEFINED);
     //m_params.SetParam(AMF_PARAM_OUTPUT_COLOR_PRIMARIES(prm->codec),         AMF_COLOR_PRIMARIES_UNDEFINED);
 
-    //m_params.SetParam(AMF_PARAM_END_OF_SEQUENCE(prm->codec),                false);
-    m_params.SetParam(AMF_PARAM_INSERT_AUD(prm->codec),                     false);
+    if (prm->codec == RGY_CODEC_H264 || prm->codec == RGY_CODEC_HEVC) {
+        if (m_sar.is_valid()) {
+            m_params.SetParam(AMF_PARAM_ASPECT_RATIO(prm->codec), AMFConstructRatio(m_sar.n(), m_sar.d()));
+        }
+        m_params.SetParam(AMF_PARAM_SLICES_PER_FRAME(prm->codec), (amf_int64)prm->nSlices);
+        m_params.SetParam(AMF_PARAM_LOWLATENCY_MODE(prm->codec), prm->ctrl.lowLatency);
+        if (prm->bVBAQ) m_params.SetParam(AMF_PARAM_ENABLE_VBAQ(prm->codec), true);
+        //m_params.SetParam(AMF_PARAM_END_OF_SEQUENCE(prm->codec),                false);
+        m_params.SetParam(AMF_PARAM_INSERT_AUD(prm->codec), false);
+    }
+    if (prm->codec == RGY_CODEC_H264 || prm->codec == RGY_CODEC_AV1) {
+        m_params.SetParam(AMF_PARAM_QVBR_QUALITY_LEVEL(prm->codec), (amf_int64)prm->qvbrLevel);
+    }
+
+    if (prm->codec == RGY_CODEC_HEVC || prm->codec == RGY_CODEC_AV1) {
+        m_params.SetParam(AMF_PARAM_COLOR_BIT_DEPTH(prm->codec), (amf_int64)prm->outputDepth);
+    }
+
     if (prm->codec == RGY_CODEC_H264) {
         //m_params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), (prm->preAnalysis) ? AMF_VIDEO_ENCODER_PREENCODE_ENABLED : AMF_VIDEO_ENCODER_PREENCODE_DISABLED);
-
-        m_params.SetParam(AMF_VIDEO_ENCODER_QVBR_QUALITY_LEVEL, (amf_int64)prm->qvbrLevel);
 
         m_params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)((m_picStruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
 
@@ -1935,7 +1957,6 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         //m_params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), prm->preAnalysis);
 
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_TIER,                            (amf_int64)prm->codecParam[prm->codec].nTier);
-        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_COLOR_BIT_DEPTH,                 (amf_int64)prm->outputDepth);
         //m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE,                   (amf_int64)(m_encVUI.colorrange == RGY_COLORRANGE_FULL ? AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE_FULL : AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE_STUDIO));
 
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_I,                        (amf_int64)prm->nQPMin);
@@ -1946,6 +1967,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_DE_BLOCKING_FILTER_DISABLE,      !prm->bDeblockFilter);
 
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER,                   true);
+    } else if (prm->codec == RGY_CODEC_AV1) {
     } else {
         PrintMes(RGY_LOG_ERROR, _T("Unsupported codec.\n"));
         return RGY_ERR_UNSUPPORTED;
@@ -3496,11 +3518,15 @@ tstring VCECore::GetEncoderParam() {
     }
     mes += strsprintf(_T("Quality:       %s\n"), getPropertyDesc(AMF_PARAM_QUALITY_PRESET(m_encCodec), get_quality_preset(m_encCodec)).c_str());
     if (GetPropertyInt(AMF_PARAM_RATE_CONTROL_METHOD(m_encCodec)) == get_rc_method(m_encCodec)[0].value) {
-        mes += strsprintf(_T("CQP:           I:%d, P:%d"),
-            GetPropertyInt(AMF_PARAM_QP_I(m_encCodec)),
-            GetPropertyInt(AMF_PARAM_QP_P(m_encCodec)));
-        if (m_encCodec == RGY_CODEC_H264 && GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN)) {
-            mes += strsprintf(_T(", B:%d"), GetPropertyInt(AMF_VIDEO_ENCODER_QP_B));
+        if (m_encCodec == RGY_CODEC_H264 || m_encCodec == RGY_CODEC_HEVC) {
+            mes += strsprintf(_T("CQP:           I:%d, P:%d"),
+                GetPropertyInt(AMF_PARAM_QP_I(m_encCodec)),
+                GetPropertyInt(AMF_PARAM_QP_P(m_encCodec)));
+            if (m_encCodec == RGY_CODEC_H264 && GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN)) {
+                mes += strsprintf(_T(", B:%d"), GetPropertyInt(AMF_VIDEO_ENCODER_QP_B));
+            }
+        } else if (m_encCodec == RGY_CODEC_AV1) {
+
         }
         mes += _T("\n");
     } else {
@@ -3599,25 +3625,27 @@ tstring VCECore::GetEncoderParam() {
         break;
     }
     others += (bDeblock) ? _T("deblock ") : _T("no_deblock ");
-    if (m_pLog->getLogLevel(RGY_LOGT_CORE) <= RGY_LOG_DEBUG) {
-        if (GetPropertyBool(AMF_PARAM_INSERT_AUD(m_encCodec))) {
-            others += _T("aud ");
+    if (m_encCodec == RGY_CODEC_H264 || m_encCodec == RGY_CODEC_HEVC) {
+        if (m_pLog->getLogLevel(RGY_LOGT_CORE) <= RGY_LOG_DEBUG) {
+            if (GetPropertyBool(AMF_PARAM_INSERT_AUD(m_encCodec))) {
+                others += _T("aud ");
+            }
         }
-        if (m_encCodec == RGY_CODEC_H264) {
-            if (GetPropertyBool(AMF_VIDEO_ENCODER_INSERT_SPS)) {
-                others += _T("sps ");
-            }
-            if (GetPropertyBool(AMF_VIDEO_ENCODER_INSERT_PPS)) {
-                others += _T("pps ");
-            }
-        } else if (m_encCodec == RGY_CODEC_HEVC) {
-            if (GetPropertyBool(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER)) {
-                others += _T("sps pps vps ");
-            }
+        if (GetPropertyBool(AMF_PARAM_LOWLATENCY_MODE(m_encCodec))) {
+            others += _T("lowlatency ");
         }
     }
-    if (GetPropertyBool(AMF_PARAM_LOWLATENCY_MODE(m_encCodec))) {
-        others += _T("lowlatency ");
+    if (m_encCodec == RGY_CODEC_H264) {
+        if (GetPropertyBool(AMF_VIDEO_ENCODER_INSERT_SPS)) {
+            others += _T("sps ");
+        }
+        if (GetPropertyBool(AMF_VIDEO_ENCODER_INSERT_PPS)) {
+            others += _T("pps ");
+        }
+    } else if (m_encCodec == RGY_CODEC_HEVC) {
+        if (GetPropertyBool(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER)) {
+            others += _T("sps pps vps ");
+        }
     }
     if (GetPropertyBool(AMF_PARAM_PREENCODE_ENABLE(m_encCodec))) {
         others += _T("pe ");

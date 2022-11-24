@@ -839,6 +839,8 @@ System::Void frmConfig::InitComboBox() {
     setComboBox(fcgCXCodecProfile,  list_avc_profile);
     setComboBox(fcgCXHEVCLevel,     list_hevc_level);
     setComboBox(fcgCXHEVCProfile,   list_hevc_profile);
+    setComboBox(fcgCXAV1Level,      list_av1_level);
+    setComboBox(fcgCXAV1Profile,    list_av1_profile);
     setComboBox(fcgCXInterlaced,    list_interlaced);
     setComboBox(fcgCXBitdepth,      list_hevc_bitdepth);
     setComboBox(fcgCXAspectRatio, aspect_desc);
@@ -974,6 +976,7 @@ System::Void frmConfig::fcgCXCodec_SelectedIndexChanged(System::Object^  sender,
     this->SuspendLayout();
 
     fcgPNHEVCLevelProfile->Visible = enc_codec == RGY_CODEC_HEVC;
+    fcgPNAV1LevelProfile->Visible = enc_codec == RGY_CODEC_AV1;
 
     setComboBox(fcgCXEncMode, get_rc_method(enc_codec));
     setComboBox(fcgCXQualityPreset, get_quality_preset(enc_codec));
@@ -983,6 +986,9 @@ System::Void frmConfig::fcgCXCodec_SelectedIndexChanged(System::Object^  sender,
     fcgCXBitdepth->Items->Clear();
     if (enc_codec == RGY_CODEC_HEVC) {
         setComboBox(fcgCXBitdepth, list_hevc_bitdepth);
+        SetCXIndex(fcgCXBitdepth, last_bitdepth);
+    } else if(enc_codec == RGY_CODEC_AV1) {
+        setComboBox(fcgCXBitdepth, list_av1_bitdepth);
         SetCXIndex(fcgCXBitdepth, last_bitdepth);
     } else if (enc_codec == RGY_CODEC_H264) {
         setComboBox(fcgCXBitdepth, list_hevc_bitdepth, 1);
@@ -1198,6 +1204,8 @@ System::Void frmConfig::LoadLangText() {
     LOAD_CLI_TEXT(fcgLBBRefDeltaQP);
     LOAD_CLI_TEXT(fcgLBHEVCLevel);
     LOAD_CLI_TEXT(fcgLBHEVCProfile);
+    LOAD_CLI_TEXT(fcgLBAV1Level);
+    LOAD_CLI_TEXT(fcgLBAV1Profile);
     LOAD_CLI_TEXT(fcgLBVBAQ);
     LOAD_CLI_TEXT(tabPageVideoEnc2);
     LOAD_CLI_TEXT(fcgCBPreEncode);
@@ -1364,6 +1372,8 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetCXIndex(fcgCXCodecProfile,      get_cx_index(list_avc_profile, enc.codecParam[RGY_CODEC_H264].nProfile));
     SetCXIndex(fcgCXHEVCLevel,         get_cx_index(list_hevc_level, enc.codecParam[RGY_CODEC_HEVC].nLevel));
     SetCXIndex(fcgCXHEVCProfile,       get_cx_index(list_hevc_profile, enc.codecParam[RGY_CODEC_HEVC].nProfile));
+    SetCXIndex(fcgCXAV1Level,          get_cx_index(list_av1_level, enc.codecParam[RGY_CODEC_AV1].nLevel));
+    SetCXIndex(fcgCXAV1Profile,        get_cx_index(list_av1_profile, enc.codecParam[RGY_CODEC_AV1].nProfile));
     SetCXIndex(fcgCXInterlaced,        get_cx_index(list_interlaced, enc.input.picstruct));
     if (enc.par[0] * enc.par[1] <= 0)
         enc.par[0] = enc.par[1] = 0;
@@ -1573,6 +1583,8 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     enc.codecParam[RGY_CODEC_H264].nLevel       = list_avc_level[fcgCXCodecLevel->SelectedIndex].value;
     enc.codecParam[RGY_CODEC_HEVC].nProfile     = list_hevc_profile[fcgCXHEVCProfile->SelectedIndex].value;
     enc.codecParam[RGY_CODEC_HEVC].nLevel       = list_hevc_level[fcgCXHEVCLevel->SelectedIndex].value;
+    enc.codecParam[RGY_CODEC_AV1].nProfile      = list_av1_profile[fcgCXAV1Profile->SelectedIndex].value;
+    enc.codecParam[RGY_CODEC_AV1].nLevel        = list_av1_level[fcgCXAV1Level->SelectedIndex].value;
     enc.outputDepth                             = list_hevc_bitdepth[fcgCXBitdepth->SelectedIndex].value;
     enc.nBitrate                                = (int)fcgNUBitrate->Value;
     enc.nMaxBitrate                             = (int)fcgNUMaxkbps->Value;
@@ -1976,6 +1988,8 @@ System::Void frmConfig::SetHelpToolTips() {
     SET_TOOL_TIP_EX(fcgCXCodecLevel);
     SET_TOOL_TIP_EX(fcgCXHEVCProfile);
     SET_TOOL_TIP_EX(fcgCXHEVCLevel);
+    SET_TOOL_TIP_EX(fcgCXAV1Profile);
+    SET_TOOL_TIP_EX(fcgCXAV1Level);
     SET_TOOL_TIP_EX(fcgCXBitdepth);
     SET_TOOL_TIP_EX(fcgCBDeblock);
     SET_TOOL_TIP_EX(fcgCBSkipFrame);

@@ -1133,6 +1133,11 @@ private: System::Windows::Forms::ToolStripDropDownButton^  fcgTSLanguage;
 private: System::Windows::Forms::ToolStripSeparator^  toolStripSeparator1;
 private: System::Windows::Forms::Label^ fcgLBDevice;
 private: System::Windows::Forms::ComboBox^ fcgCXDevice;
+private: System::Windows::Forms::Panel^  fcgPNAV1LevelProfile;
+private: System::Windows::Forms::ComboBox^  fcgCXAV1Level;
+private: System::Windows::Forms::ComboBox^  fcgCXAV1Profile;
+private: System::Windows::Forms::Label^  fcgLBAV1Level;
+private: System::Windows::Forms::Label^  fcgLBAV1Profile;
 
 
 
@@ -1251,7 +1256,7 @@ private: System::Windows::Forms::ComboBox^ fcgCXDevice;
         void InitializeComponent(void)
         {
             this->components = (gcnew System::ComponentModel::Container());
-            System::ComponentModel::ComponentResourceManager^ resources = (gcnew System::ComponentModel::ComponentResourceManager(frmConfig::typeid));
+            System::ComponentModel::ComponentResourceManager^  resources = (gcnew System::ComponentModel::ComponentResourceManager(frmConfig::typeid));
             this->fcgtoolStripSettings = (gcnew System::Windows::Forms::ToolStrip());
             this->fcgTSBSave = (gcnew System::Windows::Forms::ToolStripButton());
             this->fcgTSBSaveNew = (gcnew System::Windows::Forms::ToolStripButton());
@@ -1330,6 +1335,8 @@ private: System::Windows::Forms::ComboBox^ fcgCXDevice;
             this->fcgTTEx = (gcnew System::Windows::Forms::ToolTip(this->components));
             this->fcgtabControlVCE = (gcnew System::Windows::Forms::TabControl());
             this->tabPageVideoEnc = (gcnew System::Windows::Forms::TabPage());
+            this->fcgLBDevice = (gcnew System::Windows::Forms::Label());
+            this->fcgCXDevice = (gcnew System::Windows::Forms::ComboBox());
             this->fcgPNHEVCLevelProfile = (gcnew System::Windows::Forms::Panel());
             this->fcgCXHEVCLevel = (gcnew System::Windows::Forms::ComboBox());
             this->fcgCXHEVCProfile = (gcnew System::Windows::Forms::ComboBox());
@@ -1639,8 +1646,11 @@ private: System::Windows::Forms::ComboBox^ fcgCXDevice;
             this->fcgCXAudioPriority = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBAudioPriority = (gcnew System::Windows::Forms::Label());
             this->fcgPNHideToolStripBorder = (gcnew System::Windows::Forms::Panel());
-            this->fcgLBDevice = (gcnew System::Windows::Forms::Label());
-            this->fcgCXDevice = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgPNAV1LevelProfile = (gcnew System::Windows::Forms::Panel());
+            this->fcgCXAV1Level = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgCXAV1Profile = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgLBAV1Level = (gcnew System::Windows::Forms::Label());
+            this->fcgLBAV1Profile = (gcnew System::Windows::Forms::Label());
             this->fcgtoolStripSettings->SuspendLayout();
             this->fcgtabControlMux->SuspendLayout();
             this->fcgtabPageMP4->SuspendLayout();
@@ -1752,6 +1762,7 @@ private: System::Windows::Forms::ComboBox^ fcgCXDevice;
             this->fcgPNAudioInternal->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrateInternal))->BeginInit();
             this->fcgtabPageAudioOther->SuspendLayout();
+            this->fcgPNAV1LevelProfile->SuspendLayout();
             this->SuspendLayout();
             // 
             // fcgtoolStripSettings
@@ -2655,8 +2666,29 @@ private: System::Windows::Forms::ComboBox^ fcgCXDevice;
             this->tabPageVideoEnc->Text = L"動画エンコード";
             this->tabPageVideoEnc->UseVisualStyleBackColor = true;
             // 
+            // fcgLBDevice
+            // 
+            this->fcgLBDevice->AutoSize = true;
+            this->fcgLBDevice->Location = System::Drawing::Point(13, 110);
+            this->fcgLBDevice->Name = L"fcgLBDevice";
+            this->fcgLBDevice->Size = System::Drawing::Size(41, 14);
+            this->fcgLBDevice->TabIndex = 145;
+            this->fcgLBDevice->Text = L"デバイス";
+            // 
+            // fcgCXDevice
+            // 
+            this->fcgCXDevice->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXDevice->FormattingEnabled = true;
+            this->fcgCXDevice->Items->AddRange(gcnew cli::array< System::Object^  >(3) { L"高品質", L"標準", L"高速" });
+            this->fcgCXDevice->Location = System::Drawing::Point(81, 107);
+            this->fcgCXDevice->Name = L"fcgCXDevice";
+            this->fcgCXDevice->Size = System::Drawing::Size(188, 22);
+            this->fcgCXDevice->TabIndex = 146;
+            this->fcgCXDevice->Tag = L"reCmd";
+            // 
             // fcgPNHEVCLevelProfile
             // 
+            this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgPNAV1LevelProfile);
             this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCLevel);
             this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgCXHEVCProfile);
             this->fcgPNHEVCLevelProfile->Controls->Add(this->fcgLBHEVCLevel);
@@ -5935,25 +5967,54 @@ private: System::Windows::Forms::ComboBox^ fcgCXDevice;
             this->fcgPNHideToolStripBorder->TabIndex = 52;
             this->fcgPNHideToolStripBorder->Visible = false;
             // 
-            // fcgLBDevice
+            // fcgPNAV1LevelProfile
             // 
-            this->fcgLBDevice->AutoSize = true;
-            this->fcgLBDevice->Location = System::Drawing::Point(13, 110);
-            this->fcgLBDevice->Name = L"fcgLBDevice";
-            this->fcgLBDevice->Size = System::Drawing::Size(41, 14);
-            this->fcgLBDevice->TabIndex = 145;
-            this->fcgLBDevice->Text = L"デバイス";
+            this->fcgPNAV1LevelProfile->Controls->Add(this->fcgCXAV1Level);
+            this->fcgPNAV1LevelProfile->Controls->Add(this->fcgCXAV1Profile);
+            this->fcgPNAV1LevelProfile->Controls->Add(this->fcgLBAV1Level);
+            this->fcgPNAV1LevelProfile->Controls->Add(this->fcgLBAV1Profile);
+            this->fcgPNAV1LevelProfile->Location = System::Drawing::Point(0, 0);
+            this->fcgPNAV1LevelProfile->Name = L"fcgPNAV1LevelProfile";
+            this->fcgPNAV1LevelProfile->Size = System::Drawing::Size(255, 63);
+            this->fcgPNAV1LevelProfile->TabIndex = 111;
             // 
-            // fcgCXDevice
+            // fcgCXAV1Level
             // 
-            this->fcgCXDevice->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXDevice->FormattingEnabled = true;
-            this->fcgCXDevice->Items->AddRange(gcnew cli::array< System::Object^  >(3) { L"高品質", L"標準", L"高速" });
-            this->fcgCXDevice->Location = System::Drawing::Point(81, 107);
-            this->fcgCXDevice->Name = L"fcgCXDevice";
-            this->fcgCXDevice->Size = System::Drawing::Size(188, 22);
-            this->fcgCXDevice->TabIndex = 146;
-            this->fcgCXDevice->Tag = L"reCmd";
+            this->fcgCXAV1Level->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXAV1Level->FormattingEnabled = true;
+            this->fcgCXAV1Level->Location = System::Drawing::Point(112, 36);
+            this->fcgCXAV1Level->Name = L"fcgCXAV1Level";
+            this->fcgCXAV1Level->Size = System::Drawing::Size(121, 22);
+            this->fcgCXAV1Level->TabIndex = 104;
+            this->fcgCXAV1Level->Tag = L"reCmd";
+            // 
+            // fcgCXAV1Profile
+            // 
+            this->fcgCXAV1Profile->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXAV1Profile->FormattingEnabled = true;
+            this->fcgCXAV1Profile->Location = System::Drawing::Point(112, 4);
+            this->fcgCXAV1Profile->Name = L"fcgCXAV1Profile";
+            this->fcgCXAV1Profile->Size = System::Drawing::Size(121, 22);
+            this->fcgCXAV1Profile->TabIndex = 102;
+            this->fcgCXAV1Profile->Tag = L"reCmd";
+            // 
+            // fcgLBAV1Level
+            // 
+            this->fcgLBAV1Level->AutoSize = true;
+            this->fcgLBAV1Level->Location = System::Drawing::Point(13, 39);
+            this->fcgLBAV1Level->Name = L"fcgLBAV1Level";
+            this->fcgLBAV1Level->Size = System::Drawing::Size(33, 14);
+            this->fcgLBAV1Level->TabIndex = 103;
+            this->fcgLBAV1Level->Text = L"レベル";
+            // 
+            // fcgLBAV1Profile
+            // 
+            this->fcgLBAV1Profile->AutoSize = true;
+            this->fcgLBAV1Profile->Location = System::Drawing::Point(13, 7);
+            this->fcgLBAV1Profile->Name = L"fcgLBAV1Profile";
+            this->fcgLBAV1Profile->Size = System::Drawing::Size(53, 14);
+            this->fcgLBAV1Profile->TabIndex = 101;
+            this->fcgLBAV1Profile->Text = L"プロファイル";
             // 
             // frmConfig
             // 
@@ -6128,6 +6189,8 @@ private: System::Windows::Forms::ComboBox^ fcgCXDevice;
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrateInternal))->EndInit();
             this->fcgtabPageAudioOther->ResumeLayout(false);
             this->fcgtabPageAudioOther->PerformLayout();
+            this->fcgPNAV1LevelProfile->ResumeLayout(false);
+            this->fcgPNAV1LevelProfile->PerformLayout();
             this->ResumeLayout(false);
             this->PerformLayout();
 
