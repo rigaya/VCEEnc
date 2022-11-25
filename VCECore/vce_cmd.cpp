@@ -174,14 +174,22 @@ tstring encoder_help() {
         _T("   --ltr <int>                  set num of long term reference frames (default: %d)\n")
         _T("   --max-bitrate <int>          set max bitrate (kbps) (default: %d)\n")
         _T("   --vbv-bufsize <int>          set vbv buffer size (kbps) (default: %d)\n")
-        _T("   --slices <int>               set num of slices per frame (default: %d)\n")
-        _T("   --(no-)skip-frame            enable skip frame feature\n")
-        _T("   --motion-est                 set motion estimation precision\n")
+        _T("   --gop-len <int>              set length of gop (default: auto)\n")
+        _T("   --(no-)skip-frame            [H.264/HEVC] enable skip frame feature\n")
+        _T("   --slices <int>               [H.264/HEVC] num of slices per frame (default: %d)\n")
+        _T("   --motion-est                 [H.264/HEVC] motion estimation precision\n")
         _T("                                 - full-pel (fast)\n")
         _T("                                 - half-pel\n")
         _T("                                 - q-pel (best) = default\n")
-        _T("   --gop-len <int>              set length of gop (default: auto)\n")
-        _T("   --vbaq                       enable VBAQ\n")
+        _T("   --vbaq                       [H.264/HEVC] enable VBAQ\n")
+        _T("   --tiles <int>                [AV1] set num of tiles per frame\n")
+        _T("   --temporal-layers <int>      [AV1] set num of temporal layers\n")
+        _T("   --aq-mode <string>           [AV1] set AQ mode\n")
+        _T("                                 - none\n")
+        _T("                                 - caq\n")
+        _T("   --cdef-mode <string>         [AV1] set CDEF mode\n")
+        _T("                                 - off\n")
+        _T("                                 - on\n")
         _T("   --pe                         enable Pre Encode\n")
         _T("   --pa [<param1>=<value>][,<param2>=<value>][...]\n")
         _T("     enable Pre Analysis\n")
@@ -508,28 +516,40 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
     }
     if (IS_OPTION("qp-max")) {
         i++;
-        int value = 0;
-        if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
+        int value1 = 0, value2 = 0;
+        if (2 == _stscanf_s(strInput[i], _T("%d:%d"), &value1, &value2)) {
+            ;
+        } else if (1 == _stscanf_s(strInput[i], _T("%d"), &value1)) {
+            value2 = value1;
+        } else {
             print_cmd_error_invalid_value(option_name, strInput[i]);
             return 1;
-        } else if (value < 0) {
+        }
+        if (value1 < 0 || value2 < 0) {
             print_cmd_error_invalid_value(option_name, strInput[i], _T("qp-max should be positive value."));
             return 1;
         }
-        pParams->nQPMax = value;
+        pParams->nQPMax = value1;
+        pParams->nQPMaxInter = value2;
         return 0;
     }
     if (IS_OPTION("qp-min")) {
         i++;
-        int value = 0;
-        if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
+        int value1 = 0, value2 = 0;
+        if (2 == _stscanf_s(strInput[i], _T("%d:%d"), &value1, &value2)) {
+            ;
+        } else if (1 == _stscanf_s(strInput[i], _T("%d"), &value1)) {
+            value2 = value1;
+        } else {
             print_cmd_error_invalid_value(option_name, strInput[i]);
             return 1;
-        } else if (value < 0) {
+        }
+        if (value1 < 0 || value2 < 0) {
             print_cmd_error_invalid_value(option_name, strInput[i], _T("qp-min should be positive value."));
             return 1;
         }
-        pParams->nQPMin = value;
+        pParams->nQPMin = value1;
+        pParams->nQPMinInter = value2;
         return 0;
     }
     if (IS_OPTION("bframes")) {
@@ -702,6 +722,65 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
     }
     if (IS_OPTION("enforce-hrd")) {
         pParams->bEnforceHRD = TRUE;
+        return 0;
+    }
+    if (IS_OPTION("tiles")) {
+        i++;
+        int value = 0;
+        if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
+        } else if (value < 0) {
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("tiles should be positive value."));
+            return 1;
+        }
+        pParams->tiles = value;
+        return 0;
+    }
+    if (IS_OPTION("cdef-mode")) {
+        i++;
+        int value = 0;
+        if (get_list_value(list_av1_cdef_mode, strInput[i], &value)) {
+            pParams->cdefMode = value;
+        } else {
+            print_cmd_error_invalid_value(option_name, strInput[i], list_av1_cdef_mode);
+            return 1;
+        }
+        return 0;
+    }
+    if (IS_OPTION("temporal-layers")) {
+        i++;
+        int value = 0;
+        if (1 != _stscanf_s(strInput[i], _T("%d"), &value)) {
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
+        } else if (value < 0) {
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("temporal-layers should be positive value."));
+            return 1;
+        }
+        pParams->temporalLayers = value;
+        return 0;
+    }
+    if (IS_OPTION("alignment-mode")) {
+        i++;
+        int value = 0;
+        if (get_list_value(list_av1_alignment_mode, strInput[i], &value)) {
+            pParams->alignmentMode = value;
+        } else {
+            print_cmd_error_invalid_value(option_name, strInput[i], list_av1_alignment_mode);
+            return 1;
+        }
+        return 0;
+    }
+    if (IS_OPTION("aq-mode")) {
+        i++;
+        int value = 0;
+        if (get_list_value(list_av1_aq_mode, strInput[i], &value)) {
+            pParams->aqMode = value;
+        } else {
+            print_cmd_error_invalid_value(option_name, strInput[i], list_av1_aq_mode);
+            return 1;
+        }
         return 0;
     }
     if (IS_OPTION("no-pe")) {
@@ -1314,6 +1393,12 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     }
     OPT_BOOL(_T("--filler"), _T(""), bFiller);
     OPT_BOOL(_T("--enforce-hrd"), _T(""), bEnforceHRD);
+
+    OPT_NUM(_T("--tiles"), tiles);
+    OPT_NUM(_T("--temporal-layers"), temporalLayers);
+    OPT_LST(_T("--cdef-mode"), cdefMode, list_av1_cdef_mode);
+    OPT_LST(_T("--aq-mode"), aqMode, list_av1_aq_mode);
+    OPT_LST(_T("--alignment-mode"), alignmentMode, list_av1_alignment_mode);
 
     if (pParams->codec == RGY_CODEC_H264 || save_disabled_prm) {
         OPT_LST_H264(_T("--level"), _T(""), nLevel, list_avc_level);

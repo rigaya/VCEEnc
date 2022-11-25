@@ -231,6 +231,27 @@ const CX_DESC list_vce_preanalysis_h264[] = {
     { NULL, 0 }
 };
 
+
+const CX_DESC list_av1_alignment_mode[] = {
+    { _T("auto"),                    0 },
+    { _T("64x16"),                   AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE_64X16_ONLY },
+    { _T("64x16_1080p_codec_1082"),  AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE_64X16_1080P_CODED_1082  },
+    { _T("no_restrict"),             AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE_NO_RESTRICTIONS  },
+    { NULL, 0 }
+};
+
+const CX_DESC list_av1_cdef_mode[] = {
+    { _T("off"), AMF_VIDEO_ENCODER_AV1_CDEF_DISABLE },
+    { _T("on"),  AMF_VIDEO_ENCODER_AV1_CDEF_ENABLE_DEFAULT  },
+    { NULL, 0 }
+};
+
+const CX_DESC list_av1_aq_mode[] = {
+    { _T("none"), AMF_VIDEO_ENCODER_AV1_AQ_MODE_NONE },
+    { _T("caq"),  AMF_VIDEO_ENCODER_AV1_AQ_MODE_CAQ  },
+    { NULL, 0 }
+};
+
 #define AMF_PA_SCENE_CHANGE_DETECTION_NONE (AMF_PA_SCENE_CHANGE_DETECTION_SENSITIVITY_LOW-1)
 #define AMF_PA_STATIC_SCENE_DETECTION_NONE (AMF_PA_STATIC_SCENE_DETECTION_SENSITIVITY_LOW-1)
 
@@ -509,6 +530,8 @@ struct VCEParam {
     int     nQPB;
     int     nQPMax;
     int     nQPMin;
+    int     nQPMaxInter;
+    int     nQPMinInter;
     int     nDeltaQPBFrame;
     int     nDeltaQPBFrameRef;
     int     nBframes;
@@ -527,6 +550,14 @@ struct VCEParam {
     bool       pe;
 
     bool        bVBAQ;
+
+    //AV1
+    int     tiles;
+    int     cdefMode;
+    int     temporalLayers;
+    int     alignmentMode;
+    int     aqMode;
+
 
     bool        ssim;
     bool        psnr;
@@ -587,7 +618,7 @@ static const wchar_t *AMF_PARAM_##x(RGY_CODEC codec) { \
     case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_##x; \
     case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_##x; \
     case RGY_CODEC_H264: \
-    default: nullptr; \
+    default: return nullptr; \
     } \
 };
 
@@ -598,8 +629,6 @@ AMF_PARAM(PROFILE);
 AMF_PARAM(MAX_LTR_FRAMES);
 AMF_PARAM(MAX_NUM_REFRAMES);
 AMF_PARAM(QUALITY_PRESET);
-AMF_PARAM_H264_HEVC(ASPECT_RATIO);
-AMF_PARAM_H264_HEVC(SLICES_PER_FRAME);
 AMF_PARAM(RATE_CONTROL_METHOD);
 AMF_PARAM(VBV_BUFFER_SIZE);
 AMF_PARAM(INITIAL_VBV_BUFFER_FULLNESS);
@@ -607,16 +636,18 @@ AMF_PARAM(PRE_ANALYSIS_ENABLE);
 AMF_PARAM(ENFORCE_HRD);
 AMF_PARAM(TARGET_BITRATE);
 AMF_PARAM(PEAK_BITRATE);
+AMF_PARAM_H264_HEVC(ASPECT_RATIO);
+AMF_PARAM_H264_HEVC(SLICES_PER_FRAME);
 AMF_PARAM_H264_HEVC(ENABLE_VBAQ);
 AMF_PARAM_H264_HEVC(LOWLATENCY_MODE);
 AMF_PARAM_H264_HEVC(MAX_AU_SIZE);
-AMF_PARAM_H264_HEVC(QP_I);
-AMF_PARAM_H264_HEVC(QP_P);
 AMF_PARAM_H264_HEVC(MOTION_HALF_PIXEL);
 AMF_PARAM_H264_HEVC(MOTION_QUARTERPIXEL);
 AMF_PARAM_H264_HEVC(END_OF_SEQUENCE);
 AMF_PARAM_H264_HEVC(FORCE_PICTURE_TYPE);
 AMF_PARAM_H264_HEVC(INSERT_AUD);
+AMF_PARAM_HEVC_AV1(COLOR_BIT_DEPTH);
+AMF_PARAM_H264_AV1(QVBR_QUALITY_LEVEL);
 AMF_PARAM(INPUT_COLOR_PROFILE);
 AMF_PARAM(INPUT_TRANSFER_CHARACTERISTIC);
 AMF_PARAM(INPUT_COLOR_PRIMARIES);
@@ -631,7 +662,6 @@ AMF_PARAM(CAP_MAX_THROUGHPUT);
 AMF_PARAM_H264_HEVC(CAP_MIN_REFERENCE_FRAMES);
 AMF_PARAM_H264_HEVC(CAP_MAX_REFERENCE_FRAMES);
 AMF_PARAM_H264_HEVC(CAP_ROI);
-AMF_PARAM_H264_HEVC(OUTPUT_DATA_TYPE);
 AMF_PARAM_H264_HEVC(STATISTICS_FEEDBACK);
 AMF_PARAM_H264_HEVC(STATISTIC_FRAME_QP);
 AMF_PARAM_H264_HEVC(STATISTIC_AVERAGE_QP);
@@ -647,16 +677,6 @@ AMF_PARAM_H264_HEVC(STATISTIC_BITCOUNT_INTRA);
 AMF_PARAM_H264_HEVC(STATISTIC_BITCOUNT_ALL_MINUS_HEADER);
 AMF_PARAM_H264_HEVC(STATISTIC_MV_X);
 AMF_PARAM_H264_HEVC(STATISTIC_MV_Y);
-AMF_PARAM_HEVC_AV1(COLOR_BIT_DEPTH);
-AMF_PARAM_H264_AV1(QVBR_QUALITY_LEVEL);
-static const wchar_t *AMF_PARAM_CAP_NUM_OF_STREAMS(RGY_CODEC codec) {
-    switch (codec) {
-    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_CAP_NUM_OF_HW_INSTANCES;
-    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_CAP_NUM_OF_STREAMS;
-    case RGY_CODEC_H264:
-    default:             return AMF_VIDEO_ENCODER_CAP_NUM_OF_STREAMS;
-    }
-}
 static const wchar_t *AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(RGY_CODEC codec) {
     switch (codec) {
     case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_SKIP_FRAME;
@@ -697,8 +717,25 @@ static const wchar_t *AMF_PARAM_GOP_SIZE(RGY_CODEC codec) {
     default:             return AMF_VIDEO_ENCODER_IDR_PERIOD;
     }
 }
+static const wchar_t *AMF_PARAM_QP_I(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_Q_INDEX_INTRA;
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_MIN_QP_I;
+    case RGY_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_QP_I;
+    }
+}
+static const wchar_t *AMF_PARAM_QP_P(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_Q_INDEX_INTER;
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_MIN_QP_I;
+    case RGY_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_QP_I;
+    }
+}
 static const wchar_t *AMF_PARAM_MIN_QP(RGY_CODEC codec) {
     switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTRA;
     case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_MIN_QP_I;
     case RGY_CODEC_H264:
     default:             return AMF_VIDEO_ENCODER_MIN_QP;
@@ -706,9 +743,34 @@ static const wchar_t *AMF_PARAM_MIN_QP(RGY_CODEC codec) {
 }
 static const wchar_t *AMF_PARAM_MAX_QP(RGY_CODEC codec) {
     switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTRA;
     case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_MAX_QP_I;
     case RGY_CODEC_H264:
     default:             return AMF_VIDEO_ENCODER_MAX_QP;
+    }
+}
+static const wchar_t *AMF_PARAM_MIN_QP_INTER(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTER;
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_MIN_QP_P;
+    case RGY_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_MIN_QP;
+    }
+}
+static const wchar_t *AMF_PARAM_MAX_QP_INTER(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTER;
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_MAX_QP_P;
+    case RGY_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_MAX_QP;
+    }
+}
+static const wchar_t *AMF_PARAM_OUTPUT_DATA_TYPE(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_OUTPUT_FRAME_TYPE;
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_OUTPUT_DATA_TYPE;
+    case RGY_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_OUTPUT_DATA_TYPE;
     }
 }
 static const wchar_t *AMF_PARAM_CAPS_QUERY_TIMEOUT_SUPPORT(RGY_CODEC codec) {
@@ -716,6 +778,14 @@ static const wchar_t *AMF_PARAM_CAPS_QUERY_TIMEOUT_SUPPORT(RGY_CODEC codec) {
     case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_CAPS_HEVC_QUERY_TIMEOUT_SUPPORT;
     case RGY_CODEC_H264:
     default:             return AMF_VIDEO_ENCODER_CAPS_QUERY_TIMEOUT_SUPPORT;
+    }
+}
+static const wchar_t *AMF_PARAM_CAP_NUM_OF_STREAMS(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_CAP_NUM_OF_HW_INSTANCES;
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_CAP_NUM_OF_STREAMS;
+    case RGY_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_CAP_NUM_OF_STREAMS;
     }
 }
 
