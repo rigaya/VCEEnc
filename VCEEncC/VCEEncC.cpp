@@ -52,39 +52,36 @@ static void show_help() {
     _ftprintf(stdout, _T("%s\n"), encoder_help().c_str());
 }
 
-static void show_hw(int deviceid) {
+static void show_hw(int deviceid, const RGYParamLogLevel& loglevel) {
     show_version();
-    auto loglevel = RGY_LOG_ERROR;
-    if (check_if_vce_available(deviceid, loglevel)) {
-        auto core = std::make_unique<VCECore>();
-        auto err = RGY_ERR_NONE;
-        if ((err = core->initLog(loglevel)) == RGY_ERR_NONE
-            && (err = core->initAMFFactory()) == RGY_ERR_NONE
-            && (err = core->initTracer(loglevel)) == RGY_ERR_NONE) {
+    auto core = std::make_unique<VCECore>();
+    auto err = RGY_ERR_NONE;
+    if ((err = core->initLog(loglevel)) == RGY_ERR_NONE
+        && (err = core->initAMFFactory()) == RGY_ERR_NONE
+        && (err = core->initTracer(loglevel.get(RGY_LOGT_AMF))) == RGY_ERR_NONE) {
 #if ENABLE_D3D11
-            const auto devList = core->createDeviceList(false, true, false, true, false);
+        const auto devList = core->createDeviceList(false, true, false, true, false);
 #else
-            const auto devList = core->createDeviceList(false, true, ENABLE_VULKAN != 0, true, false);
+        const auto devList = core->createDeviceList(false, true, ENABLE_VULKAN != 0, true, false);
 #endif
-            if (devList.size() > 0) {
-                _ftprintf(stdout, _T("VCE available\n"));
-                for (auto &dev : devList) {
-                    if (deviceid < 0 || dev->id() == deviceid) {
-                        _ftprintf(stdout, _T("device #%d: %s\n"), dev->id(), dev->name().c_str());
-                    }
+        if (devList.size() > 0) {
+            _ftprintf(stdout, _T("VCE available\n"));
+            for (auto &dev : devList) {
+                if (deviceid < 0 || dev->id() == deviceid) {
+                    _ftprintf(stdout, _T("device #%d: %s\n"), dev->id(), dev->name().c_str());
                 }
-                exit(0);
             }
+            exit(0);
         }
     }
     _ftprintf(stdout, _T("VCE unavailable.\n"));
     exit(1);
 }
 
-static void show_vce_features(int deviceid) {
+static void show_vce_features(int deviceid, const RGYParamLogLevel& loglevel) {
     const auto codecs = std::vector<RGY_CODEC>{RGY_CODEC_H264, RGY_CODEC_HEVC};
-    _ftprintf(stdout, _T("%s\n"), check_vce_enc_features(codecs, deviceid, RGY_LOG_ERROR).c_str());
-    _ftprintf(stdout, _T("\n%s\n"), check_vce_dec_features(deviceid, RGY_LOG_ERROR).c_str());
+    _ftprintf(stdout, _T("%s\n"), check_vce_enc_features(codecs, deviceid, loglevel).c_str());
+    _ftprintf(stdout, _T("\n%s\n"), check_vce_dec_features(deviceid, loglevel).c_str());
     exit(0);
 }
 
@@ -107,7 +104,7 @@ static void show_option_list() {
     }
 }
 
-int parse_print_options(const TCHAR *option_name, const TCHAR *arg1) {
+int parse_print_options(const TCHAR *option_name, const TCHAR *arg1, const RGYParamLogLevel& loglevel) {
 
 #define IS_OPTION(x) (0 == _tcscmp(option_name, _T(x)))
 
@@ -138,7 +135,7 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1) {
                 deviceid = value;
             }
         }
-        show_hw(deviceid);
+        show_hw(deviceid, loglevel);
         return 1;
     }
     if (IS_OPTION("check-environment")) {
@@ -153,7 +150,7 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1) {
                 deviceid = value;
             }
         }
-        show_vce_features(deviceid);
+        show_vce_features(deviceid, loglevel);
         return 1;
     }
     if (0 == _tcscmp(option_name, _T("check-clinfo"))) {
@@ -385,6 +382,14 @@ int _tmain(int argc, TCHAR **argv) {
     }
 #endif //#if defined(_WIN32) || defined(_WIN64)
 
+    RGYParamLogLevel loglevelPrint(RGY_LOG_ERROR);
+    for (int iarg = 1; iarg < argc-1; iarg++) {
+        if (tstring(argv[iarg]) == _T("--log-level")) {
+            parse_log_level_param(argv[iarg], argv[iarg+1], loglevelPrint);
+            break;
+        }
+    }
+
     for (int iarg = 1; iarg < argc; iarg++) {
         const TCHAR *option_name = nullptr;
         if (argv[iarg][0] == _T('-')) {
@@ -399,7 +404,7 @@ int _tmain(int argc, TCHAR **argv) {
             }
         }
         if (option_name != nullptr) {
-            int ret = parse_print_options(option_name, (iarg+1 < argc) ? argv[iarg+1] : _T(""));
+            int ret = parse_print_options(option_name, (iarg+1 < argc) ? argv[iarg+1] : _T(""), loglevelPrint);
             if (ret != 0) {
                 return ret == 1 ? 0 : 1;
             }

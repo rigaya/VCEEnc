@@ -162,10 +162,21 @@ Core i7 7700K + Asrock Z270 Gaming-ITX/ac
 Radeon RX5500XT
 8GB RAM
 
+【検証環境 2022.10】
+Win11 x64
+Ryzen 7950X + MSI Pro X670-P WIFI
+Radeon RX5500XT
+Radeon RX550
+64GB RAM
+
 【お断り】
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2022.11.27 (7.14)
+- AV1 hwエンコードに仮対応。
+  未テストなので、動作しない可能性は高い
+
 2022.11.13 (7.13)
 - --vpp-subburnと--dhdr10-info copyを併用すると、dynamic HDR10のmetadataが適切にコピーされない問題を修正。
 - エンコードするフレーム数を指定するオプション(--frames)を追加。

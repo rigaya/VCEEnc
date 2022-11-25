@@ -350,7 +350,7 @@ RGY_ERR DeviceDX11::Init(int adapterID, bool onlyWithOutputs, shared_ptr<RGYLog>
 
     EnumerateAdapters(onlyWithOutputs);
     if (m_adaptersCount <= adapterID) {
-        AddMessage(RGY_LOG_ERROR, _T("Invalid Adapter ID: %d"), adapterID);
+        AddMessage(RGY_LOG_ERROR, _T("Invalid Adapter ID: %d\n"), adapterID);
         return RGY_ERR_NOT_FOUND;
     }
 
@@ -360,11 +360,13 @@ RGY_ERR DeviceDX11::Init(int adapterID, bool onlyWithOutputs, shared_ptr<RGYLog>
     ATL::CComPtr<IDXGIFactory> pFactory;
     hr = CreateDXGIFactory(__uuidof(IDXGIFactory), (void **)&pFactory);
     if (FAILED(hr)) {
-        AddMessage(RGY_LOG_ERROR, _T("CreateDXGIFactory failed. Error: %x"), hr);
+        AddMessage(RGY_LOG_ERROR, _T("CreateDXGIFactory failed. Error: %x\n"), hr);
         return RGY_ERR_UNKNOWN;
     }
 
+    AddMessage(RGY_LOG_DEBUG, _T("EnumAdapters %d...\n"), adapterID);
     if (pFactory->EnumAdapters(adapterID, &pAdapter) == DXGI_ERROR_NOT_FOUND) {
+        AddMessage(RGY_LOG_DEBUG, _T("Adaptor %d not found.\n"), adapterID);
         return RGY_ERR_UNKNOWN;
     }
 
@@ -405,27 +407,31 @@ RGY_ERR DeviceDX11::Init(int adapterID, bool onlyWithOutputs, shared_ptr<RGYLog>
     }
 #endif
     if (FAILED(hr)) {
-        AddMessage(RGY_LOG_ERROR, L"InitDX11() failed to create HW DX11.1 device ");
+        AddMessage(RGY_LOG_ERROR, L"InitDX11() failed to create HW DX11.1 device\n");
         hr = D3D11CreateDevice(pAdapter, eDriverType, NULL, createDeviceFlags, featureLevels + 1, _countof(featureLevels) - 1,
             D3D11_SDK_VERSION, &pD3D11Device, &featureLevel, &pD3D11Context);
     }
     if (FAILED(hr)) {
-        AddMessage(RGY_LOG_ERROR, L"InitDX11() failed to create HW DX11 device ");
+        AddMessage(RGY_LOG_ERROR, L"InitDX11() failed to create HW DX11 device\n");
         hr = D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_SOFTWARE, NULL, createDeviceFlags, featureLevels, _countof(featureLevels),
             D3D11_SDK_VERSION, &pD3D11Device, &featureLevel, &pD3D11Context);
     }
 
     if (FAILED(hr)) {
-        AddMessage(RGY_LOG_ERROR, L"InitDX11() failed to create SW DX11.1 device ");
+        AddMessage(RGY_LOG_ERROR, L"InitDX11() failed to create SW DX11.1 device\n");
         hr = D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_SOFTWARE, NULL, createDeviceFlags, featureLevels + 1, _countof(featureLevels) - 1,
             D3D11_SDK_VERSION, &pD3D11Device, &featureLevel, &pD3D11Context);
     }
     if (FAILED(hr)) {
-        AddMessage(RGY_LOG_ERROR, L"InitDX11() failed to create SW DX11 device ");
+        AddMessage(RGY_LOG_ERROR, L"InitDX11() failed to create SW DX11 device\n");
     }
+    AddMessage(RGY_LOG_DEBUG, _T("InitDX11() success.\n"));
 
     ATL::CComPtr<ID3D10Multithread> pMultithread = NULL;
     hr = pD3D11Device->QueryInterface(__uuidof(ID3D10Multithread), reinterpret_cast<void **>(&pMultithread));
+    if (FAILED(hr)) {
+        AddMessage(RGY_LOG_ERROR, L"QueryInterface() failed\n");
+    }
     if (pMultithread) {
         //        amf_bool isSafe = pMultithread->GetMultithreadProtected() ? true : false;
         pMultithread->SetMultithreadProtected(true);
@@ -446,13 +452,14 @@ void DeviceDX11::EnumerateAdapters(bool onlyWithOutputs) {
     ATL::CComPtr<IDXGIFactory> pFactory;
     HRESULT hr = CreateDXGIFactory(__uuidof(IDXGIFactory), (void **)&pFactory);
     if (FAILED(hr)) {
-        AddMessage(RGY_LOG_ERROR, _T("CreateDXGIFactory failed. Error: %x"), hr);
+        AddMessage(RGY_LOG_ERROR, _T("CreateDXGIFactory failed. Error: 0x%08x"), hr);
         return;
     }
 
     UINT count = 0;
     m_adaptersCount = 0;
     while (true) {
+        AddMessage(RGY_LOG_DEBUG, _T("EnumAdapters %d...\n"), count);
         ATL::CComPtr<IDXGIAdapter> pAdapter;
         if (pFactory->EnumAdapters(count, &pAdapter) == DXGI_ERROR_NOT_FOUND) {
             break;
@@ -462,6 +469,7 @@ void DeviceDX11::EnumerateAdapters(bool onlyWithOutputs) {
         pAdapter->GetDesc(&desc);
 
         if (desc.VendorId != ENCODER_VENDOR_ID) {
+            AddMessage(RGY_LOG_DEBUG, _T("Non Target Adaptor %d: VendorId: 0x%08x.\n"), count, desc.VendorId);
             count++;
             continue;
         }
@@ -472,6 +480,7 @@ void DeviceDX11::EnumerateAdapters(bool onlyWithOutputs) {
         }
         char strDevice[100];
         _snprintf_s(strDevice, 100, "%X", desc.DeviceId);
+        AddMessage(RGY_LOG_DEBUG, _T("Found Adaptor %d [%d]: %s\n"), m_adaptersCount, count, char_to_tstring(strDevice).c_str());
 
         m_adaptersIndexes[m_adaptersCount] = count;
         m_adaptersCount++;
@@ -479,16 +488,18 @@ void DeviceDX11::EnumerateAdapters(bool onlyWithOutputs) {
     }
 }
 
-int DeviceDX11::adapterCount() {
+int DeviceDX11::adapterCount(RGYLog *log) {
     ATL::CComPtr<IDXGIFactory> pFactory;
     HRESULT hr = CreateDXGIFactory(__uuidof(IDXGIFactory), (void **)&pFactory);
     if (FAILED(hr)) {
+        if (log) log->write(RGY_LOG_ERROR, RGY_LOGT_DEV, _T("Failed to CreateDXGIFactory: Error: 0x%08x\n"), hr);
         return 0;
     }
 
     UINT count = 0;
     int adaptersCount = 0;
     while (true) {
+        if (log) log->write(RGY_LOG_DEBUG, RGY_LOGT_DEV, _T("EnumAdapters %d...\n"), count);
         ATL::CComPtr<IDXGIAdapter> pAdapter;
         if (pFactory->EnumAdapters(count, &pAdapter) == DXGI_ERROR_NOT_FOUND) {
             break;
@@ -498,12 +509,15 @@ int DeviceDX11::adapterCount() {
         pAdapter->GetDesc(&desc);
 
         if (desc.VendorId != ENCODER_VENDOR_ID) {
+            if (log) log->write(RGY_LOG_DEBUG, RGY_LOGT_DEV, _T("Non Target Adaptor %d: VendorId: 0x%08x.\n"), count, desc.VendorId);
             count++;
             continue;
         }
+        if (log) log->write(RGY_LOG_DEBUG, RGY_LOGT_DEV, _T("Found Adaptor %d [%d]...\n"), adaptersCount, count);
         adaptersCount++;
         count++;
     }
+    if (log) log->write(RGY_LOG_DEBUG, RGY_LOGT_DEV, _T("Found adapters: %d\n"), adaptersCount);
     return adaptersCount;
 }
 

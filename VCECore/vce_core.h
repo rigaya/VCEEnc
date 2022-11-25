@@ -113,6 +113,7 @@ public:
 
     virtual RGY_ERR init(VCEParam *prm);
     virtual RGY_ERR initLog(RGYLogLevel loglevel);
+    virtual RGY_ERR initLog(const RGYParamLogLevel& loglevel);
     virtual RGY_ERR initLog(VCEParam *prm);
     virtual RGY_ERR initAMFFactory();
     virtual RGY_ERR initTracer(int log_level);
@@ -227,7 +228,7 @@ public:
 
     virtual ~VCEFeatures() {};
 
-    RGY_ERR init(int deviceId, RGYLogLevel logLevel);
+    RGY_ERR init(int deviceId, const RGYParamLogLevel& loglevel);
     tstring devName() const { return m_core->dev()->getGPUInfo(); }
     tstring checkEncFeatures(RGY_CODEC codec);
     tstring checkDecFeatures(RGY_CODEC codec);

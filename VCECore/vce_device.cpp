@@ -124,11 +124,14 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
             PrintMes(RGY_LOG_ERROR, _T("Failed to get directX9 device.\n"));
             return RGY_ERR_DEVICE_LOST;
         }
+        PrintMes(RGY_LOG_DEBUG, _T("dx9.Init() Success.\n"));
+
         auto amferr = m_context->InitDX9(m_dx9.GetDevice());
         if (amferr != AMF_OK) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by directX9.\n"));
             return err_to_rgy(amferr);
         }
+        PrintMes(RGY_LOG_DEBUG, _T("init AMF context by directX9: Success.\n"));
     }
 #endif //#if ENABLE_D3D9
 #if ENABLE_D3D11
@@ -138,11 +141,14 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
             PrintMes(RGY_LOG_ERROR, _T("Failed to get directX11 device.\n"));
             return RGY_ERR_DEVICE_LOST;
         }
+        PrintMes(RGY_LOG_DEBUG, _T("dx11.Init() Success.\n"));
+
         auto amferr = m_context->InitDX11(m_dx11.GetDevice());
         if (amferr != AMF_OK) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by directX11.\n"));
             return err_to_rgy(amferr);
         }
+        PrintMes(RGY_LOG_DEBUG, _T("init AMF context by directX11: Success.\n"));
     }
 #endif //#if ENABLE_D3D11
 

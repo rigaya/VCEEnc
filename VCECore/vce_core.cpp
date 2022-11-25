@@ -296,6 +296,11 @@ RGY_ERR VCECore::initLog(RGYLogLevel loglevel) {
     return RGY_ERR_NONE;
 }
 
+RGY_ERR VCECore::initLog(const RGYParamLogLevel& loglevel) {
+    m_pLog.reset(new RGYLog(nullptr, loglevel));
+    return RGY_ERR_NONE;
+}
+
 RGY_ERR VCECore::initLog(VCEParam *prm) {
     m_pLog.reset(new RGYLog(prm->ctrl.logfile.c_str(), prm->ctrl.loglevel, prm->ctrl.logAddTime));
     if ((prm->ctrl.logfile.length() > 0 || prm->common.outputFilename.length() > 0) && prm->input.type != RGY_INPUT_FMT_SM) {
@@ -2015,6 +2020,7 @@ RGY_ERR VCECore::initAMFFactory() {
     }
     AMF_RESULT res = initFun(AMF_FULL_VERSION, &m_pFactory);
     if (res != AMF_OK) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed AMFInit: %s.\n"), AMFRetString(res));
         return err_to_rgy(res);
     }
     AMFQueryVersion_Fn versionFun = (AMFQueryVersion_Fn)RGY_GET_PROC_ADDRESS(m_dll.get(), AMF_QUERY_VERSION_FUNCTION_NAME);
@@ -2028,7 +2034,9 @@ RGY_ERR VCECore::initAMFFactory() {
     }
     m_pFactory->GetTrace(&m_pTrace);
     m_pFactory->GetDebug(&m_pDebug);
-    PrintMes(RGY_LOG_DEBUG, _T("Loaded %s.\n"), wstring_to_tstring(AMF_DLL_NAME).c_str());
+    PrintMes(RGY_LOG_DEBUG, _T("Loaded %s: ver %d.%d.%d.\n"),
+        wstring_to_tstring(AMF_DLL_NAME).c_str(),
+        (int)AMF_GET_MAJOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_MINOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_SUBMINOR_VERSION(m_AMFRuntimeVersion));
     return RGY_ERR_NONE;
 }
 
@@ -2048,7 +2056,7 @@ RGY_ERR VCECore::initTracer(int log_level) {
 std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3d9, bool interopD3d11, bool interopVulkan, bool enableOpenCL, bool enableVppPerfMonitor) {
     std::vector<std::unique_ptr<VCEDevice>> devs;
 #if ENABLE_D3D11
-    const int adapterCount = DeviceDX11::adapterCount();
+    const int adapterCount = DeviceDX11::adapterCount(m_pLog.get());
 #elif ENABLE_VULKAN
     int adapterCount = 1;
     if (VULKAN_DEFAULT_DEVICE_ONLY == 0) {
@@ -2065,10 +2073,12 @@ std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3
         }
         return acc;
     });
-    PrintMes(RGY_LOG_ERROR, _T("adapterCount %d.\n"), adapterCount);
 #endif
+    PrintMes(RGY_LOG_DEBUG, _T("adapterCount %d.\n"), adapterCount);
+
     for (int i = 0; i < adapterCount; i++) {
         auto dev = std::make_unique<VCEDevice>(m_pLog, m_pFactory, m_pTrace);
+        PrintMes(RGY_LOG_DEBUG, _T("Init adaptor #%d.\n"), i);
         if (dev->init(i, interopD3d9, interopD3d11, interopVulkan, enableOpenCL, enableVppPerfMonitor) == RGY_ERR_NONE) {
             devs.push_back(std::move(dev));
         }
@@ -3701,12 +3711,12 @@ void VCECore::PrintResult() {
     m_pStatus->WriteResults();
 }
 
-RGY_ERR VCEFeatures::init(int deviceId, RGYLogLevel logLevel) {
+RGY_ERR VCEFeatures::init(int deviceId, const RGYParamLogLevel& loglevel) {
     m_core = std::make_unique<VCECore>();
     auto err = RGY_ERR_NONE;
-    if (   (err = m_core->initLog(logLevel)) != RGY_ERR_NONE
+    if (   (err = m_core->initLog(loglevel)) != RGY_ERR_NONE
         || (err = m_core->initAMFFactory()) != RGY_ERR_NONE
-        || (err = m_core->initTracer(logLevel)) != RGY_ERR_NONE) {
+        || (err = m_core->initTracer(loglevel.get(RGY_LOGT_AMF))) != RGY_ERR_NONE) {
         return err;
     }
 
@@ -3739,14 +3749,14 @@ tstring VCEFeatures::checkDecFeatures(RGY_CODEC codec) {
     return str;
 }
 
-bool check_if_vce_available(int deviceId, RGYLogLevel logLevel) {
+bool check_if_vce_available(int deviceId, const RGYParamLogLevel& loglevel) {
     VCEFeatures vce;
-    return vce.init(deviceId, logLevel) == RGY_ERR_NONE;
+    return vce.init(deviceId, loglevel) == RGY_ERR_NONE;
 }
 
-tstring check_vce_enc_features(const std::vector<RGY_CODEC> &codecs, int deviceId, RGYLogLevel logLevel) {
+tstring check_vce_enc_features(const std::vector<RGY_CODEC> &codecs, int deviceId, const RGYParamLogLevel& loglevel) {
     VCEFeatures vce;
-    if (vce.init(deviceId, logLevel) != RGY_ERR_NONE) {
+    if (vce.init(deviceId, loglevel) != RGY_ERR_NONE) {
         return _T("VCE not available.\n");
     }
     tstring str = strsprintf(_T("device #%d: "), deviceId) + vce.devName() + _T("\n");
@@ -3760,9 +3770,9 @@ tstring check_vce_enc_features(const std::vector<RGY_CODEC> &codecs, int deviceI
     return str;
 }
 
-tstring check_vce_dec_features(int deviceId, RGYLogLevel logLevel) {
+tstring check_vce_dec_features(int deviceId, const RGYParamLogLevel& loglevel) {
     VCEFeatures vce;
-    if (vce.init(deviceId, logLevel) != RGY_ERR_NONE) {
+    if (vce.init(deviceId, loglevel) != RGY_ERR_NONE) {
         return _T("VCE not available.\n");
     }
     tstring str = strsprintf(_T("device #%d: "), deviceId) + vce.devName() + _T("\n");

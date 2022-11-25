@@ -93,7 +93,7 @@ public:
     ATL::CComPtr<ID3D11Device>      GetDevice();
     LUID getLUID() const { return m_devLUID; };
     std::wstring GetDisplayDeviceName() const { return m_displayDeviceName; }
-    static int adapterCount();
+    static int adapterCount(RGYLog *log = nullptr);
 protected:
     void AddMessage(RGYLogLevel log_level, const tstring &str);
     void AddMessage(RGYLogLevel log_level, const TCHAR *format, ...);
