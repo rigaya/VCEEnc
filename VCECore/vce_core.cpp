@@ -2096,6 +2096,9 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
             return RGY_ERR_NOT_FOUND;
         }
     }
+    if (prm->ctrl.skipHWEncodeCheck) {
+        return RGY_ERR_NONE;
+    }
     const auto formatIn = csp_rgy_to_enc(encCsp);
     const auto formatOut = formatIn;
     //エンコーダの対応をチェック

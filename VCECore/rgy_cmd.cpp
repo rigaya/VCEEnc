@@ -5129,6 +5129,10 @@ int parse_one_ctrl_option(const TCHAR *option_name, const TCHAR *strInput[], int
         }
         return 0;
     }
+    if (IS_OPTION("skip-hwenc-check")) {
+        ctrl->skipHWEncodeCheck = true;
+        return 0;
+    }
     if (IS_OPTION("skip-hwdec-check")) {
         ctrl->skipHWDecodeCheck = true;
         return 0;
