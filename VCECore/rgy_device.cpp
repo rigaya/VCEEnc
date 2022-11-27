@@ -38,6 +38,16 @@
 #pragma comment(lib, "d3d11.lib")
 #endif
 
+#if ENCODER_QSV
+static const unsigned int ENCODER_VENDOR_ID = 0x00008086; // Intel
+#elif ENCODER_NVENC
+static const unsigned int ENCODER_VENDOR_ID = 0x000010de; // NVIDIA
+#elif ENCODER_VCEENC
+static const unsigned int ENCODER_VENDOR_ID = 0x00001002; // AMD
+#else
+static const unsigned int ENCODER_VENDOR_ID = 0x00000000;
+#endif
+
 #define CHECK_HRESULT_ERROR_RETURN(hr, mes) { \
     if (hr != S_OK) { \
         AddMessage(RGY_LOG_ERROR, _T("%s: %x\n"), mes, hr); \
@@ -207,7 +217,7 @@ RGY_ERR DeviceDX9::EnumerateAdapters() {
         D3DADAPTER_IDENTIFIER9 adapterIdentifier ={ 0 };
         pD3DEx->GetAdapterIdentifier(count, 0, &adapterIdentifier);
 
-        if (adapterIdentifier.VendorId != 0x1002) {
+        if (adapterIdentifier.VendorId != ENCODER_VENDOR_ID) {
             count++;
             continue;
         }
@@ -256,7 +266,7 @@ int DeviceDX9::adapterCount() {
         D3DADAPTER_IDENTIFIER9 adapterIdentifier = { 0 };
         pD3DEx->GetAdapterIdentifier(count, 0, &adapterIdentifier);
 
-        if (adapterIdentifier.VendorId != 0x1002) {
+        if (adapterIdentifier.VendorId != ENCODER_VENDOR_ID) {
             count++;
             continue;
         }
@@ -451,7 +461,7 @@ void DeviceDX11::EnumerateAdapters(bool onlyWithOutputs) {
         DXGI_ADAPTER_DESC desc;
         pAdapter->GetDesc(&desc);
 
-        if (desc.VendorId != 0x1002) {
+        if (desc.VendorId != ENCODER_VENDOR_ID) {
             count++;
             continue;
         }
@@ -487,7 +497,7 @@ int DeviceDX11::adapterCount() {
         DXGI_ADAPTER_DESC desc;
         pAdapter->GetDesc(&desc);
 
-        if (desc.VendorId != 0x1002) {
+        if (desc.VendorId != ENCODER_VENDOR_ID) {
             count++;
             continue;
         }
