@@ -3546,8 +3546,8 @@ tstring VCECore::GetEncoderParam() {
     if (GetPropertyInt(AMF_PARAM_RATE_CONTROL_METHOD(m_encCodec)) == get_rc_method(m_encCodec)[0].value) {
         mes += strsprintf(_T("CQP:           %s:%d, %s:%d"),
             (m_encCodec == RGY_CODEC_AV1) ? _T("Intra") : _T("I"),
-            (m_encCodec == RGY_CODEC_AV1) ? _T("Inter") : _T("P"),
             GetPropertyInt(AMF_PARAM_QP_I(m_encCodec)),
+            (m_encCodec == RGY_CODEC_AV1) ? _T("Inter") : _T("P"),
             GetPropertyInt(AMF_PARAM_QP_P(m_encCodec)));
         if (m_encCodec == RGY_CODEC_H264 && GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN)) {
             mes += strsprintf(_T(", B:%d"), GetPropertyInt(AMF_VIDEO_ENCODER_QP_B));
