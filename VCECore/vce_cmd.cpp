@@ -1096,6 +1096,10 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
     //parse cached profile and level
     if (argsData.cachedlevel.length() > 0) {
         const auto desc = get_level_list(pParams->codec);
+        if (is_list_empty(desc)) {
+            _ftprintf(stderr, _T("--level unsupported for %s encoding!\n"), CodecToStr(pParams->codec).c_str());
+            return 1;
+        }
         int value = 0;
         bool bParsed = false;
         if (desc != nullptr) {
@@ -1132,6 +1136,10 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
     }
     if (argsData.cachedprofile.length() > 0) {
         const auto desc = get_profile_list(pParams->codec);
+        if (is_list_empty(desc)) {
+            _ftprintf(stderr, _T("--profile unsupported for %s encoding!\n"), CodecToStr(pParams->codec).c_str());
+            return 1;
+        }
         int value = 0;
         if (desc != nullptr && PARSE_ERROR_FLAG != (value = get_value_from_chr(desc, argsData.cachedprofile.c_str()))) {
             pParams->codecParam[pParams->codec].nProfile = value;
@@ -1146,6 +1154,10 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
     }
     if (argsData.cachedtier.length() > 0) {
         const auto desc = get_tier_list(pParams->codec);
+        if (is_list_empty(desc)) {
+            _ftprintf(stderr, _T("--tier unsupported for %s encoding!\n"), CodecToStr(pParams->codec).c_str());
+            return 1;
+        }
         int value = 0;
         if (desc != nullptr && PARSE_ERROR_FLAG != (value = get_value_from_chr(desc, argsData.cachedtier.c_str()))) {
             pParams->codecParam[pParams->codec].nTier = value;
@@ -1164,17 +1176,17 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
                 pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR;
                 break;
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR:
-                fprintf(stderr, "CBR-HQ unsupported for HEVC encoding!\n");
-                abort();
+                _ftprintf(stderr, _T("CBR-HQ unsupported for HEVC encoding!\n"));
+                return 1;
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR:
                 pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR;
                 break;
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR:
-                fprintf(stderr, "QVBR unsupported for HEVC encoding!\n");
-                abort();
+                _ftprintf(stderr, _T("QVBR unsupported for HEVC encoding!\n"));
+                return 1;
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR:
-                fprintf(stderr, "VBR-HQ unsupported for HEVC encoding!\n");
-                abort();
+                _ftprintf(stderr, _T("VBR-HQ unsupported for HEVC encoding!\n"));
+                return 1;
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP:
             default:
                 pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP;
@@ -1234,8 +1246,8 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
                 break;
             }
         } else {
-            fprintf(stderr, "Unsupported codec!\n");
-            abort();
+            _ftprintf(stderr, _T("Unsupported codec!\n"));
+            return 1;
         }
     }
 
