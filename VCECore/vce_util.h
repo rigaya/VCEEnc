@@ -60,6 +60,8 @@ const wchar_t * codec_rgy_to_dec_10bit(const RGY_CODEC codec);
 AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM picstruct_rgy_to_enc(RGY_PICSTRUCT picstruct);
 RGY_PICSTRUCT picstruct_enc_to_rgy(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM picstruct);
 
+const TCHAR *AMFRetString(AMF_RESULT ret);
+
 struct RGYBitstream {
 private:
     uint8_t *dataptr;

@@ -6085,6 +6085,7 @@ tstring gen_cmd(const RGYParamControl *param, const RGYParamControl *defaultPrm,
     OPT_BOOL(_T("--log-framelist"), _T(""), logFramePosList);
     OPT_BOOL(_T("--log-packets"), _T(""), logPacketsList);
     OPT_CHAR_PATH(_T("--log-mux-ts"), logMuxVidTsFile);
+    OPT_BOOL(_T("--skip-hwenc-check"), _T(""), skipHWEncodeCheck);
     OPT_BOOL(_T("--skip-hwdec-check"), _T(""), skipHWDecodeCheck);
     OPT_STR_PATH(_T("--avsdll"), avsdll);
     if (param->perfMonitorSelect != defaultPrm->perfMonitorSelect) {

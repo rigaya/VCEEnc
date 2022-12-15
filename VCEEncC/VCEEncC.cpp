@@ -54,9 +54,9 @@ static void show_help() {
 
 static void show_hw(int deviceid, const RGYParamLogLevel& loglevel) {
     show_version();
-    auto core = std::make_unique<VCECore>();
+    auto core = std::make_unique<VCEAMF>();
     auto err = RGY_ERR_NONE;
-    if ((err = core->initLog(loglevel)) == RGY_ERR_NONE
+    if ((err = core->initLogLevel(loglevel)) == RGY_ERR_NONE
         && (err = core->initAMFFactory()) == RGY_ERR_NONE
         && (err = core->initTracer(loglevel.get(RGY_LOGT_AMF))) == RGY_ERR_NONE) {
 #if ENABLE_D3D11

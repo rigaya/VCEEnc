@@ -45,6 +45,7 @@
 #include "rgy_device.h"
 #include "vce_device.h"
 #include "vce_param.h"
+#include "vce_amf.h"
 #include "rgy_filter.h"
 #include "rgy_filter_ssim.h"
 
@@ -61,8 +62,6 @@
 // std::threadだとtry joinのようなことができないのが問題
 #define THREAD_DEC_USE_FUTURE 1
 #endif
-
-const TCHAR *AMFRetString(AMF_RESULT ret);
 
 #if ENABLE_AVSW_READER
 struct AVChapter;
@@ -89,43 +88,18 @@ enum RGYRunState {
     RGY_STATE_EOF
 };
 
-class RGYLogTracer : public amf::AMFTraceWriter {
-public:
-    RGYLogTracer() : m_pLog() {};
-    virtual ~RGYLogTracer() { m_pLog.reset(); }
-    virtual void init(shared_ptr<RGYLog> pLog) { m_pLog = pLog; };
-    virtual void AMF_CDECL_CALL Write(const wchar_t *scope, const wchar_t *message) override {
-        m_pLog->write(RGY_LOG_INFO, RGY_LOGT_AMF, _T("[%s] %s"), scope, message);
-    };
-    virtual void AMF_CDECL_CALL Flush() override {
-    };
-    virtual void reset() {
-        m_pLog.reset();
-    }
-protected:
-    shared_ptr<RGYLog> m_pLog;
-};
-
-class VCECore {
+class VCECore : public VCEAMF {
 public:
     VCECore();
     virtual ~VCECore();
 
     virtual RGY_ERR init(VCEParam *prm);
-    virtual RGY_ERR initLog(RGYLogLevel loglevel);
-    virtual RGY_ERR initLog(const RGYParamLogLevel& loglevel);
     virtual RGY_ERR initLog(VCEParam *prm);
-    virtual RGY_ERR initAMFFactory();
-    virtual RGY_ERR initTracer(int log_level);
     virtual RGY_ERR initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId);
     virtual RGY_ERR initInput(VCEParam *pParams, std::vector<std::unique_ptr<VCEDevice>> &gpuList);
     virtual RGY_ERR initOutput(VCEParam *prm);
     virtual RGY_ERR run();
-    void Terminate();
-
-    virtual std::vector<std::unique_ptr<VCEDevice>> createDeviceList(bool interopD3d9, bool interopD3d11, bool interopVulkan, bool enableOpenCL, bool enableVppPerfMonitor);
-
-    void PrintMes(RGYLogLevel log_level, const TCHAR *format, ...);
+    virtual void Terminate() override;
 
     tstring GetEncoderParam();
     void PrintEncoderParam();
@@ -155,7 +129,6 @@ protected:
     virtual RGY_ERR run_output();
 
     RGY_CODEC          m_encCodec;
-    shared_ptr<RGYLog> m_pLog;
     bool m_bTimerPeriodTuning;
 #if ENABLE_AVSW_READER
     bool                          m_keyOnChapter;        //チャプター上にキーフレームを配置する
@@ -192,12 +165,6 @@ protected:
     VideoVUIInfo       m_encVUI;
 
     std::unique_ptr<VCEDevice> m_dev;
-    unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter> m_dll;
-    amf::AMFFactory *m_pFactory;
-    amf::AMFDebug *m_pDebug;
-    amf::AMFTrace *m_pTrace;
-    RGYLogTracer m_tracer;
-    uint64_t m_AMFRuntimeVersion;
 
     vector<unique_ptr<RGYFilter>> m_vpFilters;
     shared_ptr<RGYFilterParam>    m_pLastFilterParam;
