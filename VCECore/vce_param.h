@@ -26,6 +26,7 @@
 // ------------------------------------------------------------------------------------------
 
 #pragma once
+#include <optional>
 #include "rgy_util.h"
 #pragma warning(push)
 #pragma warning(disable:4201)
@@ -553,11 +554,15 @@ struct VCEParam {
 
     //AV1
     int     tiles;
-    int     cdefMode;
-    int     temporalLayers;
     int     alignmentMode;
-    int     aqMode;
-
+    std::optional<int> cdefMode;
+    std::optional<bool> screenContentTools;
+    std::optional<bool> paletteMode;
+    std::optional<bool> forceIntegerMV;
+    std::optional<bool> cdfUpdate;
+    std::optional<bool> cdfFrameEndUpdate;
+    std::optional<int>  temporalLayers;
+    std::optional<int>  aqMode;
 
     bool        ssim;
     bool        psnr;

@@ -72,7 +72,10 @@
   - [--filler](#--filler)
   - [--motion-est \<string\> \[H.264/HEVC\]](#--motion-est-string-h264hevc)
   - [--tiles \<int\> \[AV1\]](#--tiles-int-av1)
-  - [--cdef-mode \<int\> \[AV1\]](#--cdef-mode-int-av1)
+  - [--cdef-mode \<string\> \[AV1\]](#--cdef-mode-string-av1)
+  - [--screen-content-tools  \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--screen-content-tools--param1value1param2value2)
+  - [--cdf-update \[AV1\]](#--cdf-update-av1)
+  - [--cdf-frame-end-update \[AV1\]](#--cdf-frame-end-update-av1)
   - [--temporal-layers \<int\> \[AV1\]](#--temporal-layers-int-av1)
   - [--aq-mode \<int\> \[AV1\]](#--aq-mode-int-av1)
   - [--pe](#--pe)
@@ -528,18 +531,39 @@ fillerデータを出力し、(名目上の)ビットレートを調整する。
 ### --tiles &lt;int&gt; [AV1]
 1フレームあたりのタイル数の指定。
 
-### --cdef-mode &lt;int&gt; [AV1]
+### --cdef-mode &lt;string&gt; [AV1]
 Cdefモード。
-- **params**
+- **パラメータ**
   - on
   - off 
+
+### --screen-content-tools  [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]  
+Screen content toolsを有効にする。
+
+- **パラメータ**
+  - palette-mode=&lt;bool&gt;  
+    palette modeを有効にする。
+
+  - force-integer-mv=&lt;bool&gt;  
+    force integer MVを有効にする。
+
+- 使用例
+  ```
+  --screen-content-tools palette-mode=on,force-integer-mv=on
+  ```
+
+### --cdf-update [AV1]
+Enable CDF update.
+
+### --cdf-frame-end-update [AV1]
+Enable CDF frame end update.
 
 ### --temporal-layers &lt;int&gt; [AV1]
 Temporal layersの数。
 
 ### --aq-mode &lt;int&gt; [AV1]
 AQモード。
-- **params**
+- **パラメータ**
   - none
   - caq 
 
@@ -549,7 +573,7 @@ pre-encodeによるレート制御を使用する。
 ### --pa  [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]  
 Pre-Analysisを有効にして、品質向上を図る。VBR時のみ使用可能。 (デフォルト:オフ)  
 
-- **params**
+- **パラメータ**
   - sc=&lt;string&gt;
     シーンチェンジ検出の感度。
     - none

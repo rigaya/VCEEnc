@@ -124,10 +124,15 @@ VCEParam::VCEParam() :
     pe(),
     bVBAQ(false),
     tiles(0),
-    cdefMode(0),
-    temporalLayers(0),
     alignmentMode(0),
-    aqMode(0),
+    cdefMode(),
+    screenContentTools(),
+    paletteMode(),
+    forceIntegerMV(),
+    cdfUpdate(),
+    cdfFrameEndUpdate(),
+    temporalLayers(),
+    aqMode(),
     ssim(false),
     psnr(false) {
     codecParam[RGY_CODEC_H264].nLevel   = 0;

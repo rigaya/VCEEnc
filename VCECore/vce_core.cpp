@@ -1941,11 +1941,36 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER,                   true);
     } else if (prm->codec == RGY_CODEC_AV1) {
         m_params.SetParam(AMF_VIDEO_ENCODER_AV1_TILES_PER_FRAME,         (amf_int64)prm->tiles);
-        m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_NUM_TEMPORAL_LAYERS, (amf_int64)prm->temporalLayers);
-        m_params.SetParam(AMF_VIDEO_ENCODER_AV1_NUM_TEMPORAL_LAYERS,     (amf_int64)prm->temporalLayers);
-        m_params.SetParam(AMF_VIDEO_ENCODER_AV1_CDEF_MODE,               (amf_int64)prm->cdefMode);
+        if (prm->temporalLayers.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_NUM_TEMPORAL_LAYERS, (amf_int64)prm->temporalLayers.value());
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_NUM_TEMPORAL_LAYERS,     (amf_int64)prm->temporalLayers.value());
+        }
+        if (prm->cdefMode.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_CDEF_MODE,           (amf_int64)prm->cdefMode.value());
+        }
+        if (prm->cdfUpdate.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_CDF_UPDATE,          prm->cdfUpdate.value());
+        }
+        if (prm->cdfFrameEndUpdate.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE, prm->cdfFrameEndUpdate.value() ? AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE_ENABLE_DEFAULT : AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE_DISABLE);
+        }
         m_params.SetParam(AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE,          (amf_int64)prm->alignmentMode);
-        m_params.SetParam(AMF_VIDEO_ENCODER_AV1_AQ_MODE,                 (amf_int64)prm->aqMode);
+        if (prm->aqMode.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_AQ_MODE,             (amf_int64)prm->aqMode.value());
+        }
+        if (prm->screenContentTools.has_value()) {
+            if (prm->screenContentTools.value()) {
+                m_params.SetParam(AMF_VIDEO_ENCODER_AV1_SCREEN_CONTENT_TOOLS, true);
+                if (prm->paletteMode.has_value()) {
+                    m_params.SetParam(AMF_VIDEO_ENCODER_AV1_PALETTE_MODE, prm->paletteMode.value());
+                }
+                if (prm->forceIntegerMV.has_value()) {
+                    m_params.SetParam(AMF_VIDEO_ENCODER_AV1_FORCE_INTEGER_MV, prm->forceIntegerMV.value());
+                }
+            } else {
+                m_params.SetParam(AMF_VIDEO_ENCODER_AV1_SCREEN_CONTENT_TOOLS, false);
+            }
+        }
 
         m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTRA, (amf_int64)prm->nQPMin);
         m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTRA, (amf_int64)prm->nQPMax);
@@ -3333,6 +3358,15 @@ tstring VCECore::GetEncoderParam() {
         return (pProperty->GetProperty(pName, &value) == AMF_OK) ? value : 0;
     };
 
+    auto GetPropertyIntOptional = [pProperty](const wchar_t *pName) {
+        int64_t value = 0;
+        std::optional<int64_t> ret;
+        if (pProperty->GetProperty(pName, &value) == AMF_OK) {
+            ret = value;
+        }
+        return ret;
+    };
+
     auto GetPropertyRatio = [pProperty](const wchar_t *pName) {
         AMFRatio value = AMFConstructRatio(0,0);
         pProperty->GetProperty(pName, &value);
@@ -3350,6 +3384,22 @@ tstring VCECore::GetEncoderParam() {
         return (pProperty->GetProperty(pName, &value) == AMF_OK) ? value : false;
     };
 
+    auto GetPropertyBoolOptional = [pProperty](const wchar_t *pName) {
+        bool value = false;
+        std::optional<bool> ret;
+        if (pProperty->GetProperty(pName, &value) == AMF_OK) {
+            ret = value;
+        }
+        return ret;
+    };
+    auto GetPropertyBoolOptionalOnOffAuto = [pProperty](const wchar_t *pName) {
+        bool value = false;
+        if (pProperty->GetProperty(pName, &value) == AMF_OK) {
+            return value ? _T("on") : _T("off");
+        }
+        return _T("auto");
+    };
+
     auto getPropertyDesc = [pProperty, GetPropertyInt](const wchar_t *pName, const CX_DESC *list) {
         int64_t value = 0;
         if (pProperty->GetProperty(pName, &value) != AMF_OK) {
@@ -3357,6 +3407,18 @@ tstring VCECore::GetEncoderParam() {
         }
         auto ptr = get_cx_desc(list, (int)value);
         return (ptr) ? tstring(ptr) : _T("");
+    };
+
+    auto getPropertyDescOptional = [pProperty, GetPropertyInt](const wchar_t *pName, const CX_DESC *list) {
+        int64_t value = 0;
+        std::optional<tstring> ret;
+        if (pProperty->GetProperty(pName, &value) != AMF_OK) {
+            return ret;
+        }
+        if (auto ptr = get_cx_desc(list, (int)value); ptr != nullptr && _tcslen(ptr) > 0) {
+            ret = tstring(ptr);
+        }
+        return ret;
     };
 
     tstring mes;
@@ -3483,7 +3545,7 @@ tstring VCECore::GetEncoderParam() {
         pa_str += _T("paq ") + getPropertyDesc(AMF_PA_PAQ_MODE, list_pa_paq_mode) + _T(", ");
         pa_str += _T("taq ") + getPropertyDesc(AMF_PA_TAQ_MODE, list_pa_taq_mode) + _T(", ");
         pa_str += _T("motion-qual ") + getPropertyDesc(AMF_PA_HIGH_MOTION_QUALITY_BOOST_MODE, list_pa_motion_quality_mode) + _T(", ");
-        pa_str += _T("ltr ") + tstring(GetPropertyInt(AMF_PA_LTR_ENABLE) ? _T("on") : _T("off")) + _T(", ");
+        pa_str += _T("ltr ") + tstring(GetPropertyBool(AMF_PA_LTR_ENABLE) ? _T("on") : _T("off")) + _T(", ");
         mes += pa_str.substr(0, pa_str.length()-2) + _T("\n");
     } else {
         mes += _T("off\n");
@@ -3498,7 +3560,23 @@ tstring VCECore::GetEncoderParam() {
     }
     mes += strsprintf(_T("GOP Len:       %d frames\n"), GetPropertyInt(AMF_PARAM_GOP_SIZE(m_encCodec)));
     if (m_encCodec == RGY_CODEC_AV1) {
-        mes += strsprintf(_T("Temporal Lyrs: %d\n"), GetPropertyInt(AMF_VIDEO_ENCODER_AV1_NUM_TEMPORAL_LAYERS));
+        if (auto ivalue = GetPropertyIntOptional(AMF_VIDEO_ENCODER_AV1_NUM_TEMPORAL_LAYERS); ivalue.has_value()) {
+            mes += strsprintf(_T("Temporal Lyrs: %d\n"), ivalue.value());
+        }
+        mes += strsprintf(_T("ScreenContent: "));
+        auto sct = GetPropertyBoolOptional(AMF_VIDEO_ENCODER_AV1_SCREEN_CONTENT_TOOLS);
+        if (sct.has_value()) {
+            if (sct.value()) {
+                tstring pa_str;
+                pa_str += _T("palette-mode ") + tstring(GetPropertyBoolOptionalOnOffAuto(AMF_VIDEO_ENCODER_AV1_PALETTE_MODE)) + _T(", ");
+                pa_str += _T("force-integer-mv ") + tstring(GetPropertyBoolOptionalOnOffAuto(AMF_VIDEO_ENCODER_AV1_FORCE_INTEGER_MV)) + _T(", ");
+                mes += _T("on,") + pa_str.substr(0, pa_str.length() - 2) + _T("\n");
+            } else {
+                mes += _T("off\n");
+            }
+        } else {
+            mes += _T("auto\n");
+        }
     }
     { const auto &vui_str = m_encVUI.print_all();
     if (vui_str.length() > 0) {
@@ -3569,8 +3647,18 @@ tstring VCECore::GetEncoderParam() {
             others += _T("sps pps vps ");
         }
     } else if (m_encCodec == RGY_CODEC_AV1) {
-        others += _T("aq:") + getPropertyDesc(AMF_VIDEO_ENCODER_AV1_AQ_MODE, list_av1_aq_mode) + _T(" ");
-        others += _T("cdef:") + getPropertyDesc(AMF_VIDEO_ENCODER_AV1_CDEF_MODE, list_av1_cdef_mode) + _T(" ");
+        if (auto val = getPropertyDescOptional(AMF_VIDEO_ENCODER_AV1_AQ_MODE, list_av1_cdef_mode); val.has_value()) {
+            others += _T("aq:") + val.value() + _T(" ");
+        }
+        if (auto val = getPropertyDescOptional(AMF_VIDEO_ENCODER_AV1_CDEF_MODE, list_av1_cdef_mode); val.has_value()) {
+            others += _T("cdef:") + val.value() + _T(" ");
+        }
+        if (auto bvalue = GetPropertyBoolOptional(AMF_VIDEO_ENCODER_AV1_CDF_UPDATE); bvalue.has_value()) {
+            others += tstring(_T("cdf-update")) + (bvalue ? _T("on") : _T("off")) + _T(" ");
+        }
+        if (auto ivalue = GetPropertyIntOptional(AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE); ivalue.has_value()) {
+            others += tstring(_T("cdf-frame-end-update")) + ((ivalue.value() != AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE_DISABLE) ? _T("on") : _T("off")) + _T(" ");
+        }
     }
     if (GetPropertyBool(AMF_PARAM_PREENCODE_ENABLE(m_encCodec))) {
         others += _T("pe ");

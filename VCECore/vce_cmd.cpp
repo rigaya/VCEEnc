@@ -190,6 +190,13 @@ tstring encoder_help() {
         _T("   --cdef-mode <string>         [AV1] set CDEF mode\n")
         _T("                                 - off\n")
         _T("                                 - on\n")
+        _T("   --screen-content-tools  [<param1>=<value>][,<param2>=<value>][...] [AV1]\n")
+        _T("     set screen content tools.\n")
+        _T("    params\n")
+        _T("      palette-mode=<bool>       enable palette mode\n")
+        _T("      force-integer-mv=<bool>   enable force integer MV\n")
+        _T("   --cdf-update                 [AV1] enable CDF update\n")
+        _T("   --cdf-frame-end-update       [AV1] enable CDF frame end update\n")
         _T("   --pe                         enable Pre Encode\n")
         _T("   --pa [<param1>=<value>][,<param2>=<value>][...]\n")
         _T("     enable Pre Analysis\n")
@@ -748,6 +755,74 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+    if (IS_OPTION("screen-content-tools")) {
+        i++;
+        pParams->screenContentTools = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+        const auto paramList = std::vector<std::string>{ "palette-mode", "force-integer-mv"};
+        for (const auto &param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos + 1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("palette-mode")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->paletteMode = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("force-integer-mv")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        pParams->forceIntegerMV = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
+    if (IS_OPTION("no-screen-content-tools")) {
+        i++;
+        pParams->screenContentTools = false;
+        return 0;
+    }
+    if (IS_OPTION("cdf-update")) {
+        i++;
+        pParams->cdfUpdate = true;
+        return 0;
+    }
+    if (IS_OPTION("no-cdf-update")) {
+        i++;
+        pParams->cdfUpdate = false;
+        return 0;
+    }
+    if (IS_OPTION("cdf-frame-end-update")) {
+        i++;
+        pParams->cdfFrameEndUpdate = true;
+        return 0;
+    }
+    if (IS_OPTION("no-cdf-frame-end-update")) {
+        i++;
+        pParams->cdfFrameEndUpdate = false;
+        return 0;
+    }
     if (IS_OPTION("temporal-layers")) {
         i++;
         int value = 0;
@@ -1291,11 +1366,13 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
 
 #define OPT_FLOAT(str, opt, prec) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << (str) << _T(" ") << std::setprecision(prec) << (pParams->opt);
 #define OPT_NUM(str, opt) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << (str) << _T(" ") << (int)(pParams->opt);
+#define OPT_NUM_OPTIONAL(str, opt) if ((pParams->opt.has_value())) cmd << _T(" ") << (str) << _T(" ") << (int)(pParams->opt.value());
 #define OPT_NUM_HEVC(str, codec, opt) if ((pParams->codecParam[RGY_CODEC_HEVC].opt) != (encPrmDefault.codecParam[RGY_CODEC_HEVC].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << (int)(pParams->codecParam[RGY_CODEC_HEVC].opt);
 #define OPT_NUM_H264(str, codec, opt) if ((pParams->codecParam[RGY_CODEC_H264].opt) != (encPrmDefault.codecParam[RGY_CODEC_H264].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << (int)(pParams->codecParam[RGY_CODEC_H264].opt);
 #define OPT_GUID(str, opt, list) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << (str) << _T(" ") << get_name_from_guid((pParams->opt), list);
 #define OPT_GUID_HEVC(str, codec, opt, list) if ((pParams->codecParam[RGY_CODEC_HEVC].opt) != (encPrmDefault.codecParam[RGY_CODEC_HEVC].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << get_name_from_value((pParams->codecParam[RGY_CODEC_HEVC].opt), list);
 #define OPT_LST(str, opt, list) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << (str) << _T(" ") << get_chr_from_value(list, (pParams->opt));
+#define OPT_LST_OPTIONAL(str, opt, list) if (pParams->opt.has_value()) cmd << _T(" ") << (str) << _T(" ") << get_chr_from_value(list, (pParams->opt.value()));
 #define OPT_LST_HEVC(str, codec, opt, list) if ((pParams->codecParam[RGY_CODEC_HEVC].opt) != (encPrmDefault.codecParam[RGY_CODEC_HEVC].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << get_chr_from_value(list, (pParams->codecParam[RGY_CODEC_HEVC].opt));
 #define OPT_LST_H264(str, codec, opt, list) if ((pParams->codecParam[RGY_CODEC_H264].opt) != (encPrmDefault.codecParam[RGY_CODEC_H264].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << get_chr_from_value(list, (pParams->codecParam[RGY_CODEC_H264].opt));
 #define OPT_QP(str, qpi, qpp, qpb, enable, force) { \
@@ -1316,6 +1393,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     } \
 }
 #define OPT_BOOL(str_true, str_false, opt) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << ((pParams->opt) ? (str_true) : (str_false));
+#define OPT_BOOL_OPTIONAL(str_true, str_false, opt) if (pParams->opt.has_value()) cmd << _T(" ") << ((pParams->opt.value()) ? (str_true) : (str_false));
 #define OPT_BOOL_HEVC(str_true, str_false, codec, opt) \
     if ((pParams->codecParam[RGY_CODEC_HEVC].opt) != (encPrmDefault.codecParam[RGY_CODEC_HEVC].opt)) { \
         cmd << _T(" "); \
@@ -1342,6 +1420,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
 #define ADD_NUM(str, opt) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << (pParams->opt);
 #define ADD_LST(str, opt, list) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << get_chr_from_value(list, (int)(pParams->opt));
 #define ADD_BOOL(str, opt) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << ((pParams->opt) ? (_T("true")) : (_T("false")));
+#define ADD_BOOL_OPTIONAL(str, opt) if (pParams->opt.has_value()) tmp << _T(",") << (str) << _T("=") << ((pParams->opt.value()) ? (_T("true")) : (_T("false")));
 
 
     OPT_NUM(_T("-d"), deviceID);
@@ -1407,9 +1486,25 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_BOOL(_T("--enforce-hrd"), _T(""), bEnforceHRD);
 
     OPT_NUM(_T("--tiles"), tiles);
-    OPT_NUM(_T("--temporal-layers"), temporalLayers);
-    OPT_LST(_T("--cdef-mode"), cdefMode, list_av1_cdef_mode);
-    OPT_LST(_T("--aq-mode"), aqMode, list_av1_aq_mode);
+    OPT_NUM_OPTIONAL(_T("--temporal-layers"), temporalLayers);
+    OPT_LST_OPTIONAL(_T("--cdef-mode"), cdefMode, list_av1_cdef_mode);
+    if (pParams->screenContentTools.has_value()) {
+        if (pParams->screenContentTools.value()) {
+            tmp.str(tstring());
+            ADD_BOOL_OPTIONAL(_T("palette-mode"), paletteMode);
+            ADD_BOOL_OPTIONAL(_T("force-integer-mv"), forceIntegerMV);
+            if (!tmp.str().empty()) {
+                cmd << _T(" --screen-content-tools ") << tmp.str().substr(1);
+            } else if (pParams->pa.enable) {
+                cmd << _T(" --screen-content-tools");
+            }
+        } else {
+            cmd << _T(" --no-screen-content-tools");
+        }
+    }
+    OPT_BOOL(_T("--cdf-update"), _T("--no-cdf-update"), cdfUpdate);
+    OPT_BOOL(_T("--cdf-frame-end-update"), _T("--no-cdf-frame-end-update"), cdfFrameEndUpdate);
+    OPT_LST_OPTIONAL(_T("--aq-mode"), aqMode, list_av1_aq_mode);
     OPT_LST(_T("--alignment-mode"), alignmentMode, list_av1_alignment_mode);
 
     if (pParams->codec == RGY_CODEC_H264 || save_disabled_prm) {

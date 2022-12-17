@@ -74,7 +74,10 @@
   - [--filler](#--filler)
   - [--motion-est \<string\> \[H.264/HEVC\]](#--motion-est-string-h264hevc)
   - [--tiles \<int\> \[AV1\]](#--tiles-int-av1)
-  - [--cdef-mode \<int\> \[AV1\]](#--cdef-mode-int-av1)
+  - [--cdef-mode \<string\> \[AV1\]](#--cdef-mode-string-av1)
+  - [--screen-content-tools  \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--screen-content-tools--param1value1param2value2)
+  - [--cdf-update \[AV1\]](#--cdf-update-av1)
+  - [--cdf-frame-end-update \[AV1\]](#--cdf-frame-end-update-av1)
   - [--temporal-layers \<int\> \[AV1\]](#--temporal-layers-int-av1)
   - [--aq-mode \<int\> \[AV1\]](#--aq-mode-int-av1)
   - [--pe](#--pe)
@@ -523,11 +526,32 @@ Motion vector accuracy / default: auto
 ### --tiles &lt;int&gt; [AV1]
 Set number of tiles per frame.
 
-### --cdef-mode &lt;int&gt; [AV1]
+### --cdef-mode &lt;string&gt; [AV1]
 Cdef mode.
 - **params**
   - on
   - off 
+
+### --screen-content-tools  [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]  
+Set screen content tools.
+
+- **params**
+  - palette-mode=&lt;bool&gt;  
+    enable palette mode
+
+  - force-integer-mv=&lt;bool&gt;  
+    enable force integer MV
+
+- example
+  ```
+  --screen-content-tools palette-mode=on,force-integer-mv=on
+  ```
+
+### --cdf-update [AV1]
+Enable CDF update.
+
+### --cdf-frame-end-update [AV1]
+Enable CDF frame end update.
 
 ### --temporal-layers &lt;int&gt; [AV1]
 Number of temporal layers.
