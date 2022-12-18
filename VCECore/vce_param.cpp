@@ -102,7 +102,7 @@ VCEParam::VCEParam() :
     nMaxLTR(0),
     bTimerPeriodTuning(true),
     bDeblockFilter(true),
-    bEnableSkipFrame(false),
+    enableSkipFrame(),
     nQPI(VCE_DEFAULT_QPI),
     nQPP(VCE_DEFAULT_QPP),
     nQPB(VCE_DEFAULT_QPB),

@@ -528,7 +528,7 @@ struct VCEParam {
     bool    bTimerPeriodTuning;
 
     bool    bDeblockFilter;
-    bool    bEnableSkipFrame;
+    std::optional<bool> enableSkipFrame;
     int     nQPI;
     int     nQPP;
     int     nQPB;

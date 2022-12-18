@@ -668,11 +668,11 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         return 0;
     }
     if (IS_OPTION("skip-frame")) {
-        pParams->bEnableSkipFrame = true;
+        pParams->enableSkipFrame = true;
         return 0;
     }
     if (IS_OPTION("no-skip-frame")) {
-        pParams->bEnableSkipFrame = false;
+        pParams->enableSkipFrame = false;
         return 0;
     }
     if (IS_OPTION("motion-est")) {
@@ -1470,7 +1470,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_NUM(_T("--ref"), nRefFrames);
     OPT_NUM(_T("--ltr"), nLTRFrames);
     OPT_NUM(_T("--slices"), nSlices);
-    OPT_BOOL(_T("--skip-frame"), _T("--no-skip-frame"), bEnableSkipFrame);
+    OPT_BOOL_OPTIONAL(_T("--skip-frame"), _T("--no-skip-frame"), enableSkipFrame);
     OPT_BOOL(_T("--vbaq"), _T(""), bVBAQ);
     OPT_LST(_T("--motion-est"), nMotionEst, list_mv_presicion);
     if (pParams->par[0] > 0 && pParams->par[1] > 0) {

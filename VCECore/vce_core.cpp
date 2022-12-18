@@ -1820,7 +1820,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_INITIAL_VBV_BUFFER_FULLNESS(prm->codec),     (amf_int64)prm->nInitialVBVPercent);
     m_params.SetParam(AMF_PARAM_MAX_NUM_REFRAMES(prm->codec), (amf_int64)prm->nRefFrames);
     m_params.SetParam(AMF_PARAM_MAX_LTR_FRAMES(prm->codec), (amf_int64)prm->nLTRFrames);
-    m_params.SetParam(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(prm->codec),  prm->bEnableSkipFrame);
+    if (prm->enableSkipFrame.has_value()) {
+        m_params.SetParam(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(prm->codec), prm->enableSkipFrame.value());
+    }
     m_params.SetParam(AMF_PARAM_RATE_CONTROL_METHOD(prm->codec),             (amf_int64)prm->rateControl);
 
     m_params.SetParam(AMF_PARAM_ENFORCE_HRD(prm->codec),        prm->bEnforceHRD != 0);
@@ -3641,8 +3643,8 @@ tstring VCECore::GetEncoderParam() {
         }
     }
     tstring others;
-    if (GetPropertyBool(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(m_encCodec))) {
-        others += _T("skip_frame ");
+    if (auto bvalue = GetPropertyBoolOptional(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(m_encCodec)); bvalue.has_value()) {
+        others += tstring(_T("skipframe:")) + (bvalue ? _T("on") : _T("off")) + _T(" ");
     }
     bool bDeblock = true;
     switch (m_encCodec) {
