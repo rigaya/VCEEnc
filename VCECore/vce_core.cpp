@@ -3060,7 +3060,9 @@ RGY_ERR VCECore::run() {
         pSurface->SetFrameType(amf::AMF_FRAME_PROGRESSIVE);
         //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
         //フレーム情報のほうもプログレに書き換えなければ、SubmitInputでエラーが返る
-        m_params.SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE, AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD);
+        if (m_encCodec == RGY_CODEC_H264) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE, AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_TOP_FIELD);
+        }
         // apply frame-specific properties to the current frame
         m_params.Apply(pSurface, AMF_PARAM_FRAME, m_pLog.get());
         // apply dynamic properties to the encoder
