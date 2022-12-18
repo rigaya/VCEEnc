@@ -1251,17 +1251,17 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
                 pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR;
                 break;
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR:
-                _ftprintf(stderr, _T("CBR-HQ unsupported for HEVC encoding!\n"));
-                return 1;
+                pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR;
+                break;
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR:
                 pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR;
                 break;
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR:
-                _ftprintf(stderr, _T("QVBR unsupported for HEVC encoding!\n"));
-                return 1;
+                pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_QUALITY_VBR;
+                break;
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR:
-                _ftprintf(stderr, _T("VBR-HQ unsupported for HEVC encoding!\n"));
-                return 1;
+                pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR;
+                break;
             case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP:
             default:
                 pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP;

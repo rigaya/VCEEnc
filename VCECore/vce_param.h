@@ -212,6 +212,9 @@ const CX_DESC list_vce_hevc_rc_method[] = {
     { _T("CBR"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR },
     { _T("VBR"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR },
     { _T("VBR_LAT"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_LATENCY_CONSTRAINED_VBR },
+    { _T("QVBR"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_QUALITY_VBR },
+    { _T("VBR-HQ"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR },
+    { _T("CBR-HQ"), AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR },
     { NULL, 0 }
 };
 
@@ -403,7 +406,7 @@ static inline int get_codec_hqvbr(RGY_CODEC codec) {
     int codec_vbr = 0;
     switch (codec) {
     case RGY_CODEC_H264: codec_vbr = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR; break;
-    case RGY_CODEC_HEVC: codec_vbr = -1; break;
+    case RGY_CODEC_HEVC: codec_vbr = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR; break;
     case RGY_CODEC_AV1:  codec_vbr = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR; break;
     default:
         fprintf(stderr, "Unsupported codec!\n");
@@ -442,7 +445,7 @@ static inline int get_codec_hqcbr(RGY_CODEC codec) {
     int codec_cbr = 0;
     switch (codec) {
     case RGY_CODEC_H264: codec_cbr = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR; break;
-    case RGY_CODEC_HEVC: codec_cbr = -1; break;
+    case RGY_CODEC_HEVC: codec_cbr = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR; break;
     case RGY_CODEC_AV1:  codec_cbr = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR; break;
     default:
         fprintf(stderr, "Unsupported codec!\n");
@@ -455,7 +458,7 @@ static inline int get_codec_qvbr(RGY_CODEC codec) {
     int codec_vbr = 0;
     switch (codec) {
     case RGY_CODEC_H264: codec_vbr = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR; break;
-    case RGY_CODEC_HEVC: codec_vbr = -1; break;
+    case RGY_CODEC_HEVC: codec_vbr = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_QUALITY_VBR; break;
     case RGY_CODEC_AV1:  codec_vbr = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_QUALITY_VBR; break;
     default:
         fprintf(stderr, "Unsupported codec!\n");
