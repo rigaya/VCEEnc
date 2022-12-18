@@ -1382,8 +1382,8 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetNUValue(fcgNUAspectRatioX, abs(enc.par[0]));
     SetNUValue(fcgNUAspectRatioY, abs(enc.par[1]));
 
-    SetNUValue(fcgNUQPMax,               enc.nQPMax);
-    SetNUValue(fcgNUQPMin,               enc.nQPMin);
+    SetNUValue(fcgNUQPMax,               enc.nQPMax.value_or(0));
+    SetNUValue(fcgNUQPMin,               enc.nQPMin.value_or(0));
     SetNUValue(fcgNUBDeltaQP,            enc.nDeltaQPBFrame);
     SetNUValue(fcgNUBRefDeltaQP,         enc.nDeltaQPBFrameRef);
 
@@ -1391,7 +1391,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetNUValue(fcgNURefFrames,          enc.nRefFrames);
 
     fcgCBDeblock->Checked             = enc.bDeblockFilter;
-    fcgCBSkipFrame->Checked           = enc.bEnableSkipFrame;
+    fcgCBSkipFrame->Checked           = enc.enableSkipFrame.value_or(false);
     fcgCBTimerPeriodTuning->Checked   = enc.bTimerPeriodTuning;
     fcgCBVBAQ->Checked                = enc.bVBAQ;
     fcgCBFullrange->Checked           = enc.common.out_vui.colorrange == RGY_COLORRANGE_FULL;
@@ -1593,8 +1593,8 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     enc.nQPI                                    = (int)fcgNUQPI->Value;
     enc.nQPP                                    = (int)fcgNUQPP->Value;
     enc.nQPB                                    = (int)fcgNUQPB->Value;
-    enc.nQPMax                                  = (int)fcgNUQPMax->Value;
-    enc.nQPMin                                  = (int)fcgNUQPMin->Value;
+    if (fcgNUQPMax->Value > 0) enc.nQPMax       = (int)fcgNUQPMax->Value;
+    if (fcgNUQPMin->Value > 0) enc.nQPMin       = (int)fcgNUQPMin->Value;
 
     enc.nBframes                                = (int)fcgNUBframes->Value;
     enc.bBPyramid                               = fcgCBBPyramid->Checked;
@@ -1606,7 +1606,7 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     enc.nRefFrames                              = (int)fcgNURefFrames->Value;
 
     enc.bDeblockFilter                          = fcgCBDeblock->Checked;
-    enc.bEnableSkipFrame                        = fcgCBSkipFrame->Checked;
+    if (fcgCBSkipFrame->Checked) enc.enableSkipFrame = fcgCBSkipFrame->Checked;
     enc.bVBAQ                                   = fcgCBVBAQ->Checked;
     enc.common.out_vui.colorrange               = fcgCBFullrange->Checked ? RGY_COLORRANGE_FULL : RGY_COLORRANGE_UNSPECIFIED;
     enc.common.out_vui.matrix                   = (CspMatrix)list_colormatrix[fcgCXColorMatrix->SelectedIndex].value;
