@@ -1159,7 +1159,7 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
             return 1;
         }
         if (debug_cmd_parser) {
-            _ftprintf(stderr, _T("parsing %3d: %s\n"), i, strInput[i]);
+            _ftprintf(stderr, _T("parsing %3d: %s (%s)\n"), i, strInput[i], i + 1 < nArgNum ? strInput[i+1] : _T(""));
         }
         auto sts = parse_one_option(option_name, strInput, i, nArgNum, pParams, &argsData);
         if (!ignore_parse_err && sts != 0) {
