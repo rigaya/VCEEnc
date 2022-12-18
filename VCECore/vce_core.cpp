@@ -2005,7 +2005,11 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         PrintMes(RGY_LOG_ERROR, _T("Unsupported codec.\n"));
         return RGY_ERR_UNSUPPORTED;
     }
-
+    // AMF_PARAM_ENCODER_USAGE は必ず設定する必要がある
+    if (m_params.CountParam(AMF_PARAM_ENCODER_USAGE) == 0) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to find AMF_PARAM_ENCODER_USAGE.\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
     // Usage is preset that will set many parameters
     m_params.Apply(m_pEncoder, AMF_PARAM_ENCODER_USAGE, m_pLog.get());
     PrintMes(RGY_LOG_DEBUG, _T("pushed usage params.\n"));

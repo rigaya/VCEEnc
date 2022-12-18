@@ -25,6 +25,7 @@
 //
 // ------------------------------------------------------------------------------------------
 
+#include <algorithm>
 #include "rgy_util.h"
 #include "vce_param.h"
 
@@ -194,6 +195,12 @@ RGY_ERR AMFParams::Apply(amf::AMFPropertyStorage *storage, AMFParamType prmType,
         }
     }
     return RGY_ERR_NONE;
+}
+
+int64_t AMFParams::CountParam(const AMFParamType prmType) const {
+    return std::count_if(m_params.begin(), m_params.end(), [prmType](const auto& p) {
+        return p.second.type == prmType;
+    });
 }
 
 RGY_ERR AMFParams::GetParam(const std::wstring &name, amf::AMFVariantStruct *value) const {

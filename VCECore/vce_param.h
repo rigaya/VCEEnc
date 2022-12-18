@@ -853,6 +853,7 @@ public:
         return SetParam(name, static_cast<const amf::AMFVariantStruct &>(amf::AMFVariant(value)));
     }
 
+    int64_t CountParam(const AMFParamType type) const;
     RGY_ERR GetParam(const std::wstring &name, amf::AMFVariantStruct *value) const;
 
     template<typename T> inline
