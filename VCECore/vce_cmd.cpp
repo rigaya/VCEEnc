@@ -835,17 +835,6 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->temporalLayers = value;
         return 0;
     }
-    if (IS_OPTION("alignment-mode")) {
-        i++;
-        int value = 0;
-        if (get_list_value(list_av1_alignment_mode, strInput[i], &value)) {
-            pParams->alignmentMode = value;
-        } else {
-            print_cmd_error_invalid_value(option_name, strInput[i], list_av1_alignment_mode);
-            return 1;
-        }
-        return 0;
-    }
     if (IS_OPTION("aq-mode")) {
         i++;
         int value = 0;
@@ -1500,7 +1489,6 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_BOOL(_T("--cdf-update"), _T("--no-cdf-update"), cdfUpdate);
     OPT_BOOL(_T("--cdf-frame-end-update"), _T("--no-cdf-frame-end-update"), cdfFrameEndUpdate);
     OPT_LST_OPTIONAL(_T("--aq-mode"), aqMode, list_av1_aq_mode);
-    OPT_LST(_T("--alignment-mode"), alignmentMode, list_av1_alignment_mode);
 
     if (pParams->codec == RGY_CODEC_H264 || save_disabled_prm) {
         OPT_LST_H264(_T("--level"), _T(""), nLevel, list_avc_level);

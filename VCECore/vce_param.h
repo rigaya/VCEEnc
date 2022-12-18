@@ -235,15 +235,6 @@ const CX_DESC list_vce_preanalysis_h264[] = {
     { NULL, 0 }
 };
 
-
-const CX_DESC list_av1_alignment_mode[] = {
-    { _T("auto"),                    0 },
-    { _T("64x16"),                   AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE_64X16_ONLY },
-    { _T("64x16_1080p_codec_1082"),  AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE_64X16_1080P_CODED_1082  },
-    { _T("no_restrict"),             AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE_NO_RESTRICTIONS  },
-    { NULL, 0 }
-};
-
 const CX_DESC list_av1_cdef_mode[] = {
     { _T("off"), AMF_VIDEO_ENCODER_AV1_CDEF_DISABLE },
     { _T("on"),  AMF_VIDEO_ENCODER_AV1_CDEF_ENABLE_DEFAULT  },
@@ -560,7 +551,6 @@ struct VCEParam {
 
     //AV1
     int     tiles;
-    int     alignmentMode;
     std::optional<int> cdefMode;
     std::optional<bool> screenContentTools;
     std::optional<bool> paletteMode;

@@ -127,7 +127,6 @@ VCEParam::VCEParam() :
     pe(),
     bVBAQ(false),
     tiles(0),
-    alignmentMode(0),
     cdefMode(),
     screenContentTools(),
     paletteMode(),

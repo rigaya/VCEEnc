@@ -263,7 +263,7 @@ amf::AMFCapsPtr VCEDevice::getEncCaps(RGY_CODEC codec) {
             && (codec == RGY_CODEC_HEVC || codec == RGY_CODEC_AV1)) {
             amf::AMFComponentPtr p_encoder;
             if (m_factory->CreateComponent(m_context, codec_rgy_to_enc(codec), &p_encoder) == AMF_OK) {
-                const int dummy_width = 1920;
+                const int dummy_width  = 1920;
                 const int dummy_height = 1080;
 
                 AMFParams params;
@@ -275,6 +275,10 @@ amf::AMFCapsPtr VCEDevice::getEncCaps(RGY_CODEC codec) {
                 params.SetParam(AMF_PARAM_FRAMESIZE(codec), AMFConstructSize(dummy_width, dummy_height));
                 params.SetParam(AMF_PARAM_FRAMERATE(codec), AMFConstructRate(30, 1));
                 params.SetParam(AMF_PARAM_COLOR_BIT_DEPTH(codec), (amf_int64)10);
+                if (codec == RGY_CODEC_AV1) {
+                    //これをいれないと、1920x1080などの解像度が正常に扱えない
+                    params.SetParam(AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE, (amf_int64)AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE_NO_RESTRICTIONS);
+                }
 
                 // Usage is preset that will set many parameters
                 params.Apply(p_encoder, AMF_PARAM_ENCODER_USAGE);
