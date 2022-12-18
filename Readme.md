@@ -46,6 +46,7 @@ Debian/Ubuntu (VCEEncC)
 | VCEEnc 6.17 or later | AMD driver 21.12.1 or later |
 | VCEEnc 7.00 or later | AMD driver 22.3.1 or later |
 | VCEEnc 7.03 or later | AMD driver 22.7.1 or later |
+| VCEEnc 7.15 or later | AMD driver 22.12.1 or later |
 
 
 ## Usage and options of VCEEncC
@@ -57,9 +58,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 
 ## Main usable functions
 ### Common to VCEEnc / VCEEncC
-- Encoding using VCE
+- Encoding using VCE/VCN
    - H.264/AVC
-   - HEVC (Polaris or later)
+   - HEVC
+   - AV1
 - Each encode mode of VCE
    - CQP       (fixed quantization)
    - CBR       (Constant bitrate)

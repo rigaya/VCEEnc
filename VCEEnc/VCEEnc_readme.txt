@@ -16,7 +16,7 @@ Aviutl 1.00 以降
 VCEが載ったハードウェア
   AMD製 GPU Radeon HD 7xxx以降
   AMD製 APU Trinity世代(第2世代)以降
-AMD Radeon Software Adrenalin Edition 22.3.1 以降
+AMD Radeon Software Adrenalin Edition 22.12.1 以降
 
 
 【VCEEnc 使用にあたっての注意事項】
@@ -173,6 +173,15 @@ Radeon RX550
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2022.12.18 (7.15)
+- AMF 1.4.28に対応。
+  AMD Radeon Software Adrenalin Edition 22.12.1 以降が必要。
+- AV1関連パラメータを追加。
+  - screen-content-tools
+  - cdf-update
+  - cdf-frame-end-update
+- HEVCエンコーダのQVBR/VBR-HQ/CBR-HQモードに対応。
+
 2022.12.01 (7.14)
 - AV1 hwエンコードに仮対応。
   未テストなので、動作しない可能性は高い。
