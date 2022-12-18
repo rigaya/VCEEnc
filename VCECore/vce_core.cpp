@@ -1954,7 +1954,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER,                   true);
     } else if (prm->codec == RGY_CODEC_AV1) {
-        m_params.SetParam(AMF_VIDEO_ENCODER_AV1_TILES_PER_FRAME,         (amf_int64)prm->tiles);
+        if (prm->tiles > 0) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_TILES_PER_FRAME, (amf_int64)prm->tiles);
+        }
         if (prm->temporalLayers.has_value()) {
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_NUM_TEMPORAL_LAYERS, (amf_int64)prm->temporalLayers.value());
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_NUM_TEMPORAL_LAYERS,     (amf_int64)prm->temporalLayers.value());
@@ -1968,7 +1970,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (prm->cdfFrameEndUpdate.has_value()) {
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE, prm->cdfFrameEndUpdate.value() ? AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE_ENABLE_DEFAULT : AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE_DISABLE);
         }
-        m_params.SetParam(AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE,          (amf_int64)prm->alignmentMode);
+        if (prm->alignmentMode != 0) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE, (amf_int64)prm->alignmentMode);
+        }
         if (prm->aqMode.has_value()) {
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_AQ_MODE,             (amf_int64)prm->aqMode.value());
         }
