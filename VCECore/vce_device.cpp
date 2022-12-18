@@ -473,6 +473,10 @@ tstring VCEDevice::QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
         str += strsprintf(_T("Temporal layers: %d\n"), maxTemporalLayers);
     }
 
+    amf_bool preAnalysis = 0;
+    encoderCaps->GetProperty(AMF_PARAM_CAP_PRE_ANALYSIS(codec), &preAnalysis);
+    str += strsprintf(_T("pre analysis:    %s\n"), (preAnalysis) ? _T("yes") : _T("no"));
+
     amf_uint32 maxNumOfStreams = 0;
     encoderCaps->GetProperty(AMF_PARAM_CAP_NUM_OF_STREAMS(codec), &maxNumOfStreams);
     str += strsprintf(_T("max streams:     %d\n"), maxNumOfStreams);
