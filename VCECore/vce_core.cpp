@@ -614,10 +614,10 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
         }
     }
     const int maxQP = (prm->codec == RGY_CODEC_AV1) ? 255 : (prm->outputDepth > 8 ? 63 : 51);
-    prm->nQPMax      = clamp(prm->nQPMax,      0, maxQP);
-    prm->nQPMin      = clamp(prm->nQPMin,      0, maxQP);
-    prm->nQPMinInter = clamp(prm->nQPMinInter, 0, maxQP);
-    prm->nQPMaxInter = clamp(prm->nQPMaxInter, 0, maxQP);
+    if (prm->nQPMin.has_value())      prm->nQPMin      = clamp(prm->nQPMin,      0, maxQP);
+    if (prm->nQPMax.has_value())      prm->nQPMax      = clamp(prm->nQPMax,      0, maxQP);
+    if (prm->nQPMinInter.has_value()) prm->nQPMinInter = clamp(prm->nQPMinInter, 0, maxQP);
+    if (prm->nQPMaxInter.has_value()) prm->nQPMaxInter = clamp(prm->nQPMaxInter, 0, maxQP);
     prm->nQPI        = clamp(prm->nQPI,        0, maxQP);
     prm->nQPP        = clamp(prm->nQPP,        0, maxQP);
     prm->nQPB        = clamp(prm->nQPB,        0, maxQP);
@@ -1905,8 +1905,12 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             m_params.SetParam(AMF_VIDEO_ENCODER_QP_B, (amf_int64)prm->nQPB);
         }
 
-        m_params.SetParam(AMF_VIDEO_ENCODER_MIN_QP,                                (amf_int64)prm->nQPMin);
-        m_params.SetParam(AMF_VIDEO_ENCODER_MAX_QP,                                (amf_int64)prm->nQPMax);
+        if (prm->nQPMin.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_MIN_QP,                                (amf_int64)prm->nQPMin.value());
+        }
+        if (prm->nQPMax.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_MAX_QP,                                (amf_int64)prm->nQPMax.value());
+        }
 
         //m_params.SetParam(AMF_VIDEO_ENCODER_HEADER_INSERTION_SPACING,       (amf_int64)0);
         ////m_params.SetParam(AMF_VIDEO_ENCODER_INTRA_REFRESH_NUM_MBS_PER_SLOT, false);
@@ -1933,10 +1937,18 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_TIER,                            (amf_int64)prm->codecParam[prm->codec].nTier);
         //m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE,                   (amf_int64)(m_encVUI.colorrange == RGY_COLORRANGE_FULL ? AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE_FULL : AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE_STUDIO));
 
-        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_I,                        (amf_int64)prm->nQPMin);
-        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_I,                        (amf_int64)prm->nQPMax);
-        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_P,                        (amf_int64)prm->nQPMinInter);
-        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_P,                        (amf_int64)prm->nQPMaxInter);
+        if (prm->nQPMin.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_I,                        (amf_int64)prm->nQPMin.value());
+        }
+        if (prm->nQPMax.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_I,                        (amf_int64)prm->nQPMax.value());
+        }
+        if (prm->nQPMinInter.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MIN_QP_P,                        (amf_int64)prm->nQPMinInter.value());
+        }
+        if (prm->nQPMaxInter.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_P,                        (amf_int64)prm->nQPMaxInter.value());
+        }
 
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_DE_BLOCKING_FILTER_DISABLE,      !prm->bDeblockFilter);
 
@@ -1973,11 +1985,18 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
                 m_params.SetParam(AMF_VIDEO_ENCODER_AV1_SCREEN_CONTENT_TOOLS, false);
             }
         }
-
-        m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTRA, (amf_int64)prm->nQPMin);
-        m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTRA, (amf_int64)prm->nQPMax);
-        m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTER, (amf_int64)prm->nQPMinInter);
-        m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTER, (amf_int64)prm->nQPMaxInter);
+        if (prm->nQPMin.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTRA, (amf_int64)prm->nQPMin.value());
+        }
+        if (prm->nQPMax.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTRA, (amf_int64)prm->nQPMax.value());
+        }
+        if (prm->nQPMinInter.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTER, (amf_int64)prm->nQPMinInter.value());
+        }
+        if (prm->nQPMaxInter.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTER, (amf_int64)prm->nQPMaxInter.value());
+        }
     } else {
         PrintMes(RGY_LOG_ERROR, _T("Unsupported codec.\n"));
         return RGY_ERR_UNSUPPORTED;
@@ -3515,9 +3534,16 @@ tstring VCECore::GetEncoderParam() {
             mes += strsprintf(_T("QVBR level:    %d\n"), GetPropertyInt(AMF_VIDEO_ENCODER_QVBR_QUALITY_LEVEL));
         }
         mes += strsprintf(_T("Max bitrate:   %d kbps\n"), GetPropertyInt(AMF_PARAM_PEAK_BITRATE(m_encCodec)) / 1000);
-        mes += strsprintf(_T("QP:            Min: %d:%d, Max: %d:%d\n"),
-            GetPropertyInt(AMF_PARAM_MIN_QP(m_encCodec)), GetPropertyInt(AMF_PARAM_MIN_QP_INTER(m_encCodec)),
-            GetPropertyInt(AMF_PARAM_MAX_QP(m_encCodec)), GetPropertyInt(AMF_PARAM_MAX_QP_INTER(m_encCodec)));
+        const auto qpmin       = GetPropertyIntOptional(AMF_PARAM_MIN_QP(m_encCodec));
+        const auto qpmin_inter = GetPropertyIntOptional(AMF_PARAM_MIN_QP_INTER(m_encCodec));
+        const auto qpmax       = GetPropertyIntOptional(AMF_PARAM_MAX_QP(m_encCodec));
+        const auto qpmax_inter = GetPropertyIntOptional(AMF_PARAM_MAX_QP_INTER(m_encCodec));
+        auto qpminmax_str = [](const decltype(qpmin)& qpminmax) {
+            return qpminmax.has_value() ? strsprintf(_T("%d"), qpminmax.value()) : _T("auto");
+        };
+        mes += strsprintf(_T("QP:            Min: %s:%s, Max: %s:%s\n"),
+            qpminmax_str(qpmin).c_str(), qpminmax_str(qpmin_inter).c_str(),
+            qpminmax_str(qpmax).c_str(), qpminmax_str(qpmax_inter).c_str());
     }
     mes += strsprintf(_T("VBV Bufsize:   %d kbps\n"), GetPropertyInt(AMF_PARAM_VBV_BUFFER_SIZE(m_encCodec)) / 1000);
     if (m_encCodec == RGY_CODEC_H264 && GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN)) {

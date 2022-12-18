@@ -1455,12 +1455,8 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
         OPT_NUM(_T("--vbv-bufsize"), nVBVBufferSize);
         OPT_NUM(_T("--max-bitrate"), nMaxBitrate);
     }
-    if (pParams->nQPMin || save_disabled_prm) {
-        OPT_NUM(_T("--qp-min"), nQPMin);
-    }
-    if (pParams->nQPMax || save_disabled_prm) {
-        OPT_NUM(_T("--qp-max"), nQPMax);
-    }
+    OPT_NUM_OPTIONAL(_T("--qp-min"), nQPMin);
+    OPT_NUM_OPTIONAL(_T("--qp-max"), nQPMax);
     if (pParams->nGOPLen == 0) {
         cmd << _T(" --gop-len auto");
     } else {

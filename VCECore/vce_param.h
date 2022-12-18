@@ -532,10 +532,10 @@ struct VCEParam {
     int     nQPI;
     int     nQPP;
     int     nQPB;
-    int     nQPMax;
-    int     nQPMin;
-    int     nQPMaxInter;
-    int     nQPMinInter;
+    std::optional<int> nQPMax;
+    std::optional<int> nQPMin;
+    std::optional<int> nQPMaxInter;
+    std::optional<int> nQPMinInter;
     int     nDeltaQPBFrame;
     int     nDeltaQPBFrameRef;
     int     nBframes;
