@@ -447,7 +447,7 @@ RGY_ERR AMFParams::SetParamTypeAV1() {
     SetParamType(AMF_VIDEO_ENCODER_AV1_QUERY_TIMEOUT,                          AMF_PARAM_STATIC, L"amf_int64; default = 0 (no wait); timeout for QueryOutput call in ms.");
 
     // Usage Settings
-    SetParamType(AMF_VIDEO_ENCODER_AV1_USAGE,                                  AMF_PARAM_STATIC, L"amf_int64(AMF_VIDEO_ENCODER_AV1_USAGE_ENUM); default = N/A; Encoder usage. fully configures parameter set.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_USAGE,                                  AMF_PARAM_ENCODER_USAGE, L"amf_int64(AMF_VIDEO_ENCODER_AV1_USAGE_ENUM); default = N/A; Encoder usage. fully configures parameter set.");
 
     // Session Configuration
     SetParamType(AMF_VIDEO_ENCODER_AV1_FRAMESIZE,                              AMF_PARAM_STATIC, L"AMFSize; default = 0,0; Frame size");
