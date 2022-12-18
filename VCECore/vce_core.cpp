@@ -3540,7 +3540,7 @@ tstring VCECore::GetEncoderParam() {
                 GetPropertyInt(AMF_PARAM_TARGET_BITRATE(m_encCodec)) / 1000);
         }
         if (GetPropertyInt(AMF_PARAM_RATE_CONTROL_METHOD(m_encCodec)) == get_codec_qvbr(m_encCodec)) {
-            mes += strsprintf(_T("QVBR level:    %d\n"), GetPropertyInt(AMF_VIDEO_ENCODER_QVBR_QUALITY_LEVEL));
+            mes += strsprintf(_T("QVBR level:    %d\n"), GetPropertyInt(AMF_PARAM_QVBR_QUALITY_LEVEL(m_encCodec)));
         }
         mes += strsprintf(_T("Max bitrate:   %d kbps\n"), GetPropertyInt(AMF_PARAM_PEAK_BITRATE(m_encCodec)) / 1000);
         const auto qpmin       = GetPropertyIntOptional(AMF_PARAM_MIN_QP(m_encCodec));
