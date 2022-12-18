@@ -1808,6 +1808,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         m_params.SetParam(AMF_PARAM_PROFILE_LEVEL(prm->codec), (amf_int64)prm->codecParam[prm->codec].nLevel);
     }
     m_params.SetParam(AMF_PARAM_QUALITY_PRESET(prm->codec), (amf_int64)prm->qualityPreset);
+    if (prm->rateControl == get_codec_qvbr(m_encCodec)) {
+        m_params.SetParam(AMF_PARAM_QVBR_QUALITY_LEVEL(prm->codec), (amf_int64)prm->qvbrLevel);
+    }
     m_params.SetParam(AMF_PARAM_QP_I(prm->codec), (amf_int64)prm->nQPI);
     m_params.SetParam(AMF_PARAM_QP_P(prm->codec), (amf_int64)prm->nQPP);
     if (prm->nBitrate != 0)       m_params.SetParam(AMF_PARAM_TARGET_BITRATE(prm->codec), (amf_int64)prm->nBitrate * 1000);
@@ -1881,9 +1884,6 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (prm->bVBAQ) m_params.SetParam(AMF_PARAM_ENABLE_VBAQ(prm->codec), true);
         //m_params.SetParam(AMF_PARAM_END_OF_SEQUENCE(prm->codec),                false);
         m_params.SetParam(AMF_PARAM_INSERT_AUD(prm->codec), false);
-    }
-    if (prm->codec == RGY_CODEC_H264 || prm->codec == RGY_CODEC_AV1) {
-        m_params.SetParam(AMF_PARAM_QVBR_QUALITY_LEVEL(prm->codec), (amf_int64)prm->qvbrLevel);
     }
 
     if (prm->codec == RGY_CODEC_HEVC || prm->codec == RGY_CODEC_AV1) {
