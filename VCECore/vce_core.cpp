@@ -1876,7 +1876,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (m_sar.is_valid()) {
             m_params.SetParam(AMF_PARAM_ASPECT_RATIO(prm->codec), AMFConstructRatio(m_sar.n(), m_sar.d()));
         }
-        m_params.SetParam(AMF_PARAM_SLICES_PER_FRAME(prm->codec), (amf_int64)prm->nSlices);
+        if (prm->nSlices > 0) {
+            m_params.SetParam(AMF_PARAM_SLICES_PER_FRAME(prm->codec), (amf_int64)prm->nSlices);
+        }
         m_params.SetParam(AMF_PARAM_LOWLATENCY_MODE(prm->codec), prm->ctrl.lowLatency);
         if (prm->bVBAQ) m_params.SetParam(AMF_PARAM_ENABLE_VBAQ(prm->codec), true);
         //m_params.SetParam(AMF_PARAM_END_OF_SEQUENCE(prm->codec),                false);
