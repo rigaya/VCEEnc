@@ -1808,7 +1808,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_FRAMERATE(prm->codec),      AMFConstructRate(m_encFps.n(), m_encFps.d()));
     m_params.SetParam(AMF_PARAM_USAGE(prm->codec),          (amf_int64)get_encoder_usage(prm->codec));
     m_params.SetParam(AMF_PARAM_PROFILE(prm->codec),        (amf_int64)prm->codecParam[prm->codec].nProfile);
-    m_params.SetParam(AMF_PARAM_PROFILE_LEVEL(prm->codec),  (amf_int64)prm->codecParam[prm->codec].nLevel);
+    if (prm->codecParam[prm->codec].nLevel != get_level_auto(prm->codec)) {
+        m_params.SetParam(AMF_PARAM_PROFILE_LEVEL(prm->codec), (amf_int64)prm->codecParam[prm->codec].nLevel);
+    }
     m_params.SetParam(AMF_PARAM_QUALITY_PRESET(prm->codec), (amf_int64)prm->qualityPreset);
     m_params.SetParam(AMF_PARAM_QP_I(prm->codec), (amf_int64)prm->nQPI);
     m_params.SetParam(AMF_PARAM_QP_P(prm->codec), (amf_int64)prm->nQPP);

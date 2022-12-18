@@ -353,6 +353,9 @@ static inline const CX_DESC *get_level_list(RGY_CODEC codec) {
     default:                return list_empty;
     }
 }
+static int get_level_auto(RGY_CODEC codec) {
+    return get_cx_value(get_level_list(codec), _T("auto"));
+}
 
 static inline const CX_DESC *get_profile_list(RGY_CODEC codec) {
     switch (codec) {
