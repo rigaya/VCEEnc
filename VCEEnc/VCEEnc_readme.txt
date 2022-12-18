@@ -169,6 +169,14 @@ Radeon RX5500XT
 Radeon RX550
 64GB RAM
 
+【検証環境 2022.12】
+Win11 x64
+Ryzen 7950X + MSI Pro X670-P WIFI
+Radeon RX7900XT
+Radeon RX5500XT
+Radeon RX550
+64GB RAM
+
 【お断り】
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
@@ -176,6 +184,8 @@ Radeon RX550
 2022.12.18 (7.15)
 - AMF 1.4.28に対応。
   AMD Radeon Software Adrenalin Edition 22.12.1 以降が必要。
+- 7.14では、AV1エンコードが動作しなかった問題を修正。
+  Radeon RX7900XTで動作を確認。
 - AV1関連パラメータを追加。
   - screen-content-tools
   - cdf-update
