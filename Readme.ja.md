@@ -126,7 +126,7 @@ Debian/Ubuntu系 (VCEEncC)
 |      | Vega          |  | RyzenAPU(4xxx-5xxx) | VCN2        | 8bit  | 10bit |    |
 | RDNA | RDNA1         | RX5xxx      |          | VCN2        | 8bit  | 10bit |    |
 |      | RDNA2         | RX6xxx      | Zen4 APU | VCN3        | 8bit  | 10bit |    |
-|      | RDNA3         | RX7xxx      |          | VCN4        | 8bit? | 10bit?| ?  |
+|      | RDNA3         | RX7xxx      |          | VCN4        | 8bit  | 10bit | 10bit |
 
 ## マルチGPU環境でのGPU自動選択
 VCEEncCでは、VCE/VCNを実行可能なGPUが複数存在する場合、
