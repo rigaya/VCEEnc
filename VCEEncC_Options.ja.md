@@ -616,10 +616,11 @@ Pre-Analysisを有効にして、品質向上を図る。VBR時のみ使用可�
     - none
     - caq
 
-  - taq=&lt;string&gt;  
+  - taq=&lt;int&gt;  
     時間適応的QP調整モードを指定する。
-    - off
-    - on
+    - 0
+    - 1
+    - 2
 
   - motion-quality=&lt;string&gt;  
     動き品質の向上モードを指定する。

@@ -610,10 +610,11 @@ Enable pre analysis to enahance quality, supports VBR mode only. (default: off)
     - none
     - caq
 
-  - taq=&lt;string&gt;  
+  - taq=&lt;int&gt;  
     Temporal AQ mode
-    - off
-    - on
+    - 0
+    - 1
+    - 2
 
   - motion-quality=&lt;string&gt;  
     High motion quality boost mode

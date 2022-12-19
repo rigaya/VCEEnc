@@ -216,7 +216,7 @@ tstring encoder_help() {
         _T("      paq=<string>              perceptual AQ mode\n")
         _T("                                 - none, caq\n")
         _T("      taq=<string>              temporal AQ mode\n")
-        _T("                                 - off, on\n")
+        _T("                                 - 0, 1, 2\n")
         _T("      motion-quality=<string>   high motion quality boost mode\n")
         _T("                                 - none, auto\n"),
         VCE_DEFAULT_QPI, VCE_DEFAULT_QPP, VCE_DEFAULT_QPB, VCE_DEFAULT_BFRAMES,

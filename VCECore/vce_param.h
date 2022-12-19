@@ -286,8 +286,13 @@ const CX_DESC list_pa_paq_mode[] = {
 };
 
 const CX_DESC list_pa_taq_mode[] = {
+    { _T("0"),  AMF_PA_TAQ_MODE_NONE  },
+    { _T("1"),  AMF_PA_TAQ_MODE_1  },
+    { _T("2"),  AMF_PA_TAQ_MODE_2  },
+#if !FOR_AUO
     { _T("off"), AMF_PA_TAQ_MODE_NONE },
     { _T("on"),  AMF_PA_TAQ_MODE_1  },
+#endif
     { NULL, 0 }
 };
 
