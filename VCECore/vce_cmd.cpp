@@ -866,7 +866,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         i++;
         const auto paramList = std::vector<std::string>{
-            "quality", "qp", "use_qp_table" /*, "strength", "threshold", "bratio", "prec", "max_error"*/ };
+            "sc", "ss", "activity-type", "caq-strength", "initqpsc", "fskip-maxqp", "paq", "taq", "motion-quality", "lookahead" };
         for (const auto &param : split(strInput[i], _T(","))) {
             auto pos = param.find_first_of(_T("="));
             if (pos != std::string::npos) {
