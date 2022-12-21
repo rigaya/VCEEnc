@@ -734,9 +734,9 @@ static const wchar_t *AMF_PARAM_QP_I(RGY_CODEC codec) {
 static const wchar_t *AMF_PARAM_QP_P(RGY_CODEC codec) {
     switch (codec) {
     case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_Q_INDEX_INTER;
-    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_MIN_QP_I;
+    case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_MIN_QP_P;
     case RGY_CODEC_H264:
-    default:             return AMF_VIDEO_ENCODER_QP_I;
+    default:             return AMF_VIDEO_ENCODER_QP_P;
     }
 }
 static const wchar_t *AMF_PARAM_MIN_QP(RGY_CODEC codec) {
