@@ -1231,87 +1231,89 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
             return 1;
         }
     }
-    if (pParams->codec != RGY_CODEC_H264) {
-        if (pParams->codec == RGY_CODEC_HEVC) {
-            int h264RateControl = pParams->rateControl;
-            switch (h264RateControl) {
-            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR:
-                pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR;
-                break;
-            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR:
-                pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR;
-                break;
-            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR:
-                pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR;
-                break;
-            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR:
-                pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_QUALITY_VBR;
-                break;
-            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR:
-                pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR;
-                break;
-            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP:
-            default:
-                pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP;
-                break;
-            }
-            int h264qualityPreset = pParams->qualityPreset;
-            switch (h264qualityPreset) {
-            case AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED:
-                pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_SPEED;
-                break;
-            case AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY:
-            case AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY:
-                pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_QUALITY;
-                break;
-            case AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED:
-            default:
-                pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_BALANCED;
-                break;
-            }
-        } else if (pParams->codec == RGY_CODEC_AV1) {
-            int h264RateControl = pParams->rateControl;
-            switch (h264RateControl) {
-            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR:
-                pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_CBR;
-                break;
-            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR:
-                pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR;
-                break;
-            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR:
-                pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR;
-                break;
-            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR:
-                pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_QUALITY_VBR;
-                break;
-            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR:
-                pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR;
-                break;
-            case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP:
-            default:
-                pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_CONSTANT_QP;
-                break;
-            }
-            int h264qualityPreset = pParams->qualityPreset;
-            switch (h264qualityPreset) {
-            case AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED:
-                pParams->qualityPreset = AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_SPEED;
-                break;
-            case AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY:
-                pParams->qualityPreset = AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_QUALITY;
-                break;
-            case AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY:
-                pParams->qualityPreset = AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_HIGH_QUALITY;
-                break;
-            case AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED:
-            default:
-                pParams->qualityPreset = AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_BALANCED;
-                break;
-            }
-        } else {
-            _ftprintf(stderr, _T("Unsupported codec!\n"));
-            return 1;
+    if (pParams->codec == RGY_CODEC_H264) {
+        if (pParams->qualityPreset == AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY) {
+            pParams->qualityPreset = AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY;
         }
+    } else if (pParams->codec == RGY_CODEC_HEVC) {
+        int h264RateControl = pParams->rateControl;
+        switch (h264RateControl) {
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR:
+            pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CBR;
+            break;
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR:
+            pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR;
+            break;
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR:
+            pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR;
+            break;
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR:
+            pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_QUALITY_VBR;
+            break;
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR:
+            pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR;
+            break;
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP:
+        default:
+            pParams->rateControl = AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP;
+            break;
+        }
+        int h264qualityPreset = pParams->qualityPreset;
+        switch (h264qualityPreset) {
+        case AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED:
+            pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_SPEED;
+            break;
+        case AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY:
+        case AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY:
+            pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_QUALITY;
+            break;
+        case AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED:
+        default:
+            pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_BALANCED;
+            break;
+        }
+    } else if (pParams->codec == RGY_CODEC_AV1) {
+        int h264RateControl = pParams->rateControl;
+        switch (h264RateControl) {
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR:
+            pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_CBR;
+            break;
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR:
+            pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_HIGH_QUALITY_CBR;
+            break;
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR:
+            pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_PEAK_CONSTRAINED_VBR;
+            break;
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR:
+            pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_QUALITY_VBR;
+            break;
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR:
+            pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_HIGH_QUALITY_VBR;
+            break;
+        case AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP:
+        default:
+            pParams->rateControl = AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_METHOD_CONSTANT_QP;
+            break;
+        }
+        int h264qualityPreset = pParams->qualityPreset;
+        switch (h264qualityPreset) {
+        case AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED:
+            pParams->qualityPreset = AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_SPEED;
+            break;
+        case AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY:
+            pParams->qualityPreset = AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_QUALITY;
+            break;
+        case AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY:
+            pParams->qualityPreset = AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_HIGH_QUALITY;
+            break;
+        case AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED:
+        default:
+            pParams->qualityPreset = AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_BALANCED;
+            break;
+        }
+    } else {
+        _ftprintf(stderr, _T("Unsupported codec!\n"));
+        return 1;
     }
 
     return 0;
