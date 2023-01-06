@@ -118,7 +118,7 @@ VCECore::VCECore() :
     m_dev(),
     m_vpFilters(),
     m_pLastFilterParam(),
-    m_ssim(),
+    m_videoQualityMetric(),
     m_state(RGY_STATE_STOPPED),
     m_pTrimParam(nullptr),
     m_pDecoder(),
@@ -127,6 +127,7 @@ VCECore::VCECore() :
     m_thDecoder(),
     m_thOutput(),
     m_params(),
+    m_pipelineTasks(),
     m_pAbortByUser(nullptr) {
 }
 
@@ -145,9 +146,11 @@ void VCECore::Terminate() {
     m_state = RGY_STATE_STOPPED;
     PrintMes(RGY_LOG_DEBUG, _T("Pipeline Stopped.\n"));
 
-    m_ssim.reset();
+    m_videoQualityMetric.reset();
 
     m_pTrimParam = nullptr;
+
+    m_pipelineTasks.clear();
 
     if (m_pEncoder != nullptr) {
         PrintMes(RGY_LOG_DEBUG, _T("Closing Encoder...\n"));
@@ -2430,8 +2433,99 @@ RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
         if (sts != RGY_ERR_NONE) {
             return sts;
         }
-        m_ssim = std::move(filterSsim);
+        m_videoQualityMetric = std::move(filterSsim);
     }
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR VCECore::initPipeline(VCEParam *prm) {
+    m_pipelineTasks.clear();
+
+    if (m_pDecoder) {
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskAMFDecode>(m_pDecoder, m_dev->context(), 1, m_pFileReader.get(), m_pLog));
+    } else {
+        //m_pipelineTasks.push_back(std::make_unique<PipelineTaskInput>(&m_dev->context(), m_device->allocator(), 0, m_pFileReader.get(), m_mfxVer, m_cl, m_pLog));
+    }
+#if 0
+    if (m_pFileWriterListAudio.size() > 0) {
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskAudio>(m_pFileReader.get(), m_AudioReaders, m_pFileWriterListAudio, m_vpFilters, 0, m_pLog));
+    }
+    if (m_trimParam.list.size() > 0) {
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskTrim>(m_trimParam, 0, m_pLog));
+    }
+
+    const int64_t outFrameDuration = std::max<int64_t>(1, rational_rescale(1, m_inputFps.inv(), m_outputTimebase)); //固定fpsを仮定した時の1フレームのduration (スケール: m_outputTimebase)
+    const auto inputFrameInfo = m_pFileReader->GetInputFrameInfo();
+    const auto inputFpsTimebase = rgy_rational<int>((int)inputFrameInfo.fpsD, (int)inputFrameInfo.fpsN);
+    const auto srcTimebase = (m_pFileReader->getInputTimebase().n() > 0 && m_pFileReader->getInputTimebase().is_valid()) ? m_pFileReader->getInputTimebase() : inputFpsTimebase;
+    m_pipelineTasks.push_back(std::make_unique<PipelineTaskCheckPTS>(&m_dev->context(), srcTimebase, m_outputTimebase, outFrameDuration, m_nAVSyncMode, m_pLog));
+
+    for (auto& filterBlock : m_vpFilters) {
+        if (filterBlock.type == VppFilterType::FILTER_MFX) {
+            auto err = err_to_rgy(m_dev->context().JoinSession(filterBlock.vppmfx->GetSession()));
+            if (err != RGY_ERR_NONE) {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to join mfx vpp session: %s.\n"), get_err_mes(err));
+                return err;
+            }
+            m_pipelineTasks.push_back(std::make_unique<PipelineTaskMFXVpp>(&m_dev->context(), 1, filterBlock.vppmfx->mfxvpp(), filterBlock.vppmfx->mfxparams(), filterBlock.vppmfx->mfxver(), m_pLog));
+        } else if (filterBlock.type == VppFilterType::FILTER_OPENCL) {
+            if (!m_cl) {
+                PrintMes(RGY_LOG_ERROR, _T("OpenCL not enabled, OpenCL filters cannot be used.\n"), CPU_GEN_STR[m_device->CPUGen()]);
+                return RGY_ERR_UNSUPPORTED;
+            }
+            m_pipelineTasks.push_back(std::make_unique<PipelineTaskOpenCL>(filterBlock.vppcl, nullptr, m_cl, m_device->memType(), m_device->allocator(), &m_dev->context(), 1, m_pLog));
+        } else {
+            PrintMes(RGY_LOG_ERROR, _T("Unknown filter type.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+    }
+
+    if (m_videoQualityMetric) {
+        int prevtask = -1;
+        for (int itask = (int)m_pipelineTasks.size() - 1; itask >= 0; itask--) {
+            if (!m_pipelineTasks[itask]->isPassThrough()) {
+                prevtask = itask;
+                break;
+            }
+        }
+        if (m_pipelineTasks[prevtask]->taskType() == PipelineTaskType::INPUT) {
+            //inputと直接つながる場合はうまく処理できなくなる(うまく同期がとれない)
+            //そこで、CopyのOpenCLフィルタを挟んでその中で処理する
+            auto err = createOpenCLCopyFilterForPreVideoMetric();
+            if (err != RGY_ERR_NONE) {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to join mfx vpp session: %s.\n"), get_err_mes(err));
+                return err;
+            } else if (m_vpFilters.size() != 1) {
+                PrintMes(RGY_LOG_ERROR, _T("m_vpFilters.size() != 1.\n"));
+                return RGY_ERR_UNDEFINED_BEHAVIOR;
+            }
+            m_pipelineTasks.push_back(std::make_unique<PipelineTaskOpenCL>(m_vpFilters.front().vppcl, m_videoQualityMetric.get(), m_cl, m_device->memType(), m_device->allocator(), &m_dev->context(), 1, m_pLog));
+        } else if (m_pipelineTasks[prevtask]->taskType() == PipelineTaskType::OPENCL) {
+            auto taskOpenCL = dynamic_cast<PipelineTaskOpenCL*>(m_pipelineTasks[prevtask].get());
+            if (taskOpenCL == nullptr) {
+                PrintMes(RGY_LOG_ERROR, _T("taskOpenCL == nullptr.\n"));
+                return RGY_ERR_UNDEFINED_BEHAVIOR;
+            }
+            taskOpenCL->setVideoQualityMetricFilter(m_videoQualityMetric.get());
+        } else {
+            m_pipelineTasks.push_back(std::make_unique<PipelineTaskVideoQualityMetric>(m_videoQualityMetric.get(), m_cl, m_device->memType(), m_device->allocator(), &m_dev->context(), 0, m_pLog));
+        }
+    }
+#endif
+    if (m_pEncoder) {
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskAMFEncode>(m_pEncoder, m_encCodec, m_params, m_dev->context(), 1, m_timecode.get(), m_encTimestamp.get(), m_outputTimebase, m_hdr10plus.get(), m_hdr10plusMetadataCopy, m_pLog));
+    }
+
+    if (m_pipelineTasks.size() == 0) {
+        PrintMes(RGY_LOG_DEBUG, _T("Failed to create pipeline: size = 0.\n"));
+        return RGY_ERR_INVALID_OPERATION;
+    }
+
+    PrintMes(RGY_LOG_DEBUG, _T("Created pipeline.\n"));
+    for (auto& p : m_pipelineTasks) {
+        PrintMes(RGY_LOG_DEBUG, _T("  %s\n"), p->print().c_str());
+    }
+    PrintMes(RGY_LOG_DEBUG, _T("\n"));
     return RGY_ERR_NONE;
 }
 
@@ -2555,6 +2649,10 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
+    if (RGY_ERR_NONE != (ret = initPipeline(prm))) {
+        return ret;
+    }
+
     {
         const auto& threadParam = prm->ctrl.threadParams.get(RGYThreadType::MAIN);
         threadParam.apply(GetCurrentThread());
@@ -2635,6 +2733,246 @@ RGY_ERR VCECore::run_decode() {
     return RGY_ERR_NONE;
 }
 
+
+RGY_ERR VCECore::run2() {
+    PrintMes(RGY_LOG_DEBUG, _T("Encode Thread: RunEncode2...\n"));
+    if (m_pipelineTasks.size() == 0) {
+        PrintMes(RGY_LOG_DEBUG, _T("Failed to create pipeline: size = 0.\n"));
+        return RGY_ERR_INVALID_OPERATION;
+    }
+
+#if defined(_WIN32) || defined(_WIN64)
+    TCHAR handleEvent[256];
+    _stprintf_s(handleEvent, VCEENCC_ABORT_EVENT, GetCurrentProcessId());
+    auto heAbort = std::unique_ptr<std::remove_pointer<HANDLE>::type, handle_deleter>((HANDLE)CreateEvent(nullptr, TRUE, FALSE, handleEvent));
+    auto checkAbort = [pabort = m_pAbortByUser, &heAbort]() { return ((pabort != nullptr && *pabort) || WaitForSingleObject(heAbort.get(), 0) == WAIT_OBJECT_0) ? true : false; };
+#else
+    auto checkAbort = [pabort = m_pAbortByUser]() { return  (pabort != nullptr && *pabort); };
+#endif
+    m_pStatus->SetStart();
+
+    CProcSpeedControl speedCtrl(m_nProcSpeedLimit);
+
+    auto requireSync = [this](const size_t itask) {
+        if (itask + 1 >= m_pipelineTasks.size()) return true; // 次が最後のタスクの時
+
+        size_t srctask = itask;
+        if (m_pipelineTasks[srctask]->isPassThrough()) {
+            for (size_t prevtask = srctask - 1; prevtask >= 0; prevtask--) {
+                if (!m_pipelineTasks[prevtask]->isPassThrough()) {
+                    srctask = prevtask;
+                    break;
+                }
+            }
+        }
+        for (size_t nexttask = itask + 1; nexttask < m_pipelineTasks.size(); nexttask++) {
+            if (!m_pipelineTasks[nexttask]->isPassThrough()) {
+                return m_pipelineTasks[srctask]->requireSync(m_pipelineTasks[nexttask]->taskType());
+            }
+        }
+        return true;
+    };
+
+    RGY_ERR err = RGY_ERR_NONE;
+    auto setloglevel = [](RGY_ERR err) {
+        if (err == RGY_ERR_NONE || err == RGY_ERR_MORE_DATA || err == RGY_ERR_MORE_SURFACE || err == RGY_ERR_MORE_BITSTREAM) return RGY_LOG_DEBUG;
+        if (err > RGY_ERR_NONE) return RGY_LOG_WARN;
+        return RGY_LOG_ERROR;
+    };
+    struct PipelineTaskData {
+        size_t task;
+        std::unique_ptr<PipelineTaskOutput> data;
+        PipelineTaskData(size_t t) : task(t), data() {};
+        PipelineTaskData(size_t t, std::unique_ptr<PipelineTaskOutput>& d) : task(t), data(std::move(d)) {};
+    };
+    std::deque<PipelineTaskData> dataqueue;
+    {
+        auto checkContinue = [&checkAbort](RGY_ERR& err) {
+            if (checkAbort() || stdInAbort()) { err = RGY_ERR_ABORTED; return false; }
+            return err >= RGY_ERR_NONE || err == RGY_ERR_MORE_DATA || err == RGY_ERR_MORE_SURFACE;
+        };
+        while (checkContinue(err)) {
+            if (dataqueue.empty()) {
+                speedCtrl.wait(m_pipelineTasks.front()->outputFrames());
+                dataqueue.push_back(PipelineTaskData(0)); // デコード実行用
+            }
+            while (!dataqueue.empty()) {
+                auto d = std::move(dataqueue.front());
+                dataqueue.pop_front();
+                if (d.task < m_pipelineTasks.size()) {
+                    err = RGY_ERR_NONE;
+                    auto& task = m_pipelineTasks[d.task];
+                    err = task->sendFrame(d.data);
+                    if (!checkContinue(err)) {
+                        PrintMes(setloglevel(err), _T("Break in task %s: %s.\n"), task->print().c_str(), get_err_mes(err));
+                        break;
+                    }
+                    if (err == RGY_ERR_NONE) {
+                        auto output = task->getOutput(requireSync(d.task));
+                        if (output.size() == 0) break;
+                        //出てきたものは先頭に追加していく
+                        std::for_each(output.rbegin(), output.rend(), [itask = d.task, &dataqueue](auto&& o) {
+                            dataqueue.push_front(PipelineTaskData(itask + 1, o));
+                            });
+                    }
+                } else { // pipelineの最終的なデータを出力
+                    if ((err = d.data->write(m_pFileWriter.get(), (m_dev->cl()) ? &m_dev->cl()->queue() : nullptr, m_videoQualityMetric.get())) != RGY_ERR_NONE) {
+                        PrintMes(RGY_LOG_ERROR, _T("failed to write output: %s.\n"), get_err_mes(err));
+                        break;
+                    }
+                }
+            }
+            if (dataqueue.empty()) {
+                // taskを前方からひとつづつ出力が残っていないかチェック(主にcheckptsの処理のため)
+                for (size_t itask = 0; itask < m_pipelineTasks.size(); itask++) {
+                    auto& task = m_pipelineTasks[itask];
+                    auto output = task->getOutput(requireSync(itask));
+                    if (output.size() > 0) {
+                        //出てきたものは先頭に追加していく
+                        std::for_each(output.rbegin(), output.rend(), [itask, &dataqueue](auto&& o) {
+                            dataqueue.push_front(PipelineTaskData(itask + 1, o));
+                            });
+                        //checkptsの処理上、でてきたフレームはすぐに後続処理に渡したいのでbreak
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    // flush
+    if (err == RGY_ERR_MORE_BITSTREAM) { // 読み込みの完了を示すフラグ
+        err = RGY_ERR_NONE;
+        for (auto& task : m_pipelineTasks) {
+            task->setOutputMaxQueueSize(0); //flushのため
+        }
+        auto checkContinue = [&checkAbort](RGY_ERR& err) {
+            if (checkAbort()) { err = RGY_ERR_ABORTED; return false; }
+            return err >= RGY_ERR_NONE || err == RGY_ERR_MORE_SURFACE;
+        };
+        for (size_t flushedTaskSend = 0, flushedTaskGet = 0; flushedTaskGet < m_pipelineTasks.size(); ) { // taskを前方からひとつづつflushしていく
+            err = RGY_ERR_NONE;
+            if (flushedTaskSend == flushedTaskGet) {
+                dataqueue.push_back(PipelineTaskData(flushedTaskSend)); //flush用
+            }
+            while (!dataqueue.empty() && checkContinue(err)) {
+                auto d = std::move(dataqueue.front());
+                dataqueue.pop_front();
+                if (d.task < m_pipelineTasks.size()) {
+                    err = RGY_ERR_NONE;
+                    auto& task = m_pipelineTasks[d.task];
+                    err = task->sendFrame(d.data);
+                    if (!checkContinue(err)) {
+                        if (d.task == flushedTaskSend) flushedTaskSend++;
+                        break;
+                    }
+                    auto output = task->getOutput(requireSync(d.task));
+                    if (output.size() == 0) break;
+                    //出てきたものは先頭に追加していく
+                    std::for_each(output.rbegin(), output.rend(), [itask = d.task, &dataqueue](auto&& o) {
+                        dataqueue.push_front(PipelineTaskData(itask + 1, o));
+                        });
+                    if (err == RGY_ERR_MORE_DATA) err = RGY_ERR_NONE; //VPPなどでsendFrameがRGY_ERR_MORE_DATAだったが、フレームが出てくる場合がある
+                } else { // pipelineの最終的なデータを出力
+                    if ((err = d.data->write(m_pFileWriter.get(), (m_dev->cl()) ? &m_dev->cl()->queue() : nullptr, m_videoQualityMetric.get())) != RGY_ERR_NONE) {
+                        PrintMes(RGY_LOG_ERROR, _T("failed to write output: %s.\n"), get_err_mes(err));
+                        break;
+                    }
+                }
+            }
+            if (dataqueue.empty()) {
+                // taskを前方からひとつづつ出力が残っていないかチェック(主にcheckptsの処理のため)
+                for (size_t itask = flushedTaskGet; itask < m_pipelineTasks.size(); itask++) {
+                    auto& task = m_pipelineTasks[itask];
+                    auto output = task->getOutput(requireSync(itask));
+                    if (output.size() > 0) {
+                        //出てきたものは先頭に追加していく
+                        std::for_each(output.rbegin(), output.rend(), [itask, &dataqueue](auto&& o) {
+                            dataqueue.push_front(PipelineTaskData(itask + 1, o));
+                            });
+                        //checkptsの処理上、でてきたフレームはすぐに後続処理に渡したいのでbreak
+                        break;
+                    } else if (itask == flushedTaskGet && flushedTaskGet < flushedTaskSend) {
+                        flushedTaskGet++;
+                    }
+                }
+            }
+        }
+    }
+
+    if (m_videoQualityMetric) {
+        PrintMes(RGY_LOG_DEBUG, _T("Flushing video quality metric calc.\n"));
+        m_videoQualityMetric->addBitstream(nullptr);
+    }
+
+    //vpp-perf-monitor
+#if 0
+    std::vector<std::pair<tstring, double>> filter_result;
+    for (auto& block : m_vpFilters) {
+        if (block.type == VppFilterType::FILTER_OPENCL) {
+            for (auto& filter : block.vppcl) {
+                auto avgtime = filter->GetAvgTimeElapsed();
+                if (avgtime > 0.0) {
+                    filter_result.push_back({ filter->name(), avgtime });
+                }
+            }
+        }
+    }
+#endif
+    // MFXのコンポーネントをm_pipelineTasksの解放(フレームの解放)前に実施する
+    PrintMes(RGY_LOG_DEBUG, _T("Clear vpp filters...\n"));
+    m_vpFilters.clear();
+    PrintMes(RGY_LOG_DEBUG, _T("Closing m_pmfxDEC/ENC/VPP...\n"));
+
+    if (m_pEncoder != nullptr) {
+        PrintMes(RGY_LOG_DEBUG, _T("Closing Encoder...\n"));
+        m_pEncoder->Terminate();
+        m_pEncoder = nullptr;
+        PrintMes(RGY_LOG_DEBUG, _T("Closed Encoder.\n"));
+    }
+
+    if (m_pConverter != nullptr) {
+        PrintMes(RGY_LOG_DEBUG, _T("Closing Converter...\n"));
+        m_pConverter->Terminate();
+        m_pConverter = nullptr;
+        PrintMes(RGY_LOG_DEBUG, _T("Closed Converter.\n"));
+    }
+
+    if (m_pDecoder != nullptr) {
+        PrintMes(RGY_LOG_DEBUG, _T("Closing Decoder...\n"));
+        m_pDecoder->Terminate();
+        m_pDecoder = nullptr;
+        PrintMes(RGY_LOG_DEBUG, _T("Closed Decoder.\n"));
+    }
+    //この中でフレームの解放がなされる
+    PrintMes(RGY_LOG_DEBUG, _T("Clear pipeline tasks and allocated frames...\n"));
+    m_pipelineTasks.clear();
+    PrintMes(RGY_LOG_DEBUG, _T("Waiting for writer to finish...\n"));
+    m_pFileWriter->WaitFin();
+    PrintMes(RGY_LOG_DEBUG, _T("Write results...\n"));
+    if (m_videoQualityMetric) {
+        PrintMes(RGY_LOG_DEBUG, _T("Write video quality metric results...\n"));
+        m_videoQualityMetric->showResult();
+    }
+    m_pStatus->WriteResults();
+#if 0
+    if (filter_result.size()) {
+        PrintMes(RGY_LOG_INFO, _T("\nVpp Filter Performance\n"));
+        const auto max_len = std::accumulate(filter_result.begin(), filter_result.end(), 0u, [](uint32_t max_length, std::pair<tstring, double> info) {
+            return std::max(max_length, (uint32_t)info.first.length());
+            });
+        for (const auto& info : filter_result) {
+            tstring str = info.first + _T(":");
+            for (uint32_t i = (uint32_t)info.first.length(); i < max_len; i++) {
+                str += _T(" ");
+            }
+            PrintMes(RGY_LOG_INFO, _T("%s %8.1f us\n"), str.c_str(), info.second * 1000.0);
+        }
+    }
+#endif
+    PrintMes(RGY_LOG_DEBUG, _T("RunEncode2: finished.\n"));
+    return (err == RGY_ERR_NONE || err == RGY_ERR_MORE_DATA || err == RGY_ERR_MORE_SURFACE || err == RGY_ERR_MORE_BITSTREAM || err > RGY_ERR_NONE) ? RGY_ERR_NONE : err;
+}
+
 RGY_ERR VCECore::run_output() {
     m_thOutput = std::async(std::launch::async, [this]() {
         const auto VCE_TIMEBASE = rgy_rational<int>(1, AMF_SECOND);
@@ -2677,11 +3015,11 @@ RGY_ERR VCECore::run_output() {
                     output.setAvgQP(value32);
                 }
             }
-            if (m_ssim) {
-                if (!m_ssim->decodeStarted()) {
-                    m_ssim->initDecode(&output);
+            if (m_videoQualityMetric) {
+                if (!m_videoQualityMetric->decodeStarted()) {
+                    m_videoQualityMetric->initDecode(&output);
                 }
-                m_ssim->addBitstream(&output);
+                m_videoQualityMetric->addBitstream(&output);
             }
             auto err = m_pFileWriter->WriteNextFrame(&output);
             if (err != RGY_ERR_NONE) {
@@ -2910,7 +3248,7 @@ RGY_ERR VCECore::run() {
                     && lastFilter->GetFilterParam()->frameOut.csp == inframeInfo.csp
                     && m_encWidth == inframeInfo.width
                     && m_encHeight == inframeInfo.height
-                    && !m_ssim) {
+                    && !m_videoQualityMetric) {
                     skipFilters = true;
                 }
             }
@@ -3031,9 +3369,9 @@ RGY_ERR VCECore::run() {
                     PrintMes(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), lastFilter->name().c_str());
                     return sts_filter;
                 }
-                if (m_ssim) {
+                if (m_videoQualityMetric) {
                     int dummy = 0;
-                    m_ssim->filter(&encSurfaceInfo, nullptr, &dummy);
+                    m_videoQualityMetric->filter(&encSurfaceInfo, nullptr, &dummy);
                 }
                 auto err = m_dev->cl()->queue().finish();
                 if (err != RGY_ERR_NONE) {
@@ -3329,9 +3667,9 @@ RGY_ERR VCECore::run() {
         m_thOutput.get();
         PrintMes(RGY_LOG_DEBUG, _T("Closed output thread.\n"));
     }
-    if (m_ssim) {
+    if (m_videoQualityMetric) {
         PrintMes(RGY_LOG_DEBUG, _T("Flushing ssim/psnr calc.\n"));
-        m_ssim->addBitstream(nullptr);
+        m_videoQualityMetric->addBitstream(nullptr);
     }
     for (const auto &writer : m_pFileWriterListAudio) {
         auto pAVCodecWriter = std::dynamic_pointer_cast<RGYOutputAvcodec>(writer);
@@ -3343,8 +3681,8 @@ RGY_ERR VCECore::run() {
     m_pFileWriter->Close();
     m_pFileReader->Close();
     m_pStatus->WriteResults();
-    if (m_ssim) {
-        m_ssim->showResult();
+    if (m_videoQualityMetric) {
+        m_videoQualityMetric->showResult();
     }
 
     //vpp-perf-monitor
@@ -3483,8 +3821,8 @@ tstring VCECore::GetEncoderParam() {
     for (const auto &filter : m_vpFilters) {
         vppFilterMes += strsprintf(_T("%s%s\n"), (vppFilterMes.length()) ? _T("               ") : _T("Vpp Filters    "), filter->GetInputMessage().c_str());
     }
-    if (m_ssim) {
-        vppFilterMes += _T("               ") + m_ssim->GetInputMessage() + _T("\n");
+    if (m_videoQualityMetric) {
+        vppFilterMes += _T("               ") + m_videoQualityMetric->GetInputMessage() + _T("\n");
     }
     mes += vppFilterMes;
     mes += strsprintf(_T("Output:        %s  %s @ Level %s%s\n"),

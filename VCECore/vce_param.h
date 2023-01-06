@@ -53,6 +53,11 @@ static const wchar_t* VCE_PARAM_KEY_ENGINE = L"ENGINE";
 static const wchar_t* VCE_PARAM_KEY_ADAPTERID = L"ADAPTERID";
 static const wchar_t* VCE_PARAM_KEY_CAPABILITY = L"DISPLAYCAPABILITY";
 
+static const wchar_t* RGY_PROP_TIMESTAMP = L"RGYPropTimestamp";
+static const wchar_t* RGY_PROP_DURATION = L"RGYPropDuration";
+
+static const TCHAR *VCEENCC_ABORT_EVENT = _T("VCEEncC_abort_%u");
+
 enum {
     VCE_RC_CQP = 0,
     VCE_RC_CBR = 3,

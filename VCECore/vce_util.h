@@ -354,33 +354,45 @@ public:
     }
     RGYFrame(unique_ptr<RGYCLFrame> clframe) : amfptr(), clbuf(std::move(clframe)) {
     }
-    ~RGYFrame() {
+    virtual ~RGYFrame() {
         clbuf.reset();
     }
-    bool isempty() const {
+    virtual bool isempty() const {
         return amfptr == nullptr && clbuf == nullptr;
     }
-    const amf::AMFSurfacePtr &amf() const {
+    virtual const amf::AMFSurfacePtr &amf() const {
         return amfptr;
     }
-    amf::AMFSurfacePtr &amf() {
+    virtual amf::AMFSurfacePtr &amf() {
         return amfptr;
     }
-    const unique_ptr<RGYCLFrame> &cl() const {
+    virtual const amf::AMFSurface *surf() const {
+        return amfptr.GetPtr();
+    }
+    virtual amf::AMFSurface *surf() {
+        return amfptr.GetPtr();
+    }
+    virtual const unique_ptr<RGYCLFrame> &cl() const {
         return clbuf;
     }
-    unique_ptr<RGYCLFrame> &cl() {
+    virtual unique_ptr<RGYCLFrame> &cl() {
         return clbuf;
     }
-    amf::AMFSurfacePtr detachSurface() {
+    virtual const RGYCLFrame *clframe() const {
+        return clbuf.get();
+    }
+    virtual RGYCLFrame *clframe() {
+        return clbuf.get();
+    }
+    virtual amf::AMFSurfacePtr detachSurface() {
         amf::AMFSurfacePtr ptr = amfptr;
         amfptr = nullptr;
         return ptr;
     }
-    unique_ptr<RGYCLFrame> detachCLFrame() {
+    virtual unique_ptr<RGYCLFrame> detachCLFrame() {
         return std::move(clbuf);
     }
-    unique_ptr<RGYFrame> createCopy() {
+    virtual unique_ptr<RGYFrame> createCopy() {
         if (amfptr) {
             return createCopyAMF();
         } else if (clbuf) {
@@ -391,7 +403,7 @@ public:
         }
     }
 private:
-    unique_ptr<RGYFrame> createCopyAMF() {
+    virtual unique_ptr<RGYFrame> createCopyAMF() {
         amf::AMFDataPtr data;
         amfptr->Duplicate(amfptr->GetMemoryType(), &data);
         return std::make_unique<RGYFrame>(amf::AMFSurfacePtr(data));
@@ -428,7 +440,7 @@ private:
         return clbuf->frame;
     }
 public:
-    RGYFrameInfo getInfo() const {
+    virtual RGYFrameInfo getInfo() const {
         if (amfptr) {
             return infoAMF();
         } else if (clbuf) {
@@ -465,7 +477,7 @@ public:
     uint64_t timestamp() const {
         return getInfo().timestamp;
     }
-    void setTimestamp(uint64_t timestamp) {
+    virtual void setTimestamp(uint64_t timestamp) {
         if (amfptr) {
             amfptr->SetPts(timestamp);
         } else if (clbuf) {
@@ -475,7 +487,7 @@ public:
     int64_t duration() const {
         return getInfo().duration;
     }
-    void setDuration(uint64_t duration) {
+    virtual void setDuration(uint64_t duration) {
         if (amfptr) {
             amfptr->SetDuration(duration);
         } else if (clbuf) {
@@ -485,7 +497,7 @@ public:
     RGY_PICSTRUCT picstruct() const {
         return getInfo().picstruct;
     }
-    void setPicstruct(RGY_PICSTRUCT picstruct) {
+    virtual void setPicstruct(RGY_PICSTRUCT picstruct) {
         if (amfptr) {
             amfptr->SetFrameType(frametype_rgy_to_enc(picstruct));
         } else if (clbuf) {
@@ -495,7 +507,7 @@ public:
     int inputFrameId() const {
         return getInfo().inputFrameId;
     }
-    void setInputFrameId(int id) {
+    virtual void setInputFrameId(int id) {
         if (amfptr) {
             int64_t value = id;
             amfptr->SetProperty(PROP_INPUT_FRAMEID, value);
@@ -506,7 +518,7 @@ public:
     RGY_FRAME_FLAGS flags() const {
         return getInfo().flags;
     }
-    void setFlags(RGY_FRAME_FLAGS flags) {
+    virtual void setFlags(RGY_FRAME_FLAGS flags) {
         if (amfptr) {
             int64_t value = flags;
             amfptr->SetProperty(PROP_FLAGS, value);
@@ -514,21 +526,28 @@ public:
             clbuf->frame.flags = flags;
         }
     }
-    const std::vector<std::shared_ptr<RGYFrameData>>& dataList() const {
+    virtual void clearDataList() {
+        if (clbuf) {
+            clbuf->frame.dataList.clear();
+        } else {
+            amfDataList.clear();
+        }
+    }
+    virtual const std::vector<std::shared_ptr<RGYFrameData>>& dataList() const {
         if (clbuf) {
             return clbuf->frame.dataList;
         } else {
             return amfDataList;
         }
     };
-    std::vector<std::shared_ptr<RGYFrameData>>& dataList() {
+    virtual std::vector<std::shared_ptr<RGYFrameData>>& dataList() {
         if (clbuf) {
             return clbuf->frame.dataList;
         } else {
             return amfDataList;
         }
     };
-    void setDataList(std::vector<std::shared_ptr<RGYFrameData>>& dataList) {
+    virtual void setDataList(std::vector<std::shared_ptr<RGYFrameData>>& dataList) {
         if (clbuf) {
             clbuf->frame.dataList = dataList;
         } else {
@@ -536,6 +555,54 @@ public:
         }
     }
 };
+
+class RGYFrameRef : public RGYFrame {
+private:
+    RGYFrameInfo frame;
+public:
+    RGYFrameRef(const RGYFrameInfo& f) : frame(f) {};
+    virtual ~RGYFrameRef() { }
+    virtual bool isempty() const override { return frame.ptr[0] == nullptr; }
+    virtual const amf::AMFSurface *surf() const override { return nullptr; }
+    virtual amf::AMFSurface *surf() override { return nullptr; }
+    virtual const RGYCLFrame *clframe() const override { return nullptr; }
+    virtual RGYCLFrame *clframe() override { return nullptr; }
+    virtual amf::AMFSurfacePtr detachSurface() override { return nullptr; }
+    virtual unique_ptr<RGYCLFrame> detachCLFrame() override { return nullptr; }
+    virtual unique_ptr<RGYFrame> createCopy() override { return nullptr; }
+private:
+    virtual unique_ptr<RGYFrame> createCopyAMF() override { return nullptr; }
+public:
+    virtual RGYFrameInfo getInfo() const override { return frame; }
+    virtual void setTimestamp(uint64_t timestamp) override {
+        frame.timestamp = timestamp;
+    }
+    virtual void setDuration(uint64_t duration) override {
+        frame.duration = duration;
+    }
+    virtual void setPicstruct(RGY_PICSTRUCT picstruct) override {
+        frame.picstruct = picstruct;
+    }
+    virtual void setInputFrameId(int id) override {
+        frame.inputFrameId = id;
+    }
+    virtual void setFlags(RGY_FRAME_FLAGS flags) override {
+        frame.flags = flags;
+    }
+    virtual void clearDataList() override {
+        frame.dataList.clear();
+    }
+    virtual const std::vector<std::shared_ptr<RGYFrameData>>& dataList() const override {
+        return frame.dataList;
+    };
+    virtual std::vector<std::shared_ptr<RGYFrameData>>& dataList() override {
+        return frame.dataList;
+    };
+    virtual void setDataList(std::vector<std::shared_ptr<RGYFrameData>>& dataList) override {
+        frame.dataList = dataList;
+    }
+};
+
 #else
 typedef void RGYFrame;
 

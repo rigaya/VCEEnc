@@ -337,7 +337,7 @@ int vce_run(VCEParam *pParams) {
     set_signal_handler();
 
     try {
-        if (vce->run() != RGY_ERR_NONE) {
+        if (vce->run2() != RGY_ERR_NONE) {
             return 1;
         }
     } catch (...) {

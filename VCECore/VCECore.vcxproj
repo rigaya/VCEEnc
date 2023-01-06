@@ -551,6 +551,7 @@
     <ClInclude Include="rgy_filter_unsharp.h" />
     <ClInclude Include="rgy_filter_warpsharp.h" />
     <ClInclude Include="vce_device_vulkan.h" />
+    <ClInclude Include="vce_pipeline.h" />
     <ClInclude Include="vce_util.h" />
     <ClInclude Include="vce_param.h" />
     <ClInclude Include="rgy_version.h" />

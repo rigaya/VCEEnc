@@ -46,13 +46,11 @@
 #include "vce_device.h"
 #include "vce_param.h"
 #include "vce_amf.h"
+#include "vce_pipeline.h"
 #include "rgy_filter.h"
 #include "rgy_filter_ssim.h"
 
 #pragma warning(pop)
-
-#define RGY_PROP_TIMESTAMP L"RGYPropTimestamp"
-#define RGY_PROP_DURATION  L"RGYPropDuration"
 
 #if defined(_WIN32) || defined(_WIN64)
 #define THREAD_DEC_USE_FUTURE 0
@@ -80,14 +78,6 @@ protected:
     shared_ptr<RGYCLFrame> frame;
 };
 
-enum RGYRunState {
-    RGY_STATE_STOPPED,
-    RGY_STATE_RUNNING,
-    RGY_STATE_ERROR,
-    RGY_STATE_ABORT,
-    RGY_STATE_EOF
-};
-
 class VCECore : public VCEAMF {
 public:
     VCECore();
@@ -99,6 +89,7 @@ public:
     virtual RGY_ERR initInput(VCEParam *pParams, std::vector<std::unique_ptr<VCEDevice>> &gpuList);
     virtual RGY_ERR initOutput(VCEParam *prm);
     virtual RGY_ERR run();
+    virtual RGY_ERR run2();
     virtual void Terminate() override;
 
     tstring GetEncoderParam();
@@ -124,6 +115,7 @@ protected:
     virtual RGY_ERR initEncoder(VCEParam *prm);
     virtual RGY_ERR initPowerThrottoling(VCEParam *prm);
     virtual RGY_ERR initSSIMCalc(VCEParam *prm);
+    virtual RGY_ERR initPipeline(VCEParam *prm);
 
     virtual RGY_ERR run_decode();
     virtual RGY_ERR run_output();
@@ -168,7 +160,7 @@ protected:
 
     vector<unique_ptr<RGYFilter>> m_vpFilters;
     shared_ptr<RGYFilterParam>    m_pLastFilterParam;
-    unique_ptr<RGYFilterSsim>     m_ssim;
+    unique_ptr<RGYFilterSsim>     m_videoQualityMetric;
 
     RGYRunState m_state;
 
@@ -185,6 +177,8 @@ protected:
     std::future<RGY_ERR> m_thOutput;
 
     AMFParams m_params;
+
+    std::vector<std::unique_ptr<PipelineTask>> m_pipelineTasks;
 
     bool *m_pAbortByUser;
 };
