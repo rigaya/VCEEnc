@@ -2444,7 +2444,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
     if (m_pDecoder) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskAMFDecode>(m_pDecoder, m_dev->context(), 1, m_pFileReader.get(), m_pLog));
     } else {
-        //m_pipelineTasks.push_back(std::make_unique<PipelineTaskInput>(&m_dev->context(), m_device->allocator(), 0, m_pFileReader.get(), m_mfxVer, m_cl, m_pLog));
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskInput>(m_dev->context(), 0, m_pFileReader.get(), m_dev->cl(), m_pLog));
     }
 #if 0
     if (m_pFileWriterListAudio.size() > 0) {
@@ -2453,13 +2453,17 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
     if (m_trimParam.list.size() > 0) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskTrim>(m_trimParam, 0, m_pLog));
     }
+#endif
+    { // checkpts
+        RGYInputAvcodec *pReader = dynamic_cast<RGYInputAvcodec *>(m_pFileReader.get());
+        const int64_t outFrameDuration = std::max<int64_t>(1, rational_rescale(1, m_inputFps.inv(), m_outputTimebase)); //固定fpsを仮定した時の1フレームのduration (スケール: m_outputTimebase)
+        const auto inputFrameInfo = m_pFileReader->GetInputFrameInfo();
+        const auto inputFpsTimebase = rgy_rational<int>((int)inputFrameInfo.fpsD, (int)inputFrameInfo.fpsN);
+        const auto srcTimebase = (m_pFileReader->getInputTimebase().n() > 0 && m_pFileReader->getInputTimebase().is_valid()) ? m_pFileReader->getInputTimebase() : inputFpsTimebase;
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskCheckPTS>(m_dev->context(), srcTimebase, srcTimebase, m_outputTimebase, outFrameDuration, m_nAVSyncMode, (pReader) ? pReader->GetFramePosList() : nullptr, m_pLog));
+    }
 
-    const int64_t outFrameDuration = std::max<int64_t>(1, rational_rescale(1, m_inputFps.inv(), m_outputTimebase)); //固定fpsを仮定した時の1フレームのduration (スケール: m_outputTimebase)
-    const auto inputFrameInfo = m_pFileReader->GetInputFrameInfo();
-    const auto inputFpsTimebase = rgy_rational<int>((int)inputFrameInfo.fpsD, (int)inputFrameInfo.fpsN);
-    const auto srcTimebase = (m_pFileReader->getInputTimebase().n() > 0 && m_pFileReader->getInputTimebase().is_valid()) ? m_pFileReader->getInputTimebase() : inputFpsTimebase;
-    m_pipelineTasks.push_back(std::make_unique<PipelineTaskCheckPTS>(&m_dev->context(), srcTimebase, m_outputTimebase, outFrameDuration, m_nAVSyncMode, m_pLog));
-
+#if 0
     for (auto& filterBlock : m_vpFilters) {
         if (filterBlock.type == VppFilterType::FILTER_MFX) {
             auto err = err_to_rgy(m_dev->context().JoinSession(filterBlock.vppmfx->GetSession()));
@@ -2467,7 +2471,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
                 PrintMes(RGY_LOG_ERROR, _T("Failed to join mfx vpp session: %s.\n"), get_err_mes(err));
                 return err;
             }
-            m_pipelineTasks.push_back(std::make_unique<PipelineTaskMFXVpp>(&m_dev->context(), 1, filterBlock.vppmfx->mfxvpp(), filterBlock.vppmfx->mfxparams(), filterBlock.vppmfx->mfxver(), m_pLog));
+            m_pipelineTasks.push_back(std::make_unique<PipelineTaskMFXVpp>(m_dev->context(), 1, filterBlock.vppmfx->mfxvpp(), filterBlock.vppmfx->mfxparams(), filterBlock.vppmfx->mfxver(), m_pLog));
         } else if (filterBlock.type == VppFilterType::FILTER_OPENCL) {
             if (!m_cl) {
                 PrintMes(RGY_LOG_ERROR, _T("OpenCL not enabled, OpenCL filters cannot be used.\n"), CPU_GEN_STR[m_device->CPUGen()]);
@@ -2526,6 +2530,86 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
         PrintMes(RGY_LOG_DEBUG, _T("  %s\n"), p->print().c_str());
     }
     PrintMes(RGY_LOG_DEBUG, _T("\n"));
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR VCECore::allocatePiplelineFrames() {
+    if (m_pipelineTasks.size() == 0) {
+        PrintMes(RGY_LOG_ERROR, _T("allocFrames: pipeline not defined!\n"));
+        return RGY_ERR_INVALID_CALL;
+    }
+
+    const int asyncdepth = 3;
+    PrintMes(RGY_LOG_DEBUG, _T("allocFrames: m_nAsyncDepth - %d frames\n"), asyncdepth);
+
+    PipelineTask *t0 = m_pipelineTasks[0].get();
+    for (size_t ip = 1; ip < m_pipelineTasks.size(); ip++) {
+        if (t0->isPassThrough()) {
+            PrintMes(RGY_LOG_ERROR, _T("allocFrames: t0 cannot be path through task!\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        // 次のtaskを見つける
+        PipelineTask *t1 = nullptr;
+        for (; ip < m_pipelineTasks.size(); ip++) {
+            if (!m_pipelineTasks[ip]->isPassThrough()) { // isPassThroughがtrueなtaskはスキップ
+                t1 = m_pipelineTasks[ip].get();
+                break;
+            }
+        }
+        if (t1 == nullptr) {
+            PrintMes(RGY_LOG_ERROR, _T("AllocFrames: invalid pipeline, t1 not found!\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        PrintMes(RGY_LOG_DEBUG, _T("AllocFrames: %s-%s\n"), t0->print().c_str(), t1->print().c_str());
+
+        const auto t0Alloc = t0->requiredSurfOut();
+        const auto t1Alloc = t1->requiredSurfIn();
+        int t0RequestNumFrame = 0;
+        int t1RequestNumFrame = 0;
+        RGYFrameInfo allocateFrameInfo;
+        bool allocateOpenCLFrame = false;
+        if (t0Alloc.has_value() && t1Alloc.has_value()) {
+            t0RequestNumFrame = t0Alloc.value().second;
+            t1RequestNumFrame = t1Alloc.value().second;
+            allocateFrameInfo = (t0->workSurfacesAllocPriority() >= t1->workSurfacesAllocPriority()) ? t0Alloc.value().first : t1Alloc.value().first;
+            allocateFrameInfo.width = std::max(t0Alloc.value().first.width, t1Alloc.value().first.width);
+            allocateFrameInfo.height = std::max(t0Alloc.value().first.height, t1Alloc.value().first.height);
+        } else if (t0Alloc.has_value()) {
+            allocateFrameInfo = t0Alloc.value().first;
+            t0RequestNumFrame = t0Alloc.value().second;
+        } else if (t1Alloc.has_value()) {
+            allocateFrameInfo = t1Alloc.value().first;
+            t1RequestNumFrame = t1Alloc.value().second;
+        } else {
+            PrintMes(RGY_LOG_ERROR, _T("AllocFrames: invalid pipeline: cannot get request from either t0 or t1!\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+
+        if (   (t0->taskType() == PipelineTaskType::OPENCL && !t1->isAMFTask()) // openclとraw出力がつながっているような場合
+            || (t1->taskType() == PipelineTaskType::OPENCL && !t0->isAMFTask()) // inputとopenclがつながっているような場合
+            ) {
+            if (!m_dev->cl()) {
+                PrintMes(RGY_LOG_ERROR, _T("AllocFrames: OpenCL filter not enabled.\n"));
+                return RGY_ERR_UNSUPPORTED;
+            }
+            allocateOpenCLFrame = true; // inputとopenclがつながっているような場合
+        }
+        if (t0->taskType() == PipelineTaskType::OPENCL) {
+            t0RequestNumFrame += 4; // 内部でフレームが増える場合に備えて
+        }
+        if (allocateOpenCLFrame) {
+            const int requestNumFrames = std::max(1, t0RequestNumFrame + t1RequestNumFrame + asyncdepth + 1);
+            PrintMes(RGY_LOG_DEBUG, _T("AllocFrames: %s-%s, type: CL, %s %dx%d, request %d frames\n"),
+                t0->print().c_str(), t1->print().c_str(), RGY_CSP_NAMES[allocateFrameInfo.csp],
+                allocateFrameInfo.width, allocateFrameInfo.height, requestNumFrames);
+            auto sts = t0->workSurfacesAllocCL(requestNumFrames, allocateFrameInfo, m_dev->cl().get());
+            if (sts != RGY_ERR_NONE) {
+                PrintMes(RGY_LOG_ERROR, _T("AllocFrames:   Failed to allocate frames for %s-%s: %s."), t0->print().c_str(), t1->print().c_str(), get_err_mes(sts));
+                return sts;
+            }
+        }
+        t0 = t1;
+    }
     return RGY_ERR_NONE;
 }
 
@@ -2650,6 +2734,10 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     }
 
     if (RGY_ERR_NONE != (ret = initPipeline(prm))) {
+        return ret;
+    }
+
+    if (RGY_ERR_NONE != (ret = allocatePiplelineFrames())) {
         return ret;
     }
 

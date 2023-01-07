@@ -117,6 +117,8 @@ protected:
     virtual RGY_ERR initSSIMCalc(VCEParam *prm);
     virtual RGY_ERR initPipeline(VCEParam *prm);
 
+    virtual RGY_ERR allocatePiplelineFrames();
+
     virtual RGY_ERR run_decode();
     virtual RGY_ERR run_output();
 
