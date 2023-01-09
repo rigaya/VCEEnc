@@ -113,6 +113,7 @@ protected:
     std::vector<VppType> InitFiltersCreateVppList(const VCEParam *inputParam, const bool cspConvRequired, const bool cropRequired, const RGY_VPP_RESIZE_TYPE resizeRequired);
     virtual RGY_ERR AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilters,
         RGYFrameInfo & inputFrame, const VppType vppType, const VCEParam *prm, const sInputCrop * crop, const std::pair<int, int> resize);
+    virtual RGY_ERR createOpenCLCopyFilterForPreVideoMetric(const VCEParam *inputParam);
     virtual RGY_ERR initConverter(VCEParam *prm);
     virtual RGY_ERR initChapters(VCEParam *prm);
     virtual RGY_ERR initEncoder(VCEParam *prm);

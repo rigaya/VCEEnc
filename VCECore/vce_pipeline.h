@@ -665,8 +665,13 @@ public:
             }
         }
         if (err == RGY_ERR_NONE) {
+            surfWork.frame()->setDuration(mappedframe->duration());
+            surfWork.frame()->setTimestamp(mappedframe->timestamp());
+            surfWork.frame()->setInputFrameId(mappedframe->inputFrameId());
+            surfWork.frame()->setPicstruct(mappedframe->picstruct());
+            surfWork.frame()->setFlags(mappedframe->flags());
+            surfWork.frame()->setDataList(mappedframe->dataList());
             surfWork.frame()->setInputFrameId(m_inFrames++);
-            PrintMes(RGY_LOG_ERROR, _T("m_inFrames: %d.\n"), m_inFrames);
             m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(surfWork));
         }
         return err;
@@ -691,7 +696,7 @@ public:
             PrintMes(RGY_LOG_ERROR, _T("Error in reader: %s.\n"), get_err_mes(err));
         } else {
             inputFrame->setInputFrameId(m_inFrames++);
-            PrintMes(RGY_LOG_ERROR, _T("m_inFrames: %d.\n"), m_inFrames);
+            PrintMes(RGY_LOG_ERROR, _T("m_inFramesAMF: %d, %lld.\n"), m_inFrames, inputFrame->timestamp());
             m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(m_workSurfs.addSurface(inputFrame)));
         }
         return err;
@@ -1273,6 +1278,80 @@ public:
         }
         PipelineTaskOutputSurf *taskSurf = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
         m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(taskSurf->surf()));
+        return RGY_ERR_NONE;
+    }
+};
+
+class PipelineTaskVideoQualityMetric : public PipelineTask {
+private:
+    std::shared_ptr<RGYOpenCLContext> m_cl;
+    RGYFilterSsim *m_videoMetric;
+public:
+    PipelineTaskVideoQualityMetric(amf::AMFContextPtr context, RGYFilterSsim *videoMetric, std::shared_ptr<RGYOpenCLContext> cl, int outMaxQueueSize, std::shared_ptr<RGYLog> log)
+        : PipelineTask(PipelineTaskType::VIDEOMETRIC, context, outMaxQueueSize, log), m_cl(cl), m_videoMetric(videoMetric) {
+    };
+
+    virtual bool isPassThrough() const override { return true; }
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override { return std::nullopt; };
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override { return std::nullopt; };
+    virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        if (!frame) {
+            return RGY_ERR_MORE_DATA;
+        }
+        //明示的に待機が必要
+        frame->depend_clear();
+
+        RGYCLFrameInterop *clFrameInInterop = nullptr;
+        PipelineTaskOutputSurf *taskSurf = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
+        if (taskSurf == nullptr) {
+            PrintMes(RGY_LOG_ERROR, _T("Invalid task surface.\n"));
+            return RGY_ERR_NULL_PTR;
+        }
+        RGYFrameInfo inputFrame;
+        if (auto surfVppIn = taskSurf->surf().amfsurf(); surfVppIn != nullptr) {
+            if (taskSurf->surf().frame()->getInfo().mem_type != RGY_MEM_TYPE_CPU
+                && surfVppIn->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
+                amf::AMFContext::AMFOpenCLLocker locker(m_context);
+#if 0
+                auto ar = inAmf->Interop(amf::AMF_MEMORY_OPENCL);
+#else
+#if 1
+                //dummyのCPUへのメモリコピーを行う
+                //こうしないとデコーダからの出力をOpenCLに渡したときに、フレームが壊れる(フレーム順序が入れ替わってガクガクする)
+                amf::AMFDataPtr data;
+                surfVppIn->Duplicate(amf::AMF_MEMORY_HOST, &data);
+#endif
+                auto ar = surfVppIn->Convert(amf::AMF_MEMORY_OPENCL);
+#endif
+                if (ar != AMF_OK) {
+                    PrintMes(RGY_LOG_ERROR, _T("Failed to convert plane: %s.\n"), get_err_mes(err_to_rgy(ar)));
+                    return err_to_rgy(ar);
+                }
+            }
+            inputFrame = taskSurf->surf().frame()->getInfo();
+        } else if (taskSurf->surf().clframe() != nullptr) {
+            //OpenCLフレームが出てきた時の場合
+            auto clframe = taskSurf->surf().clframe();
+            if (clframe == nullptr) {
+                PrintMes(RGY_LOG_ERROR, _T("Invalid cl frame.\n"));
+                return RGY_ERR_NULL_PTR;
+            }
+            inputFrame = clframe->frameInfo();
+        } else {
+            PrintMes(RGY_LOG_ERROR, _T("Invalid input frame.\n"));
+            return RGY_ERR_NULL_PTR;
+        }
+        //フレームを転送
+        RGYOpenCLEvent inputReleaseEvent;
+        int dummy = 0;
+        auto err = m_videoMetric->filter(&inputFrame, nullptr, &dummy, m_cl->queue(), &inputReleaseEvent);
+        if (err != RGY_ERR_NONE) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to send frame for video metric calcualtion: %s.\n"), get_err_mes(err));
+            return err;
+        }
+        //eventを入力フレームを使用し終わったことの合図として登録する
+        taskSurf->addClEvent(inputReleaseEvent);
+        m_outQeueue.push_back(std::move(frame));
         return RGY_ERR_NONE;
     }
 };

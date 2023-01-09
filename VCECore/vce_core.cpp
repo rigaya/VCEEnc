@@ -74,6 +74,9 @@
 #include "VideoEncoderVCE.h"
 #include "VideoEncoderHEVC.h"
 #include "VideoDecoderUVD.h"
+#include "HQScaler.h"
+#include "VQEnhancer.h"
+#include "PreProcessing.h"
 #include "VideoConverter.h"
 #include "Factory.h"
 
@@ -764,6 +767,29 @@ RGY_ERR VCECore::initConverter(VCEParam *prm) {
 }
 
 #define ENABLE_VPPAMF 0
+
+RGY_ERR VCECore::createOpenCLCopyFilterForPreVideoMetric(const VCEParam *prm) {
+    std::unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_dev->cl()));
+    std::shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
+    param->frameOut = RGYFrameInfo(m_encWidth, m_encHeight, GetEncoderCSP(prm), GetEncoderBitdepth(prm), m_picStruct, RGY_MEM_TYPE_GPU_IMAGE);
+    param->frameIn = param->frameOut;
+    param->frameIn.bitdepth = RGY_CSP_BIT_DEPTH[param->frameIn.csp];
+    param->baseFps = m_encFps;
+    param->bOutOverwrite = false;
+    auto sts = filterCrop->init(param, m_pLog);
+    if (sts != RGY_ERR_NONE) {
+        return sts;
+    }
+    //登録
+    std::vector<std::unique_ptr<RGYFilter>> filters;
+    filters.push_back(std::move(filterCrop));
+    if (m_vpFilters.size() > 0) {
+        PrintMes(RGY_LOG_ERROR, _T("Unknown error, not expected that m_vpFilters has size.\n"));
+        return RGY_ERR_UNDEFINED_BEHAVIOR;
+    }
+    m_vpFilters.push_back(VppVilterBlock(filters));
+    return RGY_ERR_NONE;
+}
 
 RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     //hwデコーダの場合、cropを入力時に行っていない
@@ -2504,7 +2530,7 @@ RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
         param->input.srcWidth = m_encWidth;
         param->input.srcHeight = m_encHeight;
         param->bitDepth = prm->outputDepth;
-        param->frameIn = m_pLastFilterParam->frameOut;
+        param->frameIn = (m_pLastFilterParam) ? m_pLastFilterParam->frameOut : RGYFrameInfo(m_encWidth, m_encHeight, GetEncoderCSP(prm), GetEncoderBitdepth(prm), m_picStruct, RGY_MEM_TYPE_GPU_IMAGE);
         param->frameOut = param->frameIn;
         param->frameOut.csp = param->input.csp;
         param->frameIn.mem_type = RGY_MEM_TYPE_GPU;
@@ -2562,7 +2588,6 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
         }
     }
 
-#if 0
     if (m_videoQualityMetric) {
         int prevtask = -1;
         for (int itask = (int)m_pipelineTasks.size() - 1; itask >= 0; itask--) {
@@ -2574,7 +2599,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
         if (m_pipelineTasks[prevtask]->taskType() == PipelineTaskType::INPUT) {
             //inputと直接つながる場合はうまく処理できなくなる(うまく同期がとれない)
             //そこで、CopyのOpenCLフィルタを挟んでその中で処理する
-            auto err = createOpenCLCopyFilterForPreVideoMetric();
+            auto err = createOpenCLCopyFilterForPreVideoMetric(prm);
             if (err != RGY_ERR_NONE) {
                 PrintMes(RGY_LOG_ERROR, _T("Failed to join mfx vpp session: %s.\n"), get_err_mes(err));
                 return err;
@@ -2582,7 +2607,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
                 PrintMes(RGY_LOG_ERROR, _T("m_vpFilters.size() != 1.\n"));
                 return RGY_ERR_UNDEFINED_BEHAVIOR;
             }
-            m_pipelineTasks.push_back(std::make_unique<PipelineTaskOpenCL>(m_vpFilters.front().vppcl, m_videoQualityMetric.get(), m_cl, m_device->memType(), m_device->allocator(), &m_dev->context(), 1, m_pLog));
+            m_pipelineTasks.push_back(std::make_unique<PipelineTaskOpenCL>(m_dev->context(), m_vpFilters.front().vppcl, m_videoQualityMetric.get(), m_dev->cl(), 1, m_dev->dx11interlop(), m_pLog));
         } else if (m_pipelineTasks[prevtask]->taskType() == PipelineTaskType::OPENCL) {
             auto taskOpenCL = dynamic_cast<PipelineTaskOpenCL*>(m_pipelineTasks[prevtask].get());
             if (taskOpenCL == nullptr) {
@@ -2591,10 +2616,9 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
             }
             taskOpenCL->setVideoQualityMetricFilter(m_videoQualityMetric.get());
         } else {
-            m_pipelineTasks.push_back(std::make_unique<PipelineTaskVideoQualityMetric>(m_videoQualityMetric.get(), m_cl, m_device->memType(), m_device->allocator(), &m_dev->context(), 0, m_pLog));
+            m_pipelineTasks.push_back(std::make_unique<PipelineTaskVideoQualityMetric>(m_dev->context(), m_videoQualityMetric.get(), m_dev->cl(), 0, m_pLog));
         }
     }
-#endif
     if (m_pEncoder) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskAMFEncode>(m_pEncoder, m_encCodec, m_params, m_dev->context(), 1, m_timecode.get(), m_encTimestamp.get(), m_outputTimebase, m_hdr10plus.get(), m_hdr10plusMetadataCopy, m_pLog));
     }
