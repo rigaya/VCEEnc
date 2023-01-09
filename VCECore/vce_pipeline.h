@@ -47,6 +47,7 @@
 #include "rgy_log.h"
 #include "rgy_input.h"
 #include "rgy_input_avcodec.h"
+#include "rgy_input_sm.h"
 #include "rgy_output.h"
 #include "rgy_output_avcodec.h"
 #include "rgy_opencl.h"
@@ -709,6 +710,7 @@ protected:
     RGYInput *m_input;
     RGYQueueMPMP<RGYFrameDataMetadata*> m_queueHDR10plusMetadata;
     RGYRunState m_state;
+    int m_decOutFrames;
 #if THREAD_DEC_USE_FUTURE
     std::future m_thDecoder;
 #else
@@ -718,7 +720,7 @@ public:
     PipelineTaskAMFDecode(amf::AMFComponentPtr dec, amf::AMFContextPtr context, int outMaxQueueSize, RGYInput *input, std::shared_ptr<RGYLog> log)
         : PipelineTask(PipelineTaskType::AMFDEC, context, outMaxQueueSize, log), m_dec(dec), m_input(input),
         m_queueHDR10plusMetadata(),
-        m_state(RGY_STATE_STOPPED), m_thDecoder() {
+        m_state(RGY_STATE_STOPPED), m_decOutFrames(0), m_thDecoder() {
         m_queueHDR10plusMetadata.init(256);
     };
     virtual ~PipelineTaskAMFDecode() {
@@ -885,7 +887,7 @@ protected:
         if (surf != nullptr) {
             auto surfDecOut = std::make_unique<RGYFrame>(surf);
             surfDecOut->clearDataList();
-            surfDecOut->setInputFrameId(m_outFrames++);
+            surfDecOut->setInputFrameId(m_decOutFrames++);
             if (auto data = getMetadata(RGY_FRAME_DATA_HDR10PLUS, surfDecOut->timestamp()); data) {
                 surfDecOut->dataList().push_back(data);
             }
@@ -1119,7 +1121,34 @@ public:
     }
 };
 
-#if 0
+class PipelineTaskTrim : public PipelineTask {
+protected:
+    const sTrimParam &m_trimParam;
+public:
+    PipelineTaskTrim(amf::AMFContextPtr context, const sTrimParam &trimParam, int outMaxQueueSize, std::shared_ptr<RGYLog> log) :
+        PipelineTask(PipelineTaskType::TRIM, context, outMaxQueueSize, log),
+        m_trimParam(trimParam) {
+    };
+    virtual ~PipelineTaskTrim() {};
+
+    virtual bool isPassThrough() const override { return true; }
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override { return std::nullopt; };
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override { return std::nullopt; };
+
+    virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        if (!frame) {
+            return RGY_ERR_MORE_DATA;
+        }
+        m_inFrames++;
+        PipelineTaskOutputSurf *taskSurf = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
+        if (!frame_inside_range(taskSurf->surf().frame()->inputFrameId(), m_trimParam.list).first) {
+            return RGY_ERR_NONE;
+        }
+        m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(taskSurf->surf()));
+        return RGY_ERR_NONE;
+    }
+};
+
 class PipelineTaskAudio : public PipelineTask {
 protected:
     RGYInput *m_input;
@@ -1247,7 +1276,6 @@ public:
         return RGY_ERR_NONE;
     }
 };
-#endif
 
 class PipelineTaskAMFEncode : public PipelineTask {
 protected:
