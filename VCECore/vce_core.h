@@ -88,7 +88,7 @@ public:
     virtual RGY_ERR initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId);
     virtual RGY_ERR initInput(VCEParam *pParams, std::vector<std::unique_ptr<VCEDevice>> &gpuList);
     virtual RGY_ERR initOutput(VCEParam *prm);
-    virtual RGY_ERR run();
+    //virtual RGY_ERR run();
     virtual RGY_ERR run2();
     virtual void Terminate() override;
 
@@ -110,6 +110,9 @@ protected:
     virtual RGY_ERR initPerfMonitor(VCEParam *prm);
     virtual RGY_ERR initDecoder(VCEParam *prm);
     virtual RGY_ERR initFilters(VCEParam *prm);
+    std::vector<VppType> InitFiltersCreateVppList(const VCEParam *inputParam, const bool cspConvRequired, const bool cropRequired, const RGY_VPP_RESIZE_TYPE resizeRequired);
+    virtual RGY_ERR AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilters,
+        RGYFrameInfo & inputFrame, const VppType vppType, const VCEParam *prm, const sInputCrop * crop, const std::pair<int, int> resize);
     virtual RGY_ERR initConverter(VCEParam *prm);
     virtual RGY_ERR initChapters(VCEParam *prm);
     virtual RGY_ERR initEncoder(VCEParam *prm);
@@ -160,7 +163,7 @@ protected:
 
     std::unique_ptr<VCEDevice> m_dev;
 
-    vector<unique_ptr<RGYFilter>> m_vpFilters;
+    vector<VppVilterBlock>        m_vpFilters;
     shared_ptr<RGYFilterParam>    m_pLastFilterParam;
     unique_ptr<RGYFilterSsim>     m_videoQualityMetric;
 

@@ -763,6 +763,8 @@ RGY_ERR VCECore::initConverter(VCEParam *prm) {
     return RGY_ERR_NONE;
 }
 
+#define ENABLE_VPPAMF 0
+
 RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     //hwデコーダの場合、cropを入力時に行っていない
     const bool cropRequired = cropEnabled(inputParam->input.crop)
@@ -784,13 +786,15 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     }
     m_encFps = rgy_rational<int>(inputParam->input.fpsN, inputParam->input.fpsD);
 
+    const bool cspConvRequired = inputFrame.csp != GetEncoderCSP(inputParam);
+
     //リサイザの出力すべきサイズ
-    int resizeWidth  = croppedWidth;
+    int resizeWidth = croppedWidth;
     int resizeHeight = croppedHeight;
     m_encWidth = resizeWidth;
     m_encHeight = resizeHeight;
     if (inputParam->vpp.pad.enable) {
-        m_encWidth  += inputParam->vpp.pad.right + inputParam->vpp.pad.left;
+        m_encWidth += inputParam->vpp.pad.right + inputParam->vpp.pad.left;
         m_encHeight += inputParam->vpp.pad.bottom + inputParam->vpp.pad.top;
     }
 
@@ -805,9 +809,13 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             resizeHeight -= (inputParam->vpp.pad.bottom + inputParam->vpp.pad.top);
         }
     }
-    bool resizeRequired = false;
+    RGY_VPP_RESIZE_TYPE resizeRequired = RGY_VPP_RESIZE_TYPE_NONE;
     if (croppedWidth != resizeWidth || croppedHeight != resizeHeight) {
-        resizeRequired = true;
+        resizeRequired = getVppResizeType(inputParam->vpp.resize_algo);
+        if (resizeRequired == RGY_VPP_RESIZE_TYPE_UNKNOWN) {
+            PrintMes(RGY_LOG_ERROR, _T("Unknown resize type.\n"));
+            return RGY_ERR_INVALID_VIDEO_PARAM;
+        }
     }
     //picStructの設定
     //m_stPicStruct = picstruct_rgy_to_enc(inputParam->input.picstruct);
@@ -829,397 +837,519 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     //VUI情報
     auto VuiFiltered = inputParam->input.vui;
 
-    //フィルタが必要
-    if (resizeRequired
-        || cropRequired
-        || inputParam->vpp.delogo.enable
-        || inputParam->vpp.colorspace.enable
-        || inputParam->vpp.afs.enable
-        || inputParam->vpp.nnedi.enable
-        || inputParam->vpp.yadif.enable
-        || inputParam->vpp.decimate.enable
-        || inputParam->vpp.mpdecimate.enable
-        || inputParam->vpp.pad.enable
-        || inputParam->vpp.convolution3d.enable
-        || inputParam->vpp.knn.enable
-        || inputParam->vpp.pmd.enable
-        || inputParam->vpp.smooth.enable
-        || inputParam->vpp.subburn.size() > 0
-        || inputParam->vpp.unsharp.enable
-        || inputParam->vpp.edgelevel.enable
-        || inputParam->vpp.warpsharp.enable
-        || inputParam->vpp.tweak.enable
-        || inputParam->vpp.transform.enable
-        || inputParam->vpp.deband.enable) {
-        if (!m_dev->cl()) {
-            PrintMes(RGY_LOG_ERROR, _T("OpenCL disabled, filtering not supported!\n"));
+    m_encVUI = inputParam->common.out_vui;
+    m_encVUI.apply_auto(inputParam->input.vui, m_encHeight);
+    m_encVUI.setDescriptPreset();
+
+    m_vpFilters.clear();
+
+    const auto VCE_AMF_GPU_IMAGE = RGY_MEM_TYPE_GPU_IMAGE;
+
+    std::vector<VppType> filterPipeline = InitFiltersCreateVppList(inputParam, cspConvRequired, cropRequired, resizeRequired);
+    if (filterPipeline.size() == 0) {
+        PrintMes(RGY_LOG_DEBUG, _T("No filters required.\n"));
+        return RGY_ERR_NONE;
+    }
+    const auto clfilterCount = std::count_if(filterPipeline.begin(), filterPipeline.end(), [](VppType type) { return getVppFilterType(type) == VppFilterType::FILTER_OPENCL; });
+    if (!m_dev->cl() && clfilterCount > 0) {
+        PrintMes(RGY_LOG_ERROR, _T("OpenCL filter not enabled.\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
+    //読み込み時のcrop
+    sInputCrop *inputCrop = (cropRequired) ? &inputParam->input.crop : nullptr;
+    const auto resize = std::make_pair(resizeWidth, resizeHeight);
+
+    std::vector<std::unique_ptr<RGYFilter>> vppOpenCLFilters;
+    for (size_t i = 0; i < filterPipeline.size(); i++) {
+        const VppFilterType ftype0 = (i >= 1)                      ? getVppFilterType(filterPipeline[i-1]) : VppFilterType::FILTER_NONE;
+        const VppFilterType ftype1 =                                 getVppFilterType(filterPipeline[i+0]);
+        const VppFilterType ftype2 = (i+1 < filterPipeline.size()) ? getVppFilterType(filterPipeline[i+1]) : VppFilterType::FILTER_NONE;
+        if (ftype1 == VppFilterType::FILTER_AMF) {
+#if ENABLE_VPPAMF
+            auto [err, vppmfx] = AddFilterMFX(inputFrame, m_encFps, filterPipeline[i], &inputParam->vppmfx,
+                GetEncoderCSP(inputParam), GetEncoderBitdepth(inputParam), inputCrop, resize);
+            inputCrop = nullptr;
+            if (err != RGY_ERR_NONE) {
+                return err;
+            }
+            if (vppmfx) {
+                m_vpFilters.push_back(VppVilterBlock(vppmfx));
+            }
+#endif
+        } else if (ftype1 == VppFilterType::FILTER_OPENCL) {
+            if (ftype0 != VppFilterType::FILTER_OPENCL || filterPipeline[i] == VppType::CL_CROP) { // 前のfilterがOpenCLでない場合、変換が必要
+                auto filterCrop = std::make_unique<RGYFilterCspCrop>(m_dev->cl());
+                shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
+                param->frameIn = inputFrame;
+                param->frameOut = inputFrame;
+                param->frameOut.csp = GetEncoderCSP(inputParam);
+                switch (param->frameOut.csp) { // OpenCLフィルタの内部形式への変換
+                case RGY_CSP_NV12: param->frameOut.csp = RGY_CSP_YV12; break;
+                case RGY_CSP_P010: param->frameOut.csp = RGY_CSP_YV12_16; break;
+                case RGY_CSP_AYUV: param->frameOut.csp = RGY_CSP_YUV444; break;
+                case RGY_CSP_Y410: param->frameOut.csp = RGY_CSP_YUV444_16; break;
+                case RGY_CSP_Y416: param->frameOut.csp = RGY_CSP_YUV444_16; break;
+                default:
+                    break;
+                }
+                param->frameOut.bitdepth = RGY_CSP_BIT_DEPTH[param->frameOut.csp];
+                if (inputCrop) {
+                    param->crop = *inputCrop;
+                    inputCrop = nullptr;
+                }
+                param->baseFps = m_encFps;
+                param->frameIn.mem_type = VCE_AMF_GPU_IMAGE;
+                param->frameOut.mem_type = RGY_MEM_TYPE_GPU;
+                param->bOutOverwrite = false;
+                auto sts = filterCrop->init(param, m_pLog);
+                if (sts != RGY_ERR_NONE) {
+                    return sts;
+                }
+                //入力フレーム情報を更新
+                inputFrame = param->frameOut;
+                m_encFps = param->baseFps;
+                vppOpenCLFilters.push_back(std::move(filterCrop));
+            }
+            if (filterPipeline[i] != VppType::CL_CROP) {
+                auto err = AddFilterOpenCL(vppOpenCLFilters, inputFrame, filterPipeline[i], inputParam, inputCrop, resize);
+                if (err != RGY_ERR_NONE) {
+                    return err;
+                }
+            }
+            if (ftype2 != VppFilterType::FILTER_OPENCL) { // 次のfilterがOpenCLでない場合、変換が必要
+                std::unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_dev->cl()));
+                std::shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
+                param->frameIn = inputFrame;
+                param->frameOut = inputFrame;
+                param->frameOut.csp = GetEncoderCSP(inputParam);
+                param->frameOut.bitdepth = GetEncoderBitdepth(inputParam);
+                param->frameIn.mem_type = RGY_MEM_TYPE_GPU;
+                param->frameOut.mem_type = VCE_AMF_GPU_IMAGE;
+                param->baseFps = m_encFps;
+                param->bOutOverwrite = false;
+                auto sts = filterCrop->init(param, m_pLog);
+                if (sts != RGY_ERR_NONE) {
+                    return sts;
+                }
+                //入力フレーム情報を更新
+                inputFrame = param->frameOut;
+                m_encFps = param->baseFps;
+                //登録
+                vppOpenCLFilters.push_back(std::move(filterCrop));
+                // ブロックに追加する
+                m_vpFilters.push_back(VppVilterBlock(vppOpenCLFilters));
+                vppOpenCLFilters.clear();
+            }
+        } else {
+            PrintMes(RGY_LOG_ERROR, _T("Unsupported vpp filter type.\n"));
             return RGY_ERR_UNSUPPORTED;
         }
-        //swデコードならGPUに上げる必要がある
-        if (m_pFileReader->getInputCodec() == RGY_CODEC_UNKNOWN) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_dev->cl()));
-            shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
-            param->frameIn = inputFrame;
-            param->frameOut.csp = param->frameIn.csp;
-            param->frameOut.mem_type = RGY_MEM_TYPE_GPU;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filterCrop->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
+    }
+
+    if (inputParam->vpp.checkPerformance) {
+        for (auto& block : m_vpFilters) {
+            if (block.type == VppFilterType::FILTER_OPENCL) {
+                for (auto& filter : block.vppcl) {
+                    filter->setCheckPerformance(inputParam->vpp.checkPerformance);
+                }
             }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filterCrop));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
         }
-        const auto encCsp = GetEncoderCSP(inputParam);
-        if (encCsp == RGY_CSP_NA) {
-            PrintMes(RGY_LOG_ERROR, _T("Unknown Error in GetEncoderCSP().\n"));
-            return RGY_ERR_UNSUPPORTED;
+    }
+
+    m_encWidth  = inputFrame.width;
+    m_encHeight = inputFrame.height;
+    m_picStruct = inputFrame.picstruct;
+    return RGY_ERR_NONE;
+}
+
+std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputParam, const bool cspConvRequired, const bool cropRequired, const RGY_VPP_RESIZE_TYPE resizeRequired) {
+    std::vector<VppType> filterPipeline;
+    filterPipeline.reserve((size_t)VppType::CL_MAX);
+
+    if (cspConvRequired || cropRequired)   filterPipeline.push_back(VppType::CL_CROP);
+    if (inputParam->vpp.colorspace.enable) {
+        bool requireOpenCL = inputParam->vpp.colorspace.hdr2sdr.tonemap != HDR2SDR_DISABLED || inputParam->vpp.colorspace.lut3d.table_file.length() > 0;
+        if (!requireOpenCL) {
+            auto currentVUI = inputParam->input.vui;
+            for (size_t i = 0; i < inputParam->vpp.colorspace.convs.size(); i++) {
+                auto conv_from = inputParam->vpp.colorspace.convs[i].from;
+                auto conv_to = inputParam->vpp.colorspace.convs[i].to;
+                if (conv_from.chromaloc != conv_to.chromaloc
+                    || conv_from.colorprim != conv_to.colorprim
+                    || conv_from.transfer != conv_to.transfer) {
+                    requireOpenCL = true;
+                } else if (conv_from.matrix != conv_to.matrix
+                    && (conv_from.matrix != RGY_MATRIX_ST170_M && conv_from.matrix != RGY_MATRIX_BT709)
+                    && (conv_to.matrix != RGY_MATRIX_ST170_M && conv_to.matrix != RGY_MATRIX_BT709)) {
+                    requireOpenCL = true;
+                }
+            }
         }
-        auto filterCsp = encCsp;
-        switch (filterCsp) {
-        case RGY_CSP_NV12: filterCsp = RGY_CSP_YV12; break;
-        case RGY_CSP_P010: filterCsp = RGY_CSP_YV12_16; break;
-        default: break;
+        filterPipeline.push_back((requireOpenCL) ? VppType::CL_COLORSPACE : VppType::AMF_COLORSPACE);
+    }
+    if (inputParam->vpp.delogo.enable)     filterPipeline.push_back(VppType::CL_DELOGO);
+    if (inputParam->vpp.afs.enable)        filterPipeline.push_back(VppType::CL_AFS);
+    if (inputParam->vpp.nnedi.enable)      filterPipeline.push_back(VppType::CL_NNEDI);
+    if (inputParam->vpp.yadif.enable)      filterPipeline.push_back(VppType::CL_YADIF);
+    if (inputParam->vpp.decimate.enable)   filterPipeline.push_back(VppType::CL_DECIMATE);
+    if (inputParam->vpp.mpdecimate.enable) filterPipeline.push_back(VppType::CL_MPDECIMATE);
+    if (inputParam->vpp.convolution3d.enable) filterPipeline.push_back(VppType::CL_CONVOLUTION3D);
+    if (inputParam->vpp.smooth.enable)     filterPipeline.push_back(VppType::CL_DENOISE_SMOOTH);
+    if (inputParam->vpp.knn.enable)        filterPipeline.push_back(VppType::CL_DENOISE_KNN);
+    if (inputParam->vpp.pmd.enable)        filterPipeline.push_back(VppType::CL_DENOISE_PMD);
+    //if (inputParam->vppmfx.denoise.enable) filterPipeline.push_back(VppType::AMF_DENOISE);
+    if (inputParam->vpp.subburn.size()>0)  filterPipeline.push_back(VppType::CL_SUBBURN);
+#if ENABLE_VPPAMF
+    if (     resizeRequired == RGY_VPP_RESIZE_TYPE_OPENCL) filterPipeline.push_back(VppType::CL_RESIZE);
+    else if (resizeRequired != RGY_VPP_RESIZE_TYPE_NONE)   filterPipeline.push_back(VppType::AMF_RESIZE);
+#else
+    if (resizeRequired != RGY_VPP_RESIZE_TYPE_NONE)   filterPipeline.push_back(VppType::CL_RESIZE);
+#endif
+    if (inputParam->vpp.unsharp.enable)    filterPipeline.push_back(VppType::CL_UNSHARP);
+    if (inputParam->vpp.edgelevel.enable)  filterPipeline.push_back(VppType::CL_EDGELEVEL);
+    if (inputParam->vpp.warpsharp.enable)  filterPipeline.push_back(VppType::CL_WARPSHARP);
+    //if (inputParam->vppmfx.detail.enable)  filterPipeline.push_back(VppType::MFX_DETAIL_ENHANCE);
+    //if (inputParam->vppmfx.mirrorType != MFX_MIRRORING_DISABLED) filterPipeline.push_back(VppType::MFX_MIRROR);
+    if (inputParam->vpp.transform.enable)  filterPipeline.push_back(VppType::CL_TRANSFORM);
+    if (inputParam->vpp.tweak.enable)      filterPipeline.push_back(VppType::CL_TWEAK);
+    if (inputParam->vpp.deband.enable)     filterPipeline.push_back(VppType::CL_DEBAND);
+    if (inputParam->vpp.pad.enable)        filterPipeline.push_back(VppType::CL_PAD);
+
+    if (filterPipeline.size() == 0) {
+        return filterPipeline;
+    }
+
+    // cropとresizeはmfxとopencl両方ともあるので、前後のフィルタがどちらもOpenCLだったら、そちらに合わせる
+    for (size_t i = 0; i < filterPipeline.size(); i++) {
+        const VppFilterType prev = (i >= 1)                        ? getVppFilterType(filterPipeline[i - 1]) : VppFilterType::FILTER_NONE;
+        const VppFilterType next = (i + 1 < filterPipeline.size()) ? getVppFilterType(filterPipeline[i + 1]) : VppFilterType::FILTER_NONE;
+        if (filterPipeline[i] == VppType::AMF_RESIZE) {
+            if (resizeRequired == RGY_VPP_RESIZE_TYPE_AUTO // 自動以外の指定があれば、それに従うので、自動の場合のみ変更
+                && m_dev->cl()
+                && prev == VppFilterType::FILTER_OPENCL
+                && next == VppFilterType::FILTER_OPENCL) {
+                filterPipeline[i] = VppType::CL_RESIZE; // OpenCLに挟まれていたら、OpenCLのresizeを優先する
+            }
+        } else if (filterPipeline[i] == VppType::AMF_COLORSPACE) {
+            if (m_dev->cl()
+                && prev == VppFilterType::FILTER_OPENCL
+                && next == VppFilterType::FILTER_OPENCL) {
+                filterPipeline[i] = VppType::CL_COLORSPACE; // OpenCLに挟まれていたら、OpenCLのcolorspaceを優先する
+            }
         }
-        if (inputParam->vpp.afs.enable && RGY_CSP_CHROMA_FORMAT[inputFrame.csp] == RGY_CHROMAFMT_YUV444) {
-            filterCsp = (RGY_CSP_BIT_DEPTH[inputFrame.csp] > 8) ? RGY_CSP_YUV444_16 : RGY_CSP_YUV444;
+    }
+    return filterPipeline;
+}
+
+RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilters,
+        RGYFrameInfo & inputFrame, const VppType vppType, const VCEParam *inputParam, const sInputCrop *crop, const std::pair<int, int> resize) {
+    //colorspace
+    if (vppType == VppType::CL_COLORSPACE) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilterColorspace> filter(new RGYFilterColorspace(m_dev->cl()));
+        shared_ptr<RGYFilterParamColorspace> param(new RGYFilterParamColorspace());
+        param->colorspace = inputParam->vpp.colorspace;
+        param->encCsp = inputFrame.csp;
+        param->VuiIn = inputParam->input.vui;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
         }
-        //colorspace
-        if (inputParam->vpp.colorspace.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilterColorspace> filter(new RGYFilterColorspace(m_dev->cl()));
-            shared_ptr<RGYFilterParamColorspace> param(new RGYFilterParamColorspace());
-            param->colorspace = inputParam->vpp.colorspace;
-            param->encCsp = encCsp;
-            param->VuiIn = VuiFiltered;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            VuiFiltered = filter->VuiOut();
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //delogo
+    if (vppType == VppType::CL_DELOGO) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterDelogo(m_dev->cl()));
+        shared_ptr < RGYFilterParamDelogo> param(new RGYFilterParamDelogo());
+        param->delogo = inputParam->vpp.delogo;
+        param->inputFileName = inputParam->common.inputFilename.c_str();
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = true;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
         }
-        if (filterCsp != inputFrame.csp
-            || cropRequired) { //cropが必要ならただちに適用する
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_dev->cl()));
-            shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
-            param->frameIn = inputFrame;
-            param->frameOut.csp = encCsp;
-            switch (param->frameOut.csp) {
-            case RGY_CSP_NV12:
-                param->frameOut.csp = RGY_CSP_YV12;
-                break;
-            case RGY_CSP_P010:
-                param->frameOut.csp = RGY_CSP_YV12_16;
-                break;
-            default:
-                break;
-            }
-            if (cropRequired) {
-                param->crop = inputParam->input.crop;
-            }
-            param->baseFps = m_encFps;
-            param->frameOut.mem_type = RGY_MEM_TYPE_GPU;
-            param->bOutOverwrite = false;
-            auto sts = filterCrop->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filterCrop));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //afs
+    if (vppType == VppType::CL_AFS) {
+        if ((inputParam->input.picstruct & (RGY_PICSTRUCT_TFF | RGY_PICSTRUCT_BFF)) == 0) {
+            PrintMes(RGY_LOG_ERROR, _T("Please set input interlace field order (--interlace tff/bff) for vpp-afs.\n"));
+            return RGY_ERR_INVALID_PARAM;
         }
-        //delogo
-        if (inputParam->vpp.delogo.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterDelogo(m_dev->cl()));
-            shared_ptr < RGYFilterParamDelogo> param(new RGYFilterParamDelogo());
-            param->delogo = inputParam->vpp.delogo;
-            param->inputFileName = inputParam->common.inputFilename.c_str();
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = true;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterAfs(m_dev->cl()));
+        shared_ptr<RGYFilterParamAfs> param(new RGYFilterParamAfs());
+        param->afs = inputParam->vpp.afs;
+        param->afs.tb_order = (inputParam->input.picstruct & RGY_PICSTRUCT_TFF) != 0;
+        if (inputParam->common.timecode && param->afs.timecode) {
+            param->afs.timecode = 2;
         }
-        //afs
-        if (inputParam->vpp.afs.enable) {
-            if ((inputParam->input.picstruct & (RGY_PICSTRUCT_TFF | RGY_PICSTRUCT_BFF)) == 0) {
-                PrintMes(RGY_LOG_ERROR, _T("Please set input interlace field order (--interlace tff/bff) for vpp-afs.\n"));
-                return RGY_ERR_INVALID_PARAM;
-            }
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterAfs(m_dev->cl()));
-            shared_ptr<RGYFilterParamAfs> param(new RGYFilterParamAfs());
-            param->afs = inputParam->vpp.afs;
-            param->afs.tb_order = (inputParam->input.picstruct & RGY_PICSTRUCT_TFF) != 0;
-            if (inputParam->common.timecode && param->afs.timecode) {
-                param->afs.timecode = 2;
-            }
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->inFps = m_inputFps;
-            param->inTimebase = m_outputTimebase;
-            param->outTimebase = m_outputTimebase;
-            param->baseFps = m_encFps;
-            param->outFilename = inputParam->common.outputFilename;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->inFps = m_inputFps;
+        param->inTimebase = m_outputTimebase;
+        param->outTimebase = m_outputTimebase;
+        param->baseFps = m_encFps;
+        param->outFilename = inputParam->common.outputFilename;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
         }
-        //nnedi
-        if (inputParam->vpp.nnedi.enable) {
-            if ((inputParam->input.picstruct & (RGY_PICSTRUCT_TFF | RGY_PICSTRUCT_BFF)) == 0) {
-                PrintMes(RGY_LOG_ERROR, _T("Please set input interlace field order (--interlace tff/bff) for vpp-nnedi.\n"));
-                return RGY_ERR_INVALID_PARAM;
-            }
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterNnedi(m_dev->cl()));
-            shared_ptr<RGYFilterParamNnedi> param(new RGYFilterParamNnedi());
-            param->nnedi = inputParam->vpp.nnedi;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //nnedi
+    if (vppType == VppType::CL_NNEDI) {
+        if ((inputParam->input.picstruct & (RGY_PICSTRUCT_TFF | RGY_PICSTRUCT_BFF)) == 0) {
+            PrintMes(RGY_LOG_ERROR, _T("Please set input interlace field order (--interlace tff/bff) for vpp-nnedi.\n"));
+            return RGY_ERR_INVALID_PARAM;
         }
-        //yadif
-        if (inputParam->vpp.yadif.enable) {
-            if ((inputParam->input.picstruct & (RGY_PICSTRUCT_TFF | RGY_PICSTRUCT_BFF)) == 0) {
-                PrintMes(RGY_LOG_ERROR, _T("Please set input interlace field order (--interlace tff/bff) for vpp-yadif.\n"));
-                return RGY_ERR_INVALID_PARAM;
-            }
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterYadif(m_dev->cl()));
-            shared_ptr<RGYFilterParamYadif> param(new RGYFilterParamYadif());
-            param->yadif = inputParam->vpp.yadif;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->timebase = m_outputTimebase;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterNnedi(m_dev->cl()));
+        shared_ptr<RGYFilterParamNnedi> param(new RGYFilterParamNnedi());
+        param->nnedi = inputParam->vpp.nnedi;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
         }
-        //decimate
-        if (inputParam->vpp.decimate.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterDecimate(m_dev->cl()));
-            shared_ptr<RGYFilterParamDecimate> param(new RGYFilterParamDecimate());
-            param->decimate = inputParam->vpp.decimate;
-            param->useSeparateQueue = false; // やはりuseSeparateQueueはバグっているかもしれない
-            param->outfilename = inputParam->common.outputFilename;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //yadif
+    if (vppType == VppType::CL_YADIF) {
+        if ((inputParam->input.picstruct & (RGY_PICSTRUCT_TFF | RGY_PICSTRUCT_BFF)) == 0) {
+            PrintMes(RGY_LOG_ERROR, _T("Please set input interlace field order (--interlace tff/bff) for vpp-yadif.\n"));
+            return RGY_ERR_INVALID_PARAM;
         }
-        //mpdecimate
-        if (inputParam->vpp.mpdecimate.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterMpdecimate(m_dev->cl()));
-            shared_ptr<RGYFilterParamMpdecimate> param(new RGYFilterParamMpdecimate());
-            param->mpdecimate = inputParam->vpp.mpdecimate;
-            param->useSeparateQueue = false; // やはりuseSeparateQueueはバグっているかもしれない
-            param->outfilename = inputParam->common.outputFilename;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterYadif(m_dev->cl()));
+        shared_ptr<RGYFilterParamYadif> param(new RGYFilterParamYadif());
+        param->yadif = inputParam->vpp.yadif;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->timebase = m_outputTimebase;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
         }
-        //回転
-        if (inputParam->vpp.transform.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterTransform(m_dev->cl()));
-            shared_ptr<RGYFilterParamTransform> param(new RGYFilterParamTransform());
-            param->trans = inputParam->vpp.transform;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //decimate
+    if (vppType == VppType::CL_DECIMATE) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterDecimate(m_dev->cl()));
+        shared_ptr<RGYFilterParamDecimate> param(new RGYFilterParamDecimate());
+        param->decimate = inputParam->vpp.decimate;
+        param->useSeparateQueue = false; // やはりuseSeparateQueueはバグっているかもしれない
+        param->outfilename = inputParam->common.outputFilename;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
         }
-        //ノイズ除去 (convolution3d)
-        if (inputParam->vpp.convolution3d.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterConvolution3D(m_dev->cl()));
-            shared_ptr<RGYFilterParamConvolution3D> param(new RGYFilterParamConvolution3D());
-            param->convolution3d = inputParam->vpp.convolution3d;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //mpdecimate
+    if (vppType == VppType::CL_MPDECIMATE) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterMpdecimate(m_dev->cl()));
+        shared_ptr<RGYFilterParamMpdecimate> param(new RGYFilterParamMpdecimate());
+        param->mpdecimate = inputParam->vpp.mpdecimate;
+        param->useSeparateQueue = false; // やはりuseSeparateQueueはバグっているかもしれない
+        param->outfilename = inputParam->common.outputFilename;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
         }
-        //smooth
-        if (inputParam->vpp.smooth.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterSmooth(m_dev->cl()));
-            shared_ptr<RGYFilterParamSmooth> param(new RGYFilterParamSmooth());
-            param->smooth = inputParam->vpp.smooth;
-            param->qpTableRef = nullptr;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //回転
+    if (vppType == VppType::CL_TRANSFORM) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterTransform(m_dev->cl()));
+        shared_ptr<RGYFilterParamTransform> param(new RGYFilterParamTransform());
+        param->trans = inputParam->vpp.transform;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
         }
-        //knn
-        if (inputParam->vpp.knn.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterDenoiseKnn(m_dev->cl()));
-            shared_ptr<RGYFilterParamDenoiseKnn> param(new RGYFilterParamDenoiseKnn());
-            param->knn = inputParam->vpp.knn;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //ノイズ除去 (convolution3d)
+    if (vppType == VppType::CL_CONVOLUTION3D) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterConvolution3D(m_dev->cl()));
+        shared_ptr<RGYFilterParamConvolution3D> param(new RGYFilterParamConvolution3D());
+        param->convolution3d = inputParam->vpp.convolution3d;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
         }
-        //pmd
-        if (inputParam->vpp.pmd.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterDenoisePmd(m_dev->cl()));
-            shared_ptr<RGYFilterParamDenoisePmd> param(new RGYFilterParamDenoisePmd());
-            param->pmd = inputParam->vpp.pmd;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //smooth
+    if (vppType == VppType::CL_DENOISE_SMOOTH) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterSmooth(m_dev->cl()));
+        shared_ptr<RGYFilterParamSmooth> param(new RGYFilterParamSmooth());
+        param->smooth = inputParam->vpp.smooth;
+        param->qpTableRef = nullptr;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
         }
-        //字幕焼きこみ
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //knn
+    if (vppType == VppType::CL_DENOISE_KNN) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterDenoiseKnn(m_dev->cl()));
+        shared_ptr<RGYFilterParamDenoiseKnn> param(new RGYFilterParamDenoiseKnn());
+        param->knn = inputParam->vpp.knn;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //pmd
+    if (vppType == VppType::CL_DENOISE_PMD) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterDenoisePmd(m_dev->cl()));
+        shared_ptr<RGYFilterParamDenoisePmd> param(new RGYFilterParamDenoisePmd());
+        param->pmd = inputParam->vpp.pmd;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //字幕焼きこみ
+    if (vppType == VppType::CL_SUBBURN) {
+        std::vector<std::unique_ptr<RGYFilter>> filters;
         for (const auto& subburn : inputParam->vpp.subburn) {
             if (!subburn.enable)
 #if ENABLE_AVSW_READER
@@ -1262,7 +1392,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
                     return sts;
                 }
                 //フィルタチェーンに追加
-                m_vpFilters.push_back(std::move(filter));
+                clfilters.push_back(std::move(filter));
                 //パラメータ情報を更新
                 m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
                 //入力フレーム情報を更新
@@ -1274,221 +1404,175 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
             return RGY_ERR_UNSUPPORTED;
 #endif
         }
-        //リサイズ
-        if (resizeRequired) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filterResize(new RGYFilterResize(m_dev->cl()));
-            shared_ptr<RGYFilterParamResize> param(new RGYFilterParamResize());
-            param->interp = (inputParam->vpp.resize_algo != RGY_VPP_RESIZE_AUTO) ? inputParam->vpp.resize_algo : RGY_VPP_RESIZE_SPLINE36;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->frameOut.width = resizeWidth;
-            param->frameOut.height = resizeHeight;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filterResize->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filterResize));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
-        }
-        //unsharp
-        if (inputParam->vpp.unsharp.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterUnsharp(m_dev->cl()));
-            shared_ptr<RGYFilterParamUnsharp> param(new RGYFilterParamUnsharp());
-            param->unsharp = inputParam->vpp.unsharp;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
-        }
-        //edgelevel
-        if (inputParam->vpp.edgelevel.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterEdgelevel(m_dev->cl()));
-            shared_ptr<RGYFilterParamEdgelevel> param(new RGYFilterParamEdgelevel());
-            param->edgelevel = inputParam->vpp.edgelevel;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
-        }
-        //warpsharp
-        if (inputParam->vpp.warpsharp.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterWarpsharp(m_dev->cl()));
-            shared_ptr<RGYFilterParamWarpsharp> param(new RGYFilterParamWarpsharp());
-            param->warpsharp = inputParam->vpp.warpsharp;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
-        }
-        //tweak
-        if (inputParam->vpp.tweak.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterTweak(m_dev->cl()));
-            shared_ptr<RGYFilterParamTweak> param(new RGYFilterParamTweak());
-            param->tweak = inputParam->vpp.tweak;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = true;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
-        }
-        //deband
-        if (inputParam->vpp.deband.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterDeband(m_dev->cl()));
-            shared_ptr<RGYFilterParamDeband> param(new RGYFilterParamDeband());
-            param->deband = inputParam->vpp.deband;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
-        }
-        //padding
-        if (inputParam->vpp.pad.enable) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filter(new RGYFilterPad(m_dev->cl()));
-            shared_ptr<RGYFilterParamPad> param(new RGYFilterParamPad());
-            param->pad = inputParam->vpp.pad;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->frameOut.width = m_encWidth;
-            param->frameOut.height = m_encHeight;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //フィルタチェーンに追加
-            m_vpFilters.push_back(std::move(filter));
-            //パラメータ情報を更新
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
-        }
+        return RGY_ERR_NONE;
     }
-    //最後のフィルタ
-    if (m_dev->cl()) {
-        //もし入力がCPUメモリで色空間が違うなら、一度そのままGPUに転送する必要がある
-        if (inputFrame.mem_type == RGY_MEM_TYPE_CPU && inputFrame.csp != GetEncoderCSP(inputParam)) {
-            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-            unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_dev->cl()));
-            shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
-            param->frameIn = inputFrame;
-            param->frameOut.csp = param->frameIn.csp;
-            param->frameOut.mem_type = RGY_MEM_TYPE_GPU_IMAGE;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = false;
-            auto sts = filterCrop->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            m_vpFilters.push_back(std::move(filterCrop));
-            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
-        }
+    //リサイズ
+    if (vppType == VppType::CL_RESIZE) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-        unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_dev->cl()));
-        shared_ptr<RGYFilterParamCrop> param(new RGYFilterParamCrop());
+        unique_ptr<RGYFilter> filterResize(new RGYFilterResize(m_dev->cl()));
+        shared_ptr<RGYFilterParamResize> param(new RGYFilterParamResize());
+        param->interp = (inputParam->vpp.resize_algo != RGY_VPP_RESIZE_AUTO) ? inputParam->vpp.resize_algo : RGY_VPP_RESIZE_SPLINE36;
         param->frameIn = inputFrame;
-        param->frameOut.csp = GetEncoderCSP(inputParam);
-        //インタレ保持であれば、CPU側にフレームを戻す必要がある
-        //色空間が同じなら、ここでやってしまう
-        param->frameOut.mem_type = RGY_MEM_TYPE_GPU_IMAGE;
+        param->frameOut = inputFrame;
+        param->frameOut.width = resize.first;
+        param->frameOut.height = resize.second;
         param->baseFps = m_encFps;
         param->bOutOverwrite = false;
-        auto sts = filterCrop->init(param, m_pLog);
+        auto sts = filterResize->init(param, m_pLog);
         if (sts != RGY_ERR_NONE) {
             return sts;
         }
-        m_vpFilters.push_back(std::move(filterCrop));
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filterResize));
+        //パラメータ情報を更新
         m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
         //入力フレーム情報を更新
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
     }
-    m_picStruct = inputFrame.picstruct;
-    m_encVUI = inputParam->common.out_vui;
-    m_encVUI.apply_auto(VuiFiltered, m_encHeight);
-    m_encVUI.descriptpresent =
-        get_cx_value(list_colormatrix, _T("undef")) != (int)m_encVUI.matrix
-        || get_cx_value(list_colorprim, _T("undef")) != (int)m_encVUI.colorprim
-        || get_cx_value(list_transfer, _T("undef")) != (int)m_encVUI.transfer;
-
-    if (inputParam->vpp.checkPerformance) {
-        for (auto& filter : m_vpFilters) {
-            filter->setCheckPerformance(inputParam->vpp.checkPerformance);
+    //unsharp
+    if (vppType == VppType::CL_UNSHARP) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterUnsharp(m_dev->cl()));
+        shared_ptr<RGYFilterParamUnsharp> param(new RGYFilterParamUnsharp());
+        param->unsharp = inputParam->vpp.unsharp;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
         }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
     }
-    return RGY_ERR_NONE;
+    //warpsharp
+    if (vppType == VppType::CL_WARPSHARP) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterWarpsharp(m_dev->cl()));
+        shared_ptr<RGYFilterParamWarpsharp> param(new RGYFilterParamWarpsharp());
+        param->warpsharp = inputParam->vpp.warpsharp;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //edgelevel
+    if (vppType == VppType::CL_EDGELEVEL) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterEdgelevel(m_dev->cl()));
+        shared_ptr<RGYFilterParamEdgelevel> param(new RGYFilterParamEdgelevel());
+        param->edgelevel = inputParam->vpp.edgelevel;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //tweak
+    if (vppType == VppType::CL_TWEAK) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterTweak(m_dev->cl()));
+        shared_ptr<RGYFilterParamTweak> param(new RGYFilterParamTweak());
+        param->tweak = inputParam->vpp.tweak;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = true;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //deband
+    if (vppType == VppType::CL_DEBAND) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterDeband(m_dev->cl()));
+        shared_ptr<RGYFilterParamDeband> param(new RGYFilterParamDeband());
+        param->deband = inputParam->vpp.deband;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //padding
+    if (vppType == VppType::CL_PAD) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterPad(m_dev->cl()));
+        shared_ptr<RGYFilterParamPad> param(new RGYFilterParamPad());
+        param->pad = inputParam->vpp.pad;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->frameOut.width = m_encWidth;
+        param->frameOut.height = m_encHeight;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    PrintMes(RGY_LOG_ERROR, _T("Unknown filter type.\n"));
+    return RGY_ERR_UNSUPPORTED;
 }
 
 RGY_ERR VCECore::initEncoder(VCEParam *prm) {
@@ -2448,7 +2532,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
     }
 #if 0
     if (m_pFileWriterListAudio.size() > 0) {
-        m_pipelineTasks.push_back(std::make_unique<PipelineTaskAudio>(m_pFileReader.get(), m_AudioReaders, m_pFileWriterListAudio, m_vpFilters, 0, m_pLog));
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskAudio>(m_dev->context(), m_pFileReader.get(), m_AudioReaders, m_pFileWriterListAudio, m_vpFilters, 0, m_pLog));
     }
     if (m_trimParam.list.size() > 0) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskTrim>(m_trimParam, 0, m_pLog));
@@ -2463,27 +2547,24 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskCheckPTS>(m_dev->context(), srcTimebase, srcTimebase, m_outputTimebase, outFrameDuration, m_nAVSyncMode, (pReader) ? pReader->GetFramePosList() : nullptr, m_pLog));
     }
 
-#if 0
     for (auto& filterBlock : m_vpFilters) {
-        if (filterBlock.type == VppFilterType::FILTER_MFX) {
-            auto err = err_to_rgy(m_dev->context().JoinSession(filterBlock.vppmfx->GetSession()));
-            if (err != RGY_ERR_NONE) {
-                PrintMes(RGY_LOG_ERROR, _T("Failed to join mfx vpp session: %s.\n"), get_err_mes(err));
-                return err;
-            }
+        if (filterBlock.type == VppFilterType::FILTER_AMF) {
+#if ENABLE_VPPAMF
             m_pipelineTasks.push_back(std::make_unique<PipelineTaskMFXVpp>(m_dev->context(), 1, filterBlock.vppmfx->mfxvpp(), filterBlock.vppmfx->mfxparams(), filterBlock.vppmfx->mfxver(), m_pLog));
+#endif
         } else if (filterBlock.type == VppFilterType::FILTER_OPENCL) {
-            if (!m_cl) {
-                PrintMes(RGY_LOG_ERROR, _T("OpenCL not enabled, OpenCL filters cannot be used.\n"), CPU_GEN_STR[m_device->CPUGen()]);
+            if (!m_dev->cl()) {
+                PrintMes(RGY_LOG_ERROR, _T("OpenCL not enabled, OpenCL filters cannot be used.\n"));
                 return RGY_ERR_UNSUPPORTED;
             }
-            m_pipelineTasks.push_back(std::make_unique<PipelineTaskOpenCL>(filterBlock.vppcl, nullptr, m_cl, m_device->memType(), m_device->allocator(), &m_dev->context(), 1, m_pLog));
+            m_pipelineTasks.push_back(std::make_unique<PipelineTaskOpenCL>(m_dev->context(), filterBlock.vppcl, nullptr, m_dev->cl(), 1, m_dev->dx11interlop(), m_pLog));
         } else {
             PrintMes(RGY_LOG_ERROR, _T("Unknown filter type.\n"));
             return RGY_ERR_UNSUPPORTED;
         }
     }
 
+#if 0
     if (m_videoQualityMetric) {
         int prevtask = -1;
         for (int itask = (int)m_pipelineTasks.size() - 1; itask >= 0; itask--) {
@@ -3120,6 +3201,7 @@ RGY_ERR VCECore::run_output() {
     return RGY_ERR_NONE;
 }
 
+#if 0
 RGY_ERR VCECore::run() {
     m_pStatus->SetStart();
     m_state = RGY_STATE_RUNNING;
@@ -3796,6 +3878,7 @@ RGY_ERR VCECore::run() {
     }
     return (m_state == RGY_STATE_ERROR) ? res : RGY_ERR_NONE;
 }
+#endif
 
 void VCECore::PrintEncoderParam() {
     PrintMes(RGY_LOG_INFO, GetEncoderParam().c_str());
@@ -3905,14 +3988,33 @@ tstring VCECore::GetEncoderParam() {
     if (cropEnabled(inputInfo.crop)) {
         mes += strsprintf(_T("Crop:          %d,%d,%d,%d\n"), inputInfo.crop.e.left, inputInfo.crop.e.up, inputInfo.crop.e.right, inputInfo.crop.e.bottom);
     }
-    tstring vppFilterMes;
-    for (const auto &filter : m_vpFilters) {
-        vppFilterMes += strsprintf(_T("%s%s\n"), (vppFilterMes.length()) ? _T("               ") : _T("Vpp Filters    "), filter->GetInputMessage().c_str());
+    if (m_vpFilters.size() > 0 || m_videoQualityMetric) {
+        const TCHAR *m = _T("VPP            ");
+        if (m_vpFilters.size() > 0) {
+            tstring vppstr;
+            for (auto& block : m_vpFilters) {
+                if (block.type == VppFilterType::FILTER_AMF) {
+#if ENABLE_VPPAMF
+                    vppstr += block.vppmfx->print();
+#endif
+                } else if (block.type == VppFilterType::FILTER_OPENCL) {
+                    for (auto& clfilter : block.vppcl) {
+                        vppstr += str_replace(clfilter->GetInputMessage(), _T("\n               "), _T("\n")) + _T("\n");
+                    }
+                }
+            }
+            std::vector<TCHAR> vpp_mes(vppstr.length() + 1, _T('\0'));
+            memcpy(vpp_mes.data(), vppstr.c_str(), vpp_mes.size() * sizeof(vpp_mes[0]));
+            for (TCHAR *p = vpp_mes.data(), *q; (p = _tcstok_s(p, _T("\n"), &q)) != NULL; ) {
+                mes += strsprintf(_T("%s%s\n"), m, p);
+                m = _T("               ");
+                p = NULL;
+            }
+        }
+        if (m_videoQualityMetric) {
+            mes += strsprintf(_T("%s%s\n"), m, m_videoQualityMetric->GetInputMessage().c_str());
+        }
     }
-    if (m_videoQualityMetric) {
-        vppFilterMes += _T("               ") + m_videoQualityMetric->GetInputMessage() + _T("\n");
-    }
-    mes += vppFilterMes;
     mes += strsprintf(_T("Output:        %s  %s @ Level %s%s\n"),
         CodecToStr(m_encCodec).c_str(),
         getPropertyDesc(AMF_PARAM_PROFILE(m_encCodec), get_profile_list(m_encCodec)).c_str(),

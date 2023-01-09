@@ -33,9 +33,11 @@
 #include <future>
 #include <atomic>
 #include <deque>
+#include <set>
 #pragma warning(push)
 #pragma warning(disable:4100)
 #include "VideoEncoderVCE.h"
+#include "Component.h"
 #include "Factory.h"
 #include "Trace.h"
 
@@ -46,6 +48,7 @@
 #include "rgy_input.h"
 #include "rgy_input_avcodec.h"
 #include "rgy_output.h"
+#include "rgy_output_avcodec.h"
 #include "rgy_opencl.h"
 #include "rgy_filter.h"
 #include "rgy_filter_ssim.h"
@@ -68,7 +71,9 @@ enum RGYRunState {
 enum class VppType : int {
     VPP_NONE,
 
-    AMF_FILTER_A,
+    AMF_COLORSPACE,
+    AMF_DENOISE,
+    AMF_RESIZE,
 
     AMF_MAX,
 
@@ -115,12 +120,20 @@ static VppFilterType getVppFilterType(VppType vpptype) {
     return VppFilterType::FILTER_NONE;
 }
 
+struct AMFFilter {
+
+    amf::AMFComponentPtr filter;
+
+    AMFFilter(amf::AMFComponentPtr& f) : filter(f) {};
+    ~AMFFilter() {};
+};
+
 struct VppVilterBlock {
     VppFilterType type;
-    amf::AMFComponentPtr vppamf;
+    std::unique_ptr<AMFFilter> vppamf;
     std::vector<std::unique_ptr<RGYFilter>> vppcl;
 
-    VppVilterBlock(amf::AMFComponentPtr& filter) : type(VppFilterType::FILTER_AMF), vppamf(filter), vppcl() {};
+    VppVilterBlock(amf::AMFComponentPtr& filter) : type(VppFilterType::FILTER_AMF), vppamf(std::move(std::make_unique<AMFFilter>(filter))), vppcl() {};
     VppVilterBlock(std::vector<std::unique_ptr<RGYFilter>>& filter) : type(VppFilterType::FILTER_OPENCL), vppamf(), vppcl(std::move(filter)) {};
 };
 
@@ -1106,6 +1119,136 @@ public:
     }
 };
 
+#if 0
+class PipelineTaskAudio : public PipelineTask {
+protected:
+    RGYInput *m_input;
+    std::map<int, std::shared_ptr<RGYOutputAvcodec>> m_pWriterForAudioStreams;
+    std::map<int, RGYFilter *> m_filterForStreams;
+    std::vector<std::shared_ptr<RGYInput>> m_audioReaders;
+public:
+    PipelineTaskAudio(amf::AMFContextPtr context, RGYInput *input, std::vector<std::shared_ptr<RGYInput>>& audioReaders, std::vector<std::shared_ptr<RGYOutput>>& fileWriterListAudio, std::vector<VppVilterBlock>& vpFilters, int outMaxQueueSize, std::shared_ptr<RGYLog> log) :
+        PipelineTask(PipelineTaskType::AUDIO, context, outMaxQueueSize, log),
+        m_input(input), m_audioReaders(audioReaders) {
+        //streamのindexから必要なwriteへのポインタを返すテーブルを作成
+        for (auto writer : fileWriterListAudio) {
+            auto pAVCodecWriter = std::dynamic_pointer_cast<RGYOutputAvcodec>(writer);
+            if (pAVCodecWriter) {
+                auto trackIdList = pAVCodecWriter->GetStreamTrackIdList();
+                for (auto trackID : trackIdList) {
+                    m_pWriterForAudioStreams[trackID] = pAVCodecWriter;
+                }
+            }
+        }
+        //streamのtrackIdからパケットを送信するvppフィルタへのポインタを返すテーブルを作成
+        for (auto& filterBlock : vpFilters) {
+            if (filterBlock.type == VppFilterType::FILTER_OPENCL) {
+                for (auto& filter : filterBlock.vppcl) {
+                    const auto targetTrackId = filter->targetTrackIdx();
+                    if (targetTrackId != 0) {
+                        m_filterForStreams[targetTrackId] = filter.get();
+                    }
+                }
+            }
+        }
+    };
+    virtual ~PipelineTaskAudio() {};
+
+    virtual bool isPassThrough() const override { return true; }
+
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override { return std::nullopt; };
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override { return std::nullopt; };
+
+
+    void flushAudio() {
+        PrintMes(RGY_LOG_DEBUG, _T("Clear packets in writer...\n"));
+        std::set<RGYOutputAvcodec*> writers;
+        for (const auto& [ streamid, writer ] : m_pWriterForAudioStreams) {
+            auto pWriter = std::dynamic_pointer_cast<RGYOutputAvcodec>(writer);
+            if (pWriter != nullptr) {
+                writers.insert(pWriter.get());
+            }
+        }
+        for (const auto& writer : writers) {
+            //エンコーダなどにキャッシュされたパケットを書き出す
+            writer->WriteNextPacket(nullptr);
+        }
+    }
+
+    RGY_ERR extractAudio(int inputFrames) {
+        RGY_ERR ret = RGY_ERR_NONE;
+#if ENABLE_AVSW_READER
+        if (m_pWriterForAudioStreams.size() > 0) {
+#if ENABLE_SM_READER
+            RGYInputSM *pReaderSM = dynamic_cast<RGYInputSM *>(m_input);
+            const int droppedInAviutl = (pReaderSM != nullptr) ? pReaderSM->droppedFrames() : 0;
+#else
+            const int droppedInAviutl = 0;
+#endif
+
+            auto packetList = m_input->GetStreamDataPackets(inputFrames + droppedInAviutl);
+
+            //音声ファイルリーダーからのトラックを結合する
+            for (const auto& reader : m_audioReaders) {
+                vector_cat(packetList, reader->GetStreamDataPackets(inputFrames + droppedInAviutl));
+            }
+            //パケットを各Writerに分配する
+            for (uint32_t i = 0; i < packetList.size(); i++) {
+                AVPacket *pkt = packetList[i];
+                const int nTrackId = (int)((uint32_t)pkt->flags >> 16);
+                const bool sendToFilter = m_filterForStreams.count(nTrackId) > 0;
+                const bool sendToWriter = m_pWriterForAudioStreams.count(nTrackId) > 0;
+                if (sendToFilter) {
+                    AVPacket *pktToFilter = nullptr;
+                    if (sendToWriter) {
+                        pktToFilter = av_packet_clone(pkt);
+                    } else {
+                        std::swap(pktToFilter, pkt);
+                    }
+                    auto err = m_filterForStreams[nTrackId]->addStreamPacket(pktToFilter);
+                    if (err != RGY_ERR_NONE) {
+                        return err;
+                    }
+                }
+                if (sendToWriter) {
+                    auto pWriter = m_pWriterForAudioStreams[nTrackId];
+                    if (pWriter == nullptr) {
+                        PrintMes(RGY_LOG_ERROR, _T("Invalid writer found for %s track #%d\n"), char_to_tstring(trackMediaTypeStr(nTrackId)).c_str(), trackID(nTrackId));
+                        return RGY_ERR_NOT_FOUND;
+                    }
+                    auto err = pWriter->WriteNextPacket(pkt);
+                    if (err != RGY_ERR_NONE) {
+                        return err;
+                    }
+                    pkt = nullptr;
+                }
+                if (pkt != nullptr) {
+                    PrintMes(RGY_LOG_ERROR, _T("Failed to find writer for %s track #%d\n"), char_to_tstring(trackMediaTypeStr(nTrackId)).c_str(), trackID(nTrackId));
+                    return RGY_ERR_NOT_FOUND;
+                }
+            }
+        }
+#endif //ENABLE_AVSW_READER
+        return ret;
+    };
+
+    virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        m_inFrames++;
+        auto err = extractAudio(m_inFrames);
+        if (err != RGY_ERR_NONE) {
+            return err;
+        }
+        if (!frame) {
+            flushAudio();
+            return RGY_ERR_MORE_DATA;
+        }
+        PipelineTaskOutputSurf *taskSurf = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
+        m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(taskSurf->surf()));
+        return RGY_ERR_NONE;
+    }
+};
+#endif
+
 class PipelineTaskAMFEncode : public PipelineTask {
 protected:
     amf::AMFComponentPtr m_encoder;
@@ -1317,7 +1460,239 @@ public:
     }
 };
 
+class PipelineTaskOpenCL : public PipelineTask {
+protected:
+    std::shared_ptr<RGYOpenCLContext> m_cl;
+    bool m_dx11interlop;
+    std::vector<std::unique_ptr<RGYFilter>>& m_vpFilters;
+    std::deque<std::unique_ptr<PipelineTaskOutput>> m_prevInputFrame; //前回投入されたフレーム、完了通知を待ってから解放するため、参照を保持する
+    RGYFilterSsim *m_videoMetric;
+public:
+    PipelineTaskOpenCL(amf::AMFContextPtr context, std::vector<std::unique_ptr<RGYFilter>>& vppfilters, RGYFilterSsim *videoMetric, std::shared_ptr<RGYOpenCLContext> cl, int outMaxQueueSize, bool dx11interlop, std::shared_ptr<RGYLog> log) :
+        PipelineTask(PipelineTaskType::OPENCL, context, outMaxQueueSize, log), m_cl(cl), m_vpFilters(vppfilters), m_dx11interlop(dx11interlop), m_prevInputFrame(), m_videoMetric(videoMetric) {
 
+    };
+    virtual ~PipelineTaskOpenCL() {
+        m_prevInputFrame.clear();
+        m_cl.reset();
+    };
+
+    void setVideoQualityMetricFilter(RGYFilterSsim *videoMetric) {
+        m_videoMetric = videoMetric;
+    }
+
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override { return std::nullopt; };
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override { return std::nullopt; };
+    virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        if (m_prevInputFrame.size() > 0) {
+            //前回投入したフレームの処理が完了していることを確認したうえで参照を破棄することでロックを解放する
+            auto prevframe = std::move(m_prevInputFrame.front());
+            m_prevInputFrame.pop_front();
+            prevframe->depend_clear();
+        }
+
+        deque<std::pair<RGYFrameInfo, uint32_t>> filterframes;
+        RGYCLFrameInterop *clFrameInInterop = nullptr;
+
+        bool drain = !frame;
+        if (!frame) {
+            filterframes.push_back(std::make_pair(RGYFrameInfo(), 0u));
+        } else {
+            auto taskSurf = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
+            if (taskSurf == nullptr) {
+                PrintMes(RGY_LOG_ERROR, _T("Invalid task surface.\n"));
+                return RGY_ERR_NULL_PTR;
+            }
+            if (auto surfVppIn = taskSurf->surf().amfsurf(); surfVppIn != nullptr) {
+                if (taskSurf->surf().frame()->getInfo().mem_type != RGY_MEM_TYPE_CPU
+                    && surfVppIn->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
+                    amf::AMFContext::AMFOpenCLLocker locker(m_context);
+#if 0
+                    auto ar = inAmf->Interop(amf::AMF_MEMORY_OPENCL);
+#else
+#if 1
+                    //dummyのCPUへのメモリコピーを行う
+                    //こうしないとデコーダからの出力をOpenCLに渡したときに、フレームが壊れる(フレーム順序が入れ替わってガクガクする)
+                    amf::AMFDataPtr data;
+                    surfVppIn->Duplicate(amf::AMF_MEMORY_HOST, &data);
+#endif
+                    auto ar = surfVppIn->Convert(amf::AMF_MEMORY_OPENCL);
+#endif
+                    if (ar != AMF_OK) {
+                        PrintMes(RGY_LOG_ERROR, _T("Failed to convert plane: %s.\n"), get_err_mes(err_to_rgy(ar)));
+                        return err_to_rgy(ar);
+                    }
+                }
+                filterframes.push_back(std::make_pair(taskSurf->surf().frame()->getInfo(), 0u));
+            } else if (auto surfVppIn = taskSurf->surf().clframe(); surfVppIn != nullptr) {
+                filterframes.push_back(std::make_pair(taskSurf->surf().frame()->getInfo(), 0u));
+            } else {
+                PrintMes(RGY_LOG_ERROR, _T("Invalid task surface (not opencl or amf).\n"));
+                return RGY_ERR_NULL_PTR;
+            }
+            //ここでinput frameの参照を m_prevInputFrame で保持するようにして、OpenCLによるフレームの処理が完了しているかを確認できるようにする
+            //これを行わないとこのフレームが再度使われてしまうことになる
+            m_prevInputFrame.push_back(std::move(frame));
+        }
+#define FRAME_COPY_ONLY 0
+#if !FRAME_COPY_ONLY
+        std::vector<std::unique_ptr<PipelineTaskOutputSurf>> outputSurfs;
+        while (filterframes.size() > 0 || drain) {
+            //フィルタリングするならここ
+            for (uint32_t ifilter = filterframes.front().second; ifilter < m_vpFilters.size() - 1; ifilter++) {
+                int nOutFrames = 0;
+                RGYFrameInfo *outInfo[16] = { 0 };
+                auto sts_filter = m_vpFilters[ifilter]->filter(&filterframes.front().first, (RGYFrameInfo **)&outInfo, &nOutFrames);
+                if (sts_filter != RGY_ERR_NONE) {
+                    PrintMes(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), m_vpFilters[ifilter]->name().c_str());
+                    return sts_filter;
+                }
+                if (nOutFrames == 0) {
+                    if (drain) {
+                        filterframes.front().second++;
+                        continue;
+                    }
+                    return RGY_ERR_NONE;
+                }
+                drain = false; //途中でフレームが出てきたら、drain完了していない
+
+                // 上書きするタイプのフィルタの場合、pop_front -> push_front は不要
+                if (m_vpFilters[ifilter]->GetFilterParam()->bOutOverwrite
+                    && filterframes.front().first.ptr
+                    && filterframes.front().first.ptr == outInfo[0]->ptr) {
+                    // 上書きするタイプのフィルタが複数のフレームを返すのはサポートしない
+                    if (nOutFrames > 1) {
+                        PrintMes(RGY_LOG_ERROR, _T("bOutOverwrite = true but nOutFrames = %d at filter[%d][%s].\n"),
+                            nOutFrames, ifilter, m_vpFilters[ifilter]->name().c_str());
+                        return RGY_ERR_UNSUPPORTED;
+                    }
+                } else {
+                    filterframes.pop_front();
+                    //最初に出てきたフレームは先頭に追加する
+                    for (int jframe = nOutFrames - 1; jframe >= 0; jframe--) {
+                        filterframes.push_front(std::make_pair(*outInfo[jframe], ifilter + 1));
+                    }
+                }
+            }
+            if (drain) {
+                return RGY_ERR_MORE_DATA; //最後までdrain = trueなら、drain完了
+            }
+            PipelineTaskSurface surfVppOut;
+            if (workSurfaceType() == PipelineTaskSurfaceType::CL) {
+                surfVppOut = getWorkSurf();
+                if (surfVppOut == nullptr) {
+                    PrintMes(RGY_LOG_ERROR, _T("failed to get work surface for input.\n"));
+                    return RGY_ERR_NOT_ENOUGH_BUFFER;
+                }
+            } else {
+                //エンコードバッファにコピー
+                amf::AMFContext::AMFOpenCLLocker locker(m_context);
+                auto &lastFilter = m_vpFilters[m_vpFilters.size() - 1];
+                const auto lastFilterOut = lastFilter->GetFilterParam()->frameOut;
+                amf::AMFSurfacePtr pSurface;
+                if (m_dx11interlop) {
+                    auto ar = m_context->AllocSurface(amf::AMF_MEMORY_DX11, csp_rgy_to_enc(lastFilterOut.csp),
+                        lastFilterOut.width, lastFilterOut.height, &pSurface);
+                    if (ar != AMF_OK) {
+                        PrintMes(RGY_LOG_ERROR, _T("Failed to allocate surface: %s.\n"), get_err_mes(err_to_rgy(ar)));
+                        return err_to_rgy(ar);
+                    }
+                    ar = pSurface->Interop(amf::AMF_MEMORY_OPENCL);
+                    if (ar != AMF_OK) {
+                        PrintMes(RGY_LOG_ERROR, _T("Failed to get interop of surface: %s.\n"), get_err_mes(err_to_rgy(ar)));
+                        return err_to_rgy(ar);
+                    }
+                } else {
+                    auto ar = m_context->AllocSurface(amf::AMF_MEMORY_OPENCL, csp_rgy_to_enc(lastFilterOut.csp),
+                        lastFilterOut.width, lastFilterOut.height, &pSurface);
+                    if (ar != AMF_OK) {
+                        PrintMes(RGY_LOG_ERROR, _T("Failed to allocate surface: %s.\n"), get_err_mes(err_to_rgy(ar)));
+                        return err_to_rgy(ar);
+                    }
+                }
+                auto surfVppOutAMF = std::make_unique<RGYFrame>(pSurface);
+                surfVppOut = m_workSurfs.addSurface(surfVppOutAMF);
+            }
+            //エンコードバッファにコピー
+            auto &lastFilter = m_vpFilters[m_vpFilters.size() - 1];
+            //最後のフィルタはRGYFilterCspCropでなければならない
+            if (typeid(*lastFilter.get()) != typeid(RGYFilterCspCrop)) {
+                PrintMes(RGY_LOG_ERROR, _T("Last filter setting invalid.\n"));
+                return RGY_ERR_INVALID_PARAM;
+            }
+            //エンコードバッファのポインタを渡す
+            int nOutFrames = 0;
+            auto surfVppOutInfo = surfVppOut.frame()->getInfo();
+            RGYFrameInfo *outInfo[1];
+            outInfo[0] = &surfVppOutInfo;
+            RGYOpenCLEvent clevent; // 最終フィルタの処理完了を伝えるevent
+            auto sts_filter = lastFilter->filter(&filterframes.front().first, (RGYFrameInfo **)&outInfo, &nOutFrames, m_cl->queue(), &clevent);
+            if (sts_filter != RGY_ERR_NONE) {
+                PrintMes(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), lastFilter->name().c_str());
+                return sts_filter;
+            }
+            if (m_videoMetric) {
+                //フレームを転送
+                int dummy = 0;
+                auto err = m_videoMetric->filter(&filterframes.front().first, nullptr, &dummy, m_cl->queue(), &clevent);
+                if (err != RGY_ERR_NONE) {
+                    PrintMes(RGY_LOG_ERROR, _T("Failed to send frame for video metric calcualtion: %s.\n"), get_err_mes(err));
+                    return err;
+                }
+            }
+            filterframes.pop_front();
+
+            surfVppOut.frame()->setDuration(surfVppOutInfo.duration);
+            surfVppOut.frame()->setTimestamp(surfVppOutInfo.timestamp);
+            surfVppOut.frame()->setInputFrameId(surfVppOutInfo.inputFrameId);
+            surfVppOut.frame()->setPicstruct(surfVppOutInfo.picstruct);
+            surfVppOut.frame()->setFlags(surfVppOutInfo.flags);
+            surfVppOut.frame()->setDataList(surfVppOutInfo.dataList);
+
+            outputSurfs.push_back(std::make_unique<PipelineTaskOutputSurf>(surfVppOut, frame, clevent));
+
+            #undef clFrameOutInteropRelease
+        }
+        m_outQeueue.insert(m_outQeueue.end(),
+            std::make_move_iterator(outputSurfs.begin()),
+            std::make_move_iterator(outputSurfs.end())
+        );
+#else
+        auto surfVppOut = getWorkSurf();
+        if (m_surfVppOutInterop.count(surfVppOut.get()) == 0) {
+            m_surfVppOutInterop[surfVppOut.get()] = getOpenCLFrameInterop(surfVppOut.get(), m_memType, CL_MEM_WRITE_ONLY, m_allocator, m_cl.get(), m_cl->queue(), m_vpFilters.front()->GetFilterParam()->frameIn);
+        }
+        auto clFrameOutInterop = m_surfVppOutInterop[surfVppOut.get()].get();
+        if (!clFrameOutInterop) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to get OpenCL interop [out].\n"));
+            return RGY_ERR_NULL_PTR;
+        }
+        auto err = clFrameOutInterop->acquire(m_cl->queue());
+        if (err != RGY_ERR_NONE) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to acquire OpenCL interop [out]: %s.\n"), get_err_mes(err));
+            return RGY_ERR_NULL_PTR;
+        }
+        auto inputSurface = clFrameInInterop->frameInfo();
+        surfVppOut->Data.TimeStamp = inputSurface.timestamp;
+        surfVppOut->Data.FrameOrder = inputSurface.inputFrameId;
+        surfVppOut->Info.PicStruct = picstruct_rgy_to_enc(inputSurface.picstruct);
+        surfVppOut->Data.DataFlag = (mfxU16)inputSurface.flags;
+
+        auto encSurfaceInfo = clFrameOutInterop->frameInfo();
+        RGYOpenCLEvent clevent;
+        m_cl->copyFrame(&encSurfaceInfo, &inputSurface, nullptr, m_cl->queue(), &clevent);
+        if (clFrameInInterop) {
+            clFrameInInterop->release(&clevent);
+            if (!m_prevInputFrame.empty() && m_prevInputFrame.back()) {
+                dynamic_cast<PipelineTaskOutputSurf *>(m_prevInputFrame.back().get())->addClEvent(clevent);
+            }
+        }
+        clFrameOutInterop->release(&clevent);
+        m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(m_mfxSession, surfVppOut, frame, clevent));
+#endif
+        return RGY_ERR_NONE;
+    }
+};
 
 
 
