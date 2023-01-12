@@ -100,6 +100,31 @@ static tstring PrintMultipleListOptions(const TCHAR *option_name, const TCHAR *o
     return str;
 }
 
+tstring gen_cmd_help_vppamf() {
+    tstring str;
+    str += strsprintf(_T("\n")
+        _T("   --vpp-scaler-sharpness <float>\n")
+        _T("   --vpp-preprocess [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     JND based edge-adaptive denoising filter.\n")
+        _T("    params\n")
+        _T("      strength=<int>    (default: %d, range 0 - 10)\n")
+        _T("      sensitivity=<int> (default: %d, range 0 - 10)\n")
+        _T("      adapt-filter=<bool> (default: %s)\n"),
+        VCE_FILTER_PP_STRENGTH_DEFAULT,
+        VCE_FILTER_PP_SENSITIVITY_DEFAULT,
+        VCE_FILTER_PP_ADAPT_FILTER_DEFAULT ? _T("on") : _T("off")
+    );
+    str += strsprintf(_T("\n")
+        _T("   --vpp-enhance [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("    params\n")
+        _T("      attenuation=<float> (default: %.2f, range 0.02 - 0.4)\n")
+        _T("      radius=<int> (default: %d, range 1 - 4)\n"),
+        VE_FCR_DEFAULT_ATTENUATION,
+        VCE_FILTER_VQENHANCER_RADIUS_DEFAULT
+    );
+    return str;
+}
+
 tstring encoder_help() {
     tstring str;
     str += _T("Usage: VCEEncC [Options] -i <filename> -o <filename>\n");
@@ -252,6 +277,7 @@ tstring encoder_help() {
     str += gen_cmd_help_common();
     str += _T("\n");
     str += gen_cmd_help_vpp();
+    str += gen_cmd_help_vppamf();
     str += _T("\n");
     str += gen_cmd_help_ctrl();
     return str;
@@ -311,6 +337,136 @@ struct sArgsData {
     int nBframes = -1;
 };
 #endif
+
+int parse_one_vppamf_option(const TCHAR *option_name, const TCHAR *strInput[], int &i, int nArgNum, VCEFilterParam *vpp, [[maybe_unused]] sArgsData *argData) {
+    if (IS_OPTION("vpp-scaler-sharpness")) {
+        i++;
+        try {
+            vpp->scaler.sharpness = std::stof(strInput[i]);
+        } catch (...) {
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
+        }
+        return 0;
+    }
+    if (IS_OPTION("vpp-preprocess")) {
+        vpp->pp.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{
+            "strength", "sensitivity", "adapt-filter" };
+
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos + 1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->pp.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("strength")) {
+                    try {
+                        vpp->pp.strength = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("sensitivity")) {
+                    try {
+                        vpp->pp.sensitivity = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("adapt-filter")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->pp.adaptiveFilter = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
+    if (IS_OPTION("vpp-enhance")) {
+        vpp->enhancer.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{
+            "attenuation", "fcr-radius" };
+
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos + 1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->enhancer.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("attenuation")) {
+                    try {
+                        vpp->enhancer.attenuation = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("fcr-radius")) {
+                    try {
+                        vpp->enhancer.fcrRadius = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
+    return -1;
+}
 
 int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, int nArgNum, VCEParam *pParams, sArgsData *argData) {
 
@@ -1100,6 +1256,9 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
     ret = parse_one_vpp_option(option_name, strInput, i, nArgNum, &pParams->vpp, argData);
     if (ret >= 0) return ret;
 
+    ret = parse_one_vppamf_option(option_name, strInput, i, nArgNum, &pParams->vppamf, argData);
+    if (ret >= 0) return ret;
+
     print_cmd_error_unknown_opt(strInput[i]);
     return 1;
 }
@@ -1347,6 +1506,55 @@ int parse_cmd(VCEParam *pParams, const char *cmda, bool ignore_parse_err) {
 }
 #endif //#if defined(_WIN32) || defined(_WIN64)
 
+tstring gen_cmd(const VCEFilterParam *param, const VCEFilterParam *defaultPrm, bool save_disabled_prm) {
+    std::basic_stringstream<TCHAR> cmd;
+    std::basic_stringstream<TCHAR> tmp;
+
+#define OPT_FLOAT(str, opt, prec) if ((param->opt) != (defaultPrm->opt)) cmd << _T(" ") << (str) << _T(" ") << std::setprecision(prec) << (param->opt);
+#define ADD_NUM(str, opt) if ((param->opt) != (defaultPrm->opt)) tmp << _T(",") << (str) << _T("=") << (param->opt);
+#define ADD_FLOAT(str, opt, prec) if ((param->opt) != (defaultPrm->opt)) tmp << _T(",") << (str) << _T("=") << std::setprecision(prec) << (param->opt);
+#define ADD_BOOL(str, opt) if ((param->opt) != (defaultPrm->opt)) tmp << _T(",") << (str) << _T("=") << ((param->opt) ? (_T("true")) : (_T("false")));
+
+    OPT_FLOAT(_T("--vpp-scaler-sharpness"), scaler.sharpness, 2);
+
+    if (param->pp != defaultPrm->pp) {
+        tmp.str(tstring());
+        if (!param->pp.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (param->pp.enable || save_disabled_prm) {
+            ADD_NUM(_T("strength"), pp.strength);
+            ADD_NUM(_T("sensitivity"), pp.sensitivity);
+            ADD_BOOL(_T("adapt-filter"), pp.adaptiveFilter);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-preprocess ") << tmp.str().substr(1);
+        } else if (param->pp.enable) {
+            cmd << _T(" --vpp-preprocess");
+        }
+    }
+    if (param->enhancer != defaultPrm->enhancer) {
+        tmp.str(tstring());
+        if (!param->enhancer.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (param->enhancer.enable || save_disabled_prm) {
+            ADD_FLOAT(_T("attenuation"), enhancer.attenuation, 2);
+            ADD_NUM(_T("radius"), enhancer.fcrRadius);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-enhance ") << tmp.str().substr(1);
+        } else if (param->enhancer.enable) {
+            cmd << _T(" --vpp-enhance");
+        }
+    }
+    return cmd.str();
+#undef OPT_FLOAT
+#undef ADD_NUM
+#undef ADD_FLOAT
+#undef ADD_BOOL
+}
+
 #pragma warning (push)
 #pragma warning (disable: 4127)
 tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
@@ -1354,7 +1562,6 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     std::basic_stringstream<TCHAR> tmp;
     VCEParam encPrmDefault;
 
-#define OPT_FLOAT(str, opt, prec) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << (str) << _T(" ") << std::setprecision(prec) << (pParams->opt);
 #define OPT_NUM(str, opt) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << (str) << _T(" ") << (int)(pParams->opt);
 #define OPT_NUM_OPTIONAL(str, opt) if ((pParams->opt.has_value())) cmd << _T(" ") << (str) << _T(" ") << (int)(pParams->opt.value());
 #define OPT_NUM_HEVC(str, codec, opt) if ((pParams->codecParam[RGY_CODEC_HEVC].opt) != (encPrmDefault.codecParam[RGY_CODEC_HEVC].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << (int)(pParams->codecParam[RGY_CODEC_HEVC].opt);
@@ -1408,6 +1615,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
 #define OPT_STR_PATH(str, opt) if (pParams->opt.length() > 0) cmd << _T(" ") << str << _T(" \"") << (pParams->opt.c_str()) << _T("\"");
 
 #define ADD_NUM(str, opt) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << (pParams->opt);
+#define ADD_FLOAT(str, opt, prec) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << std::setprecision(prec) << (pParams->opt);
 #define ADD_LST(str, opt, list) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << get_chr_from_value(list, (int)(pParams->opt));
 #define ADD_BOOL(str, opt) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << ((pParams->opt) ? (_T("true")) : (_T("false")));
 #define ADD_BOOL_OPTIONAL(str, opt) if (pParams->opt.has_value()) tmp << _T(",") << (str) << _T("=") << ((pParams->opt.value()) ? (_T("true")) : (_T("false")));
@@ -1546,6 +1754,8 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     cmd << gen_cmd(&pParams->ctrl, &encPrmDefault.ctrl, save_disabled_prm);
 
     cmd << gen_cmd(&pParams->vpp, &encPrmDefault.vpp, save_disabled_prm);
+
+    cmd << gen_cmd(&pParams->vppamf, &encPrmDefault.vppamf, save_disabled_prm);
 
     return cmd.str();
 }

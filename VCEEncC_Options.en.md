@@ -1775,6 +1775,21 @@ Rather weak noise reduction by modified pmd method, aimed to preserve edge while
   --vpp-pmd apply_count=2,strength=90,threshold=120
   ```
 
+### --vpp-preprocess [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
+JND based edge-adaptive denoising filter that helps the encoder to achieve better coding efficiency.
+This filter aims at removing bit-expensive high frequency details
+that are not important for the human visual system.
+
+- **パラメータ**
+  - strength=&lt;int&gt;      (default: 4, range 0 - 10)
+    Strength of filter. The higher the strength, the stronger the filtering.
+
+  - sensitivity=&lt;int&gt;  (default: 4, range 0 - 10)
+    Sensitivity of edges detection. The higher the value, the more likely edges will be detected, and less likely filtering will occur.
+
+  - adapt-filter=&lt;bool&gt;   (default: %s)
+    Enable adaptive filtering.
+
 ### --vpp-subburn [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 "Burn in" specified subtitle to the video. Text type subtitles will be rendered by [libass](https://github.com/libass/libass).
 
@@ -1838,7 +1853,6 @@ Specify the resizing algorithm.
   | option name | description |
   |:---|:---|
   | auto     | auto select |
-  | simple   | use simple scaling     |
   | advanced | use high quality scaling |
   | bilinear | linear interpolation |
   | spline16 | 4x4 spline curve interpolation |
@@ -1847,6 +1861,10 @@ Specify the resizing algorithm.
   | lanczos2 | 4x4 Lanczos resampling |
   | lanczos3 | 6x6 Lanczos resampling |
   | lanczos4 | 8x8 Lanczos resampling |
+  | amf_bilinear | amf bilinear interpolation  |
+  | amf_bicubic  | amf bicubic interpolation   |
+  | amf_fsr      | amf fsr resampling          |
+  | amf_point    | amf point scaling           |
 
 ### --vpp-unsharp [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 unsharp filter, for edge and detail enhancement.
@@ -1919,6 +1937,13 @@ Edge warping (sharpening) filter.
   Example: Using type 1.
   --vpp-warpsharp threshold=128,blur=3,type=1
   ```
+
+### --vpp-enhance [<param1>=<value>][,<param2>=<value>][...]
+
+- **Parameters**
+  - attenuation=&lt;float&gt; (default: 0.1, range 0.02 - 0.4)
+
+  - radius=&lt;int&gt; (default: 2, range 1 - 4)
 
 ### --vpp-tweak [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 

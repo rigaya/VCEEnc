@@ -1138,6 +1138,19 @@ private: System::Windows::Forms::ComboBox^  fcgCXAV1Level;
 private: System::Windows::Forms::ComboBox^  fcgCXAV1Profile;
 private: System::Windows::Forms::Label^  fcgLBAV1Level;
 private: System::Windows::Forms::Label^  fcgLBAV1Profile;
+private: System::Windows::Forms::Panel^  fcgPNVppPreProcess;
+
+private: System::Windows::Forms::Label^  fcgLBVppPreProcessAdaptiveFilter;
+private: System::Windows::Forms::CheckBox^  fcgCBVppPreProcessAdaptiveFilter;
+private: System::Windows::Forms::Label^  fcgLBVppPreProcessSensitivity;
+private: System::Windows::Forms::Label^  fcgLBVppPreProcessStrength;
+private: System::Windows::Forms::NumericUpDown^  fcgNUVppPreProcessSensitivity;
+private: System::Windows::Forms::NumericUpDown^  fcgNUVppPreProcessStrength;
+private: System::Windows::Forms::Panel^  fcgPNVppDetailEnhance;
+private: System::Windows::Forms::Label^  fcgLBVppDetailEnhanceRadius;
+private: System::Windows::Forms::Label^  fcgLBVppDetailEnhanceAttenuation;
+private: System::Windows::Forms::NumericUpDown^  fcgNUVppDetailEnhanceRadius;
+private: System::Windows::Forms::NumericUpDown^  fcgNUVppDetailEnhanceAttenuation;
 
 
 
@@ -1338,6 +1351,11 @@ private: System::Windows::Forms::Label^  fcgLBAV1Profile;
             this->fcgLBDevice = (gcnew System::Windows::Forms::Label());
             this->fcgCXDevice = (gcnew System::Windows::Forms::ComboBox());
             this->fcgPNHEVCLevelProfile = (gcnew System::Windows::Forms::Panel());
+            this->fcgPNAV1LevelProfile = (gcnew System::Windows::Forms::Panel());
+            this->fcgCXAV1Level = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgCXAV1Profile = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgLBAV1Level = (gcnew System::Windows::Forms::Label());
+            this->fcgLBAV1Profile = (gcnew System::Windows::Forms::Label());
             this->fcgCXHEVCLevel = (gcnew System::Windows::Forms::ComboBox());
             this->fcgCXHEVCProfile = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBHEVCLevel = (gcnew System::Windows::Forms::Label());
@@ -1646,11 +1664,18 @@ private: System::Windows::Forms::Label^  fcgLBAV1Profile;
             this->fcgCXAudioPriority = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBAudioPriority = (gcnew System::Windows::Forms::Label());
             this->fcgPNHideToolStripBorder = (gcnew System::Windows::Forms::Panel());
-            this->fcgPNAV1LevelProfile = (gcnew System::Windows::Forms::Panel());
-            this->fcgCXAV1Level = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgCXAV1Profile = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgLBAV1Level = (gcnew System::Windows::Forms::Label());
-            this->fcgLBAV1Profile = (gcnew System::Windows::Forms::Label());
+            this->fcgPNVppPreProcess = (gcnew System::Windows::Forms::Panel());
+            this->fcgLBVppPreProcessSensitivity = (gcnew System::Windows::Forms::Label());
+            this->fcgLBVppPreProcessStrength = (gcnew System::Windows::Forms::Label());
+            this->fcgNUVppPreProcessSensitivity = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUVppPreProcessStrength = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgCBVppPreProcessAdaptiveFilter = (gcnew System::Windows::Forms::CheckBox());
+            this->fcgLBVppPreProcessAdaptiveFilter = (gcnew System::Windows::Forms::Label());
+            this->fcgPNVppDetailEnhance = (gcnew System::Windows::Forms::Panel());
+            this->fcgLBVppDetailEnhanceRadius = (gcnew System::Windows::Forms::Label());
+            this->fcgLBVppDetailEnhanceAttenuation = (gcnew System::Windows::Forms::Label());
+            this->fcgNUVppDetailEnhanceRadius = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUVppDetailEnhanceAttenuation = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgtoolStripSettings->SuspendLayout();
             this->fcgtabControlMux->SuspendLayout();
             this->fcgtabPageMP4->SuspendLayout();
@@ -1662,6 +1687,7 @@ private: System::Windows::Forms::Label^  fcgLBAV1Profile;
             this->fcgtabControlVCE->SuspendLayout();
             this->tabPageVideoEnc->SuspendLayout();
             this->fcgPNHEVCLevelProfile->SuspendLayout();
+            this->fcgPNAV1LevelProfile->SuspendLayout();
             this->fcgPNQP->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPI))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPP))->BeginInit();
@@ -1762,7 +1788,12 @@ private: System::Windows::Forms::Label^  fcgLBAV1Profile;
             this->fcgPNAudioInternal->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrateInternal))->BeginInit();
             this->fcgtabPageAudioOther->SuspendLayout();
-            this->fcgPNAV1LevelProfile->SuspendLayout();
+            this->fcgPNVppPreProcess->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppPreProcessSensitivity))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppPreProcessStrength))->BeginInit();
+            this->fcgPNVppDetailEnhance->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDetailEnhanceRadius))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDetailEnhanceAttenuation))->BeginInit();
             this->SuspendLayout();
             // 
             // fcgtoolStripSettings
@@ -2697,6 +2728,55 @@ private: System::Windows::Forms::Label^  fcgLBAV1Profile;
             this->fcgPNHEVCLevelProfile->Name = L"fcgPNHEVCLevelProfile";
             this->fcgPNHEVCLevelProfile->Size = System::Drawing::Size(255, 63);
             this->fcgPNHEVCLevelProfile->TabIndex = 110;
+            // 
+            // fcgPNAV1LevelProfile
+            // 
+            this->fcgPNAV1LevelProfile->Controls->Add(this->fcgCXAV1Level);
+            this->fcgPNAV1LevelProfile->Controls->Add(this->fcgCXAV1Profile);
+            this->fcgPNAV1LevelProfile->Controls->Add(this->fcgLBAV1Level);
+            this->fcgPNAV1LevelProfile->Controls->Add(this->fcgLBAV1Profile);
+            this->fcgPNAV1LevelProfile->Location = System::Drawing::Point(0, 0);
+            this->fcgPNAV1LevelProfile->Name = L"fcgPNAV1LevelProfile";
+            this->fcgPNAV1LevelProfile->Size = System::Drawing::Size(255, 63);
+            this->fcgPNAV1LevelProfile->TabIndex = 111;
+            // 
+            // fcgCXAV1Level
+            // 
+            this->fcgCXAV1Level->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXAV1Level->FormattingEnabled = true;
+            this->fcgCXAV1Level->Location = System::Drawing::Point(112, 36);
+            this->fcgCXAV1Level->Name = L"fcgCXAV1Level";
+            this->fcgCXAV1Level->Size = System::Drawing::Size(121, 22);
+            this->fcgCXAV1Level->TabIndex = 104;
+            this->fcgCXAV1Level->Tag = L"reCmd";
+            // 
+            // fcgCXAV1Profile
+            // 
+            this->fcgCXAV1Profile->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXAV1Profile->FormattingEnabled = true;
+            this->fcgCXAV1Profile->Location = System::Drawing::Point(112, 4);
+            this->fcgCXAV1Profile->Name = L"fcgCXAV1Profile";
+            this->fcgCXAV1Profile->Size = System::Drawing::Size(121, 22);
+            this->fcgCXAV1Profile->TabIndex = 102;
+            this->fcgCXAV1Profile->Tag = L"reCmd";
+            // 
+            // fcgLBAV1Level
+            // 
+            this->fcgLBAV1Level->AutoSize = true;
+            this->fcgLBAV1Level->Location = System::Drawing::Point(13, 39);
+            this->fcgLBAV1Level->Name = L"fcgLBAV1Level";
+            this->fcgLBAV1Level->Size = System::Drawing::Size(33, 14);
+            this->fcgLBAV1Level->TabIndex = 103;
+            this->fcgLBAV1Level->Text = L"レベル";
+            // 
+            // fcgLBAV1Profile
+            // 
+            this->fcgLBAV1Profile->AutoSize = true;
+            this->fcgLBAV1Profile->Location = System::Drawing::Point(13, 7);
+            this->fcgLBAV1Profile->Name = L"fcgLBAV1Profile";
+            this->fcgLBAV1Profile->Size = System::Drawing::Size(53, 14);
+            this->fcgLBAV1Profile->TabIndex = 101;
+            this->fcgLBAV1Profile->Text = L"プロファイル";
             // 
             // fcgCXHEVCLevel
             // 
@@ -4037,6 +4117,7 @@ private: System::Windows::Forms::Label^  fcgLBAV1Profile;
             // 
             // fcgPNVppWarpsharp
             // 
+            this->fcgPNVppWarpsharp->Controls->Add(this->fcgPNVppDetailEnhance);
             this->fcgPNVppWarpsharp->Controls->Add(this->fcgLBVppWarpsharpDepth);
             this->fcgPNVppWarpsharp->Controls->Add(this->fcgNUVppWarpsharpDepth);
             this->fcgPNVppWarpsharp->Controls->Add(this->fcgLBVppWarpsharpThreshold);
@@ -4308,6 +4389,7 @@ private: System::Windows::Forms::Label^  fcgLBAV1Profile;
             // 
             // fcggroupBoxVppDenoise
             // 
+            this->fcggroupBoxVppDenoise->Controls->Add(this->fcgPNVppPreProcess);
             this->fcggroupBoxVppDenoise->Controls->Add(this->fcgCXVppDenoiseMethod);
             this->fcggroupBoxVppDenoise->Controls->Add(this->fcgPNVppDenoisePmd);
             this->fcggroupBoxVppDenoise->Controls->Add(this->fcgPNVppDenoiseConv3D);
@@ -5967,54 +6049,132 @@ private: System::Windows::Forms::Label^  fcgLBAV1Profile;
             this->fcgPNHideToolStripBorder->TabIndex = 52;
             this->fcgPNHideToolStripBorder->Visible = false;
             // 
-            // fcgPNAV1LevelProfile
+            // fcgPNVppPreProcess
             // 
-            this->fcgPNAV1LevelProfile->Controls->Add(this->fcgCXAV1Level);
-            this->fcgPNAV1LevelProfile->Controls->Add(this->fcgCXAV1Profile);
-            this->fcgPNAV1LevelProfile->Controls->Add(this->fcgLBAV1Level);
-            this->fcgPNAV1LevelProfile->Controls->Add(this->fcgLBAV1Profile);
-            this->fcgPNAV1LevelProfile->Location = System::Drawing::Point(0, 0);
-            this->fcgPNAV1LevelProfile->Name = L"fcgPNAV1LevelProfile";
-            this->fcgPNAV1LevelProfile->Size = System::Drawing::Size(255, 63);
-            this->fcgPNAV1LevelProfile->TabIndex = 111;
+            this->fcgPNVppPreProcess->Controls->Add(this->fcgLBVppPreProcessAdaptiveFilter);
+            this->fcgPNVppPreProcess->Controls->Add(this->fcgCBVppPreProcessAdaptiveFilter);
+            this->fcgPNVppPreProcess->Controls->Add(this->fcgLBVppPreProcessSensitivity);
+            this->fcgPNVppPreProcess->Controls->Add(this->fcgLBVppPreProcessStrength);
+            this->fcgPNVppPreProcess->Controls->Add(this->fcgNUVppPreProcessSensitivity);
+            this->fcgPNVppPreProcess->Controls->Add(this->fcgNUVppPreProcessStrength);
+            this->fcgPNVppPreProcess->Location = System::Drawing::Point(3, 42);
+            this->fcgPNVppPreProcess->Name = L"fcgPNVppPreProcess";
+            this->fcgPNVppPreProcess->Size = System::Drawing::Size(311, 92);
+            this->fcgPNVppPreProcess->TabIndex = 68;
             // 
-            // fcgCXAV1Level
+            // fcgLBVppPreProcessSensitivity
             // 
-            this->fcgCXAV1Level->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXAV1Level->FormattingEnabled = true;
-            this->fcgCXAV1Level->Location = System::Drawing::Point(112, 36);
-            this->fcgCXAV1Level->Name = L"fcgCXAV1Level";
-            this->fcgCXAV1Level->Size = System::Drawing::Size(121, 22);
-            this->fcgCXAV1Level->TabIndex = 104;
-            this->fcgCXAV1Level->Tag = L"reCmd";
+            this->fcgLBVppPreProcessSensitivity->AutoSize = true;
+            this->fcgLBVppPreProcessSensitivity->Location = System::Drawing::Point(50, 34);
+            this->fcgLBVppPreProcessSensitivity->Name = L"fcgLBVppPreProcessSensitivity";
+            this->fcgLBVppPreProcessSensitivity->Size = System::Drawing::Size(29, 14);
+            this->fcgLBVppPreProcessSensitivity->TabIndex = 11;
+            this->fcgLBVppPreProcessSensitivity->Text = L"閾値";
             // 
-            // fcgCXAV1Profile
+            // fcgLBVppPreProcessStrength
             // 
-            this->fcgCXAV1Profile->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXAV1Profile->FormattingEnabled = true;
-            this->fcgCXAV1Profile->Location = System::Drawing::Point(112, 4);
-            this->fcgCXAV1Profile->Name = L"fcgCXAV1Profile";
-            this->fcgCXAV1Profile->Size = System::Drawing::Size(121, 22);
-            this->fcgCXAV1Profile->TabIndex = 102;
-            this->fcgCXAV1Profile->Tag = L"reCmd";
+            this->fcgLBVppPreProcessStrength->AutoSize = true;
+            this->fcgLBVppPreProcessStrength->Location = System::Drawing::Point(50, 7);
+            this->fcgLBVppPreProcessStrength->Name = L"fcgLBVppPreProcessStrength";
+            this->fcgLBVppPreProcessStrength->Size = System::Drawing::Size(26, 14);
+            this->fcgLBVppPreProcessStrength->TabIndex = 10;
+            this->fcgLBVppPreProcessStrength->Text = L"強さ";
             // 
-            // fcgLBAV1Level
+            // fcgNUVppPreProcessSensitivity
             // 
-            this->fcgLBAV1Level->AutoSize = true;
-            this->fcgLBAV1Level->Location = System::Drawing::Point(13, 39);
-            this->fcgLBAV1Level->Name = L"fcgLBAV1Level";
-            this->fcgLBAV1Level->Size = System::Drawing::Size(33, 14);
-            this->fcgLBAV1Level->TabIndex = 103;
-            this->fcgLBAV1Level->Text = L"レベル";
+            this->fcgNUVppPreProcessSensitivity->Location = System::Drawing::Point(132, 32);
+            this->fcgNUVppPreProcessSensitivity->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, 0 });
+            this->fcgNUVppPreProcessSensitivity->Name = L"fcgNUVppPreProcessSensitivity";
+            this->fcgNUVppPreProcessSensitivity->Size = System::Drawing::Size(60, 21);
+            this->fcgNUVppPreProcessSensitivity->TabIndex = 8;
+            this->fcgNUVppPreProcessSensitivity->Tag = L"reCmd";
+            this->fcgNUVppPreProcessSensitivity->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            this->fcgNUVppPreProcessSensitivity->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 4, 0, 0, 0 });
             // 
-            // fcgLBAV1Profile
+            // fcgNUVppPreProcessStrength
             // 
-            this->fcgLBAV1Profile->AutoSize = true;
-            this->fcgLBAV1Profile->Location = System::Drawing::Point(13, 7);
-            this->fcgLBAV1Profile->Name = L"fcgLBAV1Profile";
-            this->fcgLBAV1Profile->Size = System::Drawing::Size(53, 14);
-            this->fcgLBAV1Profile->TabIndex = 101;
-            this->fcgLBAV1Profile->Text = L"プロファイル";
+            this->fcgNUVppPreProcessStrength->Location = System::Drawing::Point(132, 5);
+            this->fcgNUVppPreProcessStrength->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 10, 0, 0, 0 });
+            this->fcgNUVppPreProcessStrength->Name = L"fcgNUVppPreProcessStrength";
+            this->fcgNUVppPreProcessStrength->Size = System::Drawing::Size(60, 21);
+            this->fcgNUVppPreProcessStrength->TabIndex = 7;
+            this->fcgNUVppPreProcessStrength->Tag = L"reCmd";
+            this->fcgNUVppPreProcessStrength->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            this->fcgNUVppPreProcessStrength->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 4, 0, 0, 0 });
+            // 
+            // fcgCBVppPreProcessAdaptiveFilter
+            // 
+            this->fcgCBVppPreProcessAdaptiveFilter->AutoSize = true;
+            this->fcgCBVppPreProcessAdaptiveFilter->Location = System::Drawing::Point(132, 64);
+            this->fcgCBVppPreProcessAdaptiveFilter->Name = L"fcgCBVppPreProcessAdaptiveFilter";
+            this->fcgCBVppPreProcessAdaptiveFilter->Size = System::Drawing::Size(15, 14);
+            this->fcgCBVppPreProcessAdaptiveFilter->TabIndex = 18;
+            this->fcgCBVppPreProcessAdaptiveFilter->Tag = L"reCmd";
+            this->fcgCBVppPreProcessAdaptiveFilter->UseVisualStyleBackColor = true;
+            // 
+            // fcgLBVppPreProcessAdaptiveFilter
+            // 
+            this->fcgLBVppPreProcessAdaptiveFilter->AutoSize = true;
+            this->fcgLBVppPreProcessAdaptiveFilter->Location = System::Drawing::Point(50, 63);
+            this->fcgLBVppPreProcessAdaptiveFilter->Name = L"fcgLBVppPreProcessAdaptiveFilter";
+            this->fcgLBVppPreProcessAdaptiveFilter->Size = System::Drawing::Size(59, 14);
+            this->fcgLBVppPreProcessAdaptiveFilter->TabIndex = 19;
+            this->fcgLBVppPreProcessAdaptiveFilter->Text = L"適応フィルタ";
+            // 
+            // fcgPNVppDetailEnhance
+            // 
+            this->fcgPNVppDetailEnhance->Controls->Add(this->fcgLBVppDetailEnhanceRadius);
+            this->fcgPNVppDetailEnhance->Controls->Add(this->fcgLBVppDetailEnhanceAttenuation);
+            this->fcgPNVppDetailEnhance->Controls->Add(this->fcgNUVppDetailEnhanceRadius);
+            this->fcgPNVppDetailEnhance->Controls->Add(this->fcgNUVppDetailEnhanceAttenuation);
+            this->fcgPNVppDetailEnhance->Location = System::Drawing::Point(0, 0);
+            this->fcgPNVppDetailEnhance->Name = L"fcgPNVppDetailEnhance";
+            this->fcgPNVppDetailEnhance->Size = System::Drawing::Size(311, 61);
+            this->fcgPNVppDetailEnhance->TabIndex = 67;
+            // 
+            // fcgLBVppDetailEnhanceRadius
+            // 
+            this->fcgLBVppDetailEnhanceRadius->AutoSize = true;
+            this->fcgLBVppDetailEnhanceRadius->Location = System::Drawing::Point(172, 9);
+            this->fcgLBVppDetailEnhanceRadius->Name = L"fcgLBVppDetailEnhanceRadius";
+            this->fcgLBVppDetailEnhanceRadius->Size = System::Drawing::Size(29, 14);
+            this->fcgLBVppDetailEnhanceRadius->TabIndex = 3;
+            this->fcgLBVppDetailEnhanceRadius->Text = L"半径";
+            // 
+            // fcgLBVppDetailEnhanceAttenuation
+            // 
+            this->fcgLBVppDetailEnhanceAttenuation->AutoSize = true;
+            this->fcgLBVppDetailEnhanceAttenuation->Location = System::Drawing::Point(8, 10);
+            this->fcgLBVppDetailEnhanceAttenuation->Name = L"fcgLBVppDetailEnhanceAttenuation";
+            this->fcgLBVppDetailEnhanceAttenuation->Size = System::Drawing::Size(40, 14);
+            this->fcgLBVppDetailEnhanceAttenuation->TabIndex = 1;
+            this->fcgLBVppDetailEnhanceAttenuation->Text = L"減衰度";
+            // 
+            // fcgNUVppDetailEnhanceRadius
+            // 
+            this->fcgNUVppDetailEnhanceRadius->Location = System::Drawing::Point(242, 7);
+            this->fcgNUVppDetailEnhanceRadius->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 4, 0, 0, 0 });
+            this->fcgNUVppDetailEnhanceRadius->Minimum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 0 });
+            this->fcgNUVppDetailEnhanceRadius->Name = L"fcgNUVppDetailEnhanceRadius";
+            this->fcgNUVppDetailEnhanceRadius->Size = System::Drawing::Size(60, 21);
+            this->fcgNUVppDetailEnhanceRadius->TabIndex = 4;
+            this->fcgNUVppDetailEnhanceRadius->Tag = L"reCmd";
+            this->fcgNUVppDetailEnhanceRadius->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            this->fcgNUVppDetailEnhanceRadius->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 2, 0, 0, 0 });
+            // 
+            // fcgNUVppDetailEnhanceAttenuation
+            // 
+            this->fcgNUVppDetailEnhanceAttenuation->DecimalPlaces = 2;
+            this->fcgNUVppDetailEnhanceAttenuation->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 131072 });
+            this->fcgNUVppDetailEnhanceAttenuation->Location = System::Drawing::Point(78, 7);
+            this->fcgNUVppDetailEnhanceAttenuation->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 4, 0, 0, 65536 });
+            this->fcgNUVppDetailEnhanceAttenuation->Minimum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 131072 });
+            this->fcgNUVppDetailEnhanceAttenuation->Name = L"fcgNUVppDetailEnhanceAttenuation";
+            this->fcgNUVppDetailEnhanceAttenuation->Size = System::Drawing::Size(60, 21);
+            this->fcgNUVppDetailEnhanceAttenuation->TabIndex = 2;
+            this->fcgNUVppDetailEnhanceAttenuation->Tag = L"reCmd";
+            this->fcgNUVppDetailEnhanceAttenuation->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            this->fcgNUVppDetailEnhanceAttenuation->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 65536 });
             // 
             // frmConfig
             // 
@@ -6061,6 +6221,8 @@ private: System::Windows::Forms::Label^  fcgLBAV1Profile;
             this->tabPageVideoEnc->PerformLayout();
             this->fcgPNHEVCLevelProfile->ResumeLayout(false);
             this->fcgPNHEVCLevelProfile->PerformLayout();
+            this->fcgPNAV1LevelProfile->ResumeLayout(false);
+            this->fcgPNAV1LevelProfile->PerformLayout();
             this->fcgPNQP->ResumeLayout(false);
             this->fcgPNQP->PerformLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUQPI))->EndInit();
@@ -6189,8 +6351,14 @@ private: System::Windows::Forms::Label^  fcgLBAV1Profile;
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrateInternal))->EndInit();
             this->fcgtabPageAudioOther->ResumeLayout(false);
             this->fcgtabPageAudioOther->PerformLayout();
-            this->fcgPNAV1LevelProfile->ResumeLayout(false);
-            this->fcgPNAV1LevelProfile->PerformLayout();
+            this->fcgPNVppPreProcess->ResumeLayout(false);
+            this->fcgPNVppPreProcess->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppPreProcessSensitivity))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppPreProcessStrength))->EndInit();
+            this->fcgPNVppDetailEnhance->ResumeLayout(false);
+            this->fcgPNVppDetailEnhance->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDetailEnhanceRadius))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDetailEnhanceAttenuation))->EndInit();
             this->ResumeLayout(false);
             this->PerformLayout();
 

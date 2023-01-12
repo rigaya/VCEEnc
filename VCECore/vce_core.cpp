@@ -766,7 +766,7 @@ RGY_ERR VCECore::initConverter(VCEParam *prm) {
     return RGY_ERR_NONE;
 }
 
-#define ENABLE_VPPAMF 0
+#define ENABLE_VPPAMF 1
 
 RGY_ERR VCECore::createOpenCLCopyFilterForPreVideoMetric(const VCEParam *prm) {
     std::unique_ptr<RGYFilter> filterCrop(new RGYFilterCspCrop(m_dev->cl()));
@@ -892,14 +892,13 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         const VppFilterType ftype2 = (i+1 < filterPipeline.size()) ? getVppFilterType(filterPipeline[i+1]) : VppFilterType::FILTER_NONE;
         if (ftype1 == VppFilterType::FILTER_AMF) {
 #if ENABLE_VPPAMF
-            auto [err, vppmfx] = AddFilterMFX(inputFrame, m_encFps, filterPipeline[i], &inputParam->vppmfx,
-                GetEncoderCSP(inputParam), GetEncoderBitdepth(inputParam), inputCrop, resize);
+            auto [err, vppamf] = AddFilterAMF(inputFrame, filterPipeline[i], inputParam, inputCrop, resize);
             inputCrop = nullptr;
             if (err != RGY_ERR_NONE) {
                 return err;
             }
-            if (vppmfx) {
-                m_vpFilters.push_back(VppVilterBlock(vppmfx));
+            if (vppamf) {
+                m_vpFilters.push_back(VppVilterBlock(vppamf));
             }
 #endif
         } else if (ftype1 == VppFilterType::FILTER_OPENCL) {
@@ -994,6 +993,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
 
     if (cspConvRequired || cropRequired)   filterPipeline.push_back(VppType::CL_CROP);
     if (inputParam->vpp.colorspace.enable) {
+#if 0
         bool requireOpenCL = inputParam->vpp.colorspace.hdr2sdr.tonemap != HDR2SDR_DISABLED || inputParam->vpp.colorspace.lut3d.table_file.length() > 0;
         if (!requireOpenCL) {
             auto currentVUI = inputParam->input.vui;
@@ -1012,6 +1012,9 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
             }
         }
         filterPipeline.push_back((requireOpenCL) ? VppType::CL_COLORSPACE : VppType::AMF_COLORSPACE);
+#else
+        filterPipeline.push_back(VppType::CL_COLORSPACE);
+#endif
     }
     if (inputParam->vpp.delogo.enable)     filterPipeline.push_back(VppType::CL_DELOGO);
     if (inputParam->vpp.afs.enable)        filterPipeline.push_back(VppType::CL_AFS);
@@ -1023,19 +1026,14 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.smooth.enable)     filterPipeline.push_back(VppType::CL_DENOISE_SMOOTH);
     if (inputParam->vpp.knn.enable)        filterPipeline.push_back(VppType::CL_DENOISE_KNN);
     if (inputParam->vpp.pmd.enable)        filterPipeline.push_back(VppType::CL_DENOISE_PMD);
-    //if (inputParam->vppmfx.denoise.enable) filterPipeline.push_back(VppType::AMF_DENOISE);
+    if (inputParam->vppamf.pp.enable)      filterPipeline.push_back(VppType::AMF_PREPROCESS);
     if (inputParam->vpp.subburn.size()>0)  filterPipeline.push_back(VppType::CL_SUBBURN);
-#if ENABLE_VPPAMF
     if (     resizeRequired == RGY_VPP_RESIZE_TYPE_OPENCL) filterPipeline.push_back(VppType::CL_RESIZE);
     else if (resizeRequired != RGY_VPP_RESIZE_TYPE_NONE)   filterPipeline.push_back(VppType::AMF_RESIZE);
-#else
-    if (resizeRequired != RGY_VPP_RESIZE_TYPE_NONE)   filterPipeline.push_back(VppType::CL_RESIZE);
-#endif
     if (inputParam->vpp.unsharp.enable)    filterPipeline.push_back(VppType::CL_UNSHARP);
     if (inputParam->vpp.edgelevel.enable)  filterPipeline.push_back(VppType::CL_EDGELEVEL);
     if (inputParam->vpp.warpsharp.enable)  filterPipeline.push_back(VppType::CL_WARPSHARP);
-    //if (inputParam->vppmfx.detail.enable)  filterPipeline.push_back(VppType::MFX_DETAIL_ENHANCE);
-    //if (inputParam->vppmfx.mirrorType != MFX_MIRRORING_DISABLED) filterPipeline.push_back(VppType::MFX_MIRROR);
+    if (inputParam->vppamf.enhancer.enable)  filterPipeline.push_back(VppType::AMF_VQENHANCE);
     if (inputParam->vpp.transform.enable)  filterPipeline.push_back(VppType::CL_TRANSFORM);
     if (inputParam->vpp.tweak.enable)      filterPipeline.push_back(VppType::CL_TWEAK);
     if (inputParam->vpp.deband.enable)     filterPipeline.push_back(VppType::CL_DEBAND);
@@ -1065,6 +1063,60 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
         }
     }
     return filterPipeline;
+}
+
+std::tuple<RGY_ERR, std::unique_ptr<AMFFilter>> VCECore::AddFilterAMF(
+    RGYFrameInfo & inputFrame, const VppType vppType, const VCEParam *inputParam, const sInputCrop *crop, const std::pair<int, int> resize) {
+    std::unique_ptr<AMFFilter> filter;
+    switch (vppType) {
+    case VppType::AMF_PREPROCESS: {
+        filter = std::make_unique<AMFFilterPreProcessing>(m_dev->context(), m_pLog);
+        auto param = std::make_shared<AMFFilterParamPreProcessing>();
+        param->pp = inputParam->vppamf.pp;
+        param->bitrate = inputParam->nBitrate;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        m_pLastFilterParam = param;
+        } break;
+    case VppType::AMF_RESIZE: {
+        filter = std::make_unique<AMFFilterHQScaler>(m_dev->context(), m_pLog);
+        auto param = std::make_shared<AMFFilterParamHQScaler>();
+        param->scaler = inputParam->vppamf.scaler;
+        param->scaler.algorithm = resize_mode_rgy_to_enc(inputParam->vpp.resize_algo);
+        if (param->scaler.algorithm < 0) {
+            PrintMes(RGY_LOG_ERROR, _T("Unknown resize algorithm %s for HQ Scaler.\n"), get_cx_desc(list_vpp_resize, inputParam->vpp.resize_mode));
+            return { RGY_ERR_UNSUPPORTED, nullptr };
+        }
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->frameOut.width = resize.first;
+        param->frameOut.height = resize.second;
+        param->baseFps = m_encFps;
+        m_pLastFilterParam = param;
+        } break;
+    case VppType::AMF_VQENHANCE: {
+        filter = std::make_unique<AMFFilterVQEnhancer>(m_dev->context(), m_pLog);
+        auto param = std::make_shared<AMFFilterParamVQEnhancer>();
+        param->enhancer = inputParam->vppamf.enhancer;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        m_pLastFilterParam = param;
+        } break;
+    default:
+        PrintMes(RGY_LOG_ERROR, _T("Unknown filter type.\n"));
+        return { RGY_ERR_UNSUPPORTED, nullptr };
+    }
+    auto sts = filter->init(m_pFactory, m_pTrace, m_pLastFilterParam);
+    if (sts != RGY_ERR_NONE) {
+        return { sts, nullptr };
+    }
+    //入力フレーム情報を更新
+    inputFrame = m_pLastFilterParam->frameOut;
+    m_encFps = m_pLastFilterParam->baseFps;
+    return { RGY_ERR_NONE, std::move(filter) };
 }
 
 RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilters,
@@ -2573,9 +2625,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
 
     for (auto& filterBlock : m_vpFilters) {
         if (filterBlock.type == VppFilterType::FILTER_AMF) {
-#if ENABLE_VPPAMF
-            m_pipelineTasks.push_back(std::make_unique<PipelineTaskMFXVpp>(m_dev->context(), 1, filterBlock.vppmfx->mfxvpp(), filterBlock.vppmfx->mfxparams(), filterBlock.vppmfx->mfxver(), m_pLog));
-#endif
+            m_pipelineTasks.push_back(std::make_unique<PipelineTaskAMFPreProcess>(m_dev->context(), filterBlock.vppamf, m_dev->cl(), 1, m_pLog));
         } else if (filterBlock.type == VppFilterType::FILTER_OPENCL) {
             if (!m_dev->cl()) {
                 PrintMes(RGY_LOG_ERROR, _T("OpenCL not enabled, OpenCL filters cannot be used.\n"));
@@ -4016,9 +4066,7 @@ tstring VCECore::GetEncoderParam() {
             tstring vppstr;
             for (auto& block : m_vpFilters) {
                 if (block.type == VppFilterType::FILTER_AMF) {
-#if ENABLE_VPPAMF
-                    vppstr += block.vppmfx->print();
-#endif
+                    vppstr += str_replace(block.vppamf->GetInputMessage(), _T("\n               "), _T("\n")) + _T("\n");
                 } else if (block.type == VppFilterType::FILTER_OPENCL) {
                     for (auto& clfilter : block.vppcl) {
                         vppstr += str_replace(clfilter->GetInputMessage(), _T("\n               "), _T("\n")) + _T("\n");

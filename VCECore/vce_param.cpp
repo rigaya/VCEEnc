@@ -29,6 +29,82 @@
 #include "rgy_util.h"
 #include "vce_param.h"
 
+
+VppAMFHQScaler::VppAMFHQScaler() :
+    enable(false),
+    algorithm(AMF_HQ_SCALER_ALGORITHM_BICUBIC),
+    sharpness(0.0) {
+};
+bool VppAMFHQScaler::operator==(const VppAMFHQScaler& x) const {
+    return enable == x.enable
+        && algorithm == x.algorithm
+        && sharpness == x.sharpness;
+}
+bool VppAMFHQScaler::operator!=(const VppAMFHQScaler& x) const {
+    return !(*this == x);
+}
+tstring VppAMFHQScaler::print() const {
+    return strsprintf(
+        _T("scaler: %s, sharpness %.1f\n"),
+        get_cx_desc(list_vce_hq_scaler, algorithm), sharpness);
+}
+
+VppAMFPreProcessing::VppAMFPreProcessing() :
+    enable(false),
+    strength(VCE_FILTER_PP_STRENGTH_DEFAULT),
+    sensitivity(VCE_FILTER_PP_SENSITIVITY_DEFAULT),
+    adaptiveFilter(VCE_FILTER_PP_ADAPT_FILTER_DEFAULT) {
+};
+bool VppAMFPreProcessing::operator==(const VppAMFPreProcessing& x) const {
+    return enable == x.enable
+        && strength == x.strength
+        && sensitivity == x.sensitivity
+        && adaptiveFilter == x.adaptiveFilter;
+}
+bool VppAMFPreProcessing::operator!=(const VppAMFPreProcessing& x) const {
+    return !(*this == x);
+}
+tstring VppAMFPreProcessing::print() const {
+    return strsprintf(
+        _T("pp: strength %d, sensitivity %d, adaptivefilter %s\n"),
+        strength, sensitivity,
+        adaptiveFilter ? _T("on") : _T("off"));
+}
+
+VppAMFVQEnhancer::VppAMFVQEnhancer() :
+    enable(false),
+    attenuation((float)VE_FCR_DEFAULT_ATTENUATION),
+    fcrRadius(3) {
+};
+bool VppAMFVQEnhancer::operator==(const VppAMFVQEnhancer& x) const {
+    return enable == x.enable
+        && attenuation == x.attenuation
+        && fcrRadius == x.fcrRadius;
+}
+bool VppAMFVQEnhancer::operator!=(const VppAMFVQEnhancer& x) const {
+    return !(*this == x);
+}
+tstring VppAMFVQEnhancer::print() const {
+    return strsprintf(
+        _T("vqenhancer: attenuation %.1f, radius %d\n"),
+        attenuation, fcrRadius);
+}
+
+VCEFilterParam::VCEFilterParam() :
+    scaler(),
+    pp(),
+    enhancer() {
+
+}
+bool VCEFilterParam::operator==(const VCEFilterParam& x) const {
+    return scaler == x.scaler
+        && pp == x.pp
+        && enhancer == x.enhancer;
+}
+bool VCEFilterParam::operator!=(const VCEFilterParam& x) const {
+    return !(*this == x);
+}
+
 VCEParamPA::VCEParamPA() :
     enable(false),
     sc(true),
@@ -73,6 +149,7 @@ VCEParam::VCEParam() :
     common(),
     ctrl(),
     vpp(),
+    vppamf(),
     codec(RGY_CODEC_H264),
     codecParam(),
     deviceID(-1),

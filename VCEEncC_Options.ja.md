@@ -1811,6 +1811,19 @@ yadifによるインタレ解除を行う。
   --vpp-pmd apply_count=2,strength=90,threshold=120
   ```
 
+### --vpp-preprocess [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
+輪郭等を保護しながらJNDベースのノイズ除去を行うことで、人間の目に重要でない高周波成分を削減し、圧縮効率改善を目指すフィルタ。
+
+- **パラメータ**
+  - strength=&lt;int&gt;      (default: 4, range 0 - 10)
+    フィルタ強度。値が大きいほど強くなる。
+
+  - sensitivity=&lt;int&gt;  (default: 4, range 0 - 10)
+    フィルタ感度。値が大きいほどエッジとして判定されやすくなり、フィルタの対象から外れやすくなる。
+
+  - adapt-filter=&lt;bool&gt;   (default: %s)
+    適応的フィルタを有効にする。
+
 ### --vpp-subburn [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 指定した字幕の焼きこみを行う。テキスト形式の字幕については、[libass](https://github.com/libass/libass)を用いたレンダリングを行う。
 
@@ -1882,6 +1895,10 @@ yadifによるインタレ解除を行う。
   | lanczos2 | 4x4 lanczos補間 |
   | lanczos3 | 6x6 lanczos補間 |
   | lanczos4 | 8x8 lanczos補間 |
+  | amf_bilinear | amf 線形補間  |
+  | amf_bicubic  | amf 3次補間   |
+  | amf_fsr      | amf fsr 補間  |
+  | amf_point    | amf point scaling |
 
 ### --vpp-unsharp [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 unsharpフィルタ。輪郭・ディテール強調用のフィルタ。
@@ -1954,6 +1971,14 @@ unsharpフィルタ。輪郭・ディテール強調用のフィルタ。
   例: type=1を使う場合
   --vpp-warpsharp threshold=128,blur=3,type=1
   ```
+
+### --vpp-enhance [<param1>=<value>][,<param2>=<value>][...]
+
+- **パラメータ**
+  - attenuation=&lt;float&gt; (default: 0.1, range 0.02 - 0.4)
+
+  - radius=&lt;int&gt; (default: 2, range 1 - 4)
+    フィルタ計算の半径。
 
 ### --vpp-tweak [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 

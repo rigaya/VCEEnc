@@ -610,8 +610,8 @@ rgy_perf_counter.cpp        rgy_perf_monitor.cpp           rgy_pipe.cpp         
 rgy_prm.cpp                 rgy_resource.cpp               rgy_simd.cpp                rgy_status.cpp \
 rgy_thread_affinity.cpp     rgy_timecode.cpp               rgy_util.cpp                rgy_version.cpp \
 rgy_vulkan.cpp \
-vce_amf.cpp                 vce_cmd.cpp                    vce_core.cpp                vce_device.cpp \
-vce_device_vulkan.cpp       vce_param.cpp                  vce_util.cpp \
+vce_amf.cpp                 vce_filter.cpp                 vce_cmd.cpp                 vce_core.cpp \
+vce_device.cpp              vce_device_vulkan.cpp          vce_param.cpp               vce_util.cpp \
 "
 
 SRC_VCECORE_CL=" \

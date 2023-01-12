@@ -37,6 +37,9 @@ RGY_DISABLE_WARNING_STR("-Wclass-memaccess")
 #include "VideoEncoderHEVC.h"
 #include "VideoEncoderAV1.h"
 RGY_DISABLE_WARNING_POP
+#include "HQScaler.h"
+#include "PreProcessing.h"
+#include "VQEnhancer.h"
 #include "rgy_caption.h"
 #include "rgy_prm.h"
 
@@ -55,8 +58,14 @@ static const wchar_t* VCE_PARAM_KEY_CAPABILITY = L"DISPLAYCAPABILITY";
 
 static const wchar_t* RGY_PROP_TIMESTAMP = L"RGYPropTimestamp";
 static const wchar_t* RGY_PROP_DURATION = L"RGYPropDuration";
+static const wchar_t* RGY_PROP_INPUT_FRAMEID = L"RGYPropInputFrameID";
 
 static const TCHAR *VCEENCC_ABORT_EVENT = _T("VCEEncC_abort_%u");
+
+static const int VCE_FILTER_PP_STRENGTH_DEFAULT = 4;
+static const int VCE_FILTER_PP_SENSITIVITY_DEFAULT = 4;
+static const bool VCE_FILTER_PP_ADAPT_FILTER_DEFAULT = false;
+static const int VCE_FILTER_VQENHANCER_RADIUS_DEFAULT = 2;
 
 enum {
     VCE_RC_CQP = 0,
@@ -499,12 +508,65 @@ struct VCEParamPA {
     VCEParamPA();
 };
 
+const CX_DESC list_vce_hq_scaler[] = {
+    { _T("bilinear"), AMF_HQ_SCALER_ALGORITHM_BILINEAR },
+    { _T("bicubic"),  AMF_HQ_SCALER_ALGORITHM_BICUBIC  },
+    { _T("fsr"),      AMF_HQ_SCALER_ALGORITHM_FSR      },
+    { _T("point"),    AMF_HQ_SCALER_ALGORITHM_POINT    },
+    { NULL, 0 }
+};
+
+struct VppAMFHQScaler {
+    bool enable;
+    AMF_HQ_SCALER_ALGORITHM_ENUM algorithm;
+    float sharpness;
+
+    VppAMFHQScaler();
+    bool operator==(const VppAMFHQScaler& x) const;
+    bool operator!=(const VppAMFHQScaler& x) const;
+    tstring print() const;
+};
+
+struct VppAMFPreProcessing {
+    bool enable;
+    int strength;
+    int sensitivity;
+    bool adaptiveFilter;
+
+    VppAMFPreProcessing();
+    bool operator==(const VppAMFPreProcessing& x) const;
+    bool operator!=(const VppAMFPreProcessing& x) const;
+    tstring print() const;
+};
+
+struct VppAMFVQEnhancer {
+    bool enable;
+    float attenuation;
+    int fcrRadius;
+
+    VppAMFVQEnhancer();
+    bool operator==(const VppAMFVQEnhancer& x) const;
+    bool operator!=(const VppAMFVQEnhancer& x) const;
+    tstring print() const;
+};
+
+struct VCEFilterParam {
+    VppAMFHQScaler scaler;
+    VppAMFPreProcessing pp;
+    VppAMFVQEnhancer enhancer;
+
+    VCEFilterParam();
+    bool operator==(const VCEFilterParam& x) const;
+    bool operator!=(const VCEFilterParam& x) const;
+};
+
 struct VCEParam {
     VideoInfo input;              //入力する動画の情報
     RGYParamInput inprm;
     RGYParamCommon common;
     RGYParamControl ctrl;
     RGYParamVpp vpp;
+    VCEFilterParam vppamf;
 
     RGY_CODEC codec;
     VCECodecParam codecParam[RGY_CODEC_NUM];

@@ -54,6 +54,7 @@ MAP_PAIR_0_1_PROTO(codec, rgy, RGY_CODEC, dec, const wchar_t *);
 MAP_PAIR_0_1_PROTO(csp, rgy, RGY_CSP, enc, amf::AMF_SURFACE_FORMAT);
 MAP_PAIR_0_1_PROTO(loglevel, rgy, int, enc, int);
 MAP_PAIR_0_1_PROTO(frametype, rgy, RGY_PICSTRUCT, enc, amf::AMF_FRAME_TYPE);
+MAP_PAIR_0_1_PROTO(resize_mode, rgy, RGY_VPP_RESIZE_ALGO, enc, AMF_HQ_SCALER_ALGORITHM_ENUM);
 
 const wchar_t * codec_rgy_to_dec_10bit(const RGY_CODEC codec);
 

@@ -33,6 +33,7 @@
 #include "VideoEncoderHEVC.h"
 #include "VideoEncoderAV1.h"
 #include "VideoDecoderUVD.h"
+#include "HQScaler.h"
 #include "Trace.h"
 #include "Surface.h"
 #include "rgy_frame.h"
@@ -135,6 +136,15 @@ RGY_PICSTRUCT picstruct_enc_to_rgy(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_ENUM pics
     if (picstruct == AMF_VIDEO_ENCODER_PICTURE_STRUCTURE_BOTTOM_FIELD) return RGY_PICSTRUCT_FRAME_BFF;
     return RGY_PICSTRUCT_FRAME;
 }
+
+static const auto RGY_SCALING_MODE_TO_AMF = make_array<std::pair<RGY_VPP_RESIZE_ALGO, AMF_HQ_SCALER_ALGORITHM_ENUM>>(
+    std::make_pair(RGY_VPP_RESIZE_AMF_BILINEAR, AMF_HQ_SCALER_ALGORITHM_BILINEAR),
+    std::make_pair(RGY_VPP_RESIZE_AMF_BICUBIC,  AMF_HQ_SCALER_ALGORITHM_BICUBIC),
+    std::make_pair(RGY_VPP_RESIZE_AMF_FSR,      AMF_HQ_SCALER_ALGORITHM_FSR),
+    std::make_pair(RGY_VPP_RESIZE_AMF_POINT,    AMF_HQ_SCALER_ALGORITHM_POINT)
+    );
+
+MAP_PAIR_0_1(resize_mode, rgy, RGY_VPP_RESIZE_ALGO, enc, AMF_HQ_SCALER_ALGORITHM_ENUM, RGY_SCALING_MODE_TO_AMF, RGY_VPP_RESIZE_UNKNOWN, AMF_HQ_SCALER_ALGORITHM_BICUBIC);
 
 const TCHAR *AMFRetString(AMF_RESULT ret) {
 #define AMFRESULT_TO_STR(x) case x: return _T( #x );

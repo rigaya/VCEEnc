@@ -34,6 +34,7 @@
 #include <atomic>
 #include <deque>
 #include <set>
+#include <unordered_map>
 #pragma warning(push)
 #pragma warning(disable:4100)
 #include "VideoEncoderVCE.h"
@@ -58,6 +59,7 @@
 #include "rgy_device.h"
 #include "vce_device.h"
 #include "vce_param.h"
+#include "vce_filter.h"
 
 static const int RGY_WAIT_INTERVAL = 60000;
 
@@ -73,8 +75,9 @@ enum class VppType : int {
     VPP_NONE,
 
     AMF_COLORSPACE,
-    AMF_DENOISE,
+    AMF_PREPROCESS,
     AMF_RESIZE,
+    AMF_VQENHANCE,
 
     AMF_MAX,
 
@@ -121,20 +124,12 @@ static VppFilterType getVppFilterType(VppType vpptype) {
     return VppFilterType::FILTER_NONE;
 }
 
-struct AMFFilter {
-
-    amf::AMFComponentPtr filter;
-
-    AMFFilter(amf::AMFComponentPtr& f) : filter(f) {};
-    ~AMFFilter() {};
-};
-
 struct VppVilterBlock {
     VppFilterType type;
     std::unique_ptr<AMFFilter> vppamf;
     std::vector<std::unique_ptr<RGYFilter>> vppcl;
 
-    VppVilterBlock(amf::AMFComponentPtr& filter) : type(VppFilterType::FILTER_AMF), vppamf(std::move(std::make_unique<AMFFilter>(filter))), vppcl() {};
+    VppVilterBlock(std::unique_ptr<AMFFilter>& filter) : type(VppFilterType::FILTER_AMF), vppamf(std::move(filter)), vppcl() {};
     VppVilterBlock(std::vector<std::unique_ptr<RGYFilter>>& filter) : type(VppFilterType::FILTER_OPENCL), vppamf(), vppcl(std::move(filter)) {};
 };
 
@@ -1301,7 +1296,6 @@ public:
         //明示的に待機が必要
         frame->depend_clear();
 
-        RGYCLFrameInterop *clFrameInInterop = nullptr;
         PipelineTaskOutputSurf *taskSurf = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
         if (taskSurf == nullptr) {
             PrintMes(RGY_LOG_ERROR, _T("Invalid task surface.\n"));
@@ -1567,6 +1561,142 @@ public:
     }
 };
 
+class PipelineTaskAMFPreProcess : public PipelineTask {
+protected:
+    std::shared_ptr<RGYOpenCLContext> m_cl;
+    std::unique_ptr<AMFFilter>& m_vppFilter;
+    int m_vppOutFrames;
+    std::unordered_map<int64_t, std::vector<std::shared_ptr<RGYFrameData>>> m_metadatalist;
+    std::deque<std::unique_ptr<PipelineTaskOutput>> m_prevInputFrame; //前回投入されたフレーム、完了通知を待ってから解放するため、参照を保持する
+    RGYFilterSsim *m_videoMetric;
+public:
+    PipelineTaskAMFPreProcess(amf::AMFContextPtr context, std::unique_ptr<AMFFilter>& vppfilter, std::shared_ptr<RGYOpenCLContext> cl, int outMaxQueueSize, std::shared_ptr<RGYLog> log) :
+        PipelineTask(PipelineTaskType::AMFVPP, context, outMaxQueueSize, log), m_cl(cl), m_vppFilter(vppfilter), m_vppOutFrames(), m_metadatalist(), m_prevInputFrame() {
+
+    };
+    virtual ~PipelineTaskAMFPreProcess() {
+        m_prevInputFrame.clear();
+        m_cl.reset();
+    };
+
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override {
+        return std::make_pair(m_vppFilter->GetFilterParam()->frameIn, 0);
+    };
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override {
+        return std::make_pair(m_vppFilter->GetFilterParam()->frameOut, 0);
+    };
+    virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        if (m_prevInputFrame.size() > 0) {
+            //前回投入したフレームの処理が完了していることを確認したうえで参照を破棄することでロックを解放する
+            auto prevframe = std::move(m_prevInputFrame.front());
+            m_prevInputFrame.pop_front();
+            prevframe->depend_clear();
+        }
+
+        if (frame && frame->type() != PipelineTaskOutputType::SURFACE) {
+            PrintMes(RGY_LOG_ERROR, _T("Invalid frame type.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+
+        amf::AMFSurfacePtr pSurface = nullptr;
+        RGYFrame *surfVppIn = (frame) ? dynamic_cast<PipelineTaskOutputSurf *>(frame.get())->surf().frame() : nullptr;
+        const bool drain = surfVppIn == nullptr;
+        if (surfVppIn) {
+            if (surfVppIn->dataList().size() > 0) {
+                m_metadatalist[surfVppIn->timestamp()] = surfVppIn->dataList();
+            }
+            int64_t pts = surfVppIn->timestamp();
+            int64_t duration = surfVppIn->duration();
+            const auto inputFrameId = surfVppIn->inputFrameId();
+            auto frameDataList = surfVppIn->dataList();
+            if (inputFrameId < 0) {
+                PrintMes(RGY_LOG_ERROR, _T("Invalid inputFrameId: %d.\n"), inputFrameId);
+                return RGY_ERR_UNKNOWN;
+            }
+            pSurface = surfVppIn->detachSurface();
+            //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
+            pSurface->SetFrameType(amf::AMF_FRAME_PROGRESSIVE);
+            pSurface->SetProperty(RGY_PROP_TIMESTAMP, pts);
+            pSurface->SetProperty(RGY_PROP_DURATION, duration);
+            pSurface->SetProperty(RGY_PROP_INPUT_FRAMEID, inputFrameId);
+            m_inFrames++;
+
+            surfVppIn->clearDataList();
+        }
+
+        auto enc_sts = RGY_ERR_NONE;
+        auto ar = (drain) ? AMF_INPUT_FULL : AMF_OK;
+        for (;;) {
+            {
+                //VPPからの取り出し
+                amf::AMFDataPtr data;
+                const auto ar_out = m_vppFilter->filter()->QueryOutput(&data);
+                if (ar_out == AMF_EOF) {
+                    enc_sts = RGY_ERR_MORE_DATA;
+                    break;
+                } else if (ar_out == AMF_REPEAT) {
+                    ; //これ重要...ここが欠けると最後の数フレームが欠落する
+                } else if (ar_out != AMF_OK) {
+                    enc_sts = err_to_rgy(ar_out);
+                    break;
+                } else if (data != nullptr) {
+                    auto surfVppOut = amf::AMFSurfacePtr(data);
+                    int64_t pts = 0, duration = 0, inputFrameId = 0;
+                    surfVppOut->GetProperty(RGY_PROP_TIMESTAMP, &pts);
+                    surfVppOut->GetProperty(RGY_PROP_DURATION, &duration);
+                    surfVppOut->GetProperty(RGY_PROP_INPUT_FRAMEID, &inputFrameId);
+
+                    auto surfDecOut = std::make_unique<RGYFrame>(surfVppOut);
+                    surfDecOut->clearDataList();
+                    surfDecOut->setTimestamp(pts);
+                    surfDecOut->setDuration(duration);
+                    surfDecOut->setInputFrameId(m_vppOutFrames++);
+                    if (auto it = m_metadatalist.find(pts); it != m_metadatalist.end()) {
+                        surfDecOut->setDataList(m_metadatalist[pts]);
+                    }
+                    m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(m_workSurfs.addSurface(surfDecOut)));
+                }
+            }
+
+            if (drain) {
+                if (ar == AMF_INPUT_FULL) {
+                    //VPPのflush
+                    try {
+                        ar = m_vppFilter->filter()->Drain();
+                    } catch (...) {
+                        PrintMes(RGY_LOG_ERROR, _T("Fatal error when submitting frame to encoder.\n"));
+                        return RGY_ERR_UNKNOWN;
+                    }
+                    if (ar == AMF_INPUT_FULL) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    } else {
+                        enc_sts = err_to_rgy(ar);
+                    }
+                }
+            } else {
+                //VPPへの投入
+                try {
+                    ar = m_vppFilter->filter()->SubmitInput(pSurface);
+                } catch (...) {
+                    PrintMes(RGY_LOG_ERROR, _T("Fatal error when submitting frame to encoder.\n"));
+                    return RGY_ERR_UNKNOWN;
+                }
+                if (ar == AMF_NEED_MORE_INPUT) {
+                    break;
+                } else if (ar == AMF_INPUT_FULL) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                } else if (ar == AMF_REPEAT) {
+                    pSurface = nullptr;
+                } else {
+                    enc_sts = err_to_rgy(ar);
+                    break;
+                }
+            }
+        };
+        return enc_sts;
+    }
+};
+
 class PipelineTaskOpenCL : public PipelineTask {
 protected:
     std::shared_ptr<RGYOpenCLContext> m_cl;
@@ -1599,8 +1729,6 @@ public:
         }
 
         deque<std::pair<RGYFrameInfo, uint32_t>> filterframes;
-        RGYCLFrameInterop *clFrameInInterop = nullptr;
-
         bool drain = !frame;
         if (!frame) {
             filterframes.push_back(std::make_pair(RGYFrameInfo(), 0u));
@@ -1610,9 +1738,9 @@ public:
                 PrintMes(RGY_LOG_ERROR, _T("Invalid task surface.\n"));
                 return RGY_ERR_NULL_PTR;
             }
-            if (auto surfVppIn = taskSurf->surf().amfsurf(); surfVppIn != nullptr) {
+            if (auto surfVppInAMF = taskSurf->surf().amfsurf(); surfVppInAMF != nullptr) {
                 if (taskSurf->surf().frame()->getInfo().mem_type != RGY_MEM_TYPE_CPU
-                    && surfVppIn->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
+                    && surfVppInAMF->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
                     amf::AMFContext::AMFOpenCLLocker locker(m_context);
 #if 0
                     auto ar = inAmf->Interop(amf::AMF_MEMORY_OPENCL);
@@ -1621,9 +1749,9 @@ public:
                     //dummyのCPUへのメモリコピーを行う
                     //こうしないとデコーダからの出力をOpenCLに渡したときに、フレームが壊れる(フレーム順序が入れ替わってガクガクする)
                     amf::AMFDataPtr data;
-                    surfVppIn->Duplicate(amf::AMF_MEMORY_HOST, &data);
+                    surfVppInAMF->Duplicate(amf::AMF_MEMORY_HOST, &data);
 #endif
-                    auto ar = surfVppIn->Convert(amf::AMF_MEMORY_OPENCL);
+                    auto ar = surfVppInAMF->Convert(amf::AMF_MEMORY_OPENCL);
 #endif
                     if (ar != AMF_OK) {
                         PrintMes(RGY_LOG_ERROR, _T("Failed to convert plane: %s.\n"), get_err_mes(err_to_rgy(ar)));
@@ -1631,7 +1759,7 @@ public:
                     }
                 }
                 filterframes.push_back(std::make_pair(taskSurf->surf().frame()->getInfo(), 0u));
-            } else if (auto surfVppIn = taskSurf->surf().clframe(); surfVppIn != nullptr) {
+            } else if (auto surfVppInCL = taskSurf->surf().clframe(); surfVppInCL != nullptr) {
                 filterframes.push_back(std::make_pair(taskSurf->surf().frame()->getInfo(), 0u));
             } else {
                 PrintMes(RGY_LOG_ERROR, _T("Invalid task surface (not opencl or amf).\n"));
