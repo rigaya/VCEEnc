@@ -1063,6 +1063,9 @@ public:
                 PipelineTaskSurface surfVppOut = taskSurf->surf();
                 surfVppOut.frame()->setInputFrameId(taskSurf->surf().frame()->inputFrameId());
                 surfVppOut.frame()->setTimestamp(m_tsOutEstimated);
+                if (ENCODER_VCEENC) {
+                    surfVppOut.frame()->setDuration(outDuration);
+                }
                 //timestampの上書き情報
                 //surfVppOut内部のmfxSurface1自体は同じデータを指すため、複数のタイムスタンプを持つことができない
                 //この問題をm_outQeueueのPipelineTaskOutput(これは個別)に与えるPipelineTaskOutputDataCheckPtsの値で、
