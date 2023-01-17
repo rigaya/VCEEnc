@@ -107,6 +107,7 @@ RGY_ERR AMFFilterHQScaler::init(amf::AMFFactory *factory, amf::AMFTrace *trace, 
     setFilterInfo(strsprintf(_T("scaler: %dx%d -> %dx%d, %s, sharpness %.1f\n"),
         prm->frameIn.width, prm->frameIn.height, prm->frameOut.width, prm->frameOut.height,
         get_cx_desc(list_vce_hq_scaler, prm->scaler.algorithm), prm->scaler.sharpness));
+    m_param = prm;
     return RGY_ERR_NONE;
 }
 
@@ -153,6 +154,7 @@ RGY_ERR AMFFilterPreProcessing::init(amf::AMFFactory *factory, amf::AMFTrace *tr
     }
     PrintMes(RGY_LOG_DEBUG, _T("initialized %s.\n"), m_name.c_str());
     setFilterInfo(prm->print());
+    m_param = prm;
     return RGY_ERR_NONE;
 }
 
