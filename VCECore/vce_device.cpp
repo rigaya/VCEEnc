@@ -561,7 +561,7 @@ CodecCsp VCEDevice::getHWDecCodecCsp() {
             if (decCaps->GetOutputCaps(&outputCaps) == AMF_OK) {
                 auto csps = getIOCspSupport(outputCaps);
                 // 10bitサポートのチェック
-                if (std::find(csps.begin(), csps.end(), RGY_CSP_P010) == csps.end()) {
+                if (std::find(csps.begin(), csps.end(), RGY_CSP_P010) != csps.end()) {
                     bool Support10bitDepth = false;
                     if (decCaps->GetProperty(CAP_10BITDEPTH, &Support10bitDepth) == AMF_OK && Support10bitDepth) {
                         csps.push_back(RGY_CSP_P010);
