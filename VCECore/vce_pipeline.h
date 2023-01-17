@@ -74,7 +74,7 @@ enum RGYRunState {
 enum class VppType : int {
     VPP_NONE,
 
-    AMF_COLORSPACE,
+    AMF_CONVERTER,
     AMF_PREPROCESS,
     AMF_RESIZE,
     AMF_VQENHANCE,

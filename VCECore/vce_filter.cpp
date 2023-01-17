@@ -61,6 +61,74 @@ void AMFFilter::close() {
     m_log.reset();
 }
 
+tstring AMFFilterParamConverter::print() const {
+    return _T("");
+}
+
+AMFFilterConverter::AMFFilterConverter(amf::AMFContextPtr context, shared_ptr<RGYLog>& log) :
+    AMFFilter(context, log) {
+    m_name = _T("converter");
+}
+
+AMFFilterConverter::~AMFFilterConverter() {};
+
+RGY_ERR AMFFilterConverter::init(amf::AMFFactory *factory, amf::AMFTrace *trace, std::shared_ptr<RGYFilterParam> param) {
+    auto prm = std::dynamic_pointer_cast<AMFFilterParamConverter>(param);
+    if (!prm) {
+        PrintMes(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
+        return RGY_ERR_INVALID_PARAM;
+    }
+    auto res = factory->CreateComponent(m_context, AMFVideoConverter, &m_filter);
+    if (res != AMF_OK) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to create %s: %s\n"), m_name.c_str(), AMFRetString(res));
+        return err_to_rgy(res);
+    }
+    PrintMes(RGY_LOG_DEBUG, _T("created %s.\n"), m_name.c_str());
+    const auto formatOut = csp_rgy_to_enc(prm->frameOut.csp);
+    res = m_filter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_FORMAT, formatOut);
+    //res = m_filter->SetProperty(AMF_VIDEO_CONVERTER_COMPUTE_DEVICE, engine_type);
+    //res = m_filter->SetProperty(AMF_VIDEO_CONVERTER_MEMORY_TYPE, engine_type);
+    res = m_filter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_SIZE, AMFConstructSize(prm->frameOut.width, prm->frameOut.height));
+    if (prm->dummy_pad < 0) { // dummyで付加したpaddingを取り除く
+        m_name += _T(" d-");
+    } else if (prm->dummy_pad > 0) { // dummyでpaddingを付加
+        m_name += _T(" d+");
+        res = m_filter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_RECT, AMFConstructRect(0, 0, prm->frameIn.width, prm->frameIn.height));
+        //res = m_filter->SetProperty(AMF_VIDEO_CONVERTER_KEEP_ASPECT_RATIO, true);
+        //res = m_filter->SetProperty(AMF_VIDEO_CONVERTER_FILL, true);
+        //res = m_filter->SetProperty(AMF_VIDEO_CONVERTER_FILL_COLOR, AMFConstructColor(255, 255, 255, 255));
+    }
+    //res = m_filter->SetProperty(AMF_VIDEO_CONVERTER_SCALE, AMF_VIDEO_CONVERTER_SCALE_BICUBIC);
+    PrintMes(RGY_LOG_DEBUG, _T("initialize %s by format out %s, size %dx%d.\n"), m_name.c_str(),
+        wstring_to_tstring(trace->SurfaceGetFormatName(formatOut)).c_str(),
+        std::min(prm->frameIn.width, prm->frameOut.width), std::min(prm->frameIn.height, prm->frameOut.height));
+    if (AMF_OK != (res = m_filter->Init(csp_rgy_to_enc(prm->frameIn.csp), prm->frameIn.width, prm->frameIn.height))) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to init %s with %s %dx%d: %s\n"),
+            m_name.c_str(),
+            wstring_to_tstring(trace->SurfaceGetFormatName(formatOut)).c_str(),
+            prm->frameIn.width, prm->frameIn.height,
+            AMFRetString(res));
+        return err_to_rgy(res);
+    }
+    m_param = prm;
+    PrintMes(RGY_LOG_DEBUG, _T("initialized %s.\n"), m_name.c_str());
+    setFilterInfo(strsprintf(_T("%s: %s %dx%d\n"), m_name.c_str(),
+        wstring_to_tstring(trace->SurfaceGetFormatName(formatOut)).c_str(),
+        std::min(prm->frameIn.width, prm->frameOut.width), std::min(prm->frameIn.height, prm->frameOut.height)));
+    return RGY_ERR_NONE;
+}
+
+void AMFFilterConverter::setFrameParam(amf::AMFSurfacePtr pSurface) {
+    auto prm = std::dynamic_pointer_cast<AMFFilterParamConverter>(m_param);
+    if (prm) {
+        if (prm->dummy_pad < 0) {
+            // dummyのpaddingはフレームの下に入れているので、フレームの上側を有効範囲として指定する
+            const int crop = -prm->dummy_pad;
+            pSurface->SetCrop(0, 0, prm->frameIn.width, prm->frameIn.height - crop);
+        }
+    }
+}
+
 tstring AMFFilterParamHQScaler::print() const {
     return scaler.print();
 }

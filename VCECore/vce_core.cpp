@@ -74,10 +74,6 @@
 #include "VideoEncoderVCE.h"
 #include "VideoEncoderHEVC.h"
 #include "VideoDecoderUVD.h"
-#include "HQScaler.h"
-#include "VQEnhancer.h"
-#include "PreProcessing.h"
-#include "VideoConverter.h"
 #include "Factory.h"
 
 #include "rgy_level_h264.h"
@@ -1054,7 +1050,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
                 && next == VppFilterType::FILTER_OPENCL) {
                 filterPipeline[i] = VppType::CL_RESIZE; // OpenCLに挟まれていたら、OpenCLのresizeを優先する
             }
-        } else if (filterPipeline[i] == VppType::AMF_COLORSPACE) {
+        } else if (filterPipeline[i] == VppType::AMF_CONVERTER) {
             if (m_dev->cl()
                 && prev == VppFilterType::FILTER_OPENCL
                 && next == VppFilterType::FILTER_OPENCL) {
@@ -1069,6 +1065,15 @@ std::tuple<RGY_ERR, std::unique_ptr<AMFFilter>> VCECore::AddFilterAMF(
     RGYFrameInfo & inputFrame, const VppType vppType, const VCEParam *inputParam, const sInputCrop *crop, const std::pair<int, int> resize) {
     std::unique_ptr<AMFFilter> filter;
     switch (vppType) {
+    case VppType::AMF_CONVERTER: {
+        filter = std::make_unique<AMFFilterConverter>(m_dev->context(), m_pLog);
+        auto param = std::make_shared<AMFFilterParamConverter>();
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        m_pLastFilterParam = param;
+    } break;
     case VppType::AMF_PREPROCESS: {
         filter = std::make_unique<AMFFilterPreProcessing>(m_dev->context(), m_pLog);
         auto param = std::make_shared<AMFFilterParamPreProcessing>();

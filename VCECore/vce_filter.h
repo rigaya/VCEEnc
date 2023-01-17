@@ -83,6 +83,9 @@ public:
             _ftprintf(stderr, _T("%s"), mes.c_str());
         }
     }
+    virtual void setFrameParam(amf::AMFSurfacePtr pSurface) {
+        return;
+    }
 protected:
     void setFilterInfo(const tstring &info) {
         m_infoStr = info;
@@ -95,6 +98,24 @@ protected:
     tstring m_infoStr;
     std::shared_ptr<RGYFilterParam> m_param;
     std::shared_ptr<RGYLog> m_log;
+};
+
+class AMFFilterParamConverter : public RGYFilterParam {
+public:
+    int dummy_pad;
+    AMFFilterParamConverter() : dummy_pad(0) {};
+    virtual ~AMFFilterParamConverter() {};
+    virtual tstring print() const override;
+};
+
+class AMFFilterConverter : public AMFFilter {
+public:
+    AMFFilterConverter(amf::AMFContextPtr context, std::shared_ptr<RGYLog>& log);
+    virtual ~AMFFilterConverter();
+
+    virtual RGY_ERR init(amf::AMFFactory *factory, amf::AMFTrace *trace, std::shared_ptr<RGYFilterParam> param) override;
+    virtual void setFrameParam(amf::AMFSurfacePtr pSurface) override;
+protected:
 };
 
 class AMFFilterParamHQScaler : public RGYFilterParam {

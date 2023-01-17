@@ -36,10 +36,11 @@ RGY_DISABLE_WARNING_STR("-Wclass-memaccess")
 #include "VideoEncoderVCE.h"
 #include "VideoEncoderHEVC.h"
 #include "VideoEncoderAV1.h"
-RGY_DISABLE_WARNING_POP
 #include "HQScaler.h"
 #include "PreProcessing.h"
 #include "VQEnhancer.h"
+#include "VideoConverter.h"
+RGY_DISABLE_WARNING_POP
 #include "rgy_caption.h"
 #include "rgy_prm.h"
 
