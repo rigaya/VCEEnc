@@ -691,7 +691,6 @@ public:
             PrintMes(RGY_LOG_ERROR, _T("Error in reader: %s.\n"), get_err_mes(err));
         } else {
             inputFrame->setInputFrameId(m_inFrames++);
-            PrintMes(RGY_LOG_ERROR, _T("m_inFramesAMF: %d, %lld.\n"), m_inFrames, inputFrame->timestamp());
             m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(m_workSurfs.addSurface(inputFrame)));
         }
         return err;

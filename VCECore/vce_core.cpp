@@ -717,14 +717,16 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
         m_pDecoder->SetProperty(AMF_VIDEO_DECODER_EXTRADATA, amf::AMFVariant(buffer));
     }
 
-    PrintMes(RGY_LOG_DEBUG, _T("initialize decoder: %dx%d, %s.\n"),
-        prm->input.srcWidth, prm->input.srcHeight,
+    PrintMes(RGY_LOG_DEBUG, _T("initialize %s decoder: %dx%d, %s.\n"),
+        CodecToStr(inputCodec).c_str(), prm->input.srcWidth, prm->input.srcHeight,
         wstring_to_tstring(m_pTrace->SurfaceGetFormatName(csp_rgy_to_enc(prm->input.csp))).c_str());
     if (AMF_OK != (res = m_pDecoder->Init(csp_rgy_to_enc(prm->input.csp), prm->input.srcWidth, prm->input.srcHeight))) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to init decoder: %s\n"), AMFRetString(res));
+        PrintMes(RGY_LOG_ERROR, _T("Failed to init %s decoder (%s %dx%d): %s\n"), CodecToStr(inputCodec).c_str(),
+            wstring_to_tstring(m_pTrace->SurfaceGetFormatName(csp_rgy_to_enc(prm->input.csp))).c_str(), prm->input.srcWidth, prm->input.srcHeight,
+            AMFRetString(res));
         return err_to_rgy(res);
     }
-    PrintMes(RGY_LOG_DEBUG, _T("Initialized decoder\n"));
+    PrintMes(RGY_LOG_DEBUG, _T("Initialized decoder.\n"));
     return RGY_ERR_NONE;
 #else
     return RGY_ERR_NONE;
