@@ -117,7 +117,6 @@ protected:
     virtual std::tuple<RGY_ERR, std::unique_ptr<AMFFilter>> AddFilterAMF(
         RGYFrameInfo & inputFrame, const VppType vppType, const VCEParam *prm, const sInputCrop * crop, const std::pair<int, int> resize);
     virtual RGY_ERR createOpenCLCopyFilterForPreVideoMetric(const VCEParam *inputParam);
-    virtual RGY_ERR initConverter(VCEParam *prm);
     virtual RGY_ERR initChapters(VCEParam *prm);
     virtual RGY_ERR initEncoder(VCEParam *prm);
     virtual RGY_ERR initPowerThrottoling(VCEParam *prm);
@@ -177,7 +176,6 @@ protected:
 
     amf::AMFComponentPtr m_pDecoder;
     amf::AMFComponentPtr m_pEncoder;
-    amf::AMFComponentPtr m_pConverter;
 #if THREAD_DEC_USE_FUTURE
     std::future<RGY_ERR> m_thDecoder;
 #else

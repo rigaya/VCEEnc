@@ -122,7 +122,6 @@ VCECore::VCECore() :
     m_pTrimParam(nullptr),
     m_pDecoder(),
     m_pEncoder(),
-    m_pConverter(),
     m_thDecoder(),
     m_thOutput(),
     m_params(),
@@ -156,13 +155,6 @@ void VCECore::Terminate() {
         m_pEncoder->Terminate();
         m_pEncoder = nullptr;
         PrintMes(RGY_LOG_DEBUG, _T("Closed Encoder.\n"));
-    }
-
-    if (m_pConverter != nullptr) {
-        PrintMes(RGY_LOG_DEBUG, _T("Closing Converter...\n"));
-        m_pConverter->Terminate();
-        m_pConverter = nullptr;
-        PrintMes(RGY_LOG_DEBUG, _T("Closed Converter.\n"));
     }
 
     if (m_pDecoder != nullptr) {
@@ -733,41 +725,6 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
 #endif
 }
 #pragma warning(pop)
-
-RGY_ERR VCECore::initConverter(VCEParam *prm) {
-#if 0 //現状使用していない
-    const auto formatOut = csp_rgy_to_enc(GetEncoderCSP(prm));
-    if (prm->input.dstWidth == prm->input.srcWidth
-        && prm->input.dstHeight == prm->input.srcHeight
-        && csp_rgy_to_enc(prm->input.csp) == formatOut) {
-        PrintMes(RGY_LOG_DEBUG, _T("converter not required.\n"));
-        return RGY_ERR_NONE;
-    }
-    auto res = m_pFactory->CreateComponent(m_dev->context(), AMFVideoConverter, &m_pConverter);
-    if (res != AMF_OK) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to create converter context: %s\n"), AMFRetString(res));
-        return err_to_rgy(res);
-    }
-    PrintMes(RGY_LOG_DEBUG, _T("created converter context.\n"));
-
-    res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_MEMORY_TYPE, amf::AMF_MEMORY_OPENCL);
-    res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_FORMAT, formatOut);
-    res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_OUTPUT_SIZE, AMFConstructSize(prm->input.dstWidth, prm->input.dstHeight));
-    res = m_pConverter->SetProperty(AMF_VIDEO_CONVERTER_SCALE, AMF_VIDEO_CONVERTER_SCALE_BICUBIC);
-    PrintMes(RGY_LOG_DEBUG, _T("initialize converter by mem type %s, format out %s, output size %dx%x.\n"),
-        wstring_to_tstring(m_pTrace->GetMemoryTypeName(amf::AMF_MEMORY_OPENCL)).c_str(),
-        wstring_to_tstring(m_pTrace->SurfaceGetFormatName(formatOut)).c_str(),
-        prm->input.dstWidth, prm->input.dstHeight);
-    if (AMF_OK != (res = m_pConverter->Init(formatOut, prm->input.srcWidth, prm->input.srcHeight))) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to init converter: %s\n"), AMFRetString(res));
-        return err_to_rgy(res);
-    }
-    PrintMes(RGY_LOG_DEBUG, _T("initialized converter.\n"));
-#else
-    UNREFERENCED_PARAMETER(prm);
-#endif
-    return RGY_ERR_NONE;
-}
 
 #define ENABLE_VPPAMF 1
 
@@ -2868,10 +2825,6 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    if (RGY_ERR_NONE != (ret = initConverter(prm))) {
-        return ret;
-    }
-
     if (RGY_ERR_NONE != (ret = initFilters(prm))) {
         return ret;
     }
@@ -3185,13 +3138,6 @@ RGY_ERR VCECore::run2() {
         m_pEncoder->Terminate();
         m_pEncoder = nullptr;
         PrintMes(RGY_LOG_DEBUG, _T("Closed Encoder.\n"));
-    }
-
-    if (m_pConverter != nullptr) {
-        PrintMes(RGY_LOG_DEBUG, _T("Closing Converter...\n"));
-        m_pConverter->Terminate();
-        m_pConverter = nullptr;
-        PrintMes(RGY_LOG_DEBUG, _T("Closed Converter.\n"));
     }
 
     if (m_pDecoder != nullptr) {
