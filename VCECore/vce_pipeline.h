@@ -808,7 +808,12 @@ public:
                         if (sts == RGY_ERR_MORE_BITSTREAM) {
                             ar = m_dec->Drain();
                         } else {
-                            ar = m_dec->SubmitInput(pictureBuffer);
+                            try {
+                                ar = m_dec->SubmitInput(pictureBuffer);
+                            } catch (...) {
+                                PrintMes(RGY_LOG_ERROR, _T("ERROR: Unexpected error while submitting bitstream to decoder.\n"));
+                                ar = AMF_UNEXPECTED;
+                            }
                         }
                         if (ar == AMF_NEED_MORE_INPUT) {
                             break;
@@ -856,7 +861,12 @@ protected:
         }
         while (m_state == RGY_STATE_RUNNING) {
             amf::AMFDataPtr data;
-            ar = m_dec->QueryOutput(&data);
+            try {
+                ar = m_dec->QueryOutput(&data);
+            } catch (...) {
+                PrintMes(RGY_LOG_ERROR, _T("ERROR: Unexpected error while getting frame from decoder.\n"));
+                ar = AMF_UNEXPECTED;
+            }
             if (ar == AMF_EOF) {
                 break;
             }
