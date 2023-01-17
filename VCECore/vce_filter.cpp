@@ -249,11 +249,6 @@ RGY_ERR AMFFilterVQEnhancer::init(amf::AMFFactory *factory, amf::AMFTrace *trace
     }
     PrintMes(RGY_LOG_DEBUG, _T("created %s.\n"), m_name.c_str());
 
-#if defined(_WIN32) || defined(_WIN64)
-    const auto engine_type = amf::AMF_MEMORY_DX11;
-#else
-    const auto engine_type = amf::AMF_MEMORY_OPENCL;
-#endif
     const auto formatOut = csp_rgy_to_enc(prm->frameIn.csp);
     //res = m_filter->SetProperty(AMF_VIDEO_ENHANCER_ENGINE_TYPE, engine_type);
     res = m_filter->SetProperty(AMF_VIDEO_ENHANCER_OUTPUT_SIZE, AMFConstructSize(prm->frameIn.width, prm->frameIn.height));
