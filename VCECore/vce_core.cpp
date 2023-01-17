@@ -2382,7 +2382,7 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
             encoder->Clear();
         }
 
-        if (prm->input.type == RGY_INPUT_FMT_AVHW) {
+        if (m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN) {
             const auto dec_csp = (*gpu)->getHWDecCodecCsp();
             if (dec_csp.count(prm->input.codec) == 0) {
                 message += strsprintf(_T("GPU #%d (%s) does not support %s decoding.\n"), (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->input.codec).c_str());
