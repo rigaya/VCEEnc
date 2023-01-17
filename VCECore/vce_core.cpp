@@ -690,6 +690,11 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
     }
     PrintMes(RGY_LOG_DEBUG, _T("created decoder context.\n"));
 
+    //AMF_VIDEO_DECODER_SURFACE_COPYを使用すると、pre-analysis使用時などに発生するSubmitInput時のAMF_DECODER_NO_FREE_SURFACESを回避できる
+    //しかし、メモリ確保エラーが発生することがある(AMF_DIRECTX_FAIL)
+    //そこで、AMF_VIDEO_DECODER_SURFACE_COPYは使用せず、QueryOutput後、明示的にsurface->Duplicateを行って同様の挙動を再現する
+    //m_pDecoder->SetProperty(AMF_VIDEO_DECODER_SURFACE_COPY, true);
+
     //RGY_CODEC_VC1のときはAMF_TS_SORTを選択する必要がある
     const AMF_TIMESTAMP_MODE_ENUM timestamp_mode = (inputCodec == RGY_CODEC_VC1) ? AMF_TS_SORT : AMF_TS_PRESENTATION;
     if (AMF_OK != (res = m_pDecoder->SetProperty(AMF_TIMESTAMP_MODE, amf_int64(timestamp_mode)))) {

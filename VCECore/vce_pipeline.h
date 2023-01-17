@@ -848,7 +848,7 @@ public:
 protected:
     RGY_ERR getOutput() {
         auto ret = RGY_ERR_NONE;
-        amf::AMFSurfacePtr surf;
+        amf::AMFSurfacePtr surfDecOut;
         auto ar = AMF_REPEAT;
         auto timeS = std::chrono::system_clock::now();
         if (m_state == RGY_STATE_STOPPED) {
@@ -865,11 +865,11 @@ protected:
                 ar = AMF_OK; //これ重要...ここが欠けると最後の数フレームが欠落する
             }
             if (ar == AMF_OK && data != nullptr) {
-                surf = amf::AMFSurfacePtr(data);
+                surfDecOut = amf::AMFSurfacePtr(data);
                 break;
             }
             if (ar != AMF_OK) break;
-            if ((std::chrono::system_clock::now() - timeS) > std::chrono::seconds(10)) {
+            if (false && (std::chrono::system_clock::now() - timeS) > std::chrono::seconds(10)) {
                 PrintMes(RGY_LOG_ERROR, _T("10 sec has passed after getting last frame from decoder.\n"));
                 PrintMes(RGY_LOG_ERROR, _T("Decoder seems to have crushed.\n"));
                 ar = AMF_FAIL;
@@ -884,17 +884,30 @@ protected:
             PrintMes(RGY_LOG_ERROR, _T("Failed to load input frame: %s.\n"), get_err_mes(ret));
             return ret;
         }
-        if (surf != nullptr) {
-            auto surfDecOut = std::make_unique<RGYFrame>(surf);
-            surfDecOut->clearDataList();
-            surfDecOut->setInputFrameId(m_decOutFrames++);
-            if (auto data = getMetadata(RGY_FRAME_DATA_HDR10PLUS, surfDecOut->timestamp()); data) {
-                surfDecOut->dataList().push_back(data);
+        if (surfDecOut != nullptr) {
+            // pre-analysis使用時などに発生するSubmitInput時のAMF_DECODER_NO_FREE_SURFACESを回避するため、
+            // 明示的にsurface->Duplicateを行ってコピーを下流に渡していく
+            // デコーダのオプションのAMF_VIDEO_DECODER_SURFACE_COPYでも同様になるはずだが、
+            // メモリ確保エラーが発生することがある(AMF_DIRECTX_FAIL)ので、明示的なコピーのほうがよい
+            amf::AMFDataPtr dataCopy;
+            ar = surfDecOut->Duplicate(surfDecOut->GetMemoryType(), &dataCopy);
+            if (ar != AMF_OK) {
+                ret = err_to_rgy(ar); m_state = RGY_STATE_ERROR;
+                PrintMes(RGY_LOG_ERROR, _T("Faield to copy decoded frame: %s.\n"), get_err_mes(ret));
+                return ret;
             }
-            if (auto data = getMetadata(RGY_FRAME_DATA_DOVIRPU, surfDecOut->timestamp()); data) {
-                surfDecOut->dataList().push_back(data);
+            if (auto surfCopy = amf::AMFSurfacePtr(dataCopy); surfCopy != nullptr) {
+                auto surfDecOutCopy = std::make_unique<RGYFrame>(surfCopy);
+                surfDecOutCopy->clearDataList();
+                surfDecOutCopy->setInputFrameId(m_decOutFrames++);
+                if (auto data = getMetadata(RGY_FRAME_DATA_HDR10PLUS, surfDecOutCopy->timestamp()); data) {
+                    surfDecOutCopy->dataList().push_back(data);
+                }
+                if (auto data = getMetadata(RGY_FRAME_DATA_DOVIRPU, surfDecOutCopy->timestamp()); data) {
+                    surfDecOutCopy->dataList().push_back(data);
+                }
+                m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(m_workSurfs.addSurface(surfDecOutCopy)));
             }
-            m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(m_workSurfs.addSurface(surfDecOut)));
         }
         return ret;
     }
@@ -1309,7 +1322,7 @@ public:
 #if 0
                 auto ar = inAmf->Interop(amf::AMF_MEMORY_OPENCL);
 #else
-#if 1
+#if 0
                 //dummyのCPUへのメモリコピーを行う
                 //こうしないとデコーダからの出力をOpenCLに渡したときに、フレームが壊れる(フレーム順序が入れ替わってガクガクする)
                 amf::AMFDataPtr data;
@@ -1746,7 +1759,7 @@ public:
 #if 0
                     auto ar = inAmf->Interop(amf::AMF_MEMORY_OPENCL);
 #else
-#if 1
+#if 0
                     //dummyのCPUへのメモリコピーを行う
                     //こうしないとデコーダからの出力をOpenCLに渡したときに、フレームが壊れる(フレーム順序が入れ替わってガクガクする)
                     amf::AMFDataPtr data;
