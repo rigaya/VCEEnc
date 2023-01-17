@@ -1060,20 +1060,39 @@ public:
             while (ptsDiff >= std::max<int64_t>(1, m_outFrameDuration * 7 / 8)) {
                 PrintMes(RGY_LOG_DEBUG, _T("Insert frame: framepts %lld, estimated next %lld, diff %lld [%.1f]\n"), outPtsSource, m_tsOutEstimated, ptsDiff, ptsDiff / (double)m_outFrameDuration);
                 //水増しが必要
-                PipelineTaskSurface surfVppOut = taskSurf->surf();
-                surfVppOut.frame()->setInputFrameId(taskSurf->surf().frame()->inputFrameId());
-                surfVppOut.frame()->setTimestamp(m_tsOutEstimated);
-                if (ENCODER_VCEENC) {
-                    surfVppOut.frame()->setDuration(outDuration);
+                if (auto surf = taskSurf->surf().amfsurf(); surf != nullptr) {
+                    //AMFのsurfaceの場合はコピーを作成する
+                    amf::AMFDataPtr dataCopy;
+                    auto ar = surf->Duplicate(surf->GetMemoryType(), &dataCopy);
+                    if (ar != AMF_OK) {
+                        PrintMes(RGY_LOG_ERROR, _T("Failed to copy frame: %s.\n"), get_err_mes(err_to_rgy(ar)));
+                        return err_to_rgy(ar);
+                    }
+                    auto surfCopy = amf::AMFSurfacePtr(dataCopy);
+                    auto surfOutCopy = std::make_unique<RGYFrame>(surfCopy);
+                    surfOutCopy->setDataList(taskSurf->surf().frame()->dataList());
+                    surfOutCopy->setInputFrameId(taskSurf->surf().frame()->inputFrameId());
+                    surfOutCopy->setTimestamp(m_tsOutEstimated);
+                    if (ENCODER_VCEENC) {
+                        surfOutCopy->setDuration(outDuration);
+                    }
+                    m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(m_workSurfs.addSurface(surfOutCopy)));
+                } else {
+                    PipelineTaskSurface surfVppOut = taskSurf->surf();
+                    surfVppOut.frame()->setInputFrameId(taskSurf->surf().frame()->inputFrameId());
+                    surfVppOut.frame()->setTimestamp(m_tsOutEstimated);
+                    if (ENCODER_VCEENC) {
+                        surfVppOut.frame()->setDuration(outDuration);
+                    }
+                    //timestampの上書き情報
+                    //surfVppOut内部のmfxSurface1自体は同じデータを指すため、複数のタイムスタンプを持つことができない
+                    //この問題をm_outQeueueのPipelineTaskOutput(これは個別)に与えるPipelineTaskOutputDataCheckPtsの値で、
+                    //PipelineTaskCheckPTS::getOutput時にtimestampを変更するようにする
+                    //そのため、checkptsからgetOutputしたフレームは
+                    //(次にPipelineTaskCheckPTS::getOutputを呼ぶより前に)直ちに後続タスクに投入するよう制御する必要がある
+                    std::unique_ptr<PipelineTaskOutputDataCustom> timestampOverride(new PipelineTaskOutputDataCheckPts(m_tsOutEstimated));
+                    m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(surfVppOut, timestampOverride));
                 }
-                //timestampの上書き情報
-                //surfVppOut内部のmfxSurface1自体は同じデータを指すため、複数のタイムスタンプを持つことができない
-                //この問題をm_outQeueueのPipelineTaskOutput(これは個別)に与えるPipelineTaskOutputDataCheckPtsの値で、
-                //PipelineTaskCheckPTS::getOutput時にtimestampを変更するようにする
-                //そのため、checkptsからgetOutputしたフレームは
-                //(次にPipelineTaskCheckPTS::getOutputを呼ぶより前に)直ちに後続タスクに投入するよう制御する必要がある
-                std::unique_ptr<PipelineTaskOutputDataCustom> timestampOverride(new PipelineTaskOutputDataCheckPts(m_tsOutEstimated));
-                m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(surfVppOut, timestampOverride));
                 m_tsOutEstimated += m_outFrameDuration;
                 ptsDiff = outPtsSource - m_tsOutEstimated;
             }
