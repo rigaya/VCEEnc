@@ -1778,7 +1778,7 @@ Rather weak noise reduction by modified pmd method, aimed to preserve edge while
 ### --vpp-preprocess [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 JND based edge-adaptive denoising filter that helps the encoder to achieve better coding efficiency.
 This filter aims at removing bit-expensive high frequency details
-that are not important for the human visual system.
+that are not important for the human visual system. Supports 8bit only (not available for 10bit).
 
 - **パラメータ**
   - strength=&lt;int&gt;      (default: 4, range 0 - 10)
