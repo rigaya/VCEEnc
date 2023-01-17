@@ -300,8 +300,6 @@ RGY_ERR AMFParams::SetParamTypeCodec(const RGY_CODEC codec) {
 
 RGY_ERR AMFParams::SetParamTypePA() {
     // ------------- PA parameters ---------------
-    SetParamType(AMF_VIDEO_ENCODER_PRE_ANALYSIS_ENABLE, AMF_PARAM_STATIC, L"Enable PA (true, false default =  false)");
-
     SetParamType(AMF_PA_ENGINE_TYPE, AMF_PARAM_STATIC, L"Engine Type (DX11, OPENCL default = OPENCL)");
 
     SetParamType(AMF_PA_SCENE_CHANGE_DETECTION_ENABLE, AMF_PARAM_DYNAMIC, L"Scene Change Detection Enable (true, false default =  true)");
@@ -352,6 +350,8 @@ RGY_ERR AMFParams::SetParamTypeAVC() {
 #pragma warning(pop)
     SetParamType(AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD, AMF_PARAM_DYNAMIC, L"Rate Control Method (CQP, CBR, VBR, VBR_LAT default = depends on USAGE)");
     SetParamType(AMF_VIDEO_ENCODER_QVBR_QUALITY_LEVEL, AMF_PARAM_STATIC, L"amf_int64; default = 23; QVBR quality level; range = 1-51");
+    SetParamType(AMF_VIDEO_ENCODER_PRE_ANALYSIS_ENABLE, AMF_PARAM_STATIC, L"Enable PA (true, false default =  false)");
+    SetParamType(AMF_VIDEO_ENCODER_PREENCODE_ENABLE, AMF_PARAM_STATIC, L"enables pre-encode assisted rate control");
 
     SetParamType(AMF_VIDEO_ENCODER_QUALITY_PRESET, AMF_PARAM_STATIC, L"Quality Preset (BALANCED, SPEED, QUALITY default = depends on USAGE)");
 
@@ -467,7 +467,7 @@ RGY_ERR AMFParams::SetParamTypeHEVC() {
     SetParamType(AMF_VIDEO_ENCODER_HEVC_INITIAL_VBV_BUFFER_FULLNESS, AMF_PARAM_STATIC, L"Initial VBV Buffer Fullness (integer, 0=0% 64=100% , default = 64)");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_ENABLE_VBAQ, AMF_PARAM_STATIC, L"Enable VBAQ(true, false default =  false)");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_HIGH_MOTION_QUALITY_BOOST_ENABLE, AMF_PARAM_DYNAMIC, L"bool; default = depends on USAGE; Enable High motion quality boost mode");
-
+    SetParamType(AMF_VIDEO_ENCODER_HEVC_PREENCODE_ENABLE, AMF_PARAM_STATIC, L"enables pre-encode assisted rate control");
     // Motion estimation
     SetParamType(AMF_VIDEO_ENCODER_HEVC_MOTION_HALF_PIXEL, AMF_PARAM_STATIC, L"Half Pixel (true, false default =  true)");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_MOTION_QUARTERPIXEL, AMF_PARAM_STATIC, L"Quarter Pixel (true, false default =  true");
