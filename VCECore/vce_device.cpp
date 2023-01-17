@@ -241,6 +241,10 @@ void VCEDevice::getAllCaps() {
         const auto codec = HW_DECODE_LIST[i].rgy_codec;
         getDecCaps(codec);
     }
+    //フィルタの情報
+    for (auto& filter : { AMFVideoConverter, AMFPreProcessing, AMFHQScaler, AMFVQEnhancer }) {
+        getFilterCaps(filter);
+    }
 }
 
 amf::AMFCapsPtr VCEDevice::getEncCaps(RGY_CODEC codec) {
@@ -324,6 +328,17 @@ amf::AMFCapsPtr VCEDevice::getDecCaps(RGY_CODEC codec) {
         }
     }
     return m_decCaps[codec];
+}
+
+amf::AMFCapsPtr VCEDevice::getFilterCaps(const std::wstring& filter) {
+    amf::AMFComponentPtr p_filter;
+    amf::AMFCapsPtr caps;
+    if (m_factory->CreateComponent(m_context, filter.c_str(), &p_filter) == AMF_OK
+        && p_filter->GetCaps(&caps) == AMF_OK) {
+        p_filter->Terminate();
+        m_filterCaps[filter] = caps;
+    }
+    return m_filterCaps[filter];
 }
 
 std::vector<RGY_CSP> VCEDevice::getIOCspSupport(amf::AMFIOCapsPtr& ioCaps) const {
@@ -529,6 +544,35 @@ tstring VCEDevice::QueryDecCaps(RGY_CODEC codec, amf::AMFCapsPtr& decoderCaps) {
     //str += strsprintf(_T("requested throughput:    %d 16x16 MB\n"), throughputRequested);
 
     str += QueryOutputCaps(codec, decoderCaps);
+
+    return str;
+}
+
+tstring VCEDevice::QueryFilterCaps(amf::AMFCapsPtr& filterCaps) {
+    tstring str;
+    if (filterCaps == NULL) {
+        str += _T("failed to get decoder capability\n");
+    }
+
+    bool Support10bitDepth = false;
+    if (filterCaps->GetProperty(CAP_10BITDEPTH, &Support10bitDepth) == AMF_OK) {
+        str += strsprintf(_T("10bit depth:     %s\n"), (Support10bitDepth) ? _T("yes") : _T("no"));
+    }
+
+    amf::AMF_ACCELERATION_TYPE accelType = filterCaps->GetAccelerationType();
+    str += _T("acceleration:    ") + AccelTypeToString(accelType) + _T("\n");
+
+    str += strsprintf(_T("\ninput:\n"));
+    amf::AMFIOCapsPtr inputCaps;
+    if (filterCaps->GetInputCaps(&inputCaps) == AMF_OK) {
+        str += QueryIOCaps(inputCaps);
+    }
+
+    str += strsprintf(_T("\noutput:\n"));
+    amf::AMFIOCapsPtr outputCaps;
+    if (filterCaps->GetOutputCaps(&outputCaps) == AMF_OK) {
+        str += QueryIOCaps(outputCaps);
+    }
 
     return str;
 }

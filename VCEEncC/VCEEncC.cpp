@@ -82,6 +82,7 @@ static void show_vce_features(int deviceid, const RGYParamLogLevel& loglevel) {
     const auto codecs = std::vector<RGY_CODEC>{RGY_CODEC_H264, RGY_CODEC_HEVC, RGY_CODEC_AV1 };
     _ftprintf(stdout, _T("%s\n"), check_vce_enc_features(codecs, deviceid, loglevel).c_str());
     _ftprintf(stdout, _T("\n%s\n"), check_vce_dec_features(deviceid, loglevel).c_str());
+    _ftprintf(stdout, _T("\n%s\n"), check_vce_filter_features(deviceid, loglevel).c_str());
     exit(0);
 }
 

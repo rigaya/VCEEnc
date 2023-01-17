@@ -202,6 +202,7 @@ public:
     tstring devName() const { return m_core->dev()->getGPUInfo(); }
     tstring checkEncFeatures(RGY_CODEC codec);
     tstring checkDecFeatures(RGY_CODEC codec);
+    tstring checkFilterFeatures(const std::wstring& filter);
 protected:
     std::unique_ptr<VCECore> m_core;
 };

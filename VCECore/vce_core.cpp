@@ -4360,6 +4360,15 @@ tstring VCEFeatures::checkDecFeatures(RGY_CODEC codec) {
     return str;
 }
 
+tstring VCEFeatures::checkFilterFeatures(const std::wstring& filter) {
+    tstring str;
+    amf::AMFCapsPtr decCaps = m_core->dev()->getFilterCaps(filter);
+    if (decCaps != nullptr) {
+        str = m_core->dev()->QueryFilterCaps(decCaps);
+    }
+    return str;
+}
+
 bool check_if_vce_available(int deviceId, const RGYParamLogLevel& loglevel) {
     VCEFeatures vce;
     return vce.init(deviceId, loglevel) == RGY_ERR_NONE;
@@ -4392,6 +4401,22 @@ tstring check_vce_dec_features(int deviceId, const RGYParamLogLevel& loglevel) {
         auto ret = vce.checkDecFeatures(codec);
         if (ret.length() > 0) {
             str += CodecToStr(codec) + _T(" decode features\n");
+            str += ret + _T("\n");
+        }
+    }
+    return str;
+}
+
+tstring check_vce_filter_features(int deviceId, const RGYParamLogLevel& loglevel) {
+    VCEFeatures vce;
+    if (vce.init(deviceId, loglevel) != RGY_ERR_NONE) {
+        return _T("VCE not available.\n");
+    }
+    tstring str = strsprintf(_T("device #%d: "), deviceId) + vce.devName() + _T("\n");
+    for (auto& filter : { AMFVideoConverter, AMFPreProcessing, AMFHQScaler, AMFVQEnhancer }) {
+        auto ret = vce.checkFilterFeatures(filter);
+        if (ret.length() > 0) {
+            str += wstring_to_tstring(filter) + tstring(_T(" features\n"));
             str += ret + _T("\n");
         }
     }

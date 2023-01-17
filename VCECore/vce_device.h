@@ -58,6 +58,7 @@ public:
 
     amf::AMFCapsPtr getEncCaps(RGY_CODEC codec);
     amf::AMFCapsPtr getDecCaps(RGY_CODEC codec);
+    amf::AMFCapsPtr getFilterCaps(const std::wstring& filter);
     tstring QueryIOCaps(amf::AMFIOCapsPtr& ioCaps);
     std::vector<RGY_CSP> getIOCspSupport(amf::AMFIOCapsPtr& ioCaps) const;
     tstring QueryInputCaps(RGY_CODEC codec, amf::AMFCapsPtr& caps);
@@ -65,6 +66,7 @@ public:
     tstring QueryIOCaps(RGY_CODEC codec, amf::AMFCapsPtr& caps);
     tstring QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps);
     tstring QueryDecCaps(RGY_CODEC codec, amf::AMFCapsPtr& decoderCaps);
+    tstring QueryFilterCaps(amf::AMFCapsPtr& filterCaps);
     tstring getGPUInfo() const;
     CodecCsp getHWDecCodecCsp();
 
@@ -130,4 +132,5 @@ protected:
     bool m_gotCaps;
     std::unordered_map<RGY_CODEC, amf::AMFCapsPtr> m_encCaps;
     std::unordered_map<RGY_CODEC, amf::AMFCapsPtr> m_decCaps;
+    std::unordered_map<std::wstring, amf::AMFCapsPtr> m_filterCaps;
 };
