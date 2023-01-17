@@ -1619,6 +1619,7 @@ public:
             pSurface->SetProperty(RGY_PROP_TIMESTAMP, pts);
             pSurface->SetProperty(RGY_PROP_DURATION, duration);
             pSurface->SetProperty(RGY_PROP_INPUT_FRAMEID, inputFrameId);
+            m_vppFilter->setFrameParam(pSurface);
             m_inFrames++;
 
             surfVppIn->clearDataList();
