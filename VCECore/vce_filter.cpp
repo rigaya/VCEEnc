@@ -152,27 +152,24 @@ RGY_ERR AMFFilterHQScaler::init(amf::AMFFactory *factory, amf::AMFTrace *trace, 
         return err_to_rgy(res);
     }
     PrintMes(RGY_LOG_DEBUG, _T("created %s.\n"), m_name.c_str());
-#if defined(_WIN32) || defined(_WIN64)
-    const auto engine_type = amf::AMF_MEMORY_DX11;
-#else
-    const auto engine_type = amf::AMF_MEMORY_OPENCL;
-#endif
     const auto formatOut = csp_rgy_to_enc(prm->frameIn.csp);
-    res = m_filter->SetProperty(AMF_HQ_SCALER_ENGINE_TYPE, engine_type);
+    //res = m_filter->SetProperty(AMF_HQ_SCALER_ENGINE_TYPE, engine_type);
     res = m_filter->SetProperty(AMF_HQ_SCALER_OUTPUT_SIZE, AMFConstructSize(prm->frameOut.width, prm->frameOut.height));
     res = m_filter->SetProperty(AMF_HQ_SCALER_ALGORITHM, prm->scaler.algorithm);
     res = m_filter->SetProperty(AMF_HQ_SCALER_SHARPNESS, prm->scaler.sharpness);
-    PrintMes(RGY_LOG_DEBUG, _T("initialize %s by engine type %s, format out %s, size %dx%d -> %dx%d.\n"), m_name.c_str(),
-        wstring_to_tstring(trace->GetMemoryTypeName(engine_type)).c_str(),
+    PrintMes(RGY_LOG_DEBUG, _T("initialize %s by format out %s, size %dx%d -> %dx%d.\n"), m_name.c_str(),
         wstring_to_tstring(trace->SurfaceGetFormatName(formatOut)).c_str(),
         prm->frameIn.width, prm->frameIn.height, prm->frameOut.width, prm->frameOut.height);
     if (AMF_OK != (res = m_filter->Init(formatOut, prm->frameIn.width, prm->frameIn.height))) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to init %s: %s\n"), m_name.c_str(), AMFRetString(res));
+        PrintMes(RGY_LOG_ERROR, _T("Failed to init %s with %s %dx%d: %s\n"),
+            m_name.c_str(),
+            wstring_to_tstring(trace->SurfaceGetFormatName(formatOut)).c_str(),
+            prm->frameIn.width, prm->frameIn.height,
+            AMFRetString(res));
         return err_to_rgy(res);
     }
-    m_param = prm;
     PrintMes(RGY_LOG_DEBUG, _T("initialized %s.\n"), m_name.c_str());
-    setFilterInfo(strsprintf(_T("scaler: %dx%d -> %dx%d, %s, sharpness %.1f\n"),
+    setFilterInfo(strsprintf(_T("%s: %dx%d -> %dx%d, %s, sharpness %.1f\n"), m_name.c_str(),
         prm->frameIn.width, prm->frameIn.height, prm->frameOut.width, prm->frameOut.height,
         get_cx_desc(list_vce_hq_scaler, prm->scaler.algorithm), prm->scaler.sharpness));
     m_param = prm;
@@ -202,8 +199,8 @@ RGY_ERR AMFFilterPreProcessing::init(amf::AMFFactory *factory, amf::AMFTrace *tr
     }
     PrintMes(RGY_LOG_DEBUG, _T("created %s.\n"), m_name.c_str());
 
-    res = m_filter->SetProperty(AMF_PP_ENGINE_TYPE, amf::AMF_MEMORY_OPENCL);
-    res = m_filter->SetProperty(AMF_PP_OUTPUT_MEMORY_TYPE, amf::AMF_MEMORY_OPENCL);
+    //res = m_filter->SetProperty(AMF_PP_ENGINE_TYPE, amf::AMF_MEMORY_OPENCL);
+    //res = m_filter->SetProperty(AMF_PP_OUTPUT_MEMORY_TYPE, amf::AMF_MEMORY_OPENCL);
     res = m_filter->SetProperty(AMF_PP_ADAPTIVE_FILTER_STRENGTH, prm->pp.strength);
     res = m_filter->SetProperty(AMF_PP_ADAPTIVE_FILTER_SENSITIVITY, prm->pp.sensitivity);
     if (prm->pp.adaptiveFilter) {
@@ -212,12 +209,15 @@ RGY_ERR AMFFilterPreProcessing::init(amf::AMFFactory *factory, amf::AMFTrace *tr
         res = m_filter->SetProperty(AMF_PP_ADAPTIVE_FILTER_ENABLE, prm->pp.adaptiveFilter);
     }
     const auto formatOut = csp_rgy_to_enc(prm->frameIn.csp);
-    PrintMes(RGY_LOG_DEBUG, _T("initialize %s by mem type %s, format out %s, output size %dx%x.\n"), m_name.c_str(),
-        wstring_to_tstring(trace->GetMemoryTypeName(amf::AMF_MEMORY_OPENCL)).c_str(),
+    PrintMes(RGY_LOG_DEBUG, _T("initialize %s, format out %s, output size %dx%d.\n"), m_name.c_str(),
         wstring_to_tstring(trace->SurfaceGetFormatName(formatOut)).c_str(),
         prm->frameIn.width, prm->frameIn.height);
     if (AMF_OK != (res = m_filter->Init(formatOut, prm->frameIn.width, prm->frameIn.height))) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to init %s: %s\n"), m_name.c_str(), AMFRetString(res));
+        PrintMes(RGY_LOG_ERROR, _T("Failed to init %s with %s %dx%d: %s\n"),
+            m_name.c_str(),
+            wstring_to_tstring(trace->SurfaceGetFormatName(formatOut)).c_str(),
+            prm->frameIn.width, prm->frameIn.height,
+            AMFRetString(res));
         return err_to_rgy(res);
     }
     PrintMes(RGY_LOG_DEBUG, _T("initialized %s.\n"), m_name.c_str());
@@ -255,16 +255,19 @@ RGY_ERR AMFFilterVQEnhancer::init(amf::AMFFactory *factory, amf::AMFTrace *trace
     const auto engine_type = amf::AMF_MEMORY_OPENCL;
 #endif
     const auto formatOut = csp_rgy_to_enc(prm->frameIn.csp);
-    res = m_filter->SetProperty(AMF_VIDEO_ENHANCER_ENGINE_TYPE, engine_type);
+    //res = m_filter->SetProperty(AMF_VIDEO_ENHANCER_ENGINE_TYPE, engine_type);
     res = m_filter->SetProperty(AMF_VIDEO_ENHANCER_OUTPUT_SIZE, AMFConstructSize(prm->frameIn.width, prm->frameIn.height));
     res = m_filter->SetProperty(AMF_VE_FCR_ATTENUATION, prm->enhancer.attenuation);
     res = m_filter->SetProperty(AMF_VE_FCR_RADIUS, prm->enhancer.fcrRadius);
-    PrintMes(RGY_LOG_DEBUG, _T("initialize %s by engine type %s, format out %s, output size %dx%x.\n"), m_name.c_str(),
-        wstring_to_tstring(trace->GetMemoryTypeName(engine_type)).c_str(),
+    PrintMes(RGY_LOG_DEBUG, _T("initialize %s, format out %s, output size %dx%x.\n"), m_name.c_str(),
         wstring_to_tstring(trace->SurfaceGetFormatName(formatOut)).c_str(),
         prm->frameIn.width, prm->frameIn.height);
     if (AMF_OK != (res = m_filter->Init(formatOut, prm->frameIn.width, prm->frameIn.height))) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to init %s: %s\n"), m_name.c_str(), AMFRetString(res));
+        PrintMes(RGY_LOG_ERROR, _T("Failed to init %s with %s %dx%d: %s\n"),
+            m_name.c_str(),
+            wstring_to_tstring(trace->SurfaceGetFormatName(formatOut)).c_str(),
+            prm->frameIn.width, prm->frameIn.height,
+            AMFRetString(res));
         return err_to_rgy(res);
     }
     PrintMes(RGY_LOG_DEBUG, _T("initialized %s.\n"), m_name.c_str());
