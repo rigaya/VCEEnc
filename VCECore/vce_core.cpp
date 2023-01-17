@@ -1084,6 +1084,10 @@ std::tuple<RGY_ERR, std::unique_ptr<AMFFilter>> VCECore::AddFilterAMF(
         param->baseFps = m_encFps;
         param->bOutOverwrite = false;
         m_pLastFilterParam = param;
+        if (RGY_CSP_BIT_DEPTH[param->frameIn.csp] != 8) {
+            PrintMes(RGY_LOG_ERROR, _T("PreProcess currently supports 8bit only.\n"));
+            return { RGY_ERR_UNSUPPORTED, nullptr };
+        }
         } break;
     case VppType::AMF_RESIZE: {
         filter = std::make_unique<AMFFilterHQScaler>(m_dev->context(), m_pLog);
