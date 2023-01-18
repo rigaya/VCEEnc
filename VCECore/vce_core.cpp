@@ -4375,7 +4375,7 @@ tstring check_vce_filter_features(int deviceId, const RGYParamLogLevel& loglevel
         return _T("VCE not available.\n");
     }
     tstring str = strsprintf(_T("device #%d: "), deviceId) + vce.devName() + _T("\n");
-    for (auto& filter : { AMFVideoConverter, AMFPreProcessing, AMFHQScaler, AMFVQEnhancer }) {
+    for (auto& filter : { AMFVideoConverter, AMFPreProcessing, AMFHQScaler, AMFVQEnhancer, AMFPreAnalysis }) {
         auto ret = vce.checkFilterFeatures(filter);
         if (ret.length() > 0) {
             str += wstring_to_tstring(filter) + tstring(_T(" features\n"));

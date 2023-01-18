@@ -242,7 +242,7 @@ void VCEDevice::getAllCaps() {
         getDecCaps(codec);
     }
     //フィルタの情報
-    for (auto& filter : { AMFVideoConverter, AMFPreProcessing, AMFHQScaler, AMFVQEnhancer }) {
+    for (auto& filter : { AMFVideoConverter, AMFPreProcessing, AMFHQScaler, AMFVQEnhancer, AMFPreAnalysis }) {
         getFilterCaps(filter);
     }
 }
