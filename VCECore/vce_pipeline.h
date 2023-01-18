@@ -1751,7 +1751,7 @@ protected:
     RGYFilterSsim *m_videoMetric;
 public:
     PipelineTaskOpenCL(amf::AMFContextPtr context, std::vector<std::unique_ptr<RGYFilter>>& vppfilters, RGYFilterSsim *videoMetric, std::shared_ptr<RGYOpenCLContext> cl, int outMaxQueueSize, bool dx11interlop, std::shared_ptr<RGYLog> log) :
-        PipelineTask(PipelineTaskType::OPENCL, context, outMaxQueueSize, log), m_cl(cl), m_vpFilters(vppfilters), m_dx11interlop(dx11interlop), m_prevInputFrame(), m_videoMetric(videoMetric) {
+        PipelineTask(PipelineTaskType::OPENCL, context, outMaxQueueSize, log), m_cl(cl), m_dx11interlop(dx11interlop), m_vpFilters(vppfilters), m_prevInputFrame(), m_videoMetric(videoMetric) {
 
     };
     virtual ~PipelineTaskOpenCL() {
