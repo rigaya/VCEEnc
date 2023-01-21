@@ -157,6 +157,7 @@ RGY_ERR AMFFilterHQScaler::init(amf::AMFFactory *factory, amf::AMFTrace *trace, 
     res = m_filter->SetProperty(AMF_HQ_SCALER_OUTPUT_SIZE, AMFConstructSize(prm->frameOut.width, prm->frameOut.height));
     res = m_filter->SetProperty(AMF_HQ_SCALER_ALGORITHM, prm->scaler.algorithm);
     res = m_filter->SetProperty(AMF_HQ_SCALER_SHARPNESS, prm->scaler.sharpness);
+    res = m_filter->SetProperty(AMF_HQ_SCALER_KEEP_ASPECT_RATIO, false);
     PrintMes(RGY_LOG_DEBUG, _T("initialize %s by format out %s, size %dx%d -> %dx%d.\n"), m_name.c_str(),
         wstring_to_tstring(trace->SurfaceGetFormatName(formatOut)).c_str(),
         prm->frameIn.width, prm->frameIn.height, prm->frameOut.width, prm->frameOut.height);
