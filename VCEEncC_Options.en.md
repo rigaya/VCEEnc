@@ -159,11 +159,13 @@
   - [--vpp-smooth \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-smooth-param1value1param2value2)
   - [--vpp-knn \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-knn-param1value1param2value2)
   - [--vpp-pmd \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-pmd-param1value1param2value2)
+  - [--vpp-preprocess \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-preprocess-param1value1param2value2)
   - [--vpp-subburn \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-subburn-param1value1param2value2)
   - [--vpp-resize \<string\>](#--vpp-resize-string)
   - [--vpp-unsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-unsharp-param1value1param2value2)
   - [--vpp-edgelevel \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-edgelevel-param1value1param2value2)
   - [--vpp-warpsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-warpsharp-param1value1param2value2)
+  - [--vpp-enhance \[=\]\[,=\]\[...\]](#--vpp-enhance-)
   - [--vpp-tweak \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-tweak-param1value1param2value2)
   - [--vpp-deband \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-deband-param1value1param2value2)
   - [--vpp-pad \<int\>,\<int\>,\<int\>,\<int\>](#--vpp-pad-intintintint)
@@ -1631,7 +1633,10 @@ Drop duplicated frame in cycles set.
 
 - **parameters**
   - cycle=&lt;int&gt;  (default: 5)  
-    num of frame from which a frame will be droppped.
+    num of frame to select frame(s) to be droppped.
+
+  - drop=&lt;int&gt;  (default: 1)  
+    num of frame(s) to drop within a cycle.
   
   - thredup=&lt;float&gt;  (default: 1.1,  0.0 - 100.0)  
     duplicate threshold.

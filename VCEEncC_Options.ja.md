@@ -157,11 +157,13 @@
   - [--vpp-smooth \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-smooth-param1value1param2value2)
   - [--vpp-knn \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-knn-param1value1param2value2)
   - [--vpp-pmd \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-pmd-param1value1param2value2)
+  - [--vpp-preprocess \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-preprocess-param1value1param2value2)
   - [--vpp-subburn \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-subburn-param1value1param2value2)
   - [--vpp-resize \<string\>](#--vpp-resize-string)
   - [--vpp-unsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-unsharp-param1value1param2value2)
   - [--vpp-edgelevel \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-edgelevel-param1value1param2value2)
   - [--vpp-warpsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-warpsharp-param1value1param2value2)
+  - [--vpp-enhance \[=\]\[,=\]\[...\]](#--vpp-enhance-)
   - [--vpp-tweak \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-tweak-param1value1param2value2)
   - [--vpp-deband \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-deband-param1value1param2value2)
   - [--vpp-pad \<int\>,\<int\>,\<int\>,\<int\>](#--vpp-pad-intintintint)
@@ -1664,7 +1666,10 @@ yadifによるインタレ解除を行う。
 
 - **パラメータ**
   - cycle=&lt;int&gt;  (デフォルト: 5)  
-    ドロップするフレームの周期。ここで設定したフレーム数の中から1枚フレームをドロップする。
+    ドロップするフレームの周期。ここで設定したフレーム数の中から指定フレーム数をドロップする。
+
+  - drop=&lt;int&gt;  (デフォルト: 1)  
+    cycle内にドロップするフレーム数。ここで設定したフレーム数の中から1枚フレームをドロップする。
   
   - thredup=&lt;float&gt;  (デフォルト: 1.1,  0.0 - 100.0)  
     重複と判定する閾値。
