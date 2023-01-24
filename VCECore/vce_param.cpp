@@ -468,6 +468,7 @@ RGY_ERR AMFParams::SetParamTypeHEVC() {
     SetParamType(AMF_VIDEO_ENCODER_HEVC_ENABLE_VBAQ, AMF_PARAM_STATIC, L"Enable VBAQ(true, false default =  false)");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_HIGH_MOTION_QUALITY_BOOST_ENABLE, AMF_PARAM_DYNAMIC, L"bool; default = depends on USAGE; Enable High motion quality boost mode");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_PREENCODE_ENABLE, AMF_PARAM_STATIC, L"enables pre-encode assisted rate control");
+    SetParamType(AMF_VIDEO_ENCODER_HEVC_PRE_ANALYSIS_ENABLE, AMF_PARAM_STATIC, L"enables the pre-analysis module");
     // Motion estimation
     SetParamType(AMF_VIDEO_ENCODER_HEVC_MOTION_HALF_PIXEL, AMF_PARAM_STATIC, L"Half Pixel (true, false default =  true)");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_MOTION_QUARTERPIXEL, AMF_PARAM_STATIC, L"Quarter Pixel (true, false default =  true");
