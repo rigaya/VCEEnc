@@ -165,7 +165,7 @@
   - [--vpp-unsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-unsharp-param1value1param2value2)
   - [--vpp-edgelevel \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-edgelevel-param1value1param2value2)
   - [--vpp-warpsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-warpsharp-param1value1param2value2)
-  - [--vpp-enhance \[=\]\[,=\]\[...\]](#--vpp-enhance-)
+  - [--vpp-enhance \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\]\[...\]](#--vpp-enhance-param1value1param2value2)
   - [--vpp-tweak \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-tweak-param1value1param2value2)
   - [--vpp-deband \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-deband-param1value1param2value2)
   - [--vpp-pad \<int\>,\<int\>,\<int\>,\<int\>](#--vpp-pad-intintintint)
@@ -1785,7 +1785,7 @@ JND based edge-adaptive denoising filter that helps the encoder to achieve bette
 This filter aims at removing bit-expensive high frequency details
 that are not important for the human visual system. Supports 8bit only (not available for 10bit).
 
-- **パラメータ**
+- **Parameters**
   - strength=&lt;int&gt;      (default: 4, range 0 - 10)
     Strength of filter. The higher the strength, the stronger the filtering.
 
@@ -1943,7 +1943,7 @@ Edge warping (sharpening) filter.
   --vpp-warpsharp threshold=128,blur=3,type=1
   ```
 
-### --vpp-enhance [<param1>=<value>][,<param2>=<value>][...]
+### --vpp-enhance [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;][...]
 
 - **Parameters**
   - attenuation=&lt;float&gt; (default: 0.1, range 0.02 - 0.4)

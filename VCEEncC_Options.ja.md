@@ -163,7 +163,7 @@
   - [--vpp-unsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-unsharp-param1value1param2value2)
   - [--vpp-edgelevel \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-edgelevel-param1value1param2value2)
   - [--vpp-warpsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-warpsharp-param1value1param2value2)
-  - [--vpp-enhance \[=\]\[,=\]\[...\]](#--vpp-enhance-)
+  - [--vpp-enhance \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\]\[...\]](#--vpp-enhance-param1value1param2value2)
   - [--vpp-tweak \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-tweak-param1value1param2value2)
   - [--vpp-deband \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-deband-param1value1param2value2)
   - [--vpp-pad \<int\>,\<int\>,\<int\>,\<int\>](#--vpp-pad-intintintint)
@@ -1977,7 +1977,7 @@ unsharpフィルタ。輪郭・ディテール強調用のフィルタ。
   --vpp-warpsharp threshold=128,blur=3,type=1
   ```
 
-### --vpp-enhance [<param1>=<value>][,<param2>=<value>][...]
+### --vpp-enhance [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;][...]
 
 - **パラメータ**
   - attenuation=&lt;float&gt; (default: 0.1, range 0.02 - 0.4)
