@@ -102,6 +102,7 @@
   - [--input-probesize \<int\>](#--input-probesize-int)
   - [--trim \<int\>:\<int\>\[,\<int\>:\<int\>\]\[,\<int\>:\<int\>\]...](#--trim-intintintintintint)
   - [--seek \[\[\<int\>:\]\<int\>:\]\<int\>\[.\<int\>\]](#--seek-intintintint)
+  - [--seekto \[\[\<int\>:\]\<int\>:\]\<int\>\[.\<int\>\]](#--seekto-intintintint)
   - [--input-format \<string\>](#--input-format-string)
   - [-f, --output-format \<string\>](#-f---output-format-string)
   - [--video-track \<int\>](#--video-track-int)
@@ -754,6 +755,15 @@ libavが読み込み時に解析する最大のサイズをbyte単位で指定�
 例1: --seek 0:01:15.400
 例2: --seek 1:15.4
 例3: --seek 75.4
+```
+
+### --seekto [[&lt;int&gt;:]&lt;int&gt;:]&lt;int&gt;[.&lt;int&gt;]
+書式は、hh:mm:ss.ms。"hh"や"mm"は省略可。
+エンコードの終了時刻を指定する。正確な範囲指定を行いたい場合は[--trim](#--trim-intintintintintint)で行う。
+```
+例1: --seekto 0:01:15.400
+例2: --seekto 1:15.4
+例3: --seekto 75.4
 ```
 
 ### --input-format &lt;string&gt;

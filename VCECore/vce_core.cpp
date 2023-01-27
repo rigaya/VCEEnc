@@ -2584,15 +2584,15 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
     if (m_pFileWriterListAudio.size() > 0) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskAudio>(m_dev->context(), m_pFileReader.get(), m_AudioReaders, m_pFileWriterListAudio, m_vpFilters, 0, m_pLog));
     }
-    if (m_trimParam.list.size() > 0) {
-        m_pipelineTasks.push_back(std::make_unique<PipelineTaskTrim>(m_dev->context(), m_trimParam, 0, m_pLog));
-    }
     { // checkpts
         RGYInputAvcodec *pReader = dynamic_cast<RGYInputAvcodec *>(m_pFileReader.get());
         const int64_t outFrameDuration = std::max<int64_t>(1, rational_rescale(1, m_inputFps.inv(), m_outputTimebase)); //固定fpsを仮定した時の1フレームのduration (スケール: m_outputTimebase)
         const auto inputFrameInfo = m_pFileReader->GetInputFrameInfo();
         const auto inputFpsTimebase = rgy_rational<int>((int)inputFrameInfo.fpsD, (int)inputFrameInfo.fpsN);
         const auto srcTimebase = (m_pFileReader->getInputTimebase().n() > 0 && m_pFileReader->getInputTimebase().is_valid()) ? m_pFileReader->getInputTimebase() : inputFpsTimebase;
+        if (m_trimParam.list.size() > 0) {
+            m_pipelineTasks.push_back(std::make_unique<PipelineTaskTrim>(m_dev->context(), m_trimParam, m_pFileReader.get(), srcTimebase, 0, m_pLog));
+        }
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskCheckPTS>(m_dev->context(), srcTimebase, srcTimebase, m_outputTimebase, outFrameDuration, m_nAVSyncMode, (pReader) ? pReader->GetFramePosList() : nullptr, m_pLog));
     }
 

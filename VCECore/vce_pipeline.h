@@ -1168,10 +1168,12 @@ public:
 class PipelineTaskTrim : public PipelineTask {
 protected:
     const sTrimParam &m_trimParam;
+    RGYInput *m_input;
+    rgy_rational<int> m_srcTimebase;
 public:
-    PipelineTaskTrim(amf::AMFContextPtr context, const sTrimParam &trimParam, int outMaxQueueSize, std::shared_ptr<RGYLog> log) :
+    PipelineTaskTrim(amf::AMFContextPtr context, const sTrimParam &trimParam, RGYInput *input, const rgy_rational<int>& srcTimebase, int outMaxQueueSize, std::shared_ptr<RGYLog> log) :
         PipelineTask(PipelineTaskType::TRIM, context, outMaxQueueSize, log),
-        m_trimParam(trimParam) {
+        m_trimParam(trimParam), m_input(input), m_srcTimebase(srcTimebase) {
     };
     virtual ~PipelineTaskTrim() {};
 
@@ -1187,6 +1189,9 @@ public:
         PipelineTaskOutputSurf *taskSurf = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
         if (!frame_inside_range(taskSurf->surf().frame()->inputFrameId(), m_trimParam.list).first) {
             return RGY_ERR_NONE;
+        }
+        if (!m_input->checkTimeSeekTo(taskSurf->surf().frame()->timestamp(), m_srcTimebase)) {
+            return RGY_ERR_NONE; //seektoにより脱落させるフレーム
         }
         m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(taskSurf->surf()));
         return RGY_ERR_NONE;
