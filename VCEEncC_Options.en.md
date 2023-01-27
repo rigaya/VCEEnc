@@ -1039,6 +1039,9 @@ Mux an external audio file specified.
 - enc_prm=&lt;string&gt;  
   Specify params for audio encoder.
 
+- dec_prm=&lt;string&gt;  
+  Specify params for audio decoder.
+
 - filter=&lt;string&gt;  
   Specify filters for audio.
 
