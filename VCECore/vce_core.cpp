@@ -1778,19 +1778,44 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             return RGY_ERR_UNSUPPORTED;
         }
 
+        bool preAnalysisSupported = false;
+        encoderCaps->GetProperty(AMF_PARAM_CAP_PRE_ANALYSIS(prm->codec), &preAnalysisSupported);
+        const int encBitDepth = GetEncoderBitdepth(prm);
         if (   prm->rateControl == get_codec_hqvbr(prm->codec)
-            || prm->rateControl == get_codec_hqcbr(prm->codec)
-            || prm->rateControl == get_codec_qvbr(prm->codec)) {
+            || prm->rateControl == get_codec_hqcbr(prm->codec)) {
+            if (!preAnalysisSupported || encBitDepth > 8) {
+                if (prm->rateControl == get_codec_hqvbr(prm->codec)) {
+                    prm->rateControl = get_codec_vbr(prm->codec);
+                    PrintMes(RGY_LOG_WARN, _T("hqvbr mode switching to vbr mode, as hqvbr mode requires pre-analysis which is not supported on this device!\n"));
+                } else if (prm->rateControl == get_codec_hqcbr(prm->codec)) {
+                    prm->rateControl = get_codec_cbr(prm->codec);
+                    PrintMes(RGY_LOG_WARN, _T("hqcbr mode switching to cbr mode, as hqcbr mode requires pre-analysis which is not supported on this device!\n"));
+                }
+            } else {
+                PrintMes(RGY_LOG_INFO, _T("Pre-analysis will be enabled for %s mode.\n"), get_cx_desc(get_rc_method(prm->codec), prm->rateControl));
+                prm->pa.enable = true;
+            }
+        } else if (prm->rateControl == get_codec_qvbr(prm->codec)) {
+            if (!preAnalysisSupported) {
+                PrintMes(RGY_LOG_ERROR, _T("qvbr mode not supported, as it requires pre-analysis which is not supported on this device!\n"));
+                return RGY_ERR_UNSUPPORTED;
+            }
+            if (encBitDepth > 8) {
+                PrintMes(RGY_LOG_ERROR, _T("qvbr mode not supported, as it requires pre-analysis which is not supported with %d bit depth encoding!\n"), encBitDepth);
+                return RGY_ERR_UNSUPPORTED;
+            }
             PrintMes(RGY_LOG_INFO, _T("Pre-analysis will be enabled for %s mode.\n"), get_cx_desc(get_rc_method(prm->codec), prm->rateControl));
             prm->pa.enable = true;
         }
 
         if (prm->pa.enable) {
-            bool preAnalysisSupported = false;
-            encoderCaps->GetProperty(AMF_PARAM_CAP_PRE_ANALYSIS(prm->codec), &preAnalysisSupported);
             if (!preAnalysisSupported) {
                 PrintMes(RGY_LOG_WARN, _T("Pre-analysis is not supported on this device, disabled.\n"));
                 prm->pa.enable = false;
+            }
+            if (GetEncoderBitdepth(prm) > 8) {
+                PrintMes(RGY_LOG_ERROR, _T("Pre analysis is limited to 8bit encoding, disabled.\n"));
+                return RGY_ERR_UNSUPPORTED;
             }
         }
 
@@ -1990,16 +2015,17 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_FILLER_DATA_ENABLE(prm->codec), prm->bFiller != 0);
     m_params.SetParam(AMF_PARAM_GOP_SIZE(prm->codec),                       (amf_int64)nGOPLen);
 
-    if (prm->pa.enable &&
-        (   prm->rateControl != get_codec_vbr(prm->codec)
-         && prm->rateControl != get_codec_hqvbr(prm->codec)
-         && prm->rateControl != get_codec_vbr_lat(prm->codec)
-         && prm->rateControl != get_codec_cbr(prm->codec)
-         && prm->rateControl != get_codec_hqcbr(prm->codec)
-         && prm->rateControl != get_codec_qvbr(prm->codec))) {
-        PrintMes(RGY_LOG_WARN, _T("Pre analysis is currently supported only with CBR/VBR/QVBR mode.\n"));
-        PrintMes(RGY_LOG_WARN, _T("Currenlty %s mode is selected, so pre analysis will be disabled.\n"), get_cx_desc(get_rc_method(prm->codec), prm->rateControl));
-        prm->pa.enable = false;
+    if (prm->pa.enable) {
+        if (   prm->rateControl != get_codec_vbr(prm->codec)
+            && prm->rateControl != get_codec_hqvbr(prm->codec)
+            && prm->rateControl != get_codec_vbr_lat(prm->codec)
+            && prm->rateControl != get_codec_cbr(prm->codec)
+            && prm->rateControl != get_codec_hqcbr(prm->codec)
+            && prm->rateControl != get_codec_qvbr(prm->codec)) {
+                PrintMes(RGY_LOG_WARN, _T("Pre analysis is currently supported only with CBR/VBR/QVBR mode.\n"));
+                PrintMes(RGY_LOG_WARN, _T("Currenlty %s mode is selected, so pre analysis will be disabled.\n"), get_cx_desc(get_rc_method(prm->codec), prm->rateControl));
+                prm->pa.enable = false;
+        }
     }
     if (prm->pa.enable) {
         m_params.SetParam(AMF_PARAM_PRE_ANALYSIS_ENABLE(prm->codec), prm->pa.enable);
