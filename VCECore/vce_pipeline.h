@@ -107,7 +107,7 @@ enum class VppType : int {
     CL_WARPSHARP,
 
     CL_TWEAK,
-
+    CL_OVERLAY,
     CL_DEBAND,
 
     CL_PAD,

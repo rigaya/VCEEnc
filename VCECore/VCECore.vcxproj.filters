@@ -294,6 +294,9 @@
     <ClCompile Include="vce_filter.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="rgy_filter_overlay.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu_info.h">
@@ -560,6 +563,9 @@
     <ClInclude Include="vce_filter.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="rgy_filter_overlay.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="rgy_filter.cl">
@@ -641,6 +647,9 @@
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="rgy_filter_yadif.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="rgy_filter_overlay.cl">
       <Filter>ソース ファイル</Filter>
     </None>
   </ItemGroup>

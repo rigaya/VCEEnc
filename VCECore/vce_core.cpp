@@ -60,6 +60,7 @@
 #include "rgy_filter_warpsharp.h"
 #include "rgy_filter_tweak.h"
 #include "rgy_filter_transform.h"
+#include "rgy_filter_overlay.h"
 #include "rgy_filter_deband.h"
 #include "rgy_filesystem.h"
 #include "rgy_version.h"
@@ -996,6 +997,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vppamf.enhancer.enable)  filterPipeline.push_back(VppType::AMF_VQENHANCE);
     if (inputParam->vpp.transform.enable)  filterPipeline.push_back(VppType::CL_TRANSFORM);
     if (inputParam->vpp.tweak.enable)      filterPipeline.push_back(VppType::CL_TWEAK);
+    if (inputParam->vpp.overlay.size() > 0)  filterPipeline.push_back(VppType::CL_OVERLAY);
     if (inputParam->vpp.deband.enable)     filterPipeline.push_back(VppType::CL_DEBAND);
     if (inputParam->vpp.pad.enable)        filterPipeline.push_back(VppType::CL_PAD);
 
@@ -1572,6 +1574,28 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         //入力フレーム情報を更新
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //overlay
+    if (vppType == VppType::CL_OVERLAY) {
+        for (const auto& overlay : inputParam->vpp.overlay) {
+            unique_ptr<RGYFilter> filter(new RGYFilterOverlay(m_dev->cl()));
+            shared_ptr<RGYFilterParamOverlay> param(new RGYFilterParamOverlay());
+            param->overlay = overlay;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
+            param->bOutOverwrite = true;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+            //登録
+            clfilters.push_back(std::move(filter));
+        }
         return RGY_ERR_NONE;
     }
     //deband
