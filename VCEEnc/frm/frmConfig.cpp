@@ -2246,7 +2246,7 @@ VidEncInfo frmConfig::GetVidEncInfo() {
             strcpy_s(exe_path, defaultExePath.c_str());
         }
     }
-    if (get_exe_message(exe_path, "--check-hw", mes, _countof(mes), AUO_PIPE_MUXED) == RP_SUCCESS) {
+    if (get_exe_message(exe_path, "--check-device", mes, _countof(mes), AUO_PIPE_MUXED) == RP_SUCCESS) {
         auto lines = String(mes).ToString()->Split(String(L"\r\n").ToString()->ToCharArray(), System::StringSplitOptions::RemoveEmptyEntries);
         for (int i = 0; i < lines->Length; i++) {
             if (lines[i]->Contains("VCE available")) {
