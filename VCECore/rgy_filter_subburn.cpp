@@ -610,7 +610,7 @@ RGY_ERR RGYFilterSubburn::initAVCodec(const std::shared_ptr<RGYFilterParamSubbur
 
         const auto avcodec_ver = avcodec_version();
         const auto avcodec_ver_major = (avcodec_ver >> 16) & 0xff;
-        const auto avcodec_ver_minor = (avcodec_ver >> 8) & 0xff;
+        const auto avcodec_ver_minor = (avcodec_ver >>  8) & 0xff;
         if (avcodec_ver_major < 59 || (avcodec_ver_major == 59 && avcodec_ver_minor <= 8)) {
             if (0 > (ret = av_dict_set(&pCodecOpts, "sub_text_format", "ass", 0))) {
                 AddMessage(RGY_LOG_ERROR, _T("failed to set \"sub_text_format\" option for subtitle decoder: %s\n"), qsv_av_err2str(ret).c_str());
