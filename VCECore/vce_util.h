@@ -564,6 +564,7 @@ private:
 public:
     RGYFrameRef(const RGYFrameInfo& f) : frame(f) {};
     virtual ~RGYFrameRef() { }
+    const RGYFrameInfo *info() const { return &frame; }
     virtual bool isempty() const override { return frame.ptr[0] == nullptr; }
     virtual const amf::AMFSurface *surf() const override { return nullptr; }
     virtual amf::AMFSurface *surf() override { return nullptr; }
