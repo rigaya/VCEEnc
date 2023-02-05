@@ -1029,6 +1029,8 @@ public:
                     PrintMes(RGY_LOG_TRACE, _T("check_pts(%d):   skipping frame (vfr)\n"), taskSurf->surf().frame()->inputFrameId());
                     return RGY_ERR_MORE_SURFACE;
                 }
+                // 少しのずれはrffによるものとみなし、基準値を修正する
+                m_tsOutEstimated = outPtsSource;
             }
             if (ENCODER_VCEENC && m_framePosList) {
                 //cuvidデコード時は、timebaseの分子はかならず1なので、streamIn->time_baseとズレているかもしれないのでオリジナルを計算
