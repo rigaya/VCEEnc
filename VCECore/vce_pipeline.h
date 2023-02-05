@@ -706,9 +706,17 @@ public:
 
 class PipelineTaskAMFDecode : public PipelineTask {
 protected:
+    struct FrameFlags {
+        int64_t timestamp;
+        RGY_FRAME_FLAGS flags;
+
+        FrameFlags() : timestamp(AV_NOPTS_VALUE), flags(RGY_FRAME_FLAG_NONE) {};
+        FrameFlags(int64_t pts, RGY_FRAME_FLAGS f) : timestamp(pts), flags(f) {};
+    };
     amf::AMFComponentPtr m_dec;
     RGYInput *m_input;
     RGYQueueMPMP<RGYFrameDataMetadata*> m_queueHDR10plusMetadata;
+    RGYQueueMPMP<FrameFlags> m_dataFlag;
     RGYRunState m_state;
     int m_decOutFrames;
 #if THREAD_DEC_USE_FUTURE
@@ -719,9 +727,10 @@ protected:
 public:
     PipelineTaskAMFDecode(amf::AMFComponentPtr dec, amf::AMFContextPtr context, int outMaxQueueSize, RGYInput *input, std::shared_ptr<RGYLog> log)
         : PipelineTask(PipelineTaskType::AMFDEC, context, outMaxQueueSize, log), m_dec(dec), m_input(input),
-        m_queueHDR10plusMetadata(),
+        m_queueHDR10plusMetadata(), m_dataFlag(),
         m_state(RGY_STATE_STOPPED), m_decOutFrames(0), m_thDecoder() {
         m_queueHDR10plusMetadata.init(256);
+        m_dataFlag.init();
     };
     virtual ~PipelineTaskAMFDecode() {
         m_state = RGY_STATE_ABORT;
@@ -800,6 +809,8 @@ public:
                             }
                         }
                     }
+                    const auto flags = FrameFlags(bitstream.pts(), (RGY_FRAME_FLAGS)bitstream.dataflag());
+                    m_dataFlag.push(flags);
                 }
                 bitstream.setSize(0);
                 bitstream.setOffset(0);
@@ -910,6 +921,9 @@ protected:
                 auto surfDecOutCopy = std::make_unique<RGYFrame>(surfCopy);
                 surfDecOutCopy->clearDataList();
                 surfDecOutCopy->setInputFrameId(m_decOutFrames++);
+                if (getDataFlag(surfDecOutCopy->timestamp()) & RGY_FRAME_FLAG_RFF) {
+                    surfDecOutCopy->setFlags(RGY_FRAME_FLAG_RFF);
+                }
                 if (auto data = getMetadata(RGY_FRAME_DATA_HDR10PLUS, surfDecOutCopy->timestamp()); data) {
                     surfDecOutCopy->dataList().push_back(data);
                 }
@@ -920,6 +934,25 @@ protected:
             }
         }
         return ret;
+    }
+    RGY_FRAME_FLAGS getDataFlag(const int64_t timestamp) {
+        FrameFlags pts_flag;
+        while (m_dataFlag.front_copy_no_lock(&pts_flag)) {
+            if (pts_flag.timestamp < timestamp || pts_flag.timestamp == AV_NOPTS_VALUE) {
+                m_dataFlag.pop();
+            } else {
+                break;
+            }
+        }
+        size_t queueSize = m_dataFlag.size();
+        for (uint32_t i = 0; i < queueSize; i++) {
+            if (m_dataFlag.copy(&pts_flag, i, &queueSize)) {
+                if (pts_flag.timestamp == timestamp) {
+                    return pts_flag.flags;
+                }
+            }
+        }
+        return RGY_FRAME_FLAG_NONE;
     }
     std::shared_ptr<RGYFrameData> getMetadata(const RGYFrameDataType datatype, const int64_t timestamp) {
         std::shared_ptr<RGYFrameData> frameData;
@@ -961,6 +994,8 @@ protected:
     rgy_rational<int> m_streamTimebase;
     rgy_rational<int> m_outputTimebase;
     RGYAVSync m_avsync;
+    bool m_vpp_rff;
+    bool m_vpp_afs_rff_aware;
     int64_t m_outFrameDuration; //(m_outputTimebase基準)
     int64_t m_tsOutFirst;     //(m_outputTimebase基準)
     int64_t m_tsOutEstimated; //(m_outputTimebase基準)
@@ -968,9 +1003,9 @@ protected:
     uint32_t m_inputFramePosIdx;
     FramePosList *m_framePosList;
 public:
-    PipelineTaskCheckPTS(amf::AMFContextPtr context, rgy_rational<int> srcTimebase, rgy_rational<int> streamTimebase, rgy_rational<int> outputTimebase, int64_t outFrameDuration, RGYAVSync avsync, FramePosList *framePosList, std::shared_ptr<RGYLog> log) :
+    PipelineTaskCheckPTS(amf::AMFContextPtr context, rgy_rational<int> srcTimebase, rgy_rational<int> streamTimebase, rgy_rational<int> outputTimebase, int64_t outFrameDuration, RGYAVSync avsync, bool vpp_afs_rff_aware, FramePosList *framePosList, std::shared_ptr<RGYLog> log) :
         PipelineTask(PipelineTaskType::CHECKPTS, context, /*outMaxQueueSize = */ 0 /*常に0である必要がある*/, log),
-        m_srcTimebase(srcTimebase), m_streamTimebase(streamTimebase), m_outputTimebase(outputTimebase), m_avsync(avsync), m_outFrameDuration(outFrameDuration),
+        m_srcTimebase(srcTimebase), m_streamTimebase(streamTimebase), m_outputTimebase(outputTimebase), m_avsync(avsync), m_vpp_rff(false), m_vpp_afs_rff_aware(vpp_afs_rff_aware), m_outFrameDuration(outFrameDuration),
         m_tsOutFirst(-1), m_tsOutEstimated(0), m_tsPrev(-1), m_inputFramePosIdx(std::numeric_limits<decltype(m_inputFramePosIdx)>::max()), m_framePosList(framePosList) {
     };
     virtual ~PipelineTaskCheckPTS() {};
@@ -990,8 +1025,6 @@ public:
             //そのためm_outQeueueにまだフレームが残っている可能性がある
             return (m_outQeueue.size() > 0) ? RGY_ERR_MORE_SURFACE : RGY_ERR_MORE_DATA;
         }
-        const bool vpp_rff = false;
-        const bool vpp_afs_rff_aware = false;
         int64_t outPtsSource = m_tsOutEstimated; //(m_outputTimebase基準)
         int64_t outDuration = m_outFrameDuration; //入力fpsに従ったduration
 
@@ -1002,7 +1035,7 @@ public:
         }
 
         if ((m_srcTimebase.n() > 0 && m_srcTimebase.is_valid())
-            && ((m_avsync & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR)) || vpp_rff || vpp_afs_rff_aware)) {
+            && ((m_avsync & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR)) || m_vpp_rff || m_vpp_afs_rff_aware)) {
             //CFR仮定ではなく、オリジナルの時間を見る
             const auto srcTimestamp = taskSurf->surf().frame()->timestamp();
             outPtsSource = rational_rescale(srcTimestamp, m_srcTimebase, m_outputTimebase);
@@ -1015,8 +1048,8 @@ public:
         //最初のptsを0に修正
         outPtsSource -= m_tsOutFirst;
 
-        if ((m_avsync & RGY_AVSYNC_VFR) || vpp_rff || vpp_afs_rff_aware) {
-            if (vpp_rff || vpp_afs_rff_aware) {
+        if ((m_avsync & RGY_AVSYNC_VFR) || m_vpp_rff || m_vpp_afs_rff_aware) {
+            if (m_vpp_rff || m_vpp_afs_rff_aware) {
                 if (std::abs(outPtsSource - m_tsOutEstimated) >= 32 * m_outFrameDuration) {
                     PrintMes(RGY_LOG_TRACE, _T("check_pts: detected gap %lld, changing offset.\n"), outPtsSource, std::abs(outPtsSource - m_tsOutEstimated));
                     //timestampに一定以上の差があればそれを無視する

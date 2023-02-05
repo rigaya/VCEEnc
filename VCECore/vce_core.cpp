@@ -2623,6 +2623,23 @@ RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
     return RGY_ERR_NONE;
 }
 
+bool VCECore::VppAfsRffAware() const {
+    //vpp-afsのrffが使用されているか
+    bool vpp_afs_rff_aware = false;
+    for (const auto& filter_block : m_vpFilters) {
+        if (filter_block.type == VppFilterType::FILTER_OPENCL) {
+            const auto vpp_afs_filter = std::find_if(filter_block.vppcl.begin(), filter_block.vppcl.end(),
+                [](const unique_ptr<RGYFilter>& filter) { return typeid(*filter) == typeid(RGYFilterAfs); });
+            if (vpp_afs_filter == filter_block.vppcl.end()) continue;
+            auto afs_prm = reinterpret_cast<const RGYFilterParamAfs *>((*vpp_afs_filter)->GetFilterParam());
+            if (afs_prm != nullptr) {
+                vpp_afs_rff_aware |= afs_prm->afs.rff;
+            }
+        }
+    }
+    return vpp_afs_rff_aware;
+}
+
 RGY_ERR VCECore::initPipeline(VCEParam *prm) {
     m_pipelineTasks.clear();
 
@@ -2643,7 +2660,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
         if (m_trimParam.list.size() > 0) {
             m_pipelineTasks.push_back(std::make_unique<PipelineTaskTrim>(m_dev->context(), m_trimParam, m_pFileReader.get(), srcTimebase, 0, m_pLog));
         }
-        m_pipelineTasks.push_back(std::make_unique<PipelineTaskCheckPTS>(m_dev->context(), srcTimebase, srcTimebase, m_outputTimebase, outFrameDuration, m_nAVSyncMode, (pReader) ? pReader->GetFramePosList() : nullptr, m_pLog));
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskCheckPTS>(m_dev->context(), srcTimebase, srcTimebase, m_outputTimebase, outFrameDuration, m_nAVSyncMode, VppAfsRffAware(), (pReader) ? pReader->GetFramePosList() : nullptr, m_pLog));
     }
 
     for (auto& filterBlock : m_vpFilters) {

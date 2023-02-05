@@ -73,7 +73,7 @@ static void show_hw(int deviceid, const RGYParamLogLevel& loglevel) {
                     const auto codecs = std::vector<RGY_CODEC>{ RGY_CODEC_H264, RGY_CODEC_HEVC, RGY_CODEC_AV1 };
                     for (auto c : codecs) {
                         if (dev->getEncCaps(c) != nullptr) {
-                            _ftprintf(stdout, _T("%d\n"), CodecToStr(c).c_str());
+                            _ftprintf(stdout, _T("%s\n"), CodecToStr(c).c_str());
                         }
                     }
                 }

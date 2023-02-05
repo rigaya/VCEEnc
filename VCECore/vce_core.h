@@ -122,6 +122,7 @@ protected:
     virtual RGY_ERR initSSIMCalc(VCEParam *prm);
     virtual RGY_ERR initPipeline(VCEParam *prm);
 
+    bool VppAfsRffAware() const;
     virtual RGY_ERR allocatePiplelineFrames();
 
     virtual RGY_ERR run_decode();

@@ -181,6 +181,20 @@ Radeon RX550
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2023.02.05 (8.02)
+- --sub-sourceでPGS字幕を読み込むと正常にmuxできない問題を回避。
+- ffmpegのライブラリを更新 (Windows版)
+  ffmpeg     5.0    -> 5.1
+  libpng     1.3.8  -> 1.3.9
+  expat      2.4.4  -> 2.5.0
+  libsndfile 1.0.31 -> 1.2.0
+  libxml2    2.9.12 -> 2.10.3
+  libbluray  1.3.0  -> 1.3.4
+  dav1d      0.9.2  -> 1.0.0
+- --vpp-afsにrffオプションを追加。
+- --check-hwでエンコードをサポートするコーデック名も表示するように。
+- --check-hwや--check-featuresのログ出力を--log-levelで制御できるように。
+
 2023.01.30 (8.01)
 - 画像を焼き込むフィルタを追加。 (--vpp-overlay)
 - lowlatency向けにmuxの挙動を調整。
