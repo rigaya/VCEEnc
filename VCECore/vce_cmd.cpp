@@ -48,7 +48,7 @@ tstring GetVCEEncVersion() {
     if (ENABLE_AVISYNTH_READER)    version += _T(", avs");
     if (ENABLE_VAPOURSYNTH_READER) version += _T(", vpy");
 #if ENABLE_AVSW_READER
-    version += strsprintf(_T(", avhw [%s]"), getHWDecSupportedCodecList().c_str());
+    version += strsprintf(_T(", avsw, avhw"));
 #endif //#if ENABLE_AVSW_READER
     return version;
 }
