@@ -919,11 +919,15 @@ protected:
             }
             if (auto surfCopy = amf::AMFSurfacePtr(dataCopy); surfCopy != nullptr) {
                 auto surfDecOutCopy = std::make_unique<RGYFrame>(surfCopy);
-                surfDecOutCopy->clearDataList();
                 surfDecOutCopy->setInputFrameId(m_decOutFrames++);
+
+                auto flags = RGY_FRAME_FLAG_NONE;
                 if (getDataFlag(surfDecOutCopy->timestamp()) & RGY_FRAME_FLAG_RFF) {
-                    surfDecOutCopy->setFlags(RGY_FRAME_FLAG_RFF);
+                    flags |= RGY_FRAME_FLAG_RFF;
                 }
+                surfDecOutCopy->setFlags(flags);
+
+                surfDecOutCopy->clearDataList();
                 if (auto data = getMetadata(RGY_FRAME_DATA_HDR10PLUS, surfDecOutCopy->timestamp()); data) {
                     surfDecOutCopy->dataList().push_back(data);
                 }
