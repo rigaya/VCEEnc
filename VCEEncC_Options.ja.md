@@ -142,58 +142,6 @@
   - [--data-copy \[\<int\>\[,\<int\>\]...\]](#--data-copy-intint)
   - [--attachment-copy \[\<int\>\[,\<int\>\]...\]](#--attachment-copy-intint)
   - [--attachment-source \<string\>\[:{\<int\>?}\[;\<param1\>=\<value1\>\]...\]...](#--attachment-source-stringintparam1value1)
-  - [--input-option \<string1\>:\<string2\>](#--input-option-string1string2)
-  - [-m, --mux-option \<string1\>:\<string2\>](#-m---mux-option-string1string2)
-  - [--metadata \<string\> or \<string\>=\<string\>](#--metadata-string-or-stringstring)
-  - [--avsync \<string\>](#--avsync-string)
-  - [--timecode \[\<string\>\]](#--timecode-string)
-  - [--tcfile-in \<string\>](#--tcfile-in-string)
-  - [--timebase \<int\>/\<int\>](#--timebase-intint)
-  - [--input-hevc-bsf \<string\>](#--input-hevc-bsf-string)
-- [vppオプション](#vppオプション)
-  - [vppフィルタの適用順](#vppフィルタの適用順)
-  - [--vpp-colorspace \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-colorspace-param1value1param2value2)
-  - [--vpp-delogo \<string\>\[,\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\]...](#--vpp-delogo-stringparam1value1param2value2)
-  - [--vpp-afs \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-afs-param1value1param2value2)
-  - [--vpp-nnedi \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-nnedi-param1value1param2value2)
-  - [--vpp-yadif \[\<param1\>=\<value1\>\]](#--vpp-yadif-param1value1)
-  - [--vpp-decimate \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-decimate-param1value1param2value2)
-  - [--vpp-mpdecimate \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-mpdecimate-param1value1param2value2)
-  - [--vpp-rotate \<int\>](#--vpp-rotate-int)
-  - [--vpp-transform \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-transform-param1value1param2value2)
-  - [--vpp-convolution3d \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-convolution3d-param1value1param2value2)
-  - [--vpp-smooth \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-smooth-param1value1param2value2)
-  - [--vpp-knn \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-knn-param1value1param2value2)
-  - [--vpp-pmd \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-pmd-param1value1param2value2)
-  - [--vpp-preprocess \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-preprocess-param1value1param2value2)
-  - [--vpp-subburn \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-subburn-param1value1param2value2)
-  - [--vpp-resize \<string\>](#--vpp-resize-string)
-  - [--vpp-unsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-unsharp-param1value1param2value2)
-  - [--vpp-edgelevel \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-edgelevel-param1value1param2value2)
-  - [--vpp-warpsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-warpsharp-param1value1param2value2)
-  - [--vpp-enhance \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\]\[...\]](#--vpp-enhance-param1value1param2value2)
-  - [--vpp-tweak \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-tweak-param1value1param2value2)
-  - [--vpp-overlay \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-overlay-param1value1param2value2)
-  - [--vpp-deband \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-deband-param1value1param2value2)
-  - [--vpp-pad \<int\>,\<int\>,\<int\>,\<int\>](#--vpp-pad-intintintint)
-  - [--vpp-perf-monitor](#--vpp-perf-monitor)
-- [制御系のオプション](#制御系のオプション)
-  - [--output-buf \<int\>](#--output-buf-int)
-  - [--output-thread \<int\>](#--output-thread-int)
-  - [--log \<string\>](#--log-string)
-  - [--log-level \<string\>](#--log-level-string)
-  - [--log-opt \<param1\>=\<value\>\[,\<param2\>=\<value\>\]...](#--log-opt-param1valueparam2value)
-  - [--log-framelist](#--log-framelist)
-  - [--log-packets](#--log-packets)
-  - [--thread-affinity \[\<string1\>=\]{\<string2\>\[#\<int\>\[:\<int\>\]...\] or 0x\<hex\>}](#--thread-affinity-string1string2intint-or-0xhex)
-  - [--thread-priority \[\<string1\>=\]\<string2\>\[#\<int\>\[:\<int\>\]...\]](#--thread-priority-string1string2intint)
-  - [--thread-throttling \[\<string1\>=\]\<string2\>\[#\<int\>\[:\<int\>\]...\]](#--thread-throttling-string1string2intint)
-  - [--option-file \<string\>](#--option-file-string)
-  - [--max-procfps \<int\>](#--max-procfps-int)
-  - [--lowlatency](#--lowlatency)
-  - [--avsdll \<string\>](#--avsdll-string)
-  - [--process-codepage \<string\>](#--process-codepage-string)
-  - [--perf-monitor \[\<string\>\[,\<string\>\]...\]](#--perf-monitor-stringstring)
   - [--perf-monitor-interval \<int\>](#--perf-monitor-interval-int)
 
 ## コマンドラインの例
@@ -1291,7 +1239,9 @@ attachmentストリームをコピーする。avhw/avswリーダー使用時の�
   
 - 使用例
   ```
-  例1: --attachment-source "<png_file>":metadata=mimetype=image/png
+  ```
+  例1: --attachment-source <png_file>:metadata=mimetype=image/png
+  例2: --attachment-source <font_file>:metadata=mimetype=application/x-truetype-font
   ```
 
 ### --input-option &lt;string1&gt;:&lt;string2&gt;
