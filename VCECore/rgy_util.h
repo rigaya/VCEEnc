@@ -296,7 +296,7 @@ struct module_deleter {
     void operator()(void *hmodule) const {
         if (hmodule) {
 #if defined(_WIN32) || defined(_WIN64)
-            FreeLibrary((HMODULE)hmodule);
+            RGY_FREE_LIBRARY((HMODULE)hmodule);
 #endif //#if defined(_WIN32) || defined(_WIN64)
         }
     }

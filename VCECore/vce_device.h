@@ -80,6 +80,7 @@ public:
 
     static const wchar_t *CAP_10BITDEPTH;
 protected:
+    RGY_ERR initOpenCL(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool enableVppPerfMonitor);
     virtual RGY_ERR CreateContext();
     void getAllCaps();
 

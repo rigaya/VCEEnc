@@ -153,29 +153,44 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
 #endif //#if ENABLE_D3D11
 
     if (enableOpenCL) {
-        RGYOpenCL cl(m_log);
-        auto platforms = cl.getPlatforms("AMD");
-        if (platforms.size() == 0) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to find AMD OpenCL platforms.\n"));
-            return RGY_ERR_DEVICE_LOST;
+        const auto openclerr = initOpenCL(deviceId, interopD3d9, interopD3d11, enableVppPerfMonitor);
+        //OpenCLの初期化に失敗してもOpenCL無効のまま処理を継続してみる
+        if (openclerr != RGY_ERR_NONE) {
+            const auto openclDLLCheck = checkOpenCLDLL();
+            PrintMes(RGY_LOG_WARN, _T("OpenCL dll check...\n"));
+            PrintMes(RGY_LOG_WARN, openclDLLCheck);
         }
-        int totalDevices = 0;
-        int selectCLDevice = 0;
-        std::shared_ptr<RGYOpenCLPlatform> selectedPlatform;
-        for (auto& platform : platforms) {
-            PrintMes(RGY_LOG_DEBUG, _T("Checking platform %s...\n"), char_to_tstring(platform->info().name).c_str());
+    }
+
+    m_devName = getGPUInfo();
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool enableVppPerfMonitor) {
+    const auto loglevelOpenCLError = RGY_LOG_WARN;
+    RGYOpenCL cl(m_log);
+    auto platforms = cl.getPlatforms("AMD");
+    if (platforms.size() == 0) {
+        PrintMes(RGY_LOG_WARN, _T("Failed to find AMD OpenCL platforms.\n"));
+        return RGY_ERR_DEVICE_LOST;
+    }
+    int totalDevices = 0;
+    int selectCLDevice = 0;
+    std::shared_ptr<RGYOpenCLPlatform> selectedPlatform;
+    for (auto& platform : platforms) {
+        PrintMes(RGY_LOG_DEBUG, _T("Checking platform %s...\n"), char_to_tstring(platform->info().name).c_str());
 #if ENABLE_D3D9
-            if (interopD3d9) {
-                if (platform->createDeviceListD3D9(CL_DEVICE_TYPE_GPU, (void *)m_dx9.GetDevice()) != RGY_ERR_NONE || platform->devs().size() == 0) {
-                    PrintMes(RGY_LOG_ERROR, _T("Failed to find d3d9 device.\n"));
-                    return RGY_ERR_DEVICE_LOST;
-                }
-            } else
+        if (interopD3d9) {
+            if (platform->createDeviceListD3D9(CL_DEVICE_TYPE_GPU, (void *)m_dx9.GetDevice()) != RGY_ERR_NONE || platform->devs().size() == 0) {
+                PrintMes(loglevelOpenCLError, _T("Failed to find d3d9 device.\n"));
+                return RGY_ERR_DEVICE_LOST;
+            }
+        } else
 #endif //#if ENABLE_D3D9
 #if ENABLE_D3D11
             if (interopD3d11 || !interopD3d9) {
                 if (platform->createDeviceListD3D11(CL_DEVICE_TYPE_GPU, (void *)m_dx11.GetDevice()) != RGY_ERR_NONE || platform->devs().size() == 0) {
-                    PrintMes(RGY_LOG_ERROR, _T("Failed to find d3d11 device.\n"));
+                    PrintMes(loglevelOpenCLError, _T("Failed to find d3d11 device.\n"));
                     return RGY_ERR_DEVICE_LOST;
                 }
             } else
@@ -187,7 +202,7 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
                         PrintMes(RGY_LOG_INFO, _T("GPU device not found on platform %s.\n"), char_to_tstring(platform->info().name).c_str());
                         continue;
                     }
-                    PrintMes(RGY_LOG_ERROR, _T("Failed to find gpu device.\n"));
+                    PrintMes(loglevelOpenCLError, _T("Failed to find gpu device.\n"));
                     return RGY_ERR_DEVICE_LOST;
                 }
             }
@@ -199,34 +214,32 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
                 break;
             }
             PrintMes(RGY_LOG_DEBUG, _T("Target device #%d not found in platform %s.\n"), deviceId, char_to_tstring(platform->info().name).c_str());
-        }
-        if (!selectedPlatform) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to find device #%d.\n"), deviceId);
-            return RGY_ERR_DEVICE_LOST;
-        }
-        selectedPlatform->setDev(selectedPlatform->devs()[selectCLDevice],
-#if ENABLE_D3D9
-            (interopD3d9) ? m_dx9.GetDevice() :
-#endif //#if ENABLE_D3D9
-            nullptr,
-#if ENABLE_D3D11
-            (interopD3d11) ? m_dx11.GetDevice() :
-#endif //#if ENABLE_D3D11
-            nullptr);
-
-        m_cl = std::make_shared<RGYOpenCLContext>(selectedPlatform, m_log);
-        if (m_cl->createContext((enableVppPerfMonitor) ? CL_QUEUE_PROFILING_ENABLE : 0) != CL_SUCCESS) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to create OpenCL context.\n"));
-            return RGY_ERR_UNKNOWN;
-        }
-        auto amferr = m_context->InitOpenCL(m_cl->queue().get());
-        if (amferr != AMF_OK) {
-            PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by OpenCL.\n"));
-            return err_to_rgy(amferr);
-        }
     }
+    if (!selectedPlatform) {
+        PrintMes(loglevelOpenCLError, _T("Failed to find OpenCL device #%d.\n"), deviceId);
+        return RGY_ERR_DEVICE_LOST;
+    }
+    selectedPlatform->setDev(selectedPlatform->devs()[selectCLDevice],
+#if ENABLE_D3D9
+    (interopD3d9) ? m_dx9.GetDevice() :
+#endif //#if ENABLE_D3D9
+        nullptr,
+#if ENABLE_D3D11
+        (interopD3d11) ? m_dx11.GetDevice() :
+#endif //#if ENABLE_D3D11
+        nullptr);
 
-    m_devName = getGPUInfo();
+    m_cl = std::make_shared<RGYOpenCLContext>(selectedPlatform, m_log);
+    if (m_cl->createContext((enableVppPerfMonitor) ? CL_QUEUE_PROFILING_ENABLE : 0) != CL_SUCCESS) {
+        PrintMes(loglevelOpenCLError, _T("Failed to create OpenCL context.\n"));
+        return RGY_ERR_UNKNOWN;
+    }
+    auto amferr = m_context->InitOpenCL(m_cl->queue().get());
+    if (amferr != AMF_OK) {
+        PrintMes(loglevelOpenCLError, _T("Failed to init AMF context by OpenCL.\n"));
+        m_cl.reset();
+        return err_to_rgy(amferr);
+    }
     return RGY_ERR_NONE;
 }
 

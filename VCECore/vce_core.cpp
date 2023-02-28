@@ -836,6 +836,12 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
 
     const auto VCE_AMF_GPU_IMAGE = RGY_MEM_TYPE_GPU_IMAGE;
 
+    //OpenCLが使用できない場合
+    if (!m_dev->cl() && cspConvRequired) {
+        PrintMes(RGY_LOG_ERROR, _T("Cannot continue as OpenCL is disabled, but csp conversion required!\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
+
     std::vector<VppType> filterPipeline = InitFiltersCreateVppList(inputParam, cspConvRequired, cropRequired, resizeRequired);
     if (filterPipeline.size() == 0) {
         PrintMes(RGY_LOG_DEBUG, _T("No filters required.\n"));
@@ -843,7 +849,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     }
     const auto clfilterCount = std::count_if(filterPipeline.begin(), filterPipeline.end(), [](VppType type) { return getVppFilterType(type) == VppFilterType::FILTER_OPENCL; });
     if (!m_dev->cl() && clfilterCount > 0) {
-        PrintMes(RGY_LOG_ERROR, _T("OpenCL filter not enabled.\n"));
+        PrintMes(RGY_LOG_ERROR, _T("Cannot continue as OpenCL is disabled, but OpenCL filter required!\n"));
         return RGY_ERR_UNSUPPORTED;
     }
     //読み込み時のcrop
@@ -981,18 +987,18 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
         filterPipeline.push_back(VppType::CL_COLORSPACE);
 #endif
     }
-    if (inputParam->vpp.delogo.enable)     filterPipeline.push_back(VppType::CL_DELOGO);
-    if (inputParam->vpp.afs.enable)        filterPipeline.push_back(VppType::CL_AFS);
-    if (inputParam->vpp.nnedi.enable)      filterPipeline.push_back(VppType::CL_NNEDI);
-    if (inputParam->vpp.yadif.enable)      filterPipeline.push_back(VppType::CL_YADIF);
-    if (inputParam->vpp.decimate.enable)   filterPipeline.push_back(VppType::CL_DECIMATE);
-    if (inputParam->vpp.mpdecimate.enable) filterPipeline.push_back(VppType::CL_MPDECIMATE);
+    if (inputParam->vpp.delogo.enable)        filterPipeline.push_back(VppType::CL_DELOGO);
+    if (inputParam->vpp.afs.enable)           filterPipeline.push_back(VppType::CL_AFS);
+    if (inputParam->vpp.nnedi.enable)         filterPipeline.push_back(VppType::CL_NNEDI);
+    if (inputParam->vpp.yadif.enable)         filterPipeline.push_back(VppType::CL_YADIF);
+    if (inputParam->vpp.decimate.enable)      filterPipeline.push_back(VppType::CL_DECIMATE);
+    if (inputParam->vpp.mpdecimate.enable)    filterPipeline.push_back(VppType::CL_MPDECIMATE);
     if (inputParam->vpp.convolution3d.enable) filterPipeline.push_back(VppType::CL_CONVOLUTION3D);
-    if (inputParam->vpp.smooth.enable)     filterPipeline.push_back(VppType::CL_DENOISE_SMOOTH);
-    if (inputParam->vpp.knn.enable)        filterPipeline.push_back(VppType::CL_DENOISE_KNN);
-    if (inputParam->vpp.pmd.enable)        filterPipeline.push_back(VppType::CL_DENOISE_PMD);
-    if (inputParam->vppamf.pp.enable)      filterPipeline.push_back(VppType::AMF_PREPROCESS);
-    if (inputParam->vpp.subburn.size()>0)  filterPipeline.push_back(VppType::CL_SUBBURN);
+    if (inputParam->vpp.smooth.enable)        filterPipeline.push_back(VppType::CL_DENOISE_SMOOTH);
+    if (inputParam->vpp.knn.enable)           filterPipeline.push_back(VppType::CL_DENOISE_KNN);
+    if (inputParam->vpp.pmd.enable)           filterPipeline.push_back(VppType::CL_DENOISE_PMD);
+    if (inputParam->vppamf.pp.enable)         filterPipeline.push_back(VppType::AMF_PREPROCESS);
+    if (inputParam->vpp.subburn.size()>0)     filterPipeline.push_back(VppType::CL_SUBBURN);
     if (     resizeRequired == RGY_VPP_RESIZE_TYPE_OPENCL) filterPipeline.push_back(VppType::CL_RESIZE);
     else if (resizeRequired != RGY_VPP_RESIZE_TYPE_NONE)   filterPipeline.push_back(VppType::AMF_RESIZE);
     if (inputParam->vpp.unsharp.enable)    filterPipeline.push_back(VppType::CL_UNSHARP);
@@ -1007,6 +1013,24 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
 
     if (filterPipeline.size() == 0) {
         return filterPipeline;
+    }
+    //OpenCLが使用できない場合
+    if (!m_dev->cl()) {
+        //置き換え
+        for (auto& filter : filterPipeline) {
+            if (filter == VppType::CL_RESIZE) filter = VppType::AMF_RESIZE;
+        }
+        //削除
+        decltype(filterPipeline) newPipeline;
+        for (auto& filter : filterPipeline) {
+            if (getVppFilterType(filter) != VppFilterType::FILTER_OPENCL) {
+                newPipeline.push_back(filter);
+            }
+        }
+        if (filterPipeline.size() != newPipeline.size()) {
+            PrintMes(RGY_LOG_WARN, _T("OpenCL disabled, OpenCL based vpp filters will be disabled!\n"));
+        }
+        filterPipeline = newPipeline;
     }
 
     // cropとresizeはmfxとopencl両方ともあるので、前後のフィルタがどちらもOpenCLだったら、そちらに合わせる
