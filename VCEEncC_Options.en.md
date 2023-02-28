@@ -753,6 +753,8 @@ Calculate ssim of the encoded video.
 ### --psnr
 Calculate psnr of the encoded video.
 
+### --smart-access-video  
+Enables smart access video feature.
 
 ## IO / Audio / Subtitle Options
 

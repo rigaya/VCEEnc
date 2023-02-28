@@ -273,6 +273,8 @@ tstring encoder_help() {
         _T("\n")
         _T("   --enforce-hrd                enforce hrd compatibility of bitstream\n")
         _T("   --filler                     use filler data\n")
+        _T("\n")
+        _T("   --smart-access-video         enables smart access video feature.\n")
     );
     str += _T("\n");
     str += gen_cmd_help_common();
@@ -1244,6 +1246,10 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->pa.maxQPBeforeForceSkip = value;
         return 0;
     }
+    if (IS_OPTION("smart-access-video")) {
+        pParams->smartAccessVideo = true;
+        return 0;
+    }
 
     auto ret = parse_one_input_option(option_name, strInput, i, nArgNum, &pParams->input, &pParams->inprm, argData);
     if (ret >= 0) return ret;
@@ -1749,6 +1755,8 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
             cmd << _T(" --pa");
         }
     }
+
+    OPT_BOOL(_T("--smart-access-video"), _T(""), smartAccessVideo);
 
     cmd << gen_cmd(&pParams->common, &encPrmDefault.common, save_disabled_prm);
 

@@ -692,6 +692,8 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
     //そこで、AMF_VIDEO_DECODER_SURFACE_COPYは使用せず、QueryOutput後、明示的にsurface->Duplicateを行って同様の挙動を再現する
     //m_pDecoder->SetProperty(AMF_VIDEO_DECODER_SURFACE_COPY, true);
 
+    m_pDecoder->SetProperty(AMF_VIDEO_DECODER_ENABLE_SMART_ACCESS_VIDEO, prm->smartAccessVideo);
+
     //RGY_CODEC_VC1のときはAMF_TS_SORTを選択する必要がある
     const AMF_TIMESTAMP_MODE_ENUM timestamp_mode = (inputCodec == RGY_CODEC_VC1) ? AMF_TS_SORT : AMF_TS_PRESENTATION;
     if (AMF_OK != (res = m_pDecoder->SetProperty(AMF_TIMESTAMP_MODE, amf_int64(timestamp_mode)))) {
@@ -2089,6 +2091,8 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     //m_params.SetParam(AMF_PARAM_OUTPUT_TRANSFER_CHARACTERISTIC(prm->codec), AMF_COLOR_TRANSFER_CHARACTERISTIC_UNDEFINED);
     //m_params.SetParam(AMF_PARAM_OUTPUT_COLOR_PRIMARIES(prm->codec),         AMF_COLOR_PRIMARIES_UNDEFINED);
 
+    m_params.SetParam(AMF_PARAM_ENABLE_SMART_ACCESS_VIDEO(prm->codec), prm->smartAccessVideo);
+
     if (prm->codec == RGY_CODEC_H264 || prm->codec == RGY_CODEC_HEVC) {
         if (m_sar.is_valid()) {
             m_params.SetParam(AMF_PARAM_ASPECT_RATIO(prm->codec), AMFConstructRatio(m_sar.n(), m_sar.d()));
@@ -3429,6 +3433,9 @@ tstring VCECore::GetEncoderParam() {
         (int)AMF_GET_MAJOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_MINOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_SUBMINOR_VERSION(m_AMFRuntimeVersion),
         AMF_VERSION_MAJOR, AMF_VERSION_MINOR, AMF_VERSION_RELEASE);
 
+    if (GetPropertyBool(AMF_PARAM_ENABLE_SMART_ACCESS_VIDEO(m_encCodec))) {
+        mes += _T("Smart Access:  on\n");
+    }
     auto inputInfo = m_pFileReader->GetInputFrameInfo();
     mes += strsprintf(_T("Input Info:    %s\n"), m_pFileReader->GetInputMessage());
     if (cropEnabled(inputInfo.crop)) {

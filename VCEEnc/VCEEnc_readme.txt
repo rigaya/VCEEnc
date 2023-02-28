@@ -181,8 +181,14 @@ Radeon RX550
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
-2023.02.xx (8.07)
+2023.02.28 (8.07)
 [VCEEncC]
+- AMF 1.4.29に対応。
+  AMD Radeon Software Adrenalin Edition 23.1.2 以降が必要。
+- Smart Access Videoに対応。(--smart-access-memory)
+- OpenCLの初期化に失敗した際に、OpenCLを無効にして処理を継続するように。
+  本来ドライバをインストールすればOpenCLは利用可能なはずだが、OpenCLがなぜか使用できない場合がある。
+  そこで、そうした環境でもOpenCLが不要な処理であれば、動作を継続できるようにした。
 
 [VCEEnc.auo]
 - オブジェクトエクスプローラからドラッグドロップしたファイルがある場合の出力に対応。

@@ -708,6 +708,8 @@ MediaInfoによるDolby Vision情報の検出を可能とするには、[tsMuxeR
 ### --psnr
 エンコード結果のPSNRを計算。
 
+### --smart-access-video  
+Smart Access Videoを使用する。
 
 ## 入出力 / 音声 / 字幕などのオプション
 

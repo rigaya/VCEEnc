@@ -213,7 +213,8 @@ VCEParam::VCEParam() :
     temporalLayers(),
     aqMode(),
     ssim(false),
-    psnr(false) {
+    psnr(false),
+    smartAccessVideo(false) {
     codecParam[RGY_CODEC_H264].nLevel   = 0;
 #if defined(_WIN32) || defined(_WIN64)
     codecParam[RGY_CODEC_H264].nProfile = list_avc_profile[2].value;
@@ -421,6 +422,8 @@ RGY_ERR AMFParams::SetParamTypeAVC() {
     SetParamType(AMF_VIDEO_ENCODER_STATISTICS_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to collect and feedback statistics");
     SetParamType(AMF_VIDEO_ENCODER_BLOCK_QP_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to collect and feedback block level QP values");
 
+    SetParamType(AMF_VIDEO_ENCODER_ENABLE_SMART_ACCESS_VIDEO, AMF_PARAM_STATIC, L"amf_bool; default = false; true = enables smart access video feature");
+
     SetParamTypePA();
 
     return RGY_ERR_NONE;
@@ -519,6 +522,8 @@ RGY_ERR AMFParams::SetParamTypeHEVC() {
     SetParamType(AMF_VIDEO_ENCODER_HEVC_PSNR_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to calculate PSNR score");
     SetParamType(AMF_VIDEO_ENCODER_HEVC_SSIM_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to calculate SSIM score");
 
+    SetParamType(AMF_VIDEO_ENCODER_HEVC_ENABLE_SMART_ACCESS_VIDEO, AMF_PARAM_STATIC, L"amf_bool; default = false; true = enables smart access video feature");
+
     SetParamTypePA();
 
     return RGY_ERR_NONE;
@@ -565,6 +570,7 @@ RGY_ERR AMFParams::SetParamTypeAV1() {
     // Picture Management Configuration
     SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_NUM_TEMPORAL_LAYERS,                AMF_PARAM_STATIC, L"amf_int64; default = depends on USAGE; Max number of temporal layers might be enabled. The maximum value can be queried from AMF_VIDEO_ENCODER_AV1_CAP_MAX_NUM_TEMPORAL_LAYERS");
     SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_LTR_FRAMES,                         AMF_PARAM_STATIC, L"amf_int64; default = depends on USAGE; Max number of LTR frames. The maximum value can be queried from AMF_VIDEO_ENCODER_AV1_CAP_MAX_NUM_LTR_FRAMES");
+#define AMF_VIDEO_ENCODER_AV1_LTR_MODE                              L"Av1LTRMode"                       // amf_int64(AMF_VIDEO_ENCODER_AV1_LTR_MODE_ENUM); default = AMF_VIDEO_ENCODER_AV1_LTR_MODE_RESET_UNUSED; remove/keep unused LTRs (not specified in property AMF_VIDEO_ENCODER_AV1_FORCE_LTR_REFERENCE_BITFIELD)
     SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_NUM_REFRAMES,                       AMF_PARAM_STATIC, L"amf_int64; default = 1; Maximum number of reference frames");
 
     // color conversion
@@ -633,6 +639,7 @@ RGY_ERR AMFParams::SetParamTypeAV1() {
     SetParamType(AMF_VIDEO_ENCODER_AV1_OUTPUT_MARKED_LTR_INDEX,                AMF_PARAM_FRAME, L"amf_int64; default = N/A; Marked LTR index");
     SetParamType(AMF_VIDEO_ENCODER_AV1_OUTPUT_REFERENCED_LTR_INDEX_BITFIELD,   AMF_PARAM_FRAME, L"amf_int64; default = N/A; referenced LTR bit-field");
 
+    SetParamType(AMF_VIDEO_ENCODER_AV1_ENABLE_SMART_ACCESS_VIDEO,              AMF_PARAM_STATIC, L"amf_bool; default = false; true = enables smart access video feature");
 
     SetParamTypePA();
 
