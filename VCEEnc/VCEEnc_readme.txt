@@ -16,7 +16,7 @@ Aviutl 1.00 以降
 VCEが載ったハードウェア
   AMD製 GPU Radeon HD 7xxx以降
   AMD製 APU Trinity世代(第2世代)以降
-AMD Radeon Software Adrenalin Edition 22.12.1 以降
+AMD Radeon Software Adrenalin Edition 23.1.2 以降
 
 
 【VCEEnc 使用にあたっての注意事項】
