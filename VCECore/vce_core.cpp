@@ -2887,10 +2887,6 @@ RGY_ERR VCECore::init(VCEParam *prm) {
 #endif //#if defined(_WIN32) || defined(_WIN64)
     if (prm->ctrl.lowLatency) {
         m_pipelineDepth = 1;
-        prm->nBframes = 0;
-        if (prm->rateControl == get_cx_value(get_rc_method(prm->codec), _T("VBR"))) {
-            prm->rateControl = get_cx_value(get_rc_method(prm->codec), _T("VBR_LAT"));
-        }
         PrintMes(RGY_LOG_DEBUG, _T("lowlatency mode.\n"));
     }
 
