@@ -43,7 +43,7 @@ std::string PathCombineS(const std::string& dir, const std::string& filename);
 bool CreateDirectoryRecursive(const wchar_t *dir);
 std::wstring PathGetFilename(const std::wstring& path);
 std::vector<tstring> get_file_list(const tstring& pattern, const tstring& dir);
-tstring getModulePath(HMODULE module);
+tstring getModulePath(void *module);
 #endif //#if defined(_WIN32) || defined(_WIN64)
 tstring getExePath();
 tstring getExeDir();

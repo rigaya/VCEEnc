@@ -264,10 +264,10 @@ tstring getExePath() {
     return exePath;
 }
 
-tstring getModulePath(HMODULE module) {
+tstring getModulePath(void *module) {
     TCHAR dllPath[16384];
     memset(dllPath, 0, sizeof(dllPath));
-    GetModuleFileName(module, dllPath, _countof(dllPath));
+    GetModuleFileName((HMODULE)module, dllPath, _countof(dllPath));
     return dllPath;
 }
 
