@@ -103,6 +103,7 @@
   - [--dolby-vision-rpu \<string\>](#--dolby-vision-rpu-string)
   - [--ssim](#--ssim)
   - [--psnr](#--psnr)
+  - [--smart-access-video](#--smart-access-video)
 - [IO / Audio / Subtitle Options](#io--audio--subtitle-options)
   - [--input-analyze \<float\>](#--input-analyze-float)
   - [--input-probesize \<int\>](#--input-probesize-int)
@@ -174,6 +175,7 @@
   - [--vpp-edgelevel \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-edgelevel-param1value1param2value2)
   - [--vpp-warpsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-warpsharp-param1value1param2value2)
   - [--vpp-enhance \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\]\[...\]](#--vpp-enhance-param1value1param2value2)
+  - [--vpp-curves \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-curves-param1value1param2value2)
   - [--vpp-tweak \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-tweak-param1value1param2value2)
   - [--vpp-overlay \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-overlay-param1value1param2value2)
   - [--vpp-deband \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-deband-param1value1param2value2)
@@ -2061,6 +2063,44 @@ Edge warping (sharpening) filter.
   - attenuation=&lt;float&gt; (default: 0.1, range 0.02 - 0.4)
 
   - radius=&lt;int&gt; (default: 2, range 1 - 4)
+
+### --vpp-curves [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...  
+Apply color adjustments using curves.
+
+- **Parameters**
+  - preset=&lt;float&gt;  
+    - none
+    - color_negative
+    - process
+    - darker
+    - lighter
+    - increase_contrast
+    - linear_contrast
+    - medium_contrast
+    - strong_contrast
+    - negative
+    - vintage
+  
+  - m=&lt;string&gt;  
+    Set master curve points, post process for luminance.
+
+  - r=&lt;string&gt;  
+    Set curve points for red. Will override preset settings.
+  
+  - g=&lt;string&gt;  
+    Set curve points for green. Will override preset settings.
+  
+  - b=&lt;string&gt;  
+    Set curve points for blue. Will override preset settings.
+  
+  - all=&lt;string&gt;  
+    Set curve points for r,g,b when not specified. Will override preset settings.
+
+- Examples
+  ```
+  Example:
+  --vpp-curves r="0/0.11 0.42/0.51 1/0.95":g="0/0 0.50/0.48 1/1":b="0/0.22 0.49/0.44 1/0.8"
+  ```
 
 ### --vpp-tweak [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 
