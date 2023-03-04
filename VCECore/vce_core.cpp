@@ -1011,9 +1011,9 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.transform.enable)  filterPipeline.push_back(VppType::CL_TRANSFORM);
     if (inputParam->vpp.curves.enable)     filterPipeline.push_back(VppType::CL_CURVES);
     if (inputParam->vpp.tweak.enable)      filterPipeline.push_back(VppType::CL_TWEAK);
-    if (inputParam->vpp.overlay.size() > 0)  filterPipeline.push_back(VppType::CL_OVERLAY);
     if (inputParam->vpp.deband.enable)     filterPipeline.push_back(VppType::CL_DEBAND);
     if (inputParam->vpp.pad.enable)        filterPipeline.push_back(VppType::CL_PAD);
+    if (inputParam->vpp.overlay.size() > 0)  filterPipeline.push_back(VppType::CL_OVERLAY);
 
     if (filterPipeline.size() == 0) {
         return filterPipeline;
@@ -1630,28 +1630,6 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         m_encFps = param->baseFps;
         return RGY_ERR_NONE;
     }
-    //overlay
-    if (vppType == VppType::CL_OVERLAY) {
-        for (const auto& overlay : inputParam->vpp.overlay) {
-            unique_ptr<RGYFilter> filter(new RGYFilterOverlay(m_dev->cl()));
-            shared_ptr<RGYFilterParamOverlay> param(new RGYFilterParamOverlay());
-            param->overlay = overlay;
-            param->frameIn = inputFrame;
-            param->frameOut = inputFrame;
-            param->baseFps = m_encFps;
-            param->bOutOverwrite = true;
-            auto sts = filter->init(param, m_pLog);
-            if (sts != RGY_ERR_NONE) {
-                return sts;
-            }
-            //入力フレーム情報を更新
-            inputFrame = param->frameOut;
-            m_encFps = param->baseFps;
-            //登録
-            clfilters.push_back(std::move(filter));
-        }
-        return RGY_ERR_NONE;
-    }
     //deband
     if (vppType == VppType::CL_DEBAND) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
@@ -1698,6 +1676,28 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         //入力フレーム情報を更新
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //overlay
+    if (vppType == VppType::CL_OVERLAY) {
+        for (const auto& overlay : inputParam->vpp.overlay) {
+            unique_ptr<RGYFilter> filter(new RGYFilterOverlay(m_dev->cl()));
+            shared_ptr<RGYFilterParamOverlay> param(new RGYFilterParamOverlay());
+            param->overlay = overlay;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            param->baseFps = m_encFps;
+            param->bOutOverwrite = true;
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+            //登録
+            clfilters.push_back(std::move(filter));
+        }
         return RGY_ERR_NONE;
     }
     PrintMes(RGY_LOG_ERROR, _T("Unknown filter type.\n"));
