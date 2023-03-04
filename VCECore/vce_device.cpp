@@ -268,10 +268,29 @@ amf::AMFCapsPtr VCEDevice::getEncCaps(RGY_CODEC codec) {
         {   amf::AMFComponentPtr p_encoder;
             ret = m_factory->CreateComponent(m_context, codec_rgy_to_enc(codec), &p_encoder);
             if (ret == AMF_OK) {
-                //HEVCでのAMFComponent::GetCaps()は、AMFComponent::Init()を呼んでおかないと成功しない
-                p_encoder->Init(amf::AMF_SURFACE_NV12, 1280, 720);
-                ret = p_encoder->GetCaps(&encoderCaps);
-                encoderCaps->SetProperty(CAP_10BITDEPTH, false);
+                try {
+                    ret = p_encoder->GetCaps(&encoderCaps);
+                    if (ret != AMF_OK || encoderCaps == nullptr) {
+                        PrintMes(RGY_LOG_DEBUG, _T("Failed to get caps for %s, retry after calling AMFComponent::Init().\n"), codec_rgy_to_enc(codec));
+                        //HEVCでのAMFComponent::GetCaps()は、AMFComponent::Init()を呼んでおかないと成功しない
+                        const int dummy_width = 1280;
+                        const int dummy_height = 720;
+                        p_encoder->SetProperty(AMF_PARAM_FRAMESIZE(codec), AMFConstructSize(dummy_width, dummy_height));
+                        p_encoder->SetProperty(AMF_PARAM_FRAMERATE(codec), AMFConstructRate(30, 1));
+                        p_encoder->SetProperty(AMF_PARAM_COLOR_BIT_DEPTH(codec), (amf_int64)8);
+                        if (codec == RGY_CODEC_AV1) {
+                            //これをいれないと、1920x1080などの解像度が正常に扱えない
+                            p_encoder->SetProperty(AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE, (amf_int64)AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE_NO_RESTRICTIONS);
+                        }
+                        //HEVCでのAMFComponent::GetCaps()は、AMFComponent::Init()を呼んでおかないと成功しない
+                        p_encoder->Init(amf::AMF_SURFACE_NV12, dummy_width, dummy_height);
+                        ret = p_encoder->GetCaps(&encoderCaps);
+                        encoderCaps->SetProperty(CAP_10BITDEPTH, false);
+                    }
+                } catch (...) {
+                    //GetCapsがクラッシュする場合がある
+                    PrintMes(RGY_LOG_ERROR, _T("Crushed while getting caps for %s encoding.\n"), codec_rgy_to_enc(codec));
+                }
                 p_encoder->Terminate();
             }
         }
@@ -280,32 +299,37 @@ amf::AMFCapsPtr VCEDevice::getEncCaps(RGY_CODEC codec) {
             && (codec == RGY_CODEC_HEVC || codec == RGY_CODEC_AV1)) {
             amf::AMFComponentPtr p_encoder;
             if (m_factory->CreateComponent(m_context, codec_rgy_to_enc(codec), &p_encoder) == AMF_OK) {
-                const int dummy_width  = 1920;
-                const int dummy_height = 1080;
+                try {
+                    const int dummy_width = 1920;
+                    const int dummy_height = 1080;
 
-                AMFParams params;
-                params.SetParamTypeCodec(codec);
-                params.SetParam(VCE_PARAM_KEY_INPUT_WIDTH, dummy_width);
-                params.SetParam(VCE_PARAM_KEY_INPUT_HEIGHT, dummy_height);
-                params.SetParam(VCE_PARAM_KEY_OUTPUT_WIDTH, dummy_width);
-                params.SetParam(VCE_PARAM_KEY_OUTPUT_HEIGHT, dummy_height);
-                params.SetParam(AMF_PARAM_FRAMESIZE(codec), AMFConstructSize(dummy_width, dummy_height));
-                params.SetParam(AMF_PARAM_FRAMERATE(codec), AMFConstructRate(30, 1));
-                params.SetParam(AMF_PARAM_COLOR_BIT_DEPTH(codec), (amf_int64)10);
-                if (codec == RGY_CODEC_AV1) {
-                    //これをいれないと、1920x1080などの解像度が正常に扱えない
-                    params.SetParam(AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE, (amf_int64)AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE_NO_RESTRICTIONS);
-                }
+                    AMFParams params;
+                    params.SetParamTypeCodec(codec);
+                    params.SetParam(VCE_PARAM_KEY_INPUT_WIDTH, dummy_width);
+                    params.SetParam(VCE_PARAM_KEY_INPUT_HEIGHT, dummy_height);
+                    params.SetParam(VCE_PARAM_KEY_OUTPUT_WIDTH, dummy_width);
+                    params.SetParam(VCE_PARAM_KEY_OUTPUT_HEIGHT, dummy_height);
+                    params.SetParam(AMF_PARAM_FRAMESIZE(codec), AMFConstructSize(dummy_width, dummy_height));
+                    params.SetParam(AMF_PARAM_FRAMERATE(codec), AMFConstructRate(30, 1));
+                    params.SetParam(AMF_PARAM_COLOR_BIT_DEPTH(codec), (amf_int64)10);
+                    if (codec == RGY_CODEC_AV1) {
+                        //これをいれないと、1920x1080などの解像度が正常に扱えない
+                        params.SetParam(AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE, (amf_int64)AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE_NO_RESTRICTIONS);
+                    }
 
-                // Usage is preset that will set many parameters
-                params.Apply(p_encoder, AMF_PARAM_ENCODER_USAGE);
-                // override some usage parameters
-                params.Apply(p_encoder, AMF_PARAM_STATIC);
-                //HEVCでのAMFComponent::GetCaps()は、AMFComponent::Init()を呼んでおかないと成功しない
-                if (p_encoder->Init(amf::AMF_SURFACE_P010, dummy_width, dummy_height) == AMF_OK
-                    && p_encoder->GetCaps(&encoderCaps) == AMF_OK) {
-                    encoderCaps->SetProperty(CAP_10BITDEPTH, true);
-                    p_encoder->Terminate();
+                    // Usage is preset that will set many parameters
+                    params.Apply(p_encoder, AMF_PARAM_ENCODER_USAGE);
+                    // override some usage parameters
+                    params.Apply(p_encoder, AMF_PARAM_STATIC);
+                    //HEVCでのAMFComponent::GetCaps()は、AMFComponent::Init()を呼んでおかないと成功しない
+                    if (p_encoder->Init(amf::AMF_SURFACE_P010, dummy_width, dummy_height) == AMF_OK
+                        && p_encoder->GetCaps(&encoderCaps) == AMF_OK) {
+                        encoderCaps->SetProperty(CAP_10BITDEPTH, true);
+                        p_encoder->Terminate();
+                    }
+                } catch (...) {
+                    //GetCapsがクラッシュする場合がある
+                    PrintMes(RGY_LOG_WARN, _T("Crushed while getting caps for %s 10bit encoding.\n"), codec_rgy_to_enc(codec));
                 }
             }
         }
