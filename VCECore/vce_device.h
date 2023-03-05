@@ -73,6 +73,7 @@ public:
     int id() const { return m_id; }
     const tstring &name() const { return m_devName; }
     LUID luid() const;
+    tstring getDriverVersion();
     amf::AMFContextPtr context() { return m_context; }
     shared_ptr<RGYOpenCLContext> cl() { return m_cl; }
     bool dx11interlop() const { return m_d3d11interlop; }

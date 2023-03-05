@@ -323,6 +323,10 @@ DeviceDX11::DeviceDX11() :
     m_name(_T("devDX11")),
     m_pD3DDevice(),
     m_devLUID(),
+    m_vendorID(0),
+    m_deviceID(0),
+    m_deviceInfo(),
+    m_fDeviceInfo(),
     m_adaptersCount(0),
     m_adaptersIndexes(),
     m_displayDeviceName(),
@@ -374,6 +378,10 @@ RGY_ERR DeviceDX11::Init(int adapterID, bool onlyWithOutputs, shared_ptr<RGYLog>
     pAdapter->GetDesc(&desc);
     m_displayDeviceName = desc.Description;
     m_devLUID = desc.AdapterLuid;
+    m_vendorID = desc.VendorId;
+    m_deviceID = desc.DeviceId;
+
+    m_fDeviceInfo = std::async(GetDeviceInfoWMI, m_vendorID, m_deviceID);
 
     ATL::CComPtr<IDXGIOutput> pOutput;
     if (SUCCEEDED(pAdapter->EnumOutputs(0, &pOutput))) {
@@ -480,12 +488,31 @@ void DeviceDX11::EnumerateAdapters(bool onlyWithOutputs) {
         }
         char strDevice[100];
         _snprintf_s(strDevice, 100, "%X", desc.DeviceId);
-        AddMessage(RGY_LOG_DEBUG, _T("Found Adaptor %d [%d]: %s\n"), m_adaptersCount, count, char_to_tstring(strDevice).c_str());
+        AddMessage(RGY_LOG_DEBUG, _T("Found Adaptor %d [%d]: %s, DeviceID: %d, LUID: %08x-%08x\n"), m_adaptersCount, count, char_to_tstring(strDevice).c_str(),
+            desc.DeviceId, desc.AdapterLuid.HighPart, desc.AdapterLuid.LowPart);
 
         m_adaptersIndexes[m_adaptersCount] = count;
         m_adaptersCount++;
         count++;
     }
+}
+
+tstring DeviceDX11::getDriverVersion() {
+    auto info = getDeviceInfo();
+    if (!info) return _T("");
+    return wstring_to_tstring(info->DriverVersion);
+}
+
+const RGYDeviceInfoWMI *DeviceDX11::getDeviceInfo() {
+    if (!m_deviceInfo) {
+        if (m_fDeviceInfo.valid()) {
+            auto [ret, info] = m_fDeviceInfo.get();
+            if (ret == RGY_ERR_NONE) {
+                m_deviceInfo = std::move(info);
+            }
+        }
+    }
+    return m_deviceInfo.get();
 }
 
 int DeviceDX11::adapterCount(RGYLog *log) {

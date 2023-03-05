@@ -33,6 +33,8 @@
 #include "rgy_version.h"
 #include <string>
 #include <memory>
+#include <future>
+#include <thread>
 
 #if ENABLE_D3D9 || ENABLE_D3D11
 #include <SDKDDKVer.h>
@@ -43,6 +45,7 @@
 #endif
 #if ENABLE_D3D11
 #include <d3d11.h>
+#include "rgy_device_info_wmi.h"
 #endif
 #include "rgy_err.h"
 #include "rgy_log.h"
@@ -92,7 +95,11 @@ public:
     bool isValid() const;
     ATL::CComPtr<ID3D11Device>      GetDevice();
     LUID getLUID() const { return m_devLUID; };
+    int getVendorID() const { return m_vendorID; };
+    int getDeviceID() const { return m_deviceID; };
     std::wstring GetDisplayDeviceName() const { return m_displayDeviceName; }
+    tstring getDriverVersion();
+    const RGYDeviceInfoWMI *getDeviceInfo();
     static int adapterCount(RGYLog *log = nullptr);
 protected:
     void AddMessage(RGYLogLevel log_level, const tstring &str);
@@ -103,6 +110,12 @@ private:
     tstring                      m_name;
     ATL::CComPtr<ID3D11Device>   m_pD3DDevice;
     LUID                         m_devLUID;
+    int                          m_vendorID;
+    int                          m_deviceID;
+
+    std::unique_ptr<RGYDeviceInfoWMI> m_deviceInfo;
+    std::future<std::tuple<RGY_ERR, std::unique_ptr<RGYDeviceInfoWMI>>> m_fDeviceInfo;
+
 
     static const int             MAXADAPTERS = 128;
     int                          m_adaptersCount;

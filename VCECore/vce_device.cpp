@@ -149,6 +149,15 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
             return err_to_rgy(amferr);
         }
         PrintMes(RGY_LOG_DEBUG, _T("init AMF context by directX11: Success.\n"));
+        
+        auto info = m_dx11.getDeviceInfo();
+        if (info) {
+            PrintMes(RGY_LOG_DEBUG, _T("Device %s [ID:0x%04x], driver version: %s, driver date %s.\n"),
+                wstring_to_tstring(info->name).c_str(),
+                info->deviceID,
+                wstring_to_tstring(info->DriverVersion).c_str(),
+                wstring_to_tstring(info->DriverDate).c_str());
+        }
     }
 #endif //#if ENABLE_D3D11
 
@@ -234,6 +243,11 @@ RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const 
         PrintMes(loglevelOpenCLError, _T("Failed to create OpenCL context.\n"));
         return RGY_ERR_UNKNOWN;
     }
+    if (m_log && RGY_LOG_DEBUG >= m_log->getLogLevel(RGY_LOGT_DEV)) {
+        PrintMes(RGY_LOG_DEBUG, _T("Created OpenCL context.\n"));
+        PrintMes(RGY_LOG_DEBUG, _T("Selected OpenCL device...\n%s\n"), m_cl->platform()->dev(0).infostr().c_str());
+    }
+
     auto amferr = m_context->InitOpenCL(m_cl->queue().get());
     if (amferr != AMF_OK) {
         PrintMes(loglevelOpenCLError, _T("Failed to init AMF context by OpenCL.\n"));
@@ -682,4 +696,14 @@ LUID VCEDevice::luid() const {
 #else
     LUID();
 #endif
+}
+
+
+tstring VCEDevice::getDriverVersion() {
+#if ENABLE_D3D11
+    if (m_dx11.isValid()) {
+        return m_dx11.getDriverVersion();
+    }
+#endif //#if ENABLE_D3D11
+    return _T("");
 }
