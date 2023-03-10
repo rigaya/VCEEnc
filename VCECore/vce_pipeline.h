@@ -1486,15 +1486,20 @@ public:
     std::pair<RGY_ERR, std::shared_ptr<RGYBitstream>> getOutputBitstream() {
         const auto VCE_TIMEBASE = rgy_rational<int>(1, AMF_SECOND);
         amf::AMFDataPtr data;
-        auto ar = m_encoder->QueryOutput(&data);
-        if (ar == AMF_REPEAT || (ar == AMF_OK && data == nullptr)) {
-            return { RGY_ERR_MORE_SURFACE, nullptr };
-        }
-        if (ar == AMF_EOF) {
-            return { RGY_ERR_MORE_DATA, nullptr };
-        }
-        if (ar != AMF_OK) {
-            return { err_to_rgy(ar), nullptr };
+        try {
+            auto ar = m_encoder->QueryOutput(&data);
+            if (ar == AMF_REPEAT || (ar == AMF_OK && data == nullptr)) {
+                return { RGY_ERR_MORE_SURFACE, nullptr };
+            }
+            if (ar == AMF_EOF) {
+                return { RGY_ERR_MORE_DATA, nullptr };
+            }
+            if (ar != AMF_OK) {
+                return { err_to_rgy(ar), nullptr };
+            }
+        } catch (...) {
+            PrintMes(RGY_LOG_ERROR, _T("Fatal error when getting output bitstream from encoder.\n"));
+            return { RGY_ERR_DEVICE_FAILED, nullptr };
         }
 
         auto output = m_bitStreamOut.get([](RGYBitstream *bs) {
@@ -1619,7 +1624,7 @@ public:
                         ar = m_encoder->Drain();
                     } catch (...) {
                         PrintMes(RGY_LOG_ERROR, _T("Fatal error when submitting frame to encoder.\n"));
-                        return RGY_ERR_UNKNOWN;
+                        return RGY_ERR_DEVICE_FAILED;
                     }
                     if (ar == AMF_INPUT_FULL) {
                         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -1633,7 +1638,7 @@ public:
                     ar = m_encoder->SubmitInput(pSurface);
                 } catch (...) {
                     PrintMes(RGY_LOG_ERROR, _T("Fatal error when submitting frame to encoder.\n"));
-                    return RGY_ERR_UNKNOWN;
+                    return RGY_ERR_DEVICE_FAILED;
                 }
                 if (ar == AMF_NEED_MORE_INPUT) {
                     break;
@@ -1756,7 +1761,7 @@ public:
                         ar = m_vppFilter->filter()->Drain();
                     } catch (...) {
                         PrintMes(RGY_LOG_ERROR, _T("Fatal error when submitting frame to encoder.\n"));
-                        return RGY_ERR_UNKNOWN;
+                        return RGY_ERR_DEVICE_FAILED;
                     }
                     if (ar == AMF_INPUT_FULL) {
                         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -1770,7 +1775,7 @@ public:
                     ar = m_vppFilter->filter()->SubmitInput(pSurface);
                 } catch (...) {
                     PrintMes(RGY_LOG_ERROR, _T("Fatal error when submitting frame to encoder.\n"));
-                    return RGY_ERR_UNKNOWN;
+                    return RGY_ERR_DEVICE_FAILED;
                 }
                 if (ar == AMF_NEED_MORE_INPUT) {
                     break;
