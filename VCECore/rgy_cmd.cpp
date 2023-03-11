@@ -6827,6 +6827,9 @@ tstring gen_cmd_help_common() {
         _T("                                 - internal   ... use internal implementation (default)\n")
         _T("                                 - libavcodec ... use hevc_mp4toannexb bsf\n"),
         DEFAULT_IGNORE_DECODE_ERROR);
+    str += _T("\n")
+        _T("   --allow-other-negative-pts  for debug\n")
+        _T("\n");
 #endif
     str += _T("\n")
         _T("   --ssim                       calc ssim\n")
@@ -6845,9 +6848,6 @@ tstring gen_cmd_help_common() {
         _T("      enable_transform=<bool>   enable transform when calculating vmaf score.\n"),
         VMAF_DEFAULT_MODEL_VERSION);
 #endif //#if ENABLE_VMAF
-    str += _T("\n")
-        _T("   --allow-other-negative-pts  for debug\n")
-        _T("\n");
     return str;
 }
 
