@@ -50,7 +50,7 @@ public:
     virtual ~RGYLogTracer() { m_pLog.reset(); }
     virtual void init(shared_ptr<RGYLog> pLog) { m_pLog = pLog; };
     virtual void AMF_CDECL_CALL Write(const wchar_t *scope, const wchar_t *message) override {
-        m_pLog->write(RGY_LOG_INFO, RGY_LOGT_AMF, _T("[%s] %s"), scope, message);
+        m_pLog->write(RGY_LOG_INFO, RGY_LOGT_AMF, _T("[%s] %s"), scope, str_replace(std::wstring(message), L"\r\n", L"\n").c_str());
     };
     virtual void AMF_CDECL_CALL Flush() override {
     };
