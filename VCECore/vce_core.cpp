@@ -1144,13 +1144,13 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
             return sts;
         }
         //フィルタチェーンに追加
+        vuiInfo = filter->VuiOut();
         clfilters.push_back(std::move(filter));
         //パラメータ情報を更新
         m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
         //入力フレーム情報を更新
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
-        vuiInfo = filter->VuiOut();
         return RGY_ERR_NONE;
     }
     //delogo
