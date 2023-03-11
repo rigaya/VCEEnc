@@ -1368,6 +1368,9 @@ switch hevc bitstream filter used for hw decoder input. (for debug purpose)
   - libavcodec  
     use hevc_mp4toannexb bitstream filter.
 
+### --allow-other-negative-pts  
+Allow negative timestamps for audio, subtitles. Intended for debug purpose only.
+
 ## Vpp Options
 
 These options will apply filters before encoding.

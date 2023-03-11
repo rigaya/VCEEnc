@@ -1314,6 +1314,9 @@ switch hevc bitstream filter used for hw decoder input. (for debug purpose)
   - libavcodec  
     libavcodec の hevc_mp4toannexb bitstream filter を使用する。
 
+### --allow-other-negative-pts  
+音声・字幕において負のtimestampを許容する。原則デバッグ用。
+
 ## vppオプション
 
 エンコード前にフィルタ処理を追加するオプションです。
