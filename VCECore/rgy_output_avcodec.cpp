@@ -2979,8 +2979,8 @@ void RGYOutputAvcodec::WriteNextPacketProcessed(AVMuxAudio *muxAudio, AVPacket *
             pkt->pts = maxPts;
         }
     }
-    pkt->dts = pkt->pts;
-    pkt->duration = (int)av_rescale_q(samples, samplerate, muxAudio->streamOut->time_base);
+    pkt->dts          = pkt->pts;
+    pkt->duration     = (int)av_rescale_q(samples, samplerate, muxAudio->streamOut->time_base);
     if (pkt->duration == 0) {
         pkt->duration = (int)(pkt->pts - muxAudio->lastPtsOut);
     }
