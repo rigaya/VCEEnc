@@ -153,6 +153,7 @@
   - [--tcfile-in \<string\>](#--tcfile-in-string)
   - [--timebase \<int\>/\<int\>](#--timebase-intint)
   - [--input-hevc-bsf \<string\>](#--input-hevc-bsf-string)
+  - [--allow-other-negative-pts](#--allow-other-negative-pts)
 - [Vpp Options](#vpp-options)
   - [Vpp Filtering order](#vpp-filtering-order)
   - [--vpp-colorspace \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-colorspace-param1value1param2value2)
@@ -1979,6 +1980,7 @@ Specify the resizing algorithm.
   | auto     | auto select |
   | advanced | use high quality scaling |
   | bilinear | linear interpolation |
+  | bicubic  | bicubic interpolation |
   | spline16 | 4x4 spline curve interpolation |
   | spline36 | 6x6 spline curve interpolation |
   | spline64 | 8x8 spline curve interpolation |

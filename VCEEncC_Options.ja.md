@@ -1967,6 +1967,7 @@ yadifによるインタレ解除を行う。
   |:---|:---|
   | auto     | 自動的に適切なものを選択 |
   | bilinear | 線形補間 |
+  | bicubic  | 双3次補間 |
   | simple   | Nearest Neighbor法による高速なリサイズ |
   | advanced | 高品質なリサイズ |
   | spline16 | 4x4 Spline補間 |
