@@ -62,6 +62,7 @@ Debian/Ubuntu系 (VCEEncC)
 - VCEを使用したエンコード
    - H.264/AVC
    - HEVC (Polaris以降)
+   - AV1
 - VCEEncの各エンコードモード
    - CQP       固定量子化量
    - CBR       固定ビットレート
