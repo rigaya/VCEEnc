@@ -844,6 +844,11 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         PrintMes(RGY_LOG_ERROR, _T("Cannot continue as OpenCL is disabled, but csp conversion required!\n"));
         return RGY_ERR_UNSUPPORTED;
     }
+    if (resizeRequired != RGY_VPP_RESIZE_TYPE_NONE
+        && !m_dev->cl() && !m_dev->getFilterCaps(AMFHQScaler)) {
+        PrintMes(RGY_LOG_WARN, _T("HQScaler and OpenCL both unavailable, cannot enable resize!\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
 
     std::vector<VppType> filterPipeline = InitFiltersCreateVppList(inputParam, cspConvRequired, cropRequired, resizeRequired);
     if (filterPipeline.size() == 0) {
@@ -1017,6 +1022,18 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
 
     if (filterPipeline.size() == 0) {
         return filterPipeline;
+    }
+    // HQScalerが使用できない場合
+    if (!m_dev->getFilterCaps(AMFHQScaler)) {
+        //置き換え
+        for (auto& filter : filterPipeline) {
+            if (filter == VppType::AMF_RESIZE) {
+                if (resizeRequired == RGY_VPP_RESIZE_TYPE_AMF) {
+                    PrintMes(RGY_LOG_WARN, _T("HQScaler unavailable, switching to OpenCL based resize filter.\n"));
+                }
+                filter = VppType::CL_RESIZE;
+            }
+        }
     }
     //OpenCLが使用できない場合
     if (!m_dev->cl()) {
