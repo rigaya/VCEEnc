@@ -848,6 +848,7 @@ public:
                 }
             }
             m_dec->Drain();
+            bitstream.clear();
             return sts;
         });
         PrintMes(RGY_LOG_DEBUG, _T("Started Decode thread.\n"));
