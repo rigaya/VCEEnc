@@ -482,6 +482,9 @@ HRD互換の出力を行う。
 ### --filler
 fillerデータを出力し、(名目上の)ビットレートを調整する。
 
+### --no-deblock [H.264/HEVC]
+デブロックフィルタの無効化。
+
 ### --motion-est &lt;string&gt; [H.264/HEVC]
 動きベクトル精度 / デフォルト: auto
 - auto     ... 自動

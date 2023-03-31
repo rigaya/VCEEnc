@@ -1392,7 +1392,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetNUValue(fcgNUSlices,             enc.nSlices);
     SetNUValue(fcgNURefFrames,          enc.nRefFrames);
 
-    fcgCBDeblock->Checked             = enc.bDeblockFilter;
+    fcgCBDeblock->Checked             = enc.deblockFilter.value_or(true);
     fcgCBSkipFrame->Checked           = enc.enableSkipFrame.value_or(false);
     fcgCBTimerPeriodTuning->Checked   = enc.bTimerPeriodTuning;
     fcgCBVBAQ->Checked                = enc.bVBAQ;
@@ -1616,7 +1616,7 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     enc.nSlices                                 = (int)fcgNUSlices->Value;
     enc.nRefFrames                              = (int)fcgNURefFrames->Value;
 
-    enc.bDeblockFilter                          = fcgCBDeblock->Checked;
+    if (!fcgCBDeblock->Checked) enc.deblockFilter     = fcgCBDeblock->Checked;
     if (fcgCBSkipFrame->Checked) enc.enableSkipFrame = fcgCBSkipFrame->Checked;
     enc.bVBAQ                                   = fcgCBVBAQ->Checked;
     enc.common.out_vui.colorrange               = fcgCBFullrange->Checked ? RGY_COLORRANGE_FULL : RGY_COLORRANGE_UNSPECIFIED;

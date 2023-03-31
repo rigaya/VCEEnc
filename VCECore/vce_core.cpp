@@ -2192,6 +2192,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (m_encVUI.colorrange == RGY_COLORRANGE_FULL) {
             m_params.SetParam(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR, true);
         }
+        if (prm->deblockFilter.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_DE_BLOCKING_FILTER, prm->deblockFilter.value());
+        }
     } else if (prm->codec == RGY_CODEC_HEVC) {
         //m_params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), prm->preAnalysis);
 
@@ -2211,7 +2214,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_MAX_QP_P,                        (amf_int64)prm->nQPMaxInter.value());
         }
 
-        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_DE_BLOCKING_FILTER_DISABLE,      !prm->bDeblockFilter);
+        if (prm->deblockFilter.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_DE_BLOCKING_FILTER_DISABLE, !prm->deblockFilter.value());
+        }
 
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER,                   true);
     } else if (prm->codec == RGY_CODEC_AV1) {

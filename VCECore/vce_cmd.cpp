@@ -203,6 +203,7 @@ tstring encoder_help() {
         _T("   --gop-len <int>              set length of gop (default: auto)\n")
         _T("   --(no-)skip-frame            [H.264/HEVC] enable skip frame feature\n")
         _T("   --slices <int>               [H.264/HEVC] num of slices per frame (default: %d)\n")
+        _T("   --no-deblock <int>           [H.264/HEVC] disable deblock filter\n")
         _T("   --motion-est                 [H.264/HEVC] motion estimation precision\n")
         _T("                                 - full-pel (fast)\n")
         _T("                                 - half-pel\n")
@@ -884,6 +885,14 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
     }
     if (IS_OPTION("filler")) {
         pParams->bFiller = TRUE;
+        return 0;
+    }
+    if (IS_OPTION("deblock")) {
+        pParams->deblockFilter = true;
+        return 0;
+    }
+    if (IS_OPTION("no-deblock")) {
+        pParams->deblockFilter = false;
         return 0;
     }
     if (IS_OPTION("enforce-hrd")) {
@@ -1675,6 +1684,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_NUM(_T("--ref"), nRefFrames);
     OPT_NUM(_T("--ltr"), nLTRFrames);
     OPT_NUM(_T("--slices"), nSlices);
+    OPT_BOOL_OPTIONAL(_T("--deblock"), _T("--no-deblock"), deblockFilter);
     OPT_BOOL_OPTIONAL(_T("--skip-frame"), _T("--no-skip-frame"), enableSkipFrame);
     OPT_BOOL(_T("--vbaq"), _T(""), bVBAQ);
     OPT_LST(_T("--motion-est"), nMotionEst, list_mv_presicion);

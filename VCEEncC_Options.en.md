@@ -530,6 +530,9 @@ Enforce hrd compatibility of bitstream.
 ### --filler
 Output filler data to adjust nominal bitrate.
 
+### --no-deblock [H.264/HEVC]
+Disable deblock filter.
+
 ### --motion-est &lt;string&gt; [H.264/HEVC]
 Motion vector accuracy / default: auto
 - auto ... automatic
