@@ -72,7 +72,7 @@ VCEEnc.slnを開きます。
 - git
 - libraries
   - libva, libdrm, libmfx 
-  - ffmpeg 4.x libs (libavcodec58, libavformat58, libavfilter7, libavutil56, libswresample3)
+  - ffmpeg 4.x libs (libavcodec58, libavformat58, libavfilter7, libavutil56, libswresample3, libavdevice58)
   - libass9
   - [Optional] VapourSynth
 
@@ -104,7 +104,7 @@ sudo apt install \
   libx11-dev
 
 sudo apt install ffmpeg \
-  libavcodec-extra libavcodec-dev libavutil-dev libavformat-dev libswresample-dev libavfilter-dev \
+  libavcodec-extra libavcodec-dev libavutil-dev libavformat-dev libswresample-dev libavfilter-dev libavdevice-dev \
   libass9 libass-dev
 ```
 
@@ -206,7 +206,7 @@ make -j8
 - git
 - libraries
   - libva, libdrm, libmfx 
-  - ffmpeg 4.x libs (libavcodec58, libavformat58, libavfilter7, libavutil56, libswresample3)
+  - ffmpeg 4.x libs (libavcodec58, libavformat58, libavfilter7, libavutil56, libswresample3, libavdevice58)
   - libass9
   - [Optional] VapourSynth
 
