@@ -72,6 +72,7 @@
   - [--skip-frame \[H.264/HEVC\]](#--skip-frame-h264hevc)
   - [--enforce-hrd](#--enforce-hrd)
   - [--filler](#--filler)
+  - [--no-deblock \[H.264/HEVC\]](#--no-deblock-h264hevc)
   - [--motion-est \<string\> \[H.264/HEVC\]](#--motion-est-string-h264hevc)
   - [--tiles \<int\> \[AV1\]](#--tiles-int-av1)
   - [--cdef-mode \<string\> \[AV1\]](#--cdef-mode-string-av1)
@@ -1078,7 +1079,14 @@ The default is 10.
 ### --audio-source &lt;string&gt;[:{&lt;int&gt;?}[;&lt;param1&gt;=&lt;value1&gt;]...]...
 Mux an external audio file specified.
 
-- **params** 
+- **file params**
+  - format=&lt;string&gt;  
+    Specify input format for the file.
+
+  - input_opt=&lt;string&gt;  
+    Specify input options for the file.
+
+- **track params**
   - copy  
     Copy audio track.
   
@@ -1202,7 +1210,14 @@ There should be one frame ID per line.
 ### --sub-source &lt;string&gt;[:{&lt;int&gt;?}[;&lt;param1&gt;=&lt;value1&gt;]...]...
 Read subtitle from the specified file and mux into the output file.
 
-- **params** 
+- **file params**
+  - format=&lt;string&gt;  
+    Specify input format for the file.
+
+  - input_opt=&lt;string&gt;  
+    Specify input options for the file.
+
+- **track params**
   - disposition=&lt;string&gt;  
     Specify disposition for subtitle.
     
