@@ -216,7 +216,7 @@
     </Link>
     <PostBuildEvent>
       <Command>echo "依存関係を確認..."
-dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll" /c:"avdevice-[0-9]*.dll"
 if %ERRORLEVEL% == 0 exit /B 1
 exit /B 0</Command>
     </PostBuildEvent>
@@ -264,7 +264,7 @@ exit /B 0</Command>
     </Link>
     <PostBuildEvent>
       <Command>echo "依存関係を確認..."
-dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll" /c:"avdevice-[0-9]*.dll"
 if %ERRORLEVEL% == 0 exit /B 1
 exit /B 0</Command>
     </PostBuildEvent>
@@ -310,7 +310,7 @@ exit /B 0</Command>
     </Link>
     <PostBuildEvent>
       <Command>echo "依存関係を確認..."
-dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll" /c:"avdevice-[0-9]*.dll"
 if %ERRORLEVEL% == 0 exit /B 1
 exit /B 0</Command>
     </PostBuildEvent>
@@ -356,7 +356,7 @@ exit /B 0</Command>
     </Link>
     <PostBuildEvent>
       <Command>echo "依存関係を確認..."
-dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll" /c:"avdevice-[0-9]*.dll"
 if %ERRORLEVEL% == 0 exit /B 1
 exit /B 0</Command>
     </PostBuildEvent>
@@ -408,7 +408,7 @@ exit /B 0</Command>
     </Link>
     <PostBuildEvent>
       <Command>echo "依存関係を確認..."
-dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll" /c:"avdevice-[0-9]*.dll"
 if %ERRORLEVEL% == 0 exit /B 1
 exit /B 0</Command>
     </PostBuildEvent>
@@ -460,7 +460,7 @@ exit /B 0</Command>
     </Link>
     <PostBuildEvent>
       <Command>echo "依存関係を確認..."
-dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll" /c:"avdevice-[0-9]*.dll"
 if %ERRORLEVEL% == 0 exit /B 1
 exit /B 0</Command>
     </PostBuildEvent>
@@ -513,7 +513,7 @@ exit /B 0</Command>
     </Link>
     <PostBuildEvent>
       <Command>echo "依存関係を確認..."
-dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll" /c:"avdevice-[0-9]*.dll"
 if %ERRORLEVEL% == 0 exit /B 1
 exit /B 0</Command>
     </PostBuildEvent>
@@ -564,7 +564,7 @@ exit /B 0</Command>
     </Link>
     <PostBuildEvent>
       <Command>echo "依存関係を確認..."
-dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll"
+dumpbin.exe /DEPENDENTS "$(TargetPath)"   | findstr /i /r /c:"avutil-[0-9]*.dll" /c:"avcodec-[0-9]*.dll" /c:"avformat-[0-9]*.dll" /c:"avfilter-[0-9]*.dll" /c:"swresample-[0-9]*.dll" /c:"avdevice-[0-9]*.dll"
 if %ERRORLEVEL% == 0 exit /B 1
 exit /B 0</Command>
     </PostBuildEvent>
