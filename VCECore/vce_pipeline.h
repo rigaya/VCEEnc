@@ -166,16 +166,16 @@ public:
     ~PipelineTaskSurface() { reset(); }
     void reset() { if (surf) (*ref)--; surf = nullptr; ref = nullptr; }
     bool operator !() const {
-        return amfsurf() == nullptr && clframe() == nullptr;
+        return frame() == nullptr;
     }
-    bool operator !=(const PipelineTaskSurface& obj) const { return amfsurf() != obj.amfsurf() || clframe() != obj.clframe(); }
-    bool operator ==(const PipelineTaskSurface& obj) const { return amfsurf() == obj.amfsurf() && clframe() == obj.clframe(); }
-    bool operator !=(std::nullptr_t) const { return amfsurf() != nullptr || clframe() != nullptr; }
-    bool operator ==(std::nullptr_t) const { return amfsurf() == nullptr && clframe() == nullptr; }
-    const amf::AMFSurface *amfsurf() const { return (surf && surf->amf()) ? surf->amf().GetPtr() : nullptr; }
-    amf::AMFSurface *amfsurf() { return (surf && surf->amf()) ? surf->amf().GetPtr() : nullptr; }
-    const RGYCLFrame *clframe() const { return (surf && surf->cl()) ? surf->cl().get() : nullptr; }
-    RGYCLFrame *clframe() { return (surf && surf->cl()) ? surf->cl().get() : nullptr; }
+    bool operator !=(const PipelineTaskSurface& obj) const { return frame() != obj.frame(); }
+    bool operator ==(const PipelineTaskSurface& obj) const { return frame() == obj.frame(); }
+    bool operator !=(std::nullptr_t) const { return frame() != nullptr; }
+    bool operator ==(std::nullptr_t) const { return frame() == nullptr; }
+    const RGYFrameAMF *amf() const { return dynamic_cast<const RGYFrameAMF*>(surf); }
+    RGYFrameAMF *amf() { return dynamic_cast<RGYFrameAMF*>(surf); }
+    const RGYCLFrame *cl() const { return dynamic_cast<const RGYCLFrame*>(surf); }
+    RGYCLFrame *cl() { return dynamic_cast<RGYCLFrame*>(surf); }
     const RGYFrame *frame() const { return surf; }
     RGYFrame *frame() { return surf; }
 };
@@ -196,8 +196,8 @@ private:
         RGYFrame *surf() { return surf_.get(); }
         PipelineTaskSurfaceType type() const {
             if (!surf_) return PipelineTaskSurfaceType::UNKNOWN;
-            if (surf_->cl()) return PipelineTaskSurfaceType::CL;
-            if (surf_->amf()) return PipelineTaskSurfaceType::AMF;
+            if (dynamic_cast<const RGYCLFrame*>(surf_.get())) return PipelineTaskSurfaceType::CL;
+            if (dynamic_cast<const RGYFrameAMF*>(surf_.get())) return PipelineTaskSurfaceType::AMF;
             return PipelineTaskSurfaceType::UNKNOWN;
         }
     };
@@ -213,17 +213,17 @@ public:
         clear();
         m_surfaces.resize(surfs.size());
         for (size_t i = 0; i < m_surfaces.size(); i++) {
-            m_surfaces[i] = std::make_unique<PipelineTaskSurfacesPair>(std::make_unique<RGYFrame>(surfs[i]));
+            m_surfaces[i] = std::make_unique<PipelineTaskSurfacesPair>(std::make_unique<RGYFrameAMF>(surfs[i]));
         }
     }
     void setSurfaces(std::vector<std::unique_ptr<RGYCLFrame>>& frames) {
         clear();
         m_surfaces.resize(frames.size());
         for (size_t i = 0; i < m_surfaces.size(); i++) {
-            m_surfaces[i] = std::make_unique<PipelineTaskSurfacesPair>(std::make_unique<RGYFrame>(std::move(frames[i])));
+            m_surfaces[i] = std::make_unique<PipelineTaskSurfacesPair>(std::move(frames[i]));
         }
     }
-    PipelineTaskSurface addSurface(std::unique_ptr<RGYFrame>& surf) {
+    PipelineTaskSurface addSurface(std::unique_ptr<RGYFrameAMF>& surf) {
         deleteFreedSurface();
         m_surfaces.push_back(std::move(std::unique_ptr<PipelineTaskSurfacesPair>(new PipelineTaskSurfacesPair(std::move(surf)))));
         return m_surfaces.back()->getRef();
@@ -238,9 +238,12 @@ public:
         return PipelineTaskSurface();
     }
     PipelineTaskSurface get(amf::AMFSurface *surf) {
-        auto s = findSurf(surf);
-        if (s != nullptr) {
-            return s->getRef();
+        for (auto& s : m_surfaces) {
+            if (auto amf = dynamic_cast<RGYFrameAMF*>(s->surf()); amf != nullptr) {
+                if (amf->surf() == surf) {
+                    return s->getRef();
+                }
+            }
         }
         return PipelineTaskSurface();
     }
@@ -275,18 +278,9 @@ protected:
             }
         }
     }
-
-    PipelineTaskSurfacesPair *findSurf(amf::AMFSurface *surf) {
+    PipelineTaskSurfacesPair *findSurf(RGYFrame *surf) {
         for (auto& s : m_surfaces) {
-            if (s->surf()->surf() == surf) {
-                return s.get();
-            }
-        }
-        return nullptr;
-    }
-    PipelineTaskSurfacesPair *findSurf(RGYCLFrame *frame) {
-        for (auto& s : m_surfaces) {
-            if (s->surf()->clframe() == frame) {
+            if (s->surf() == surf) {
                 return s.get();
             }
         }
@@ -374,14 +368,14 @@ public:
         if (clqueue == nullptr) {
             return RGY_ERR_NULL_PTR;
         }
-        auto clframe = m_surf.clframe();
+        auto clframe = m_surf.cl();
         auto err = clframe->queueMapBuffer(*clqueue, CL_MAP_READ); // CPUが読み込むためにmapする
         if (err != RGY_ERR_NONE) {
             return err;
         }
         clframe->mapWait();
-        auto mappedframe = std::make_unique<RGYFrameRef>(clframe->mappedHost());
-        err = writer->WriteNextFrame(mappedframe.get());
+        auto mappedframe = clframe->mappedHost();
+        err = writer->WriteNextFrame(mappedframe);
         clframe->unmapBuffer();
         return err;
     }
@@ -393,7 +387,7 @@ public:
         if (writer->getOutType() != OUT_TYPE_SURFACE) {
             return RGY_ERR_INVALID_OPERATION;
         }
-        auto err = (m_surf.amfsurf() != nullptr) ? writeAMF(writer) : writeCL(writer, clqueue);
+        auto err = (m_surf.amf() != nullptr) ? writeAMF(writer) : writeCL(writer, clqueue);
         return err;
     }
 };
@@ -636,15 +630,15 @@ public:
             PrintMes(RGY_LOG_ERROR, _T("failed to get work surface for input.\n"));
             return RGY_ERR_NOT_ENOUGH_BUFFER;
         }
-        auto clframe = surfWork.clframe();
+        auto clframe = surfWork.cl();
         auto err = clframe->queueMapBuffer(m_cl->queue(), CL_MAP_WRITE); // CPUが書き込むためにMapする
         if (err != RGY_ERR_NONE) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to map buffer: %s.\n"), get_err_mes(err));
             return err;
         }
         clframe->mapWait(); //すぐ終わるはず
-        auto mappedframe = std::make_unique<RGYFrameRef>(clframe->mappedHost());
-        err = m_input->LoadNextFrame(mappedframe.get());
+        auto mappedframe = clframe->mappedHost();
+        err = m_input->LoadNextFrame(mappedframe);
         if (err != RGY_ERR_NONE) {
             //Unlockする必要があるので、ここに入ってもすぐにreturnしてはいけない
             if (err == RGY_ERR_MORE_DATA) { // EOF
@@ -653,7 +647,7 @@ public:
                 PrintMes(RGY_LOG_ERROR, _T("Error in reader: %s.\n"), get_err_mes(err));
             }
         }
-        copyFrameProp(&clframe->frame, mappedframe->info());
+        clframe->setPropertyFrom(mappedframe);
         auto clerr = clframe->unmapBuffer();
         if (clerr != RGY_ERR_NONE) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to unmap buffer: %s.\n"), get_err_mes(err));
@@ -685,7 +679,7 @@ public:
             return err_to_rgy(ar);
         }
         pSurface->SetFrameType(frametype_rgy_to_enc(inputFrameInfo.picstruct));
-        auto inputFrame = std::make_unique<RGYFrame>(pSurface);
+        auto inputFrame = std::make_unique<RGYFrameAMF>(pSurface);
         auto err = m_input->LoadNextFrame(inputFrame.get());
         if (err == RGY_ERR_MORE_DATA) {// EOF
             err = RGY_ERR_MORE_BITSTREAM; // EOF を PipelineTaskMFXDecode のreturnコードに合わせる
@@ -920,7 +914,7 @@ protected:
                 return ret;
             }
             if (auto surfCopy = amf::AMFSurfacePtr(dataCopy); surfCopy != nullptr) {
-                auto surfDecOutCopy = std::make_unique<RGYFrame>(surfCopy);
+                auto surfDecOutCopy = std::make_unique<RGYFrameAMF>(surfCopy);
                 surfDecOutCopy->setInputFrameId(m_decOutFrames++);
 
                 auto flags = RGY_FRAME_FLAG_NONE;
@@ -1102,16 +1096,16 @@ public:
             while (ptsDiff >= std::max<int64_t>(1, m_outFrameDuration * 7 / 8)) {
                 PrintMes(RGY_LOG_DEBUG, _T("Insert frame: framepts %lld, estimated next %lld, diff %lld [%.1f]\n"), outPtsSource, m_tsOutEstimated, ptsDiff, ptsDiff / (double)m_outFrameDuration);
                 //水増しが必要
-                if (auto surf = taskSurf->surf().amfsurf(); surf != nullptr) {
+                if (auto surf = taskSurf->surf().amf(); surf != nullptr) {
                     //AMFのsurfaceの場合はコピーを作成する
                     amf::AMFDataPtr dataCopy;
-                    auto ar = surf->Duplicate(surf->GetMemoryType(), &dataCopy);
+                    auto ar = surf->amf()->Duplicate(surf->amf()->GetMemoryType(), &dataCopy);
                     if (ar != AMF_OK) {
                         PrintMes(RGY_LOG_ERROR, _T("Failed to copy frame: %s.\n"), get_err_mes(err_to_rgy(ar)));
                         return err_to_rgy(ar);
                     }
                     auto surfCopy = amf::AMFSurfacePtr(dataCopy);
-                    auto surfOutCopy = std::make_unique<RGYFrame>(surfCopy);
+                    auto surfOutCopy = std::make_unique<RGYFrameAMF>(surfCopy);
                     surfOutCopy->setDataList(taskSurf->surf().frame()->dataList());
                     surfOutCopy->setInputFrameId(taskSurf->surf().frame()->inputFrameId());
                     surfOutCopy->setTimestamp(m_tsOutEstimated);
@@ -1393,9 +1387,9 @@ public:
             return RGY_ERR_NULL_PTR;
         }
         RGYFrameInfo inputFrame;
-        if (auto surfVppIn = taskSurf->surf().amfsurf(); surfVppIn != nullptr) {
-            if (taskSurf->surf().frame()->getInfo().mem_type != RGY_MEM_TYPE_CPU
-                && surfVppIn->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
+        if (auto surfVppIn = taskSurf->surf().amf(); surfVppIn != nullptr) {
+            if (taskSurf->surf().frame()->mem_type() != RGY_MEM_TYPE_CPU
+                && surfVppIn->amf()->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
                 amf::AMFContext::AMFOpenCLLocker locker(m_context);
 #if 0
                 auto ar = inAmf->Interop(amf::AMF_MEMORY_OPENCL);
@@ -1406,17 +1400,17 @@ public:
                 amf::AMFDataPtr data;
                 surfVppIn->Duplicate(amf::AMF_MEMORY_HOST, &data);
 #endif
-                auto ar = surfVppIn->Convert(amf::AMF_MEMORY_OPENCL);
+                auto ar = surfVppIn->amf()->Convert(amf::AMF_MEMORY_OPENCL);
 #endif
                 if (ar != AMF_OK) {
                     PrintMes(RGY_LOG_ERROR, _T("Failed to convert plane: %s.\n"), get_err_mes(err_to_rgy(ar)));
                     return err_to_rgy(ar);
                 }
             }
-            inputFrame = taskSurf->surf().frame()->getInfo();
-        } else if (taskSurf->surf().clframe() != nullptr) {
+            inputFrame = taskSurf->surf().amf()->getInfoCopy();
+        } else if (taskSurf->surf().cl() != nullptr) {
             //OpenCLフレームが出てきた時の場合
-            auto clframe = taskSurf->surf().clframe();
+            auto clframe = taskSurf->surf().cl();
             if (clframe == nullptr) {
                 PrintMes(RGY_LOG_ERROR, _T("Invalid cl frame.\n"));
                 return RGY_ERR_NULL_PTR;
@@ -1559,12 +1553,12 @@ public:
 
         //以下の処理は
         amf::AMFSurfacePtr pSurface = nullptr;
-        RGYFrame *surfEncodeIn = (frame) ? dynamic_cast<PipelineTaskOutputSurf *>(frame.get())->surf().frame() : nullptr;
+        RGYFrameAMF *surfEncodeIn = (frame) ? dynamic_cast<PipelineTaskOutputSurf *>(frame.get())->surf().amf() : nullptr;
         const bool drain = surfEncodeIn == nullptr;
         if (surfEncodeIn) {
-            int64_t pts = surfEncodeIn->timestamp();
-            int64_t duration = surfEncodeIn->duration();
-            auto frameDataList = surfEncodeIn->dataList();
+            const int64_t pts = surfEncodeIn->timestamp();
+            const int64_t duration = surfEncodeIn->duration();
+            const auto frameDataList = surfEncodeIn->dataList();
             const auto inputFrameId = surfEncodeIn->inputFrameId();
             if (inputFrameId < 0) {
                 PrintMes(RGY_LOG_ERROR, _T("Invalid inputFrameId: %d.\n"), inputFrameId);
@@ -1695,7 +1689,7 @@ public:
         }
 
         amf::AMFSurfacePtr pSurface = nullptr;
-        RGYFrame *surfVppIn = (frame) ? dynamic_cast<PipelineTaskOutputSurf *>(frame.get())->surf().frame() : nullptr;
+        RGYFrameAMF *surfVppIn = (frame) ? dynamic_cast<PipelineTaskOutputSurf *>(frame.get())->surf().amf() : nullptr;
         const bool drain = surfVppIn == nullptr;
         if (surfVppIn) {
             if (surfVppIn->dataList().size() > 0) {
@@ -1743,7 +1737,7 @@ public:
                     surfVppOut->GetProperty(RGY_PROP_DURATION, &duration);
                     surfVppOut->GetProperty(RGY_PROP_INPUT_FRAMEID, &inputFrameId);
 
-                    auto surfDecOut = std::make_unique<RGYFrame>(surfVppOut);
+                    auto surfDecOut = std::make_unique<RGYFrameAMF>(surfVppOut);
                     surfDecOut->clearDataList();
                     surfDecOut->setTimestamp(pts);
                     surfDecOut->setDuration(duration);
@@ -1835,9 +1829,9 @@ public:
                 PrintMes(RGY_LOG_ERROR, _T("Invalid task surface.\n"));
                 return RGY_ERR_NULL_PTR;
             }
-            if (auto surfVppInAMF = taskSurf->surf().amfsurf(); surfVppInAMF != nullptr) {
-                if (taskSurf->surf().frame()->getInfo().mem_type != RGY_MEM_TYPE_CPU
-                    && surfVppInAMF->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
+            if (auto surfVppInAMF = taskSurf->surf().amf(); surfVppInAMF != nullptr) {
+                if (taskSurf->surf().frame()->mem_type() != RGY_MEM_TYPE_CPU
+                    && surfVppInAMF->amf()->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
                     amf::AMFContext::AMFOpenCLLocker locker(m_context);
 #if 0
                     auto ar = inAmf->Interop(amf::AMF_MEMORY_OPENCL);
@@ -1848,16 +1842,16 @@ public:
                     amf::AMFDataPtr data;
                     surfVppInAMF->Duplicate(amf::AMF_MEMORY_HOST, &data);
 #endif
-                    auto ar = surfVppInAMF->Convert(amf::AMF_MEMORY_OPENCL);
+                    auto ar = surfVppInAMF->amf()->Convert(amf::AMF_MEMORY_OPENCL);
 #endif
                     if (ar != AMF_OK) {
                         PrintMes(RGY_LOG_ERROR, _T("Failed to convert plane: %s.\n"), get_err_mes(err_to_rgy(ar)));
                         return err_to_rgy(ar);
                     }
                 }
-                filterframes.push_back(std::make_pair(taskSurf->surf().frame()->getInfo(), 0u));
-            } else if (auto surfVppInCL = taskSurf->surf().clframe(); surfVppInCL != nullptr) {
-                filterframes.push_back(std::make_pair(taskSurf->surf().frame()->getInfo(), 0u));
+                filterframes.push_back(std::make_pair(surfVppInAMF->getInfoCopy(), 0u));
+            } else if (auto surfVppInCL = taskSurf->surf().cl(); surfVppInCL != nullptr) {
+                filterframes.push_back(std::make_pair(surfVppInCL->frameInfo(), 0u));
             } else {
                 PrintMes(RGY_LOG_ERROR, _T("Invalid task surface (not opencl or amf).\n"));
                 return RGY_ERR_NULL_PTR;
@@ -1910,12 +1904,14 @@ public:
                 return RGY_ERR_MORE_DATA; //最後までdrain = trueなら、drain完了
             }
             PipelineTaskSurface surfVppOut;
+            RGYFrameInfo surfVppOutInfo;
             if (workSurfaceType() == PipelineTaskSurfaceType::CL) {
                 surfVppOut = getWorkSurf();
                 if (surfVppOut == nullptr) {
                     PrintMes(RGY_LOG_ERROR, _T("failed to get work surface for input.\n"));
                     return RGY_ERR_NOT_ENOUGH_BUFFER;
                 }
+                surfVppOutInfo = surfVppOut.cl()->frameInfo();
             } else {
                 //エンコードバッファにコピー
                 amf::AMFContext::AMFOpenCLLocker locker(m_context);
@@ -1942,7 +1938,8 @@ public:
                         return err_to_rgy(ar);
                     }
                 }
-                auto surfVppOutAMF = std::make_unique<RGYFrame>(pSurface);
+                auto surfVppOutAMF = std::make_unique<RGYFrameAMF>(pSurface);
+                surfVppOutInfo = surfVppOutAMF->getInfoCopy();
                 surfVppOut = m_workSurfs.addSurface(surfVppOutAMF);
             }
             //エンコードバッファにコピー
@@ -1954,7 +1951,6 @@ public:
             }
             //エンコードバッファのポインタを渡す
             int nOutFrames = 0;
-            auto surfVppOutInfo = surfVppOut.frame()->getInfo();
             RGYFrameInfo *outInfo[1];
             outInfo[0] = &surfVppOutInfo;
             RGYOpenCLEvent clevent; // 最終フィルタの処理完了を伝えるevent
