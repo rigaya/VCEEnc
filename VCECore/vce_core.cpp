@@ -515,7 +515,7 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
         PrintMes(RGY_LOG_ERROR, _T("Invalid frame size - zero or negative (%dx%d).\n"), prm->input.srcWidth, prm->input.srcHeight);
         return RGY_ERR_INVALID_PARAM;
     }
-    const int h_mul = (prm->input.picstruct & RGY_PICSTRUCT_INTERLACED) ? 4 : 2;
+    const int h_mul = 2; // VCEは常にインタレなし (prm->input.picstruct & RGY_PICSTRUCT_INTERLACED) ? 4 : 2;
     if (prm->input.srcWidth % 2 != 0) {
         PrintMes(RGY_LOG_ERROR, _T("Invalid input frame size - non mod2 (width: %d).\n"), prm->input.srcWidth);
         return RGY_ERR_INVALID_PARAM;
