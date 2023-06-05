@@ -182,7 +182,13 @@ Radeon RX550
 
 【どうでもいいメモ】
 2023.06.xx (8.14)
+[VCEEncC]
+- SAR比使用時の出力を改善。
+- 複数のデバイスからGPUを選択する際、OpenCLの初期化に失敗したデバイスの優先度を落とすように。
 - tsファイルで--audio-copyを使用すると、"AAC bitstream not in ADTS format and extradata missing"というエラーが出るのを回避。
+
+[VCEEnc.auo]
+- fawの処理機能を内蔵し、faw2aac.auo/fawcl.exeがなくても内蔵機能でfawを処理できるように。
 
 2023.06.03 (8.13)
 - dshowのカメラ入力等に対応。
