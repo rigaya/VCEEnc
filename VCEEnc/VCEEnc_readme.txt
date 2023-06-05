@@ -181,6 +181,9 @@ Radeon RX550
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2023.06.xx (8.14)
+- tsファイルで--audio-copyを使用すると、"AAC bitstream not in ADTS format and extradata missing"というエラーが出るのを回避。
+
 2023.06.03 (8.13)
 - dshowのカメラ入力等に対応。
 - --audio-source, --sub-sourceのコマンドラインの区切りを変更。
