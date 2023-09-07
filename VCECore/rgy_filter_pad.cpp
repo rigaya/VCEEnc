@@ -115,7 +115,7 @@ RGY_ERR RGYFilterPad::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog>
          || prm->pad.top    % 2 != 0
          || prm->pad.right  % 2 != 0
          || prm->pad.bottom % 2 != 0)) {
-        AddMessage(RGY_LOG_ERROR, _T("Invalid parameter.\n"));
+        AddMessage(RGY_LOG_ERROR, _T("Invalid parameter, --vpp-pad only supports values which is multiple of 2 in YUV420.\n"));
         return RGY_ERR_INVALID_PARAM;
     }
     if (pParam->frameOut.width != pParam->frameIn.width + prm->pad.right + prm->pad.left
