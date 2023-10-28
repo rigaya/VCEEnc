@@ -1590,6 +1590,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
 #define OPT_GUID_HEVC(str, codec, opt, list) if ((pParams->codecParam[RGY_CODEC_HEVC].opt) != (encPrmDefault.codecParam[RGY_CODEC_HEVC].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << get_name_from_value((pParams->codecParam[RGY_CODEC_HEVC].opt), list);
 #define OPT_LST(str, opt, list) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << (str) << _T(" ") << get_chr_from_value(list, (pParams->opt));
 #define OPT_LST_OPTIONAL(str, opt, list) if (pParams->opt.has_value()) cmd << _T(" ") << (str) << _T(" ") << get_chr_from_value(list, (pParams->opt.value()));
+#define OPT_LST_AV1(str, codec, opt, list) if ((pParams->codecParam[RGY_CODEC_AV1].opt) != (encPrmDefault.codecParam[RGY_CODEC_AV1].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << get_chr_from_value(list, (pParams->codecParam[RGY_CODEC_AV1].opt));
 #define OPT_LST_HEVC(str, codec, opt, list) if ((pParams->codecParam[RGY_CODEC_HEVC].opt) != (encPrmDefault.codecParam[RGY_CODEC_HEVC].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << get_chr_from_value(list, (pParams->codecParam[RGY_CODEC_HEVC].opt));
 #define OPT_LST_H264(str, codec, opt, list) if ((pParams->codecParam[RGY_CODEC_H264].opt) != (encPrmDefault.codecParam[RGY_CODEC_H264].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << get_chr_from_value(list, (pParams->codecParam[RGY_CODEC_H264].opt));
 #define OPT_QP(str, qpi, qpp, qpb, enable, force) { \
@@ -1721,18 +1722,16 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_BOOL(_T("--cdf-frame-end-update"), _T("--no-cdf-frame-end-update"), cdfFrameEndUpdate);
     OPT_LST_OPTIONAL(_T("--aq-mode"), aqMode, list_av1_aq_mode);
 
-    if (pParams->codec == RGY_CODEC_H264 || save_disabled_prm) {
+    if (pParams->codec == RGY_CODEC_H264) {
         OPT_LST_H264(_T("--level"), _T(""), nLevel, list_avc_level);
         OPT_LST_H264(_T("--profile"), _T(""), nProfile, list_avc_profile);
-    }
-    if (pParams->codec == RGY_CODEC_HEVC || save_disabled_prm) {
+    } else if (pParams->codec == RGY_CODEC_HEVC) {
         OPT_LST_HEVC(_T("--level"), _T(""), nLevel, list_hevc_level);
         OPT_LST_HEVC(_T("--profile"), _T(""), nProfile, list_hevc_profile);
         OPT_LST_HEVC(_T("--tier"), _T(""), nTier, list_hevc_tier);
-    }
-    if (pParams->codec == RGY_CODEC_AV1 || save_disabled_prm) {
-        OPT_LST_HEVC(_T("--level"), _T(""), nLevel, list_av1_level);
-        OPT_LST_HEVC(_T("--profile"), _T(""), nProfile, list_av1_profile);
+    } else if (pParams->codec == RGY_CODEC_AV1) {
+        OPT_LST_AV1(_T("--level"), _T(""), nLevel, list_av1_level);
+        OPT_LST_AV1(_T("--profile"), _T(""), nProfile, list_av1_profile);
     }
 
     OPT_BOOL(_T("--pe"), _T("--no-pe"), pe);
