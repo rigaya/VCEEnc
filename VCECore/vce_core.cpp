@@ -48,6 +48,7 @@
 #include "rgy_filter_nnedi.h"
 #include "rgy_filter_yadif.h"
 #include "rgy_filter_convolution3d.h"
+#include "rgy_filter_rff.h"
 #include "rgy_filter_delogo.h"
 #include "rgy_filter_denoise_knn.h"
 #include "rgy_filter_denoise_pmd.h"
@@ -384,7 +385,7 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCE
     m_poolPkt = std::make_unique<RGYPoolAVPacket>();
     m_poolFrame = std::make_unique<RGYPoolAVFrame>();
 
-    const bool vpp_rff = false; // inputParam->vpp.rff;
+    const bool vpp_rff = inputParam->vpp.rff.enable;
     auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, inputCspOfRawReader,
         m_pStatus, &inputParam->common, &inputParam->ctrl, HWDecCodecCsp, subburnTrackId,
         inputParam->vpp.afs.enable, vpp_rff,
@@ -430,11 +431,14 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCE
 #if ENABLE_AVSW_READER
     auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
     const bool vpp_afs = inputParam->vpp.afs.enable;
-    if ((m_nAVSyncMode & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR))/* || inputParam->vpp.rff*/) {
+    if ((m_nAVSyncMode & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR)) || vpp_rff) {
         tstring err_target;
         if (m_nAVSyncMode & RGY_AVSYNC_VFR)       err_target += _T("avsync vfr, ");
         if (m_nAVSyncMode & RGY_AVSYNC_FORCE_CFR) err_target += _T("avsync forcecfr, ");
-        if (vpp_rff)                  err_target += _T("vpp-rff, ");
+        if (vpp_rff) {
+            err_target += _T("vpp-rff, ");
+            m_nAVSyncMode = RGY_AVSYNC_VFR;
+        }
         err_target = err_target.substr(0, err_target.length()-2);
 
         if (pAVCodecReader) {
@@ -827,6 +831,19 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         PrintMes(RGY_LOG_ERROR, _T("Activating 2 or more deinterlacer is not supported.\n"));
         return RGY_ERR_UNSUPPORTED;
     }
+    //vpp-rffの制約事項
+    if (inputParam->vpp.rff.enable) {
+        if (trim_active(&m_trimParam)) {
+            PrintMes(RGY_LOG_ERROR, _T("vpp-rff cannot be used with trim.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
+        if (pAVCodecReader == nullptr
+            || m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN) {
+            PrintMes(RGY_LOG_ERROR, _T("vpp-rff can only be used with avsw reader.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+    }
 
     //VUI情報
     auto VuiFiltered = inputParam->input.vui;
@@ -995,6 +1012,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
         filterPipeline.push_back(VppType::CL_COLORSPACE);
 #endif
     }
+    if (inputParam->vpp.rff.enable)           filterPipeline.push_back(VppType::CL_RFF);
     if (inputParam->vpp.delogo.enable)        filterPipeline.push_back(VppType::CL_DELOGO);
     if (inputParam->vpp.afs.enable)           filterPipeline.push_back(VppType::CL_AFS);
     if (inputParam->vpp.nnedi.enable)         filterPipeline.push_back(VppType::CL_NNEDI);
@@ -1162,6 +1180,31 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         }
         //フィルタチェーンに追加
         vuiInfo = filter->VuiOut();
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //rff
+    if (vppType == VppType::CL_RFF) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterRff(m_dev->cl()));
+        shared_ptr<RGYFilterParamRff> param(new RGYFilterParamRff());
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->inFps = m_inputFps;
+        param->timebase = m_outputTimebase;
+        param->outFilename = inputParam->common.outputFilename;
+        param->bOutOverwrite = true;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //登録
         clfilters.push_back(std::move(filter));
         //パラメータ情報を更新
         m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);

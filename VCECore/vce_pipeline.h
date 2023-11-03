@@ -90,6 +90,7 @@ enum class VppType : int {
     CL_MPDECIMATE,
     CL_YADIF,
     CL_COLORSPACE,
+    CL_RFF,
     CL_DELOGO,
     CL_TRANSFORM,
 
@@ -1039,6 +1040,9 @@ public:
             //CFR仮定ではなく、オリジナルの時間を見る
             const auto srcTimestamp = taskSurf->surf().frame()->timestamp();
             outPtsSource = rational_rescale(srcTimestamp, m_srcTimebase, m_outputTimebase);
+            if (taskSurf->surf().frame()->duration() > 0) {
+                taskSurf->surf().frame()->setDuration(rational_rescale(taskSurf->surf().frame()->duration(), m_srcTimebase, m_outputTimebase));
+            }
         }
         PrintMes(RGY_LOG_TRACE, _T("check_pts(%d/%d): nOutEstimatedPts %lld, outPtsSource %lld, outDuration %d\n"), taskSurf->surf().frame()->inputFrameId(), m_inFrames, m_tsOutEstimated, outPtsSource, outDuration);
         if (m_tsOutFirst < 0) {
@@ -1866,9 +1870,13 @@ public:
         while (filterframes.size() > 0 || drain) {
             //フィルタリングするならここ
             for (uint32_t ifilter = filterframes.front().second; ifilter < m_vpFilters.size() - 1; ifilter++) {
+                // コピーを作ってそれをfilter関数に渡す
+                // vpp-rffなどoverwirteするフィルタのときに、filterframes.pop_front -> push がうまく動作しない
+                RGYFrameInfo input = filterframes.front().first;
+
                 int nOutFrames = 0;
                 RGYFrameInfo *outInfo[16] = { 0 };
-                auto sts_filter = m_vpFilters[ifilter]->filter(&filterframes.front().first, (RGYFrameInfo **)&outInfo, &nOutFrames);
+                auto sts_filter = m_vpFilters[ifilter]->filter(&input, (RGYFrameInfo **)&outInfo, &nOutFrames);
                 if (sts_filter != RGY_ERR_NONE) {
                     PrintMes(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), m_vpFilters[ifilter]->name().c_str());
                     return sts_filter;
@@ -1882,22 +1890,10 @@ public:
                 }
                 drain = false; //途中でフレームが出てきたら、drain完了していない
 
-                // 上書きするタイプのフィルタの場合、pop_front -> push_front は不要
-                if (m_vpFilters[ifilter]->GetFilterParam()->bOutOverwrite
-                    && filterframes.front().first.ptr
-                    && filterframes.front().first.ptr == outInfo[0]->ptr) {
-                    // 上書きするタイプのフィルタが複数のフレームを返すのはサポートしない
-                    if (nOutFrames > 1) {
-                        PrintMes(RGY_LOG_ERROR, _T("bOutOverwrite = true but nOutFrames = %d at filter[%d][%s].\n"),
-                            nOutFrames, ifilter, m_vpFilters[ifilter]->name().c_str());
-                        return RGY_ERR_UNSUPPORTED;
-                    }
-                } else {
-                    filterframes.pop_front();
-                    //最初に出てきたフレームは先頭に追加する
-                    for (int jframe = nOutFrames - 1; jframe >= 0; jframe--) {
-                        filterframes.push_front(std::make_pair(*outInfo[jframe], ifilter + 1));
-                    }
+                filterframes.pop_front();
+                //最初に出てきたフレームは先頭に追加する
+                for (int jframe = nOutFrames - 1; jframe >= 0; jframe--) {
+                    filterframes.push_front(std::make_pair(*outInfo[jframe], ifilter + 1));
                 }
             }
             if (drain) {
