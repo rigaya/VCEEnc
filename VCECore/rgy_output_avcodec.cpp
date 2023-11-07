@@ -994,7 +994,8 @@ RGY_ERR RGYOutputAvcodec::InitVideo(const VideoInfo *videoOutputInfo, const Avco
                         || videoOutputInfo->vui.colorprim != 2
                         || videoOutputInfo->vui.transfer != 2
                         || videoOutputInfo->vui.matrix != 2
-                        || videoOutputInfo->vui.chromaloc != 0)))
+                        || videoOutputInfo->vui.chromaloc != 0)
+                    || (videoOutputInfo->codec == RGY_CODEC_AV1 && videoOutputInfo->vui.colorrange == RGY_COLORRANGE_FULL)))
             || (ENCODER_MPP
                 && ((videoOutputInfo->codec == RGY_CODEC_H264 || videoOutputInfo->codec == RGY_CODEC_HEVC) // HEVCの時は常に上書き)
                     || (videoOutputInfo->sar[0] * videoOutputInfo->sar[1] > 0
@@ -1068,6 +1069,15 @@ RGY_ERR RGYOutputAvcodec::InitVideo(const VideoInfo *videoOutputInfo, const Avco
                 if (override_always || videoOutputInfo->vui.matrix != 2 /*undef*/) {
                     av_dict_set_int(&bsfPrm, "matrix_coefficients", videoOutputInfo->vui.matrix, 0);
                     AddMessage(RGY_LOG_DEBUG, _T("set matrix %d by %s filter\n"), videoOutputInfo->vui.matrix, bsf_tname.c_str());
+                }
+                if (override_always || videoOutputInfo->vui.colorrange != RGY_COLORRANGE_UNSPECIFIED /*undef*/) {
+                    if (videoOutputInfo->codec == RGY_CODEC_AV1) {
+                        av_dict_set(&bsfPrm, "color_range", videoOutputInfo->vui.colorrange == RGY_COLORRANGE_FULL ? "pc" : "tv", 0);
+                        AddMessage(RGY_LOG_DEBUG, _T("set color_range %s by %s filter\n"), videoOutputInfo->vui.colorrange == RGY_COLORRANGE_FULL ? "full" : "limited", bsf_tname.c_str());
+                    } else if (videoOutputInfo->codec == RGY_CODEC_H264 || videoOutputInfo->codec == RGY_CODEC_HEVC) {
+                        av_dict_set_int(&bsfPrm, "video_full_range_flag", videoOutputInfo->vui.colorrange == RGY_COLORRANGE_FULL ? 1 : 0, 0);
+                        AddMessage(RGY_LOG_DEBUG, _T("set color_range %s by %s filter\n"), videoOutputInfo->vui.colorrange == RGY_COLORRANGE_FULL ? "full" : "limited", bsf_tname.c_str());
+                    }
                 }
             }
             if (ENCODER_QSV || ENCODER_VCEENC || ENCODER_MPP) {

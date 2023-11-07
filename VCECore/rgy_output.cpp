@@ -338,6 +338,15 @@ RGY_ERR RGYOutputRaw::Init(const TCHAR *strFileName, const VideoInfo *pVideoOutp
                     av_dict_set_int(&bsfPrm, "matrix_coefficients", pVideoOutputInfo->vui.matrix, 0);
                     AddMessage(RGY_LOG_DEBUG, _T("set matrix %d by %s filter\n"), pVideoOutputInfo->vui.matrix, bsf_tname.c_str());
                 }
+                if (override_always || pVideoOutputInfo->vui.colorrange != RGY_COLORRANGE_UNSPECIFIED /*undef*/) {
+                    if (pVideoOutputInfo->codec == RGY_CODEC_AV1) {
+                        av_dict_set(&bsfPrm, "color_range", pVideoOutputInfo->vui.colorrange == RGY_COLORRANGE_FULL ? "pc" : "tv", 0);
+                        AddMessage(RGY_LOG_DEBUG, _T("set color_range %s by %s filter\n"), pVideoOutputInfo->vui.colorrange == RGY_COLORRANGE_FULL ? "full" : "limited", bsf_tname.c_str());
+                    } else if (pVideoOutputInfo->codec == RGY_CODEC_H264 || pVideoOutputInfo->codec == RGY_CODEC_HEVC) {
+                        av_dict_set_int(&bsfPrm, "video_full_range_flag", pVideoOutputInfo->vui.colorrange == RGY_COLORRANGE_FULL ? 1 : 0, 0);
+                        AddMessage(RGY_LOG_DEBUG, _T("set color_range %s by %s filter\n"), pVideoOutputInfo->vui.colorrange == RGY_COLORRANGE_FULL ? "full" : "limited", bsf_tname.c_str());
+                    }
+                }
             }
             if (ENCODER_QSV || ENCODER_VCEENC) {
                 if (pVideoOutputInfo->vui.chromaloc != 0) {
