@@ -44,9 +44,12 @@ bool VppAMFHQScaler::operator!=(const VppAMFHQScaler& x) const {
     return !(*this == x);
 }
 tstring VppAMFHQScaler::print() const {
+    //return strsprintf(
+    //    _T("scaler: %s, sharpness %.1f\n"),
+    //    get_cx_desc(list_vce_hq_scaler, algorithm), sharpness);
     return strsprintf(
-        _T("scaler: %s, sharpness %.1f\n"),
-        get_cx_desc(list_vce_hq_scaler, algorithm), sharpness);
+        _T("scaler: %s\n"),
+        get_cx_desc(list_vce_hq_scaler, algorithm));
 }
 
 VppAMFPreProcessing::VppAMFPreProcessing() :
