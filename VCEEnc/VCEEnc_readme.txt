@@ -188,6 +188,7 @@ Radeon RX550
 - rffを展開するフィルタを追加。(--vpp-rff)
 - --audio-streamをavs読み込み時にも対応。
 - AV1エンコードでcolormatrix等を適切に反映するように。
+- --vpp-afsでrffの考慮をデフォルトで有効に。
 - --log-levelにquietを追加。
 - 新しいAVChannelLayout APIに対応(Windows版)。
 - smart access videoに関するチェックを追加。
