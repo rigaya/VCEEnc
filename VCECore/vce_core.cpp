@@ -2261,6 +2261,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (prm->deblockFilter.has_value()) {
             m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_DE_BLOCKING_FILTER_DISABLE, !prm->deblockFilter.value());
         }
+        if (m_encVUI.colorrange == RGY_COLORRANGE_FULL) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE,                   (amf_int64)AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE_FULL);
+        }
 
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER,                   true);
     } else if (prm->codec == RGY_CODEC_AV1) {
