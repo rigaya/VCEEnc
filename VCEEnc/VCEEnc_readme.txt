@@ -183,12 +183,18 @@ Radeon RX550
 【どうでもいいメモ】
 2023.11.xx (8.17)
 [VCEEncC]
+- AMFを1.4.30に更新。
+  AMD Radeon Software Adrenalin Edition 23.5.2 以降が必要。
 - rffを展開するフィルタを追加。(--vpp-rff)
+- --audio-streamをavs読み込み時にも対応。
+- AV1エンコードでcolormatrix等を適切に反映するように。
 - --log-levelにquietを追加。
 - 新しいAVChannelLayout APIに対応(Windows版)。
+- smart access videoに関するチェックを追加。
 - --video-tagの指定がない場合、HEVCでは再生互換性改善のため、 "hvc1"をデフォルトとする。
   (libavformatのデフォルトは"hev1")
-- --audio-streamをavs読み込み時にも対応。
+- AV1 10bit decodeはうまく動作しないので無効化し、swデコーダを使用するようにする。
+- vbvバッファサイズの上限は500000kbとする。
 - 音声フィルターの切り替えがエンコード中に発生する時に--thread-audio > 1で異常終了する問題を修正。
 - --vpp-afs, --vpp-nnedi, --vpp-yadif, --vpp-padのエラーメッセージを拡充。
 - --vpp-padのエラーメッセージを拡充。
