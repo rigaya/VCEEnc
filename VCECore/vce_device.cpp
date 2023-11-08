@@ -311,7 +311,7 @@ amf::AMFCapsPtr VCEDevice::getEncCaps(RGY_CODEC codec) {
         }
         //10bit深度のチェック
         if (ret == AMF_OK
-            && (codec == RGY_CODEC_HEVC /* || codec == RGY_CODEC_AV1 */)) { // AV1 10bit decodeはうまく動作しないので無効化し、swデコーダを使用するようにする
+            && (codec == RGY_CODEC_HEVC || codec == RGY_CODEC_AV1)) {
             amf::AMFComponentPtr p_encoder;
             if (m_factory->CreateComponent(m_context, codec_rgy_to_enc(codec), &p_encoder) == AMF_OK) {
                 try {
@@ -361,7 +361,8 @@ amf::AMFCapsPtr VCEDevice::getDecCaps(RGY_CODEC codec) {
             amf::AMFCapsPtr decodeCaps;
             amf::AMFComponentPtr p_decode;
             if (m_factory->CreateComponent(m_context, codec_uvd_name, &p_decode) == AMF_OK
-                && p_decode->GetCaps(&decodeCaps) == AMF_OK) {
+                && p_decode->GetCaps(&decodeCaps) == AMF_OK
+                && codec != RGY_CODEC_AV1) { // AV1 10bit decodeはうまく動作しないので無効化し、swデコーダを使用するようにする
                 // 10bit深度のサポートのチェック
                 decodeCaps->SetProperty(CAP_10BITDEPTH, false);
                 const auto codec_uvd_10bit_name = codec_rgy_to_dec_10bit(codec);
