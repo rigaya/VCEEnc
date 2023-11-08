@@ -1936,6 +1936,15 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             }
         }
 
+        if (prm->smartAccessVideo) {
+            bool smartAccessVideoSupported = false;
+            encoderCaps->GetProperty(AMF_PARAM_CAP_SUPPORT_SMART_ACCESS_VIDEO(prm->codec), &smartAccessVideoSupported);
+            if (!smartAccessVideoSupported) {
+                PrintMes(RGY_LOG_WARN, _T("smart access video is not supported on this device, disabled.\n"));
+                prm->smartAccessVideo = false;
+            }
+        }
+
         amf::AMFIOCapsPtr inputCaps;
         if (encoderCaps->GetInputCaps(&inputCaps) == AMF_OK) {
             int minWidth, maxWidth;

@@ -27,6 +27,7 @@
 
 #include "vce_device.h"
 #include "vce_util.h"
+#include "VideoDecoderUVD.h"
 
 const wchar_t *VCEDevice::CAP_10BITDEPTH = L"CAP_10BITDEPTH";
 
@@ -563,6 +564,10 @@ tstring VCEDevice::QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
     encoderCaps->GetProperty(AMF_PARAM_CAPS_QUERY_TIMEOUT_SUPPORT(codec), &queryTimeout);
     str += strsprintf(_T("timeout support: %s\n"), (queryTimeout) ? _T("yes") : _T("no"));
 
+    bool smartAccessVideo = false;
+    encoderCaps->GetProperty(AMF_PARAM_CAP_SUPPORT_SMART_ACCESS_VIDEO(codec), &smartAccessVideo);
+    str += strsprintf(_T("smart access:    %s\n"), (smartAccessVideo) ? _T("yes") : _T("no"));
+
     str += QueryIOCaps(codec, encoderCaps);
 
     return str;
@@ -593,6 +598,10 @@ tstring VCEDevice::QueryDecCaps(RGY_CODEC codec, amf::AMFCapsPtr& decoderCaps) {
     //amf_uint32 throughputRequested = 0;
     //encoderCaps->GetProperty(AMF_PARAM_CAP_REQUESTED_THROUGHPUT(codec), &throughputRequested);
     //str += strsprintf(_T("requested throughput:    %d 16x16 MB\n"), throughputRequested);
+
+    bool smartAccessVideo = false;
+    decoderCaps->GetProperty(AMF_VIDEO_DECODER_CAP_SUPPORT_SMART_ACCESS_VIDEO, &smartAccessVideo);
+    str += strsprintf(_T("smart access:    %s\n"), (smartAccessVideo) ? _T("yes") : _T("no"));
 
     str += QueryOutputCaps(codec, decoderCaps);
 
