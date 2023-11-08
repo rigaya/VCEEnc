@@ -310,7 +310,7 @@ amf::AMFCapsPtr VCEDevice::getEncCaps(RGY_CODEC codec) {
         }
         //10bit深度のチェック
         if (ret == AMF_OK
-            && (codec == RGY_CODEC_HEVC || codec == RGY_CODEC_AV1)) {
+            && (codec == RGY_CODEC_HEVC /* || codec == RGY_CODEC_AV1 */)) { // AV1 10bit decodeはうまく動作しないので無効化し、swデコーダを使用するようにする
             amf::AMFComponentPtr p_encoder;
             if (m_factory->CreateComponent(m_context, codec_rgy_to_enc(codec), &p_encoder) == AMF_OK) {
                 try {
