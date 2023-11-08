@@ -3642,7 +3642,7 @@ tstring VCECore::GetEncoderParam() {
             qpminmax_str(qpmin).c_str(), qpminmax_str(qpmin_inter).c_str(),
             qpminmax_str(qpmax).c_str(), qpminmax_str(qpmax_inter).c_str());
     }
-    mes += strsprintf(_T("VBV Bufsize:   %d kbps\n"), GetPropertyInt(AMF_PARAM_VBV_BUFFER_SIZE(m_encCodec)) / 1000);
+    mes += strsprintf(_T("VBV Bufsize:   %d kb\n"), GetPropertyInt(AMF_PARAM_VBV_BUFFER_SIZE(m_encCodec)) / 1000);
     if (m_encCodec == RGY_CODEC_H264 && GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN)) {
         mes += strsprintf(_T("Bframes:       %d frames, b-pyramid: %s\n"),
             GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN),
