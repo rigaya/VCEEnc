@@ -181,7 +181,7 @@ Radeon RX550
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
-2023.11.xx (8.17)
+2023.11.08 (8.17)
 [VCEEncC]
 - AMFを1.4.30に更新。
   AMD Radeon Software Adrenalin Edition 23.5.2 以降が必要。

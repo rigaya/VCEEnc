@@ -2512,7 +2512,7 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
                     Support10bitDepth = false;
                 }
                 if (!Support10bitDepth) {
-                    message += strsprintf(_T("GPU #%d (%s) does not support 10bit depth %s decoding.\n"), (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
+                    message += strsprintf(_T("GPU #%d (%s) does not support 10bit depth %s encoding.\n"), (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
                     gpu = gpuList.erase(gpu);
                     continue;
                 }
