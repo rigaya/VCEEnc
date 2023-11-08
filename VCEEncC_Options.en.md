@@ -488,7 +488,7 @@ Set output bit depth.
 Maximum bitrate (in kbps).
 
 ### --vbv-bufsize &lt;int&gt;
-Size of VBV buffer size (in kbps).
+Size of VBV buffer size (in kb). Max possible is 500000.
 
 ### --qp-min &lt;int&gt; or &lt;int&gt;:&lt;int&gt;:&lt;int&gt;
 Set the minimum QP value with &lt;I frame&gt;:&lt;P frame&gt;:&lt;B frame&gt;. This option will be ignored in CQP mode. 
