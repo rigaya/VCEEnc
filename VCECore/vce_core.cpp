@@ -83,6 +83,8 @@
 #include "rgy_level_hevc.h"
 #include "rgy_level_av1.h"
 
+static const int VBV_BUFSIZE_MAX_Kbit = 500000;
+
 VCECore::VCECore() :
     m_encCodec(RGY_CODEC_UNKNOWN),
     m_bTimerPeriodTuning(true),
@@ -2117,7 +2119,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     m_params.SetParam(AMF_PARAM_QP_P(prm->codec), (amf_int64)prm->nQPP);
     if (prm->nBitrate != 0)       m_params.SetParam(AMF_PARAM_TARGET_BITRATE(prm->codec), (amf_int64)prm->nBitrate * 1000);
     if (prm->nMaxBitrate != 0)    m_params.SetParam(AMF_PARAM_PEAK_BITRATE(prm->codec),   (amf_int64)prm->nMaxBitrate * 1000);
-    if (prm->nVBVBufferSize != 0) m_params.SetParam(AMF_PARAM_VBV_BUFFER_SIZE(prm->codec), (amf_int64)prm->nVBVBufferSize * 1000);
+    if (prm->nVBVBufferSize != 0) m_params.SetParam(AMF_PARAM_VBV_BUFFER_SIZE(prm->codec), (amf_int64)std::min(prm->nVBVBufferSize, VBV_BUFSIZE_MAX_Kbit) * 1000);
     m_params.SetParam(AMF_PARAM_INITIAL_VBV_BUFFER_FULLNESS(prm->codec),     (amf_int64)prm->nInitialVBVPercent);
     m_params.SetParam(AMF_PARAM_MAX_NUM_REFRAMES(prm->codec), (amf_int64)prm->nRefFrames);
     m_params.SetParam(AMF_PARAM_MAX_LTR_FRAMES(prm->codec), (amf_int64)prm->nLTRFrames);
