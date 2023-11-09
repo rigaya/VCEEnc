@@ -33,7 +33,7 @@
 VppAMFHQScaler::VppAMFHQScaler() :
     enable(false),
     algorithm(AMF_HQ_SCALER_ALGORITHM_BICUBIC),
-    sharpness(0.0) {
+    sharpness(0.5) {
 };
 bool VppAMFHQScaler::operator==(const VppAMFHQScaler& x) const {
     return enable == x.enable
