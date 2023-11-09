@@ -2008,6 +2008,7 @@ yadifによるインタレ解除を行う。
   | amf_bilinear | amf 線形補間  |
   | amf_bicubic  | amf 3次補間   |
   | amf_fsr      | amf fsr 補間  |
+  | amf_fsr_11   | amf fsr 補間  |
   | amf_point    | amf point scaling |
 
 ### --vpp-unsharp [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]

@@ -512,8 +512,9 @@ struct VCEParamPA {
 const CX_DESC list_vce_hq_scaler[] = {
     { _T("bilinear"), AMF_HQ_SCALER_ALGORITHM_BILINEAR },
     { _T("bicubic"),  AMF_HQ_SCALER_ALGORITHM_BICUBIC  },
-    { _T("fsr"),      AMF_HQ_SCALER_ALGORITHM_FSR      },
-    { _T("point"),    AMF_HQ_SCALER_ALGORITHM_POINT    },
+    { _T("fsr"),      AMF_HQ_SCALER_ALGORITHM_VIDEOSR1_0 },
+    { _T("fsr11"),    AMF_HQ_SCALER_ALGORITHM_VIDEOSR1_1 },
+    { _T("point"),    AMF_HQ_SCALER_ALGORITHM_POINT      },
     { NULL, 0 }
 };
 

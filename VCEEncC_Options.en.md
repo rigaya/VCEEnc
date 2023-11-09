@@ -2020,6 +2020,7 @@ Specify the resizing algorithm.
   | amf_bilinear | amf bilinear interpolation  |
   | amf_bicubic  | amf bicubic interpolation   |
   | amf_fsr      | amf fsr resampling          |
+  | amf_fsr_11   | amf fsr resampling          |
   | amf_point    | amf point scaling           |
 
 ### --vpp-unsharp [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
