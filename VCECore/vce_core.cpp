@@ -387,6 +387,13 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCE
     m_poolPkt = std::make_unique<RGYPoolAVPacket>();
     m_poolFrame = std::make_unique<RGYPoolAVFrame>();
 
+    // VCEではhwデコーダ使用時はrffの処理に対応していない
+    // 特に指定の場合、自動的にavhwを無効化する
+    if (inputParam->input.type == RGY_INPUT_FMT_AVANY
+        && (inputParam->vpp.rff.enable || inputParam->vpp.afs.rff)) {
+        inputParam->input.type = RGY_INPUT_FMT_AVSW;
+    }
+
     const bool vpp_rff = inputParam->vpp.rff.enable;
     auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, inputCspOfRawReader,
         m_pStatus, &inputParam->common, &inputParam->ctrl, HWDecCodecCsp, subburnTrackId,
