@@ -79,7 +79,7 @@
   - [--cdf-update \[AV1\]](#--cdf-update-av1)
   - [--cdf-frame-end-update \[AV1\]](#--cdf-frame-end-update-av1)
   - [--temporal-layers \<int\> \[AV1\]](#--temporal-layers-int-av1)
-  - [--aq-mode \<int\> \[AV1\]](#--aq-mode-int-av1)
+  - [--aq-mode \<string\> \[AV1\]](#--aq-mode-string-av1)
   - [--pe](#--pe)
   - [--pa  \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--pa--param1value1param2value2)
   - [--slices \<int\> \[H.264/HEVC\]](#--slices-int-h264hevc)
@@ -530,7 +530,7 @@ Enable CDF frame end update.
 ### --temporal-layers &lt;int&gt; [AV1]
 Temporal layersの数。
 
-### --aq-mode &lt;int&gt; [AV1]
+### --aq-mode &lt;string&gt; [AV1]
 AQモード。
 - **パラメータ**
   - none
