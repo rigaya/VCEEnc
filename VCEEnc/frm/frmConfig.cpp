@@ -861,7 +861,7 @@ System::Void frmConfig::InitComboBox() {
     setComboBox(fcgCXMP4BoxTempDir, mp4boxtempdir_desc);
     setComboBox(fcgCXTempDir, tempdir_desc);
 
-    setComboBox(fcgCXVppResizeAlg,   list_vpp_resize, _countof(list_vpp_resize)-2 /*最後の2つamf_fsr_11とamf_pointは正常動作しないでのぞく*/);
+    setComboBox(fcgCXVppResizeAlg, list_vpp_resize_help);
     setComboBox(fcgCXVppDeinterlace, list_deinterlace_gui);
     setComboBox(fcgCXVppDenoiseConv3DMatrix, list_vpp_convolution3d_matrix);
     setComboBox(fcgCXVppAfsAnalyze,     list_vpp_afs_analyze);

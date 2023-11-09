@@ -103,7 +103,9 @@ static tstring PrintMultipleListOptions(const TCHAR *option_name, const TCHAR *o
 tstring gen_cmd_help_vppamf() {
     tstring str;
     str += strsprintf(_T("\n")
+#if !DONOTSHOW_AMF_SHARPNESS
         _T("   --vpp-scaler-sharpness <float>\n")
+#endif
         _T("   --vpp-preprocess [<param1>=<value>][,<param2>=<value>][...]\n")
         _T("     JND based edge-adaptive denoising filter.\n")
         _T("    params\n")
