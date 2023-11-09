@@ -54,6 +54,9 @@ const char *get_encoder_version();
 
 #define AV1_TIMESTAMP_OVERRIDE 1
 
+#define DONOTSHOW_AMF_POINT_FSR11 1
+#define DONOTSHOW_AMF_SHARPNESS 1
+
 #if defined(_WIN32) || defined(_WIN64)
 
 #define ENABLE_PERF_COUNTER 1
@@ -71,9 +74,6 @@ const char *get_encoder_version();
 #define ENABLE_DOVI_METADATA_OPTIONS 0
 #define ENABLE_KEYFRAME_INSERT 0
 #define ENABLE_AUTO_PICSTRUCT 0
-
-#define DONOTSHOW_AMF_POINT_FSR11 1
-#define DONOTSHOW_AMF_SHARPNESS 1
 
 #define GPU_VENDOR "AMD"
 #define DECODER_NAME  "vce"
