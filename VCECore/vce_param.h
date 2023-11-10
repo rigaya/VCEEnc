@@ -68,6 +68,8 @@ static const int VCE_FILTER_PP_SENSITIVITY_DEFAULT = 4;
 static const bool VCE_FILTER_PP_ADAPT_FILTER_DEFAULT = false;
 static const int VCE_FILTER_VQENHANCER_RADIUS_DEFAULT = 2;
 
+static const double VCE_FILTER_HQ_SCALER_SHARPNESS_DEFAULT = 0.5;
+
 enum {
     VCE_RC_CQP = 0,
     VCE_RC_CBR = 3,
@@ -521,7 +523,7 @@ const CX_DESC list_vce_hq_scaler[] = {
 struct VppAMFHQScaler {
     bool enable;
     AMF_HQ_SCALER_ALGORITHM_ENUM algorithm;
-    float sharpness;
+    double sharpness; // sharpness はdoubleでないとエラー
 
     VppAMFHQScaler();
     bool operator==(const VppAMFHQScaler& x) const;

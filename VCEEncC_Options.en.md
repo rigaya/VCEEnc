@@ -175,6 +175,7 @@
   - [--vpp-preprocess \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-preprocess-param1value1param2value2)
   - [--vpp-subburn \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-subburn-param1value1param2value2)
   - [--vpp-resize \<string\>](#--vpp-resize-string)
+  - [--vpp-scaler-sharpness \<float\>](#--vpp-scaler-sharpness-float)
   - [--vpp-unsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-unsharp-param1value1param2value2)
   - [--vpp-edgelevel \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-edgelevel-param1value1param2value2)
   - [--vpp-warpsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-warpsharp-param1value1param2value2)
@@ -2020,6 +2021,9 @@ Specify the resizing algorithm.
   | amf_bilinear | amf bilinear interpolation  |
   | amf_bicubic  | amf bicubic interpolation   |
   | amf_fsr      | amf fsr resampling          |
+
+### --vpp-scaler-sharpness &lt;float&gt;
+sharpness for amf_fsr. (default=0.5, 0.0-2.0)
 
 ### --vpp-unsharp [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 unsharp filter, for edge and detail enhancement.

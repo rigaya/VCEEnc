@@ -2009,6 +2009,9 @@ yadifによるインタレ解除を行う。
   | amf_bicubic  | amf 3次補間   |
   | amf_fsr      | amf fsr 補間  |
 
+### --vpp-scaler-sharpness &lt;float&gt;
+--vpp-resize amf_fsr を選択したときのsharpnessの値。 (default=0.5, 0.0-2.0)
+
 ### --vpp-unsharp [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 unsharpフィルタ。輪郭・ディテール強調用のフィルタ。
 

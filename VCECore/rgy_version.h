@@ -29,9 +29,9 @@
 #ifndef __RGY_VERSION_H__
 #define __RGY_VERSION_H__
 
-#define VER_FILEVERSION             0,8,18,0
-#define VER_STR_FILEVERSION          "8.18"
-#define VER_STR_FILEVERSION_TCHAR _T("8.18")
+#define VER_FILEVERSION             0,8,19,0
+#define VER_STR_FILEVERSION          "8.19"
+#define VER_STR_FILEVERSION_TCHAR _T("8.19")
 
 
 #ifdef _M_IX86
@@ -55,7 +55,6 @@ const char *get_encoder_version();
 #define AV1_TIMESTAMP_OVERRIDE 1
 
 #define DONOTSHOW_AMF_POINT_FSR11 1
-#define DONOTSHOW_AMF_SHARPNESS 1
 
 #if defined(_WIN32) || defined(_WIN64)
 

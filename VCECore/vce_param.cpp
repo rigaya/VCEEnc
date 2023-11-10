@@ -33,7 +33,7 @@
 VppAMFHQScaler::VppAMFHQScaler() :
     enable(false),
     algorithm(AMF_HQ_SCALER_ALGORITHM_BICUBIC),
-    sharpness(0.5) {
+    sharpness(VCE_FILTER_HQ_SCALER_SHARPNESS_DEFAULT) {
 };
 bool VppAMFHQScaler::operator==(const VppAMFHQScaler& x) const {
     return enable == x.enable
@@ -47,7 +47,7 @@ tstring VppAMFHQScaler::print() const {
     tstring str = strsprintf(
         _T("scaler: %s"),
         get_cx_desc(list_vce_hq_scaler, algorithm));
-    if (!DONOTSHOW_AMF_SHARPNESS || sharpness != VppAMFHQScaler().sharpness) {
+    if (sharpness != VppAMFHQScaler().sharpness) {
         str += strsprintf(_T(", sharpness % .1f"), sharpness);
     }
     str += _T("\n");

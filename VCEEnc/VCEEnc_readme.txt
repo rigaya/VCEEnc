@@ -181,6 +181,10 @@ Radeon RX550
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2023.11.10 (8.19)
+[VCEEncC]
+- amf_fsrのsharpnessを設定可能に。 (--vpp-scaler-sharpness)
+
 2023.11.09 (8.18)
 [VCEEncC]
 - 正常に動作しない --vpp-resize amf_point を削除。
