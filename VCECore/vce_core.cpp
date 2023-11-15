@@ -384,6 +384,15 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCE
         return RGY_ERR_UNSUPPORTED;
     }
 
+    // インタレ解除が指定され、かつインタレの指定がない場合は、自動的にインタレの情報取得を行う
+    int deinterlacer = 0;
+    if (inputParam->vpp.afs.enable) deinterlacer++;
+    if (inputParam->vpp.nnedi.enable) deinterlacer++;
+    if (inputParam->vpp.yadif.enable) deinterlacer++;
+    if (deinterlacer > 0 && ((inputParam->input.picstruct & RGY_PICSTRUCT_INTERLACED) == 0)) {
+        inputParam->input.picstruct = RGY_PICSTRUCT_AUTO;
+    }
+
     m_poolPkt = std::make_unique<RGYPoolAVPacket>();
     m_poolFrame = std::make_unique<RGYPoolAVFrame>();
 
@@ -1248,10 +1257,6 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
     }
     //afs
     if (vppType == VppType::CL_AFS) {
-        if ((inputParam->input.picstruct & (RGY_PICSTRUCT_TFF | RGY_PICSTRUCT_BFF)) == 0) {
-            PrintMes(RGY_LOG_ERROR, _T("Please set input interlace field order (--interlace tff/bff) for vpp-afs.\n"));
-            return RGY_ERR_INVALID_PARAM;
-        }
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
         unique_ptr<RGYFilter> filter(new RGYFilterAfs(m_dev->cl()));
         shared_ptr<RGYFilterParamAfs> param(new RGYFilterParamAfs());
@@ -1283,10 +1288,6 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
     }
     //nnedi
     if (vppType == VppType::CL_NNEDI) {
-        if ((inputParam->input.picstruct & (RGY_PICSTRUCT_TFF | RGY_PICSTRUCT_BFF)) == 0) {
-            PrintMes(RGY_LOG_ERROR, _T("Please set input interlace field order (--interlace tff/bff) for vpp-nnedi.\n"));
-            return RGY_ERR_INVALID_PARAM;
-        }
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
         unique_ptr<RGYFilter> filter(new RGYFilterNnedi(m_dev->cl()));
         shared_ptr<RGYFilterParamNnedi> param(new RGYFilterParamNnedi());
@@ -1310,10 +1311,6 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
     }
     //yadif
     if (vppType == VppType::CL_YADIF) {
-        if ((inputParam->input.picstruct & (RGY_PICSTRUCT_TFF | RGY_PICSTRUCT_BFF)) == 0) {
-            PrintMes(RGY_LOG_ERROR, _T("Please set input interlace field order (--interlace tff/bff) for vpp-yadif.\n"));
-            return RGY_ERR_INVALID_PARAM;
-        }
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
         unique_ptr<RGYFilter> filter(new RGYFilterYadif(m_dev->cl()));
         shared_ptr<RGYFilterParamYadif> param(new RGYFilterParamYadif());
