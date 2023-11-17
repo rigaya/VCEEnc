@@ -597,11 +597,10 @@ struct VCEParam {
     int     nMaxLTR;
     bool    bTimerPeriodTuning;
 
+    RGYQPSet qp;
+
     std::optional<bool> deblockFilter;
     std::optional<bool> enableSkipFrame;
-    int     nQPI;
-    int     nQPP;
-    int     nQPB;
     std::optional<int> nQPMax;
     std::optional<int> nQPMin;
     std::optional<int> nQPMaxInter;

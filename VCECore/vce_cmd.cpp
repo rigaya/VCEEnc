@@ -588,16 +588,12 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
     }
     if (IS_OPTION("cqp")) {
         i++;
-        int qp[3];
-        int ret = parse_qp(qp, strInput[i]);
+        int ret = pParams->qp.parse(strInput[i]);
         if (ret == 0) {
             print_cmd_error_invalid_value(option_name, strInput[i]);
             return 1;
         }
         pParams->rateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP;
-        pParams->nQPI = qp[0];
-        pParams->nQPP = (ret > 1) ? qp[1] : qp[ret - 1];
-        pParams->nQPB = (ret > 2) ? qp[2] : qp[ret - 1];
         return 0;
     }
     if (IS_OPTION("vbr")) {
@@ -1652,7 +1648,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
         if (pParams->rateControl == get_codec_cqp(pParams->codec)) {
             cmd << _T(" --vbr ") << pParams->nBitrate;
         } else {
-            OPT_QP(_T("--cqp"), nQPI, nQPP, nQPB, true, true);
+            OPT_QP(_T("--cqp"), qp.qpI, qp.qpP, qp.qpB, true, true);
         }
     }
     cmd << _T(" --preset ") << get_chr_from_value(get_quality_preset(pParams->codec), (pParams->qualityPreset));
@@ -1666,7 +1662,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     } else if (pParams->rateControl == get_codec_hqvbr(pParams->codec)) {
         cmd << _T(" --vbrhq ") << pParams->nBitrate;
     } else if (pParams->rateControl == get_codec_cqp(pParams->codec)) {
-        OPT_QP(_T("--cqp"), nQPI, nQPP, nQPB, true, true);
+        OPT_QP(_T("--cqp"), qp.qpI, qp.qpP, qp.qpB, true, true);
     } else if (pParams->rateControl == get_codec_qvbr(pParams->codec)) {
         cmd << _T(" --qvbr ") << pParams->nBitrate;
         cmd << _T(" --qvbr-quality ") << pParams->qvbrLevel;

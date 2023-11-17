@@ -640,9 +640,7 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
     if (prm->nQPMax.has_value())      prm->nQPMax      = clamp(prm->nQPMax,      0, maxQP);
     if (prm->nQPMinInter.has_value()) prm->nQPMinInter = clamp(prm->nQPMinInter, 0, maxQP);
     if (prm->nQPMaxInter.has_value()) prm->nQPMaxInter = clamp(prm->nQPMaxInter, 0, maxQP);
-    prm->nQPI        = clamp(prm->nQPI,        0, maxQP);
-    prm->nQPP        = clamp(prm->nQPP,        0, maxQP);
-    prm->nQPB        = clamp(prm->nQPB,        0, maxQP);
+    prm->qp.applyQPMinMax(0, maxQP);
 
     return RGY_ERR_NONE;
 }
@@ -2129,8 +2127,8 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     if (prm->rateControl == get_codec_qvbr(m_encCodec)) {
         m_params.SetParam(AMF_PARAM_QVBR_QUALITY_LEVEL(prm->codec), (amf_int64)prm->qvbrLevel);
     }
-    m_params.SetParam(AMF_PARAM_QP_I(prm->codec), (amf_int64)prm->nQPI);
-    m_params.SetParam(AMF_PARAM_QP_P(prm->codec), (amf_int64)prm->nQPP);
+    m_params.SetParam(AMF_PARAM_QP_I(prm->codec), (amf_int64)prm->qp.qpI);
+    m_params.SetParam(AMF_PARAM_QP_P(prm->codec), (amf_int64)prm->qp.qpP);
     if (prm->nBitrate != 0)       m_params.SetParam(AMF_PARAM_TARGET_BITRATE(prm->codec), (amf_int64)prm->nBitrate * 1000);
     if (prm->nMaxBitrate != 0)    m_params.SetParam(AMF_PARAM_PEAK_BITRATE(prm->codec),   (amf_int64)prm->nMaxBitrate * 1000);
     if (prm->nVBVBufferSize != 0) m_params.SetParam(AMF_PARAM_VBV_BUFFER_SIZE(prm->codec), (amf_int64)std::min(prm->nVBVBufferSize, VBV_BUFSIZE_MAX_Kbit) * 1000);
@@ -2223,7 +2221,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             m_params.SetParam(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrame);
             m_params.SetParam(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrameRef);
             m_params.SetParam(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE, prm->nBframes > 0 && !!prm->bBPyramid);
-            m_params.SetParam(AMF_VIDEO_ENCODER_QP_B, (amf_int64)prm->nQPB);
+            m_params.SetParam(AMF_VIDEO_ENCODER_QP_B, (amf_int64)prm->qp.qpB);
         }
 
         if (prm->nQPMin.has_value()) {
