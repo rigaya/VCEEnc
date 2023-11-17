@@ -1295,6 +1295,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         param->frameIn = inputFrame;
         param->frameOut = inputFrame;
         param->baseFps = m_encFps;
+        param->timebase = m_outputTimebase;
         param->bOutOverwrite = false;
         auto sts = filter->init(param, m_pLog);
         if (sts != RGY_ERR_NONE) {
