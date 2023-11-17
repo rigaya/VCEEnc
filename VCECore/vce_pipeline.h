@@ -1041,7 +1041,8 @@ public:
             const auto srcTimestamp = taskSurf->surf().frame()->timestamp();
             outPtsSource = rational_rescale(srcTimestamp, m_srcTimebase, m_outputTimebase);
             if (taskSurf->surf().frame()->duration() > 0) {
-                taskSurf->surf().frame()->setDuration(rational_rescale(taskSurf->surf().frame()->duration(), m_srcTimebase, m_outputTimebase));
+                outDuration = rational_rescale(taskSurf->surf().frame()->duration(), m_srcTimebase, m_outputTimebase);
+                taskSurf->surf().frame()->setDuration(outDuration);
             }
         }
         PrintMes(RGY_LOG_TRACE, _T("check_pts(%d/%d): nOutEstimatedPts %lld, outPtsSource %lld, outDuration %d\n"), taskSurf->surf().frame()->inputFrameId(), m_inFrames, m_tsOutEstimated, outPtsSource, outDuration);
