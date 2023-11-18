@@ -1322,9 +1322,12 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
             return 1;
         }
         if (debug_cmd_parser) {
-            _ftprintf(stderr, _T("parsing %3d: %s (%s)\n"), i, strInput[i], i + 1 < nArgNum ? strInput[i+1] : _T(""));
+            _ftprintf(stderr, _T("parsing %3d: %s: "), i, strInput[i]);
         }
         auto sts = parse_one_option(option_name, strInput, i, nArgNum, pParams, &argsData);
+        if (debug_cmd_parser) {
+            _ftprintf(stderr, _T("%s\n"), (sts == 0) ? _T("OK") : _T("ERR"));
+        }
         if (!ignore_parse_err && sts != 0) {
             return sts;
         }
