@@ -40,6 +40,7 @@
   - [--vpy-mt](#--vpy-mt)
   - [--avsw](#--avsw)
   - [--avhw](#--avhw)
+  - [--interlace \<string\>](#--interlace-string)
   - [--video-track \<int\>](#--video-track-int)
   - [--crop \<int\>,\<int\>,\<int\>,\<int\>](#--crop-intintintint)
   - [--frames \<int\>](#--frames-int)
@@ -397,6 +398,15 @@ since entire transcode process will be run on the GPU.
 
 ○ ... supported  
 × ... no support
+
+### --interlace &lt;string&gt;
+Set interlace flag of **input** frame.
+
+- **Parameters**
+  - none ... progressive
+  - tff ... top field first
+  - bff ... Bottom Field First
+  - auto ... auto detect when possible
 
 ### --video-track &lt;int&gt;
 Set video track to encode in track id. Will be active when used with avhw/avsw reader.

@@ -39,6 +39,7 @@
   - [--vpy-mt](#--vpy-mt)
   - [--avsw](#--avsw)
   - [--avhw](#--avhw)
+  - [--interlace \<string\>](#--interlace-string)
   - [--crop \<int\>,\<int\>,\<int\>,\<int\>](#--crop-intintintint)
   - [--frames \<int\>](#--frames-int)
   - [--fps \<int\>/\<int\> or \<float\>](#--fps-intint-or-float)
@@ -352,6 +353,15 @@ avformat + hw decoderを使用して読み込む。
 | VP9        | ○ |
 | VC-1       | ○ |
 | WMV3/WMV9  | × |
+
+### --interlace &lt;string&gt;
+**入力**フレームがインターレースかどうかと、そのフィールドオーダーを設定する。
+
+- **パラメータ**
+  - none ... プログレッシブ
+  - tff ... トップフィールドファースト
+  - bff ... ボトムフィールドファースト
+  - auto ... 自動検出
 
 ### --crop &lt;int&gt;,&lt;int&gt;,&lt;int&gt;,&lt;int&gt;
 左、上、右、下の切り落とし画素数。
