@@ -72,7 +72,6 @@ const char *get_encoder_version();
 
 #define ENABLE_DOVI_METADATA_OPTIONS 0
 #define ENABLE_KEYFRAME_INSERT 0
-#define ENABLE_AUTO_PICSTRUCT 0
 
 #define GPU_VENDOR "AMD"
 #define DECODER_NAME  "vce"
@@ -93,6 +92,7 @@ const char *get_encoder_version();
 #define ENABLE_SM_READER          0
 #define ENABLE_OPENCL             0
 #define ENABLE_CAPTION2ASS        0
+#define ENABLE_AUTO_PICSTRUCT     0
 #else
 #define ENCODER_NAME  "VCEEnc"
 #define FOR_AUO                   0
@@ -105,6 +105,7 @@ const char *get_encoder_version();
 #define ENABLE_LIBAVDEVICE        1
 #define ENABLE_OPENCL             1
 #define ENABLE_CAPTION2ASS        1
+#define ENABLE_AUTO_PICSTRUCT     1
 #endif
 
 #else //#if defined(WIN32) || defined(WIN64)
