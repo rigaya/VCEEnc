@@ -589,7 +589,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
     if (IS_OPTION("cqp")) {
         i++;
         int ret = pParams->qp.parse(strInput[i]);
-        if (ret == 0) {
+        if (ret != 0) {
             print_cmd_error_invalid_value(option_name, strInput[i]);
             return 1;
         }

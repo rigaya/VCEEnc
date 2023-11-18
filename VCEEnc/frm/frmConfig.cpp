@@ -1369,9 +1369,9 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetNUValue(fcgNUBitrate,           enc.nBitrate);
     SetNUValue(fcgNUMaxkbps,           enc.nMaxBitrate);
     SetNUValue(fcgNUVBVBufSize,        enc.nVBVBufferSize);
-    SetNUValue(fcgNUQPI,               enc.nQPI);
-    SetNUValue(fcgNUQPP,               enc.nQPP);
-    SetNUValue(fcgNUQPB,               enc.nQPB);
+    SetNUValue(fcgNUQPI,               enc.qp.qpI);
+    SetNUValue(fcgNUQPP,               enc.qp.qpP);
+    SetNUValue(fcgNUQPB,               enc.qp.qpB);
     SetNUValue(fcgNUGopLength,         enc.nGOPLen);
     SetNUValue(fcgNUBframes,           enc.nBframes);
     fcgCBBPyramid->Checked           = enc.bBPyramid != 0;
@@ -1606,9 +1606,9 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     enc.nMaxBitrate                             = (int)fcgNUMaxkbps->Value;
     enc.nVBVBufferSize                          = (int)fcgNUVBVBufSize->Value;
     enc.nGOPLen                                 = (int)fcgNUGopLength->Value;
-    enc.nQPI                                    = (int)fcgNUQPI->Value;
-    enc.nQPP                                    = (int)fcgNUQPP->Value;
-    enc.nQPB                                    = (int)fcgNUQPB->Value;
+    enc.qp.qpI                                  = (int)fcgNUQPI->Value;
+    enc.qp.qpP                                  = (int)fcgNUQPP->Value;
+    enc.qp.qpB                                  = (int)fcgNUQPB->Value;
     if (fcgNUQPMax->Value > 0) enc.nQPMax       = (int)fcgNUQPMax->Value;
     if (fcgNUQPMin->Value > 0) enc.nQPMin       = (int)fcgNUQPMin->Value;
 
