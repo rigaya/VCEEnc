@@ -181,6 +181,12 @@ Radeon RX550
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2023.11.18 (8.20)
+[VCEEncC]
+- --vpp-yadif/--vpp-nnediでbob化する際、--vpp-rffなしでrffな動画を処理するとtimestamp周りの計算がおかしくなりエラー終了する問題を修正。
+- インタレ解除を指定したが、インタレ設定がされていない場合、自動的に--interlace auto相当の動作にするように。
+- エンコードを遅くする大量のメッセージを抑制。
+
 2023.11.10 (8.19)
 [VCEEncC]
 - amf_fsrのsharpnessを設定可能に。 (--vpp-scaler-sharpness)
