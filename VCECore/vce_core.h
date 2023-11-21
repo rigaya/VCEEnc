@@ -155,6 +155,7 @@ protected:
     int                m_pipelineDepth;
     int                m_nProcSpeedLimit;       //処理速度制限 (0で制限なし)
     RGYAVSync          m_nAVSyncMode;           //映像音声同期設定
+    bool               m_timestampPassThrough;  //タイムスタンプをそのまま通す
     rgy_rational<int>  m_inputFps;              //入力フレームレート
     rgy_rational<int>  m_encFps;             //出力フレームレート
     rgy_rational<int>  m_outputTimebase;        //出力のtimebase

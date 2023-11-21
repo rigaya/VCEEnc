@@ -995,6 +995,7 @@ protected:
     rgy_rational<int> m_streamTimebase;
     rgy_rational<int> m_outputTimebase;
     RGYAVSync m_avsync;
+    bool m_timestampPassThrough;
     bool m_vpp_rff;
     bool m_vpp_afs_rff_aware;
     int64_t m_outFrameDuration; //(m_outputTimebase基準)
@@ -1004,9 +1005,9 @@ protected:
     uint32_t m_inputFramePosIdx;
     FramePosList *m_framePosList;
 public:
-    PipelineTaskCheckPTS(amf::AMFContextPtr context, rgy_rational<int> srcTimebase, rgy_rational<int> streamTimebase, rgy_rational<int> outputTimebase, int64_t outFrameDuration, RGYAVSync avsync, bool vpp_afs_rff_aware, FramePosList *framePosList, std::shared_ptr<RGYLog> log) :
+    PipelineTaskCheckPTS(amf::AMFContextPtr context, rgy_rational<int> srcTimebase, rgy_rational<int> streamTimebase, rgy_rational<int> outputTimebase, int64_t outFrameDuration, RGYAVSync avsync, bool timestampPassThrough, bool vpp_afs_rff_aware, FramePosList *framePosList, std::shared_ptr<RGYLog> log) :
         PipelineTask(PipelineTaskType::CHECKPTS, context, /*outMaxQueueSize = */ 0 /*常に0である必要がある*/, log),
-        m_srcTimebase(srcTimebase), m_streamTimebase(streamTimebase), m_outputTimebase(outputTimebase), m_avsync(avsync), m_vpp_rff(false), m_vpp_afs_rff_aware(vpp_afs_rff_aware), m_outFrameDuration(outFrameDuration),
+        m_srcTimebase(srcTimebase), m_streamTimebase(streamTimebase), m_outputTimebase(outputTimebase), m_avsync(avsync), m_timestampPassThrough(timestampPassThrough), m_vpp_rff(false), m_vpp_afs_rff_aware(vpp_afs_rff_aware), m_outFrameDuration(outFrameDuration),
         m_tsOutFirst(-1), m_tsOutEstimated(0), m_tsPrev(-1), m_inputFramePosIdx(std::numeric_limits<decltype(m_inputFramePosIdx)>::max()), m_framePosList(framePosList) {
     };
     virtual ~PipelineTaskCheckPTS() {};
@@ -1036,7 +1037,7 @@ public:
         }
 
         if ((m_srcTimebase.n() > 0 && m_srcTimebase.is_valid())
-            && ((m_avsync & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR)) || m_vpp_rff || m_vpp_afs_rff_aware)) {
+            && ((m_avsync & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR)) || m_vpp_rff || m_vpp_afs_rff_aware || m_timestampPassThrough)) {
             //CFR仮定ではなく、オリジナルの時間を見る
             const auto srcTimestamp = taskSurf->surf().frame()->timestamp();
             outPtsSource = rational_rescale(srcTimestamp, m_srcTimebase, m_outputTimebase);
@@ -1051,7 +1052,10 @@ public:
             PrintMes(RGY_LOG_TRACE, _T("check_pts: m_tsOutFirst %lld\n"), outPtsSource);
         }
         //最初のptsを0に修正
-        outPtsSource -= m_tsOutFirst;
+        if (!m_timestampPassThrough) {
+            //最初のptsを0に修正
+            outPtsSource -= m_tsOutFirst;
+        }
 
         if ((m_avsync & RGY_AVSYNC_VFR) || m_vpp_rff || m_vpp_afs_rff_aware) {
             if (m_vpp_rff || m_vpp_afs_rff_aware) {
