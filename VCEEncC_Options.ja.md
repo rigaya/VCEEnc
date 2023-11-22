@@ -2323,11 +2323,14 @@ file以外のプロトコルを使用する場合には、この出力バッフ�
   - addtime (デフォルト=off)  
     ログの各行に時刻を表示するように。
 
-### --log-framelist
+### --log-framelist [&lt;string&gt;]
 avsw/avhw読み込み時のデバッグ情報出力。
 
-### --log-packets
+### --log-packets [&lt;string&gt;]
 avsw/avhw読み込み時のデバッグ情報出力。
+
+### --log-mux-ts [&lt;string&gt;]
+デバッグ情報出力。
 
 ### --thread-affinity [&lt;string1&gt;=]{&lt;string2&gt;[#&lt;int&gt;[:&lt;int&gt;]...] or 0x&lt;hex&gt;}
 プロセスやスレッドのスレッドアフィニティを設定する。具体的な指定方法は例を確認してください。
