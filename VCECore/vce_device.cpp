@@ -28,6 +28,7 @@
 #include "vce_device.h"
 #include "vce_util.h"
 #include "VideoDecoderUVD.h"
+#include "rgy_avutil.h"
 
 const wchar_t *VCEDevice::CAP_10BITDEPTH = L"CAP_10BITDEPTH";
 

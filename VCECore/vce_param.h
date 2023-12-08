@@ -41,7 +41,6 @@ RGY_DISABLE_WARNING_STR("-Wclass-memaccess")
 #include "VQEnhancer.h"
 #include "VideoConverter.h"
 RGY_DISABLE_WARNING_POP
-#include "rgy_caption.h"
 #include "rgy_prm.h"
 
 static const wchar_t* VCE_PARAM_KEY_INPUT = L"INPUT";

@@ -181,6 +181,24 @@ Radeon RX550
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2023.12.10 (8.21)
+- ffmpeg 6.1に更新。(Windows版)
+  - ffmpeg 5.1 -> 6.1
+  - libpng 1.3.9 -> 1.4.0
+  - opus 1.3.1 -> 1.4
+  - libsndfile 1.2.0 -> 1.2.2
+  - libxml2 2.10.3 -> 2.12.0
+  - dav1d 1.0.0 -> 1.3.0
+  - libaribcaption 1.1.1 (new!)
+
+- --caption2assを廃止。
+  --sub-codec ass#sub_type=ass,ass_single_rect=true で同等の処理が可能。
+- --audio-delayを小数点で渡せるように変更。
+- VCEEnc 8.17からAVX2に対応しない環境で動作しないのを回避。
+- --option-fileが空のファイルの時に異常終了してしまう問題を修正。
+- --seek使用時の進捗表示を改善。
+- ts出力時にaacをコピーする時の処理を改善。
+
 2023.11.18 (8.20)
 [VCEEncC]
 - --vpp-yadif/--vpp-nnediでbob化する際、--vpp-rffなしでrffな動画を処理するとtimestamp周りの計算がおかしくなりエラー終了する問題を修正。

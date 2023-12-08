@@ -123,9 +123,6 @@
     <ClCompile Include="rgy_bitstream.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="rgy_caption.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="rgy_opencl.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -438,9 +435,6 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="rgy_bitstream.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="rgy_caption.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="rgy_opencl.h">

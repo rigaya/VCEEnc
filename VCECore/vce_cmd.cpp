@@ -33,7 +33,6 @@
 #include "rgy_osdep.h"
 #include "rgy_version.h"
 #include "rgy_perf_monitor.h"
-#include "rgy_caption.h"
 #include "vce_param.h"
 #include "core/Version.h"
 #include "rgy_cmd.h"
