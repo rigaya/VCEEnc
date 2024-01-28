@@ -71,61 +71,6 @@ enum RGYRunState {
     RGY_STATE_EOF
 };
 
-enum class VppType : int {
-    VPP_NONE,
-
-    AMF_CONVERTER,
-    AMF_PREPROCESS,
-    AMF_RESIZE,
-    AMF_VQENHANCE,
-
-    AMF_MAX,
-
-    CL_MIN = AMF_MAX,
-
-    CL_CROP,
-    CL_AFS,
-    CL_NNEDI,
-    CL_DECIMATE,
-    CL_MPDECIMATE,
-    CL_YADIF,
-    CL_COLORSPACE,
-    CL_RFF,
-    CL_DELOGO,
-    CL_TRANSFORM,
-
-    CL_CONVOLUTION3D,
-    CL_DENOISE_KNN,
-    CL_DENOISE_PMD,
-    CL_DENOISE_SMOOTH,
-
-    CL_RESIZE,
-
-    CL_SUBBURN,
-
-    CL_UNSHARP,
-    CL_EDGELEVEL,
-    CL_WARPSHARP,
-
-    CL_CURVES,
-    CL_TWEAK,
-    CL_OVERLAY,
-    CL_DEBAND,
-
-    CL_PAD,
-
-    CL_MAX,
-};
-
-enum class VppFilterType { FILTER_NONE, FILTER_AMF, FILTER_OPENCL };
-
-static VppFilterType getVppFilterType(VppType vpptype) {
-    if (vpptype == VppType::VPP_NONE) return VppFilterType::FILTER_NONE;
-    if (vpptype < VppType::AMF_MAX) return VppFilterType::FILTER_AMF;
-    if (vpptype < VppType::CL_MAX) return VppFilterType::FILTER_OPENCL;
-    return VppFilterType::FILTER_NONE;
-}
-
 struct VppVilterBlock {
     VppFilterType type;
     std::unique_ptr<AMFFilter> vppamf;
