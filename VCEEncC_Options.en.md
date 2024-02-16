@@ -170,6 +170,7 @@
   - [--vpp-transform \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-transform-param1value1param2value2)
   - [--vpp-convolution3d \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-convolution3d-param1value1param2value2)
   - [--vpp-smooth \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-smooth-param1value1param2value2)
+  - [--vpp-denoise-dct \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-denoise-dct-param1value1param2value2)
   - [--vpp-knn \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-knn-param1value1param2value2)
   - [--vpp-pmd \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-pmd-param1value1param2value2)
   - [--vpp-preprocess \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-preprocess-param1value1param2value2)
@@ -1422,6 +1423,7 @@ Vpp filters will be applied in fixed order, regardless of the order in the comma
   - [--vpp-transform/rotate](#--vpp-rotate-int)
   - [--vpp-convolution3d](#--vpp-convolution3d-param1value1param2value2)
   - [--vpp-smooth](#--vpp-smooth-param1value1param2value2)
+  - [--vpp-denoise-dct](#--vpp-denoise-dct-param1value1param2value2)
   - [--vpp-knn](#--vpp-knn-param1value1param2value2)
   - [--vpp-pmd](#--vpp-pmd-param1value1param2value2)
   - [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
@@ -1892,6 +1894,23 @@ Rotate video. 90, 180, 270 degrees is allowed.
     
     - fp32  
       Force to use fp32.
+
+### --vpp-denoise-dct [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+- **parameters**
+  - step=&lt;int&gt;  
+    Quality of the filter. Smaller value should result in higher quality but with lower speed.  
+    - 1 (high quality, slow)
+    - 2 (default)
+    - 4
+    - 8 (fast)
+  
+  - sigma=&lt;float&gt;  (default=4.0)    
+    Strength of the filter. Larger value will result stronger denoise but with blurring.
+    
+  - block_size=&lt;int&gt;  (default=8)  
+    - 8
+    - 16 (slow)
 
 ### --vpp-knn [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 Strong noise reduction filter.

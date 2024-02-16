@@ -1362,6 +1362,7 @@ vppフィルタの適用順は固定で、コマンドラインの順序によ�
   - [--vpp-transform/rotate](#--vpp-rotate-int)
   - [--vpp-convolution3d](#--vpp-convolution3d-param1value1param2value2)
   - [--vpp-smooth](#--vpp-smooth-param1value1param2value2)
+  - [--vpp-denoise-dct](#--vpp-denoise-dct-param1value1param2value2)
   - [--vpp-knn](#--vpp-knn-param1value1param2value2)
   - [--vpp-pmd](#--vpp-pmd-param1value1param2value2)
   - [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
@@ -1878,6 +1879,26 @@ yadifによるインタレ解除を行う。
     
     - fp16  
       半精度浮動小数点をメインに使って計算する。
+
+
+### --vpp-denoise-dct [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+  もう一つのDCTベースのノイズ除去フィルタ。
+
+- **パラメータ**
+  - step=&lt;int&gt;  
+    処理の品質。値が小さいほど高精度だが遅くなる。  
+    - 1 (high quality, slow)
+    - 2 (default)
+    - 4
+    - 8 (fast)
+  
+  - sigma=&lt;float&gt;  (default=4.0)    
+    フィルタの強さ。値が大きいほど強さが増すが、輪郭がぼける等の副作用も強くなる。
+    
+  - block_size=&lt;int&gt;  (default=8)  
+    - 8
+    - 16 (slow)
     
   
 ### --vpp-knn [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
