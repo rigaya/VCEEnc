@@ -56,6 +56,7 @@ const char *get_encoder_version();
 
 #define DONOTSHOW_AMF_POINT_FSR11 1
 #define ENABLE_AVOID_IDLE_CLOCK 0
+#define ENABLE_VPP_SMOOTH_QP_FRAME 0
 
 #if defined(_WIN32) || defined(_WIN64)
 
