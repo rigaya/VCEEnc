@@ -55,6 +55,7 @@ const char *get_encoder_version();
 #define AV1_TIMESTAMP_OVERRIDE 1
 
 #define DONOTSHOW_AMF_POINT_FSR11 1
+#define ENABLE_AVOID_IDLE_CLOCK 0
 
 #if defined(_WIN32) || defined(_WIN64)
 
