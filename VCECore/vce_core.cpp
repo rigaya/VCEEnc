@@ -2119,9 +2119,10 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (prm->nMaxBitrate == 0) {
             prm->nMaxBitrate = max_bitrate_kbps;
         }
-        if (prm->nVBVBufferSize == 0) {
-            prm->nVBVBufferSize = vbv_bufsize_kbps;
-        }
+        // VBVバッファサイズを指定すると、ビットレートが期待通りにならないことがるので、自動設定は無効化する
+        //if (prm->nVBVBufferSize == 0) {
+        //    prm->nVBVBufferSize = vbv_bufsize_kbps;
+        //}
     }
 
     //SAR自動設定
