@@ -17,7 +17,7 @@ jobs:
       version_name: ${{ steps.rev.outputs.version_name }}
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Set version name
@@ -53,7 +53,7 @@ jobs:
     
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
           fetch-depth: 0
@@ -69,7 +69,7 @@ jobs:
           git clone https://github.com/KhronosGroup/OpenCL-Headers.git ..\openclheaders
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.1
+        uses: microsoft/setup-msbuild@v2
         with:
           msbuild-architecture: ${{ matrix.arch }}
 
@@ -100,6 +100,11 @@ jobs:
         run: |
           powershell "$ver = (Get-ItemProperty .\VCEEncC_Release\VCEEncC*.exe).VersionInfo.FileVersion; if ($ver -eq '${{ needs.get_version_name.outputs.version_name }}') { exit 0; } exit 1;"
 
+      - name: Calc hash
+        id: calc_hash
+        run: |
+          7z h -scrc* VCEEncC_${{ needs.get_version_name.outputs.version_name }}_${{ matrix.platform }}.7z
+
       - name: Upload Release Asset
         id: upload-release-asset 
         uses: softprops/action-gh-release@v1
@@ -110,7 +115,7 @@ jobs:
           files: VCEEncC_${{ needs.get_version_name.outputs.version_name }}_${{ matrix.platform }}.7z
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: VCEEncC_release_${{ needs.get_version_name.outputs.version_name }}_${{ matrix.platform }}
           path: VCEEncC_${{ needs.get_version_name.outputs.version_name }}_${{ matrix.platform }}.7z
@@ -128,7 +133,7 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
           fetch-depth: 0
@@ -143,7 +148,7 @@ jobs:
           git clone https://github.com/KhronosGroup/OpenCL-Headers.git ..\openclheaders
 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.1
+        uses: microsoft/setup-msbuild@v2
         with:
           msbuild-architecture: Win32
 
@@ -160,13 +165,13 @@ jobs:
           curl -o auo_setup.zip -L https://github.com/rigaya/auo_setup/releases/download/2.01/auo_setup_2.01.zip
 
       - name: Download VCEEncC Win32
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: VCEEncC_release_${{ needs.get_version_name.outputs.version_name }}_Win32
           path: VCEEncC_${{ needs.get_version_name.outputs.version_name }}_Win32.7z
 
       - name: Download VCEEncC x64
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: VCEEncC_release_${{ needs.get_version_name.outputs.version_name }}_x64
           path: VCEEncC_${{ needs.get_version_name.outputs.version_name }}_x64.7z
@@ -203,6 +208,11 @@ jobs:
           "Aviutl_VCEEnc_release\exe_files\VCEEncC\x86\VCEEncC.exe" --check-avcodec-dll
           "Aviutl_VCEEnc_release\exe_files\VCEEncC\x64\VCEEncC64.exe" --check-avcodec-dll
 
+      - name: Calc hash
+        id: calc_hash
+        run: |
+          7z h -scrc* Aviutl_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.zip
+
       - name: Upload Release Asset
         id: upload-release-asset 
         uses: softprops/action-gh-release@v1
@@ -213,7 +223,7 @@ jobs:
           files: Aviutl_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.zip
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Aviutl_VCEEnc_${{ needs.get_version_name.outputs.version_name }}
           path: Aviutl_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.zip
