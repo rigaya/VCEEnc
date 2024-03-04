@@ -111,7 +111,7 @@ VCECore::VCECore() :
     m_pPerfMonitor(),
     m_pipelineDepth(2),
     m_nProcSpeedLimit(0),
-    m_nAVSyncMode(RGY_AVSYNC_ASSUME_CFR),
+    m_nAVSyncMode(RGY_AVSYNC_AUTO),
     m_timestampPassThrough(false),
     m_inputFps(),
     m_encFps(),
