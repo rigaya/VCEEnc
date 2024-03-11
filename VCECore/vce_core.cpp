@@ -1463,7 +1463,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
     //dct
     if (vppType == VppType::CL_DENOISE_DCT) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-        unique_ptr<RGYFilter> filter(new RGYFilterDenoiseKnn(m_dev->cl()));
+        unique_ptr<RGYFilter> filter(new RGYFilterDenoiseDct(m_dev->cl()));
         shared_ptr<RGYFilterParamDenoiseDct> param(new RGYFilterParamDenoiseDct());
         param->dct = inputParam->vpp.dct;
         param->frameIn = inputFrame;
