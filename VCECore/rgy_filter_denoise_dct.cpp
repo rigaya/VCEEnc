@@ -91,7 +91,7 @@ RGY_ERR RGYFilterDenoiseDct::colorDecorrelation(RGYFrameInfo *pOutputFrame, cons
     }
     {
         const char *kernel_name = "kernel_color_decorrelation";
-        RGYWorkSize local(64, 8);
+        RGYWorkSize local(64, 4);
         RGYWorkSize global(planeInputR.width, planeInputR.height);
         auto err = m_dct.get()->kernel(kernel_name).config(queue, local, global).launch(
             (cl_mem)planeOutputR.ptr[0], (cl_mem)planeOutputG.ptr[0], (cl_mem)planeOutputB.ptr[0], planeOutputR.pitch[0],
@@ -126,7 +126,7 @@ RGY_ERR RGYFilterDenoiseDct::colorCorrelation(RGYFrameInfo *pOutputFrame, const 
     }
     {
         const char *kernel_name = "kernel_color_correlation";
-        RGYWorkSize local(64, 8);
+        RGYWorkSize local(64, 4);
         RGYWorkSize global(planeInputR.width, planeInputR.height);
         auto err = m_dct.get()->kernel(kernel_name).config(queue, local, global).launch(
             (cl_mem)planeOutputR.ptr[0], (cl_mem)planeOutputG.ptr[0], (cl_mem)planeOutputB.ptr[0], planeOutputR.pitch[0],
