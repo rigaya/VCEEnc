@@ -181,6 +181,17 @@ Radeon RX550
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2024.03.12 (8.22)
+- ノイズ除去フィルタを追加。(--vpp-denoise-dct)
+- 音声を品質で指定するオプションを追加。 ( --audio-quality )
+- spline系のresizeが正常に動作しない可能性があったのを修正。
+- --vpp-smoothがRDNA3世代で正常に動作しなかった問題を修正。
+- 10bit出力時に、--vpp-smoothの強度が8bit出力時と一致しなかったのを修正。
+- bitrate 0, max-bitrate 0のときの問題回避。
+- --vpp-colorspaceのデバッグ用ログメッセージ出力を修正。
+- --vpp-smoothのデバッグ用ログメッセージ出力を修正。
+- --avsyncのデフォルトをautoに改名。
+
 2023.12.10 (8.21)
 - ffmpeg 6.1に更新。(Windows版)
   - ffmpeg 5.1 -> 6.1
