@@ -488,7 +488,7 @@ static DWORD video_output_inside(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_E
     VCEParam enc_prm;
     parse_cmd(&enc_prm, conf->enc.cmd);
 
-    enc_prm.common.AVSyncMode = (conf->vid.afs) ? RGY_AVSYNC_VFR : RGY_AVSYNC_ASSUME_CFR;
+    enc_prm.common.AVSyncMode = (conf->vid.afs) ? RGY_AVSYNC_VFR : RGY_AVSYNC_AUTO;
     enc_prm.common.disableMp4Opt = pe->muxer_to_be_used != MUXER_DISABLED;
     if (conf->vid.resize_enable) {
         enc_prm.input.dstWidth = conf->vid.resize_width;
