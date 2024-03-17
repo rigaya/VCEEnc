@@ -311,6 +311,7 @@ struct RGYQPSet {
 
     RGYQPSet();
     RGYQPSet(int i, int p, int b);
+    RGYQPSet(int i, int p, int b, bool enable);
     int qp(int i) const;
     int& qp(int i);
     bool operator==(const RGYQPSet &x) const;
@@ -479,6 +480,7 @@ static bool isNvvfxResizeFiter(const RGY_VPP_RESIZE_ALGO interp) {
 #if ENCODER_NVENC && (!defined(_M_IX86) || FOR_AUO) || CUFILTERS || CLFILTERS_AUF
     return getVppResizeType(interp) == RGY_VPP_RESIZE_TYPE_NVVFX;
 #else
+    UNREFERENCED_PARAMETER(interp);
     return false;
 #endif
 }
