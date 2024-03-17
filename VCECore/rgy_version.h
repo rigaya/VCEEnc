@@ -71,6 +71,7 @@ const char *get_encoder_version();
 #define ENABLE_DTL 1
 
 #define AV_CHANNEL_LAYOUT_STRUCT_AVAIL 1
+#define AV_FRAME_DURATION_AVAIL 1
 
 #define ENABLE_DOVI_METADATA_OPTIONS 0
 #define ENABLE_KEYFRAME_INSERT 0
