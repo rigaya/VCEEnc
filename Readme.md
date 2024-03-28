@@ -123,8 +123,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 |      | Vega          |  | RyzenAPU(2xxx-3xxx) | VCN1        | 8bit  |  8bit |    |
 |      | Vega          |  | RyzenAPU(4xxx-5xxx) | VCN2        | 8bit  | 10bit |    |
 | RDNA | RDNA1         | RX5xxx      |          | VCN2        | 8bit  | 10bit |    |
-|      | RDNA2         | RX6xxx      | Zen4 APU | VCN3        | 8bit  | 10bit |    |
+|      | RDNA2         | RX6xxx*      | Zen4 APU | VCN3        | 8bit  | 10bit |    |
 |      | RDNA3         | RX7xxx      |          | VCN4        | 8bit  | 10bit | 10bit |
+
+* RX 6400 and RX 6500 XT not supported, due to lack of HW Encoder on these cards! (Shame on you AMD)
 
 ## Auto GPU selection in multi GPU envinronment
 VCEEncC will automatically select a GPU depending on the options used,
