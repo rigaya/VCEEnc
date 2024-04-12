@@ -593,7 +593,7 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
         outpar = std::make_pair(prm->input.sar[0], prm->input.sar[1]);
     }
     set_auto_resolution(prm->input.dstWidth, prm->input.dstHeight, outpar.first, outpar.second,
-        prm->input.srcWidth, prm->input.srcHeight, prm->input.sar[0], prm->input.sar[1], 2, 2, prm->inprm.resizeResMode, prm->input.crop);
+        prm->input.srcWidth, prm->input.srcHeight, prm->input.sar[0], prm->input.sar[1], 2, 2, prm->inprm.resizeResMode, prm->inprm.ignoreSAR, prm->input.crop);
 
     if (prm->codec == RGY_CODEC_UNKNOWN) {
         prm->codec = RGY_CODEC_H264;
