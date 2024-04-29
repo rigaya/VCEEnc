@@ -1365,6 +1365,7 @@ vppフィルタの適用順は固定で、コマンドラインの順序によ�
   - [--vpp-smooth](#--vpp-smooth-param1value1param2value2)
   - [--vpp-denoise-dct](#--vpp-denoise-dct-param1value1param2value2)
   - [--vpp-knn](#--vpp-knn-param1value1param2value2)
+  - [--vpp-nlmeans](#--vpp-nlmeans-param1value1param2value2)
   - [--vpp-pmd](#--vpp-pmd-param1value1param2value2)
   - [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
   - [--vpp-resize](#--vpp-resize-string)
@@ -1921,6 +1922,38 @@ yadifによるインタレ解除を行う。
   ```
   例: すこし強め
   --vpp-knn radius=3,strength=0.10,lerp=0.1
+  ```
+
+### --vpp-nlmeans [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
+Non local meansを用いたノイズ除去フィルタ。
+
+- **パラメータ**
+  - sigma=&lt;float&gt;  (default=0.005, 0.0 -)   
+    ノイズの分散。 より大きな値にするとより強くノイズ除去を行う。
+  
+  - h=&lt;float&gt;  (default=0.05, 0.0 <)   
+    パラメータ。 値を大きくすると重みがより均一になる。
+  
+  - patch=&lt;int&gt;  (default=5, 3 - )  
+    パッチのサイズ。奇数で指定。
+  
+  - search=&lt;int&gt;  (default=11, 3 - )  
+    探索範囲。奇数で指定。 
+  
+  - fp16=&lt;string&gt;  (default=blockdiff)  
+    - none  
+      fp16を使用せず、fp32を使用する。高精度だが遅い。
+
+    - blockdiff  
+      ブロックの差分計算にのみfp16を使用する。精度と速度のバランスが良い。
+
+    - fp16  
+      重みの計算にもfp16を使用する。高速だが低精度。
+  
+- 使用例
+  ```
+  例: 探索範囲を広げてより高精度に
+  --vpp-nlmeans patch=7,search=15
   ```
 
 ### --vpp-pmd [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
