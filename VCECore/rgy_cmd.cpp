@@ -2072,7 +2072,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                     if (get_list_value(list_vpp_nlmeans_fp16, param_val.c_str(), &value)) {
                         vpp->nlmeans.fp16 = (VppNLMeansFP16Opt)value;
                     } else {
-                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_fp_prec);
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_nlmeans_fp16);
                         return 1;
                     }
                     continue;
@@ -5788,6 +5788,13 @@ int parse_one_ctrl_option(const TCHAR *option_name, const TCHAR *strInput[], int
         ctrl->avsdll = strInput[i];
         return 0;
     }
+#if defined(_WIN32) || defined(_WIN64)
+    if (IS_OPTION("vpydir")) {
+        i++;
+        ctrl->vpydir = strInput[i];
+        return 0;
+    }
+#endif
     if (IS_OPTION("perf-monitor")) {
         if (strInput[i+1][0] == _T('-') || _tcslen(strInput[i+1]) == 0) {
             ctrl->perfMonitorSelect = (int)PERF_MONITOR_ALL;
@@ -7071,6 +7078,7 @@ tstring gen_cmd(const RGYParamControl *param, const RGYParamControl *defaultPrm,
     OPT_BOOL(_T("--skip-hwenc-check"), _T(""), skipHWEncodeCheck);
     OPT_BOOL(_T("--skip-hwdec-check"), _T(""), skipHWDecodeCheck);
     OPT_STR_PATH(_T("--avsdll"), avsdll);
+    OPT_STR_PATH(_T("--vpydir"), vpydir);
     if (param->perfMonitorSelect != defaultPrm->perfMonitorSelect) {
         auto select = (int)param->perfMonitorSelect;
         std::basic_stringstream<TCHAR> tmp;
@@ -8020,6 +8028,8 @@ tstring gen_cmd_help_ctrl() {
     str += strsprintf(_T("\n")
         _T("   --avsdll <string>            specifies AviSynth DLL location to use.\n"));
 #if defined(_WIN32) || defined(_WIN64)
+    str += strsprintf(_T("\n")
+        _T("   --vpydir <string>            specifies VapourSynth DLL directory to use.\n"));
     str += strsprintf(_T("\n")
         _T("   --process-codepage <string>  utf8 ... use UTF-8 (default)\n")
         _T("                                os   ... use the codepage set in Operating System.\n"));

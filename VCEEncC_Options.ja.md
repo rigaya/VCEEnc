@@ -1947,7 +1947,7 @@ Non local meansを用いたノイズ除去フィルタ。
     - blockdiff  
       ブロックの差分計算にのみfp16を使用する。精度と速度のバランスが良い。
 
-    - fp16  
+    - all  
       重みの計算にもfp16を使用する。高速だが低精度。
   
 - 使用例
@@ -2494,6 +2494,9 @@ avsw/avhw読み込み時のデバッグ情報出力。
 
 ### --avsdll &lt;string&gt;
 使用するAvsiynth.dllを指定するオプション。特に指定しない場合、システムのAvisynth.dllが使用される。
+
+### --vpydir &lt;string&gt; [Windows専用]
+VapoursynthのPortable版を使用する際に、インストールしたフォルダを指定する。特に指定しない場合、システムにインストールされたVapoursynthが使用される。
 
 ### --process-codepage &lt;string&gt;  
 - **パラメータ**  
