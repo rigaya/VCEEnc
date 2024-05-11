@@ -82,8 +82,6 @@ const char *get_encoder_version();
 #define DECODER_NAME  "vce"
 #define HW_TIMEBASE 10000000L //AMF_SECOND
 
-#define ENABLE_LIBASS_SUBBURN 0
-
 #if defined(VCE_AUO)
 #define ENCODER_NAME  "VCEEnc"
 #define AUO_NAME      "VCEEnc.auo"
