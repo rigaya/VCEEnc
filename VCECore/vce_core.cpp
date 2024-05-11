@@ -407,7 +407,7 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCE
     }
 
     const bool vpp_rff = inputParam->vpp.rff.enable;
-    auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, inputCspOfRawReader,
+    auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, &inputParam->inprm, inputCspOfRawReader,
         m_pStatus, &inputParam->common, &inputParam->ctrl, HWDecCodecCsp, subburnTrackId,
         inputParam->vpp.afs.enable, vpp_rff,
         m_poolPkt.get(), m_poolFrame.get(), nullptr, m_pPerfMonitor.get(), m_pLog);
