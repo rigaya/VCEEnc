@@ -47,6 +47,7 @@
 #include "rgy_filter_afs.h"
 #include "rgy_filter_nnedi.h"
 #include "rgy_filter_yadif.h"
+#include "rgy_filter_decomb.h"
 #include "rgy_filter_convolution3d.h"
 #include "rgy_filter_rff.h"
 #include "rgy_filter_delogo.h"
@@ -392,6 +393,7 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCE
     if (inputParam->vpp.afs.enable) deinterlacer++;
     if (inputParam->vpp.nnedi.enable) deinterlacer++;
     if (inputParam->vpp.yadif.enable) deinterlacer++;
+    if (inputParam->vpp.decomb.enable) deinterlacer++;
     if (deinterlacer > 0 && ((inputParam->input.picstruct & RGY_PICSTRUCT_INTERLACED) == 0)) {
         inputParam->input.picstruct = RGY_PICSTRUCT_AUTO;
     }
@@ -851,6 +853,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     if (inputParam->vpp.afs.enable) deinterlacer++;
     if (inputParam->vpp.nnedi.enable) deinterlacer++;
     if (inputParam->vpp.yadif.enable) deinterlacer++;
+    if (inputParam->vpp.decomb.enable) deinterlacer++;
     if (deinterlacer >= 2) {
         PrintMes(RGY_LOG_ERROR, _T("Activating 2 or more deinterlacer is not supported.\n"));
         return RGY_ERR_UNSUPPORTED;
@@ -1041,6 +1044,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.afs.enable)           filterPipeline.push_back(VppType::CL_AFS);
     if (inputParam->vpp.nnedi.enable)         filterPipeline.push_back(VppType::CL_NNEDI);
     if (inputParam->vpp.yadif.enable)         filterPipeline.push_back(VppType::CL_YADIF);
+    if (inputParam->vpp.decomb.enable)        filterPipeline.push_back(VppType::CL_DECOMB);
     if (inputParam->vpp.decimate.enable)      filterPipeline.push_back(VppType::CL_DECIMATE);
     if (inputParam->vpp.mpdecimate.enable)    filterPipeline.push_back(VppType::CL_MPDECIMATE);
     if (inputParam->vpp.convolution3d.enable) filterPipeline.push_back(VppType::CL_CONVOLUTION3D);
@@ -1324,6 +1328,30 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         unique_ptr<RGYFilter> filter(new RGYFilterYadif(m_dev->cl()));
         shared_ptr<RGYFilterParamYadif> param(new RGYFilterParamYadif());
         param->yadif = inputParam->vpp.yadif;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->timebase = m_outputTimebase;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //decomb
+    if (vppType == VppType::CL_DECOMB) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterDecomb(m_dev->cl()));
+        shared_ptr<RGYFilterParamDecomb> param(new RGYFilterParamDecomb());
+        param->decomb = inputParam->vpp.decomb;
         param->frameIn = inputFrame;
         param->frameOut = inputFrame;
         param->baseFps = m_encFps;
@@ -2556,7 +2584,8 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
                 (prm->input.picstruct & RGY_PICSTRUCT_INTERLACED)
                 && !prm->vpp.afs.enable
                 && !prm->vpp.nnedi.enable
-                && !prm->vpp.yadif.enable;
+                && !prm->vpp.yadif.enable
+                && !prm->vpp.decomb.enable;
             if (interlacedEncoding
                 && !outputCaps->IsInterlacedSupported()) {
                 message += strsprintf(_T("GPU #%d (%s) does not support %s interlaced encoding.\n"),
