@@ -171,6 +171,7 @@
   - [--vpp-convolution3d \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-convolution3d-param1value1param2value2)
   - [--vpp-smooth \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-smooth-param1value1param2value2)
   - [--vpp-denoise-dct \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-denoise-dct-param1value1param2value2)
+  - [--vpp-fft3d \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-fft3d-param1value1param2value2)
   - [--vpp-knn \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-knn-param1value1param2value2)
   - [--vpp-nlmeans \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-nlmeans-param1value1param2value2)
   - [--vpp-pmd \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-pmd-param1value1param2value2)
@@ -1419,6 +1420,7 @@ Vpp filters will be applied in fixed order, regardless of the order in the comma
   - [--vpp-afs](#--vpp-afs-param1value1param2value2)
   - [--vpp-nnedi](#--vpp-nnedi-param1value1param2value2)
   - [--vpp-yadif](#--vpp-yadif-param1value1)
+  - [--vpp-decomb](#--vpp-decomb-param1value1param2value2)
   - [--vpp-transform/rotate](#--vpp-rotate-int)
   - [--vpp-decimate](#--vpp-decimate-param1value1param2value2)
   - [--vpp-mpdecimate](#--vpp-mpdecimate-param1value1param2value2)
@@ -1915,6 +1917,38 @@ Rotate video. 90, 180, 270 degrees is allowed.
   - block_size=&lt;int&gt;  (default=8)  
     - 8
     - 16 (slow)
+
+### --vpp-fft3d [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+  FFT based denoise filter.
+
+- **parameters**
+  - sigma=&lt;float&gt;  
+    Strength of filter. (default=1.0, 0.0 - 100.0)
+  
+  - amount=&lt;float&gt;  (default=1.0, 0.0 - 1.0)    
+    Amount of denoising.
+    
+  - block_size=&lt;int&gt;  (default=32)  
+    - 8
+    - 16
+    - 32
+    - 64
+
+  - overlap=&lt;float&gt;  (default=0.5, 0.2 - 0.8)    
+    Block overlap, value 0.5 or larger is recomended.
+  
+  - method=&lt;int&gt; (default = 0)
+    - 0 ... wiener method
+    - 1 ... hard thresholding
+
+  - temporal=&lt;int&gt; (default = 1)
+    - 0 ... spatial filtering only
+    - 1 ... enable temporal filtering
+
+  - prec=&lt;string&gt; (default = auto)
+    - auto ... use fp16 if possible (faster)
+    - fp32 ... always use fp32
 
 ### --vpp-knn [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 Strong noise reduction filter.
