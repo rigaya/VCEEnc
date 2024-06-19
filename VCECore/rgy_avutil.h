@@ -34,6 +34,7 @@
 
 #if ENABLE_AVSW_READER
 #include <algorithm>
+#include <vector>
 
 #pragma warning (push)
 #pragma warning (disable: 4244)
@@ -97,6 +98,21 @@ struct RGYAVDeleter {
     RGYAVDeleter(std::function<void(T**)> deleter) : deleter(deleter) {};
     void operator()(T *p) { deleter(&p); }
     std::function<void(T**)> deleter;
+};
+
+struct StreamInfoOptDeleter {
+    int streamCount;
+    StreamInfoOptDeleter(int streamCount_) : streamCount(streamCount_) {};
+    void operator()(AVDictionary **dictArray) const {
+        if (dictArray) {
+            for (int i = 0; i < streamCount; i++) {
+                if (dictArray[i]) {
+                    av_dict_free(&dictArray[i]);
+                }
+            }
+            av_freep(&dictArray);
+        }
+    }
 };
 
 #define RGYPOOLAV_DEBUG 0
@@ -247,9 +263,9 @@ static tstring errorMesForCodec(const TCHAR *mes, AVCodecID targetCodec) {
 
 static const AVRational HW_NATIVE_TIMEBASE = { 1, (int)HW_TIMEBASE };
 static const TCHAR *AVCODEC_DLL_NAME[] = {
-    _T("avcodec-60.dll"), _T("avformat-60.dll"), _T("avutil-58.dll"), _T("avfilter-9.dll"), _T("swresample-4.dll")
+    _T("avcodec-61.dll"), _T("avformat-61.dll"), _T("avutil-59.dll"), _T("avfilter-10.dll"), _T("swresample-5.dll")
 #if ENABLE_LIBAVDEVICE
-    , _T("avdevice-60.dll")
+    , _T("avdevice-61.dll")
 #endif
 };
 
@@ -325,7 +341,7 @@ bool checkAvcodecLicense();
 tstring getHWDecSupportedCodecList();
 
 //利用可能な音声エンコーダ/デコーダを表示
-tstring getAVCodecs(RGYAVCodecType flag);
+tstring getAVCodecs(RGYAVCodecType flag, const std::vector<AVMediaType> mediatype);
 
 //音声エンコーダで利用可能なプロファイルのリストを作成
 std::vector<tstring> getAudioPofileList(const tstring& codec_name);
@@ -410,10 +426,10 @@ std::unique_ptr<T, RGYAVDeleter<T>> AVStreamGetSideData(const AVStream *stream, 
     std::unique_ptr<T, RGYAVDeleter<T>> side_data_copy(nullptr, RGYAVDeleter<T>(av_freep));
 #if AVCODEC_PAR_CODED_SIDE_DATA_AVAIL
     auto side_data = av_packet_side_data_get(stream->codecpar->coded_side_data, stream->codecpar->nb_coded_side_data, type);
-    if (side_data) {
+    if (side_data && side_data->type == type) {
         side_data_size = side_data->size;
         side_data_copy = unique_ptr<T, RGYAVDeleter<T>>((T *)av_malloc(side_data->size + AV_INPUT_BUFFER_PADDING_SIZE), RGYAVDeleter<T>(av_freep));
-        memcpy(side_data_copy.get(), side_data, side_data->size);
+        memcpy(side_data_copy.get(), side_data->data, side_data->size);
     }
 #else
     std::remove_pointer<RGYArgN<2U, decltype(av_stream_get_side_data)>::type>::type size = 0;

@@ -47,11 +47,14 @@
 #include "rgy_filter_afs.h"
 #include "rgy_filter_nnedi.h"
 #include "rgy_filter_yadif.h"
+#include "rgy_filter_decomb.h"
 #include "rgy_filter_convolution3d.h"
 #include "rgy_filter_rff.h"
 #include "rgy_filter_delogo.h"
 #include "rgy_filter_denoise_dct.h"
+#include "rgy_filter_denoise_fft3d.h"
 #include "rgy_filter_denoise_knn.h"
+#include "rgy_filter_denoise_nlmeans.h"
 #include "rgy_filter_denoise_pmd.h"
 #include "rgy_filter_decimate.h"
 #include "rgy_filter_mpdecimate.h"
@@ -391,6 +394,7 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCE
     if (inputParam->vpp.afs.enable) deinterlacer++;
     if (inputParam->vpp.nnedi.enable) deinterlacer++;
     if (inputParam->vpp.yadif.enable) deinterlacer++;
+    if (inputParam->vpp.decomb.enable) deinterlacer++;
     if (deinterlacer > 0 && ((inputParam->input.picstruct & RGY_PICSTRUCT_INTERLACED) == 0)) {
         inputParam->input.picstruct = RGY_PICSTRUCT_AUTO;
     }
@@ -406,7 +410,7 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCE
     }
 
     const bool vpp_rff = inputParam->vpp.rff.enable;
-    auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, inputCspOfRawReader,
+    auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, &inputParam->inprm, inputCspOfRawReader,
         m_pStatus, &inputParam->common, &inputParam->ctrl, HWDecCodecCsp, subburnTrackId,
         inputParam->vpp.afs.enable, vpp_rff,
         m_poolPkt.get(), m_poolFrame.get(), nullptr, m_pPerfMonitor.get(), m_pLog);
@@ -593,7 +597,7 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
         outpar = std::make_pair(prm->input.sar[0], prm->input.sar[1]);
     }
     set_auto_resolution(prm->input.dstWidth, prm->input.dstHeight, outpar.first, outpar.second,
-        prm->input.srcWidth, prm->input.srcHeight, prm->input.sar[0], prm->input.sar[1], 2, 2, prm->inprm.resizeResMode, prm->input.crop);
+        prm->input.srcWidth, prm->input.srcHeight, prm->input.sar[0], prm->input.sar[1], 2, 2, prm->inprm.resizeResMode, prm->inprm.ignoreSAR, prm->input.crop);
 
     if (prm->codec == RGY_CODEC_UNKNOWN) {
         prm->codec = RGY_CODEC_H264;
@@ -850,6 +854,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     if (inputParam->vpp.afs.enable) deinterlacer++;
     if (inputParam->vpp.nnedi.enable) deinterlacer++;
     if (inputParam->vpp.yadif.enable) deinterlacer++;
+    if (inputParam->vpp.decomb.enable) deinterlacer++;
     if (deinterlacer >= 2) {
         PrintMes(RGY_LOG_ERROR, _T("Activating 2 or more deinterlacer is not supported.\n"));
         return RGY_ERR_UNSUPPORTED;
@@ -1040,12 +1045,15 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.afs.enable)           filterPipeline.push_back(VppType::CL_AFS);
     if (inputParam->vpp.nnedi.enable)         filterPipeline.push_back(VppType::CL_NNEDI);
     if (inputParam->vpp.yadif.enable)         filterPipeline.push_back(VppType::CL_YADIF);
+    if (inputParam->vpp.decomb.enable)        filterPipeline.push_back(VppType::CL_DECOMB);
     if (inputParam->vpp.decimate.enable)      filterPipeline.push_back(VppType::CL_DECIMATE);
     if (inputParam->vpp.mpdecimate.enable)    filterPipeline.push_back(VppType::CL_MPDECIMATE);
     if (inputParam->vpp.convolution3d.enable) filterPipeline.push_back(VppType::CL_CONVOLUTION3D);
     if (inputParam->vpp.smooth.enable)        filterPipeline.push_back(VppType::CL_DENOISE_SMOOTH);
     if (inputParam->vpp.dct.enable)           filterPipeline.push_back(VppType::CL_DENOISE_DCT);
+    if (inputParam->vpp.fft3d.enable)         filterPipeline.push_back(VppType::CL_DENOISE_FFT3D);
     if (inputParam->vpp.knn.enable)           filterPipeline.push_back(VppType::CL_DENOISE_KNN);
+    if (inputParam->vpp.nlmeans.enable)       filterPipeline.push_back(VppType::CL_DENOISE_NLMEANS);
     if (inputParam->vpp.pmd.enable)           filterPipeline.push_back(VppType::CL_DENOISE_PMD);
     if (inputParam->vppamf.pp.enable)         filterPipeline.push_back(VppType::AMF_PREPROCESS);
     if (inputParam->vpp.subburn.size()>0)     filterPipeline.push_back(VppType::CL_SUBBURN);
@@ -1340,6 +1348,30 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         m_encFps = param->baseFps;
         return RGY_ERR_NONE;
     }
+    //decomb
+    if (vppType == VppType::CL_DECOMB) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterDecomb(m_dev->cl()));
+        shared_ptr<RGYFilterParamDecomb> param(new RGYFilterParamDecomb());
+        param->decomb = inputParam->vpp.decomb;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->timebase = m_outputTimebase;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
     //decimate
     if (vppType == VppType::CL_DECIMATE) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
@@ -1483,12 +1515,58 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         m_encFps = param->baseFps;
         return RGY_ERR_NONE;
     }
+    //fft3d
+    if (vppType == VppType::CL_DENOISE_FFT3D) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterDenoiseFFT3D(m_dev->cl()));
+        shared_ptr<RGYFilterParamDenoiseFFT3D> param(new RGYFilterParamDenoiseFFT3D());
+        param->fft3d = inputParam->vpp.fft3d;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
     //knn
     if (vppType == VppType::CL_DENOISE_KNN) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
         unique_ptr<RGYFilter> filter(new RGYFilterDenoiseKnn(m_dev->cl()));
         shared_ptr<RGYFilterParamDenoiseKnn> param(new RGYFilterParamDenoiseKnn());
         param->knn = inputParam->vpp.knn;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //nlmeans
+    if (vppType == VppType::CL_DENOISE_NLMEANS) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterDenoiseNLMeans(m_dev->cl()));
+        shared_ptr<RGYFilterParamDenoiseNLMeans> param(new RGYFilterParamDenoiseNLMeans());
+        param->nlmeans = inputParam->vpp.nlmeans;
         param->frameIn = inputFrame;
         param->frameOut = inputFrame;
         param->baseFps = m_encFps;
@@ -2531,7 +2609,8 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
                 (prm->input.picstruct & RGY_PICSTRUCT_INTERLACED)
                 && !prm->vpp.afs.enable
                 && !prm->vpp.nnedi.enable
-                && !prm->vpp.yadif.enable;
+                && !prm->vpp.yadif.enable
+                && !prm->vpp.decomb.enable;
             if (interlacedEncoding
                 && !outputCaps->IsInterlacedSupported()) {
                 message += strsprintf(_T("GPU #%d (%s) does not support %s interlaced encoding.\n"),

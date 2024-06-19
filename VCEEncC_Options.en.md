@@ -38,7 +38,7 @@
   - [--avs](#--avs)
   - [--vpy](#--vpy)
   - [--vpy-mt](#--vpy-mt)
-  - [--avsw](#--avsw)
+  - [--avsw \[\<string\>\]](#--avsw-string)
   - [--avhw](#--avhw)
   - [--interlace \<string\>](#--interlace-string)
   - [--video-track \<int\>](#--video-track-int)
@@ -171,7 +171,9 @@
   - [--vpp-convolution3d \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-convolution3d-param1value1param2value2)
   - [--vpp-smooth \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-smooth-param1value1param2value2)
   - [--vpp-denoise-dct \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-denoise-dct-param1value1param2value2)
+  - [--vpp-fft3d \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-fft3d-param1value1param2value2)
   - [--vpp-knn \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-knn-param1value1param2value2)
+  - [--vpp-nlmeans \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-nlmeans-param1value1param2value2)
   - [--vpp-pmd \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-pmd-param1value1param2value2)
   - [--vpp-preprocess \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-preprocess-param1value1param2value2)
   - [--vpp-subburn \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-subburn-param1value1param2value2)
@@ -203,6 +205,7 @@
   - [--max-procfps \<int\>](#--max-procfps-int)
   - [--lowlatency](#--lowlatency)
   - [--avsdll \<string\>](#--avsdll-string)
+  - [--vsdir \<string\>](#--vsdir-string)
   - [--process-codepage \<string\> \[Windows OS only\]](#--process-codepage-string-windows-os-only)
   - [--perf-monitor \[\<string\>\[,\<string\>\]...\]](#--perf-monitor-stringstring)
   - [--perf-monitor-interval \<int\>](#--perf-monitor-interval-int)
@@ -377,11 +380,11 @@ you will need to add "[--process-codepage](#--process-codepage-string-windows-os
 ### --vpy-mt
 Read VapourSynth script file using vpy reader.
 
-### --avsw
-Read input file using avformat + ffmpeg's sw decoder.
+### --avsw [&lt;string&gt;]
+Read input file using avformat + libavcodec's sw decoder. The optional parameter will set decoder name to be used, otherwise decoder will be selected automatically.
 
 ### --avhw
-Read using avformat + hw hw decoder. Using this mode will provide maximum performance,
+Read input file using avformat + QSV hw decoder. Using this mode will provide maximum performance,
 since entire transcode process will be run on the GPU.
 
 **Codecs supported by avhw reader**  
@@ -445,6 +448,8 @@ If not specified, it will be same as the input resolution. (no resize)
     Resize to specified width **or** height, while preserving input aspect ratio.
     - increase ... preserve aspect ratio by increasing resolution.
     - decrease ... preserve aspect ratio by decreasing resolution.
+  - ignore_sar=&lt;bool&gt;  
+    When auto resizing with negative value, ignore in/out SAR ratio in calculation. Default = off.
 
 - Example
   ```
@@ -1415,6 +1420,7 @@ Vpp filters will be applied in fixed order, regardless of the order in the comma
   - [--vpp-afs](#--vpp-afs-param1value1param2value2)
   - [--vpp-nnedi](#--vpp-nnedi-param1value1param2value2)
   - [--vpp-yadif](#--vpp-yadif-param1value1)
+  - [--vpp-decomb](#--vpp-decomb-param1value1param2value2)
   - [--vpp-transform/rotate](#--vpp-rotate-int)
   - [--vpp-decimate](#--vpp-decimate-param1value1param2value2)
   - [--vpp-mpdecimate](#--vpp-mpdecimate-param1value1param2value2)
@@ -1424,6 +1430,7 @@ Vpp filters will be applied in fixed order, regardless of the order in the comma
   - [--vpp-smooth](#--vpp-smooth-param1value1param2value2)
   - [--vpp-denoise-dct](#--vpp-denoise-dct-param1value1param2value2)
   - [--vpp-knn](#--vpp-knn-param1value1param2value2)
+  - [--vpp-nlmeans](#--vpp-nlmeans-param1value1param2value2)
   - [--vpp-pmd](#--vpp-pmd-param1value1param2value2)
   - [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
   - [--vpp-resize](#--vpp-resize-string)
@@ -1911,6 +1918,38 @@ Rotate video. 90, 180, 270 degrees is allowed.
     - 8
     - 16 (slow)
 
+### --vpp-fft3d [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+  FFT based denoise filter.
+
+- **parameters**
+  - sigma=&lt;float&gt;  
+    Strength of filter. (default=1.0, 0.0 - 100.0)
+  
+  - amount=&lt;float&gt;  (default=1.0, 0.0 - 1.0)    
+    Amount of denoising.
+    
+  - block_size=&lt;int&gt;  (default=32)  
+    - 8
+    - 16
+    - 32
+    - 64
+
+  - overlap=&lt;float&gt;  (default=0.5, 0.2 - 0.8)    
+    Block overlap, value 0.5 or larger is recomended.
+  
+  - method=&lt;int&gt; (default = 0)
+    - 0 ... wiener method
+    - 1 ... hard thresholding
+
+  - temporal=&lt;int&gt; (default = 1)
+    - 0 ... spatial filtering only
+    - 1 ... enable temporal filtering
+
+  - prec=&lt;string&gt; (default = auto)
+    - auto ... use fp16 if possible (faster)
+    - fp32 ... always use fp32
+
 ### --vpp-knn [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 Strong noise reduction filter.
 
@@ -1931,6 +1970,38 @@ Strong noise reduction filter.
   ```
   Example: slightly stronger than default
   --vpp-knn radius=3,strength=0.10,lerp=0.1
+  ```
+
+### --vpp-nlmeans [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
+Non local means noise reduction filter.
+
+- **Parameters**
+  - sigma=&lt;float&gt;  (default=0.005, 0.0 -)   
+    Noise variance. Larger value will result stronger denosing.
+  
+  - h=&lt;float&gt;  (default=0.05, 0.0 <)   
+    Parameter. Larger value will result the weight to be more flat.
+  
+  - patch=&lt;int&gt;  (default=5, 3 - )  
+    Set patch size. Must be odd number.
+  
+  - search=&lt;int&gt;  (default=11, 3 - )  
+    Set search size. Must be odd number.
+  
+  - fp16=&lt;string&gt;  (default=blockdiff)  
+    - none  
+      Do not use fp16 and use fp32. High precision but slow.
+
+    - blockdiff  
+      Use fp16 in block diff calculation. Balanced between performace and precision.
+
+    - all  
+      Additionally use fp16 in weight calculation. Fast but low precision.
+  
+- Examples
+  ```
+  Example: Use larger search area
+  --vpp-nlmeans patch=7,search=15
   ```
 
 ### --vpp-pmd [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
@@ -2476,6 +2547,9 @@ Tune for lower transcoding latency, but will hurt transcoding throughput. Not re
 
 ### --avsdll &lt;string&gt;
 Specifies AviSynth DLL location to use. When unspecified, the default AviSynth.dll will be used.
+
+### --vsdir &lt;string&gt;
+Specifies vapoursynth portable directory to use. Supported on Windows only.
 
 ### --process-codepage &lt;string&gt; [Windows OS only]  
 - **parameters**  

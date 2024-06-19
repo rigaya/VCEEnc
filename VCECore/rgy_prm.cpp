@@ -79,6 +79,7 @@ static const auto VPPTYPE_TO_STR = make_array<std::pair<VppType, tstring>>(
     std::make_pair(VppType::CL_AFS,                  _T("afs")),
     std::make_pair(VppType::CL_NNEDI,                _T("nnedi")),
     std::make_pair(VppType::CL_YADIF,                _T("yadif")),
+    std::make_pair(VppType::CL_DECOMB,               _T("decomb")),
     std::make_pair(VppType::CL_DECIMATE,             _T("decimate")),
     std::make_pair(VppType::CL_MPDECIMATE,           _T("mpdecimate")),
     std::make_pair(VppType::CL_RFF,                  _T("rff")),
@@ -86,9 +87,11 @@ static const auto VPPTYPE_TO_STR = make_array<std::pair<VppType, tstring>>(
     std::make_pair(VppType::CL_TRANSFORM,            _T("transform")),
     std::make_pair(VppType::CL_CONVOLUTION3D,        _T("convolution3d")),
     std::make_pair(VppType::CL_DENOISE_KNN,          _T("knn")),
+    std::make_pair(VppType::CL_DENOISE_NLMEANS,      _T("nlmeans")),
     std::make_pair(VppType::CL_DENOISE_PMD,          _T("pmd")),
     std::make_pair(VppType::CL_DENOISE_DCT,          _T("denoise-dct")),
     std::make_pair(VppType::CL_DENOISE_SMOOTH,       _T("smooth")),
+    std::make_pair(VppType::CL_DENOISE_FFT3D,        _T("fft3d")),
     std::make_pair(VppType::CL_RESIZE,               _T("resize")),
     std::make_pair(VppType::CL_UNSHARP,              _T("unsharp")),
     std::make_pair(VppType::CL_EDGELEVEL,            _T("edgelevel")),
@@ -770,6 +773,34 @@ tstring VppYadif::print() const {
         get_cx_desc(list_vpp_yadif_mode, mode));
 }
 
+VppDecomb::VppDecomb() :
+    enable(false),
+    full(FILTER_DEFAULT_DECOMB_FULL),
+    threshold(FILTER_DEFAULT_DECOMB_THRESHOLD),
+    dthreshold(FILTER_DEFAULT_DECOMB_DTHRESHOLD),
+    blend(FILTER_DEFAULT_DECOMB_BLEND) {
+
+}
+
+bool VppDecomb::operator==(const VppDecomb& x) const {
+    return enable == x.enable
+        && full == x.full
+        && threshold == x.threshold
+        && dthreshold == x.dthreshold
+        && blend == x.blend;
+}
+bool VppDecomb::operator!=(const VppDecomb& x) const {
+    return !(*this == x);
+}
+
+tstring VppDecomb::print() const {
+    return strsprintf(
+        _T("decomb: full %s, threshold %d, dthreshold %d, blend %s"),
+        full ? _T("on") : _T("off"),
+        threshold, dthreshold,
+        blend ? _T("on") : _T("off"));
+}
+
 VppSelectEvery::VppSelectEvery() :
     enable(false),
     step(1),
@@ -912,6 +943,35 @@ tstring VppKnn::print() const {
         weight_threshold, lerp_threshold);
 }
 
+VppNLMeans::VppNLMeans() :
+    enable(false),
+    sigma(FILTER_DEFAULT_NLMEANS_FILTER_SIGMA),
+    patchSize(FILTER_DEFAULT_NLMEANS_PATCH_SIZE),
+    searchSize(FILTER_DEFAULT_NLMEANS_SEARCH_SIZE),
+    h(FILTER_DEFAULT_NLMEANS_H),
+    fp16(VppNLMeansFP16Opt::BlockDiff),
+    sharedMem(true) {
+}
+
+bool VppNLMeans::operator==(const VppNLMeans &x) const {
+    return enable == x.enable
+        && sigma == x.sigma
+        && patchSize == x.patchSize
+        && searchSize == x.searchSize
+        && h == x.h
+        && fp16 == x.fp16
+        && sharedMem == x.sharedMem;
+}
+bool VppNLMeans::operator!=(const VppNLMeans &x) const {
+    return !(*this == x);
+}
+
+tstring VppNLMeans::print() const {
+    return strsprintf(
+        _T("denoise(nlmeans): sigma %.3f, h %.3f, patch %d, search %d, fp16 %s"),
+        sigma, h, patchSize, searchSize, get_cx_desc(list_vpp_nlmeans_fp16, fp16));
+}
+
 VppPmd::VppPmd() :
     enable(false),
     strength(FILTER_DEFAULT_PMD_STRENGTH),
@@ -994,6 +1054,41 @@ bool VppDenoiseDct::operator!=(const VppDenoiseDct &x) const {
 
 tstring VppDenoiseDct::print() const {
     tstring str = strsprintf(_T("denoise-dct: sigma %.2f, step %d, block_size %d"), sigma, step, block_size);
+    return str;
+}
+
+VppDenoiseFFT3D::VppDenoiseFFT3D() :
+    enable(false),
+    sigma(FILTER_DEFAULT_DENOISE_FFT3D_SIGMA),
+    amount(FILTER_DEFAULT_DENOISE_FFT3D_AMOUNT),
+    block_size(FILTER_DEFAULT_DENOISE_FFT3D_BLOCK_SIZE),
+    overlap(FILTER_DEFAULT_DENOISE_FFT3D_OVERLAP),
+    overlap2(FILTER_DEFAULT_DENOISE_FFT3D_OVERLAP2),
+    method(FILTER_DEFAULT_DENOISE_FFT3D_METHOD),
+    temporal(FILTER_DEFAULT_DENOISE_FFT3D_TEMPORAL),
+    precision(VppFpPrecision::VPP_FP_PRECISION_AUTO) {
+
+}
+
+bool VppDenoiseFFT3D::operator==(const VppDenoiseFFT3D &x) const {
+    return enable == x.enable
+        && sigma == x.sigma
+        && amount == x.amount
+        && block_size == x.block_size
+        && overlap == x.overlap
+        && overlap2 == x.overlap2
+        && method == x.method
+        && temporal == x.temporal
+        && precision == x.precision;
+}
+bool VppDenoiseFFT3D::operator!=(const VppDenoiseFFT3D &x) const {
+    return !(*this == x);
+}
+
+tstring VppDenoiseFFT3D::print() const {
+    tstring str = strsprintf(_T("denoise-fft3d: sigma %.2f, strength %.2f, block_size %d\n"
+        "                         overlap %.2f, method %d, temporal %d, precision %s"),
+        sigma, amount, block_size, overlap, method, temporal, get_cx_desc(list_vpp_fp_prec, precision));
     return str;
 }
 
@@ -1456,6 +1551,7 @@ RGYParamVpp::RGYParamVpp() :
     afs(),
     nnedi(),
     yadif(),
+    decomb(),
     rff(),
     selectevery(),
     decimate(),
@@ -1463,9 +1559,11 @@ RGYParamVpp::RGYParamVpp() :
     pad(),
     convolution3d(),
     knn(),
+    nlmeans(),
     pmd(),
     dct(),
     smooth(),
+    fft3d(),
     subburn(),
     unsharp(),
     edgelevel(),
@@ -1488,6 +1586,7 @@ bool RGYParamVpp::operator==(const RGYParamVpp& x) const {
         && afs == x.afs
         && nnedi == x.nnedi
         && yadif == x.yadif
+        && decomb == x.decomb
         && rff == x.rff
         && selectevery == x.selectevery
         && decimate == x.decimate
@@ -1495,6 +1594,7 @@ bool RGYParamVpp::operator==(const RGYParamVpp& x) const {
         && pad == x.pad
         && convolution3d == x.convolution3d
         && knn == x.knn
+        && nlmeans == x.nlmeans
         && pmd == x.pmd
         && dct == x.dct
         && smooth == x.smooth
@@ -1533,7 +1633,8 @@ AudioSelect::AudioSelect() :
     disposition(),
     lang(),
     selectCodec(),
-    metadata() {
+    metadata(),
+    resamplerPrm() {
 }
 
 AudioSource::AudioSource() :
@@ -1568,6 +1669,7 @@ SubSource::SubSource() :
 
 DataSelect::DataSelect() :
     trackID(0),
+    encCodec(),
     disposition(),
     lang(),
     selectCodec(),
@@ -1655,7 +1757,9 @@ tstring RGYDebugLogFile::getFilename(const tstring& outputFilename, const tstrin
 }
 
 RGYParamInput::RGYParamInput() :
-    resizeResMode(RGYResizeResMode::Normal) {
+    resizeResMode(RGYResizeResMode::Normal),
+    ignoreSAR(false),
+    avswDecoder() {
 
 }
 
@@ -1763,6 +1867,7 @@ RGYParamControl::RGYParamControl() :
     skipHWEncodeCheck(false),
     skipHWDecodeCheck(false),
     avsdll(),
+    vsdir(),
     enableOpenCL(true),
     avoidIdleClock(),
     outputBufSizeMB(RGY_OUTPUT_BUF_MB_DEFAULT) {

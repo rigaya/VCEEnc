@@ -159,6 +159,7 @@ static const ENC_OPTION_STR2 list_deinterlace_gui[] = {
     { AUO_CONFIG_CX_DEINTERLACE_AFS,    L"自動フィールドシフト",    100 },
     { AUO_CONFIG_CX_DEINTERLACE_NNEDI,  L"nnedi",                   101 },
     { AUO_CONFIG_CX_DEINTERLACE_YADIF,  L"yadif",                   102 },
+    { AUO_CONFIG_CX_DEINTERLACE_DECOMB, L"decomb",                  103 },
     { AUO_MES_UNKNOWN, NULL, NULL }
 };
 
@@ -220,6 +221,12 @@ static const ENC_OPTION_STR2 list_vpp_deband_gui[] = {
     { AUO_CONFIG_CX_DEBAND_0, L"0 - 1点参照",  0 },
     { AUO_CONFIG_CX_DEBAND_1, L"1 - 2点参照",  1 },
     { AUO_CONFIG_CX_DEBAND_2, L"2 - 4点参照",  2 },
+    { AUO_MES_UNKNOWN, NULL, 0 }
+};
+
+static const ENC_OPTION_STR2 list_vpp_fft3d_temporal_gui[] = {
+    { AUO_MES_UNKNOWN, L"off",  0 },
+    { AUO_MES_UNKNOWN, L"on",  1 },
     { AUO_MES_UNKNOWN, NULL, 0 }
 };
 

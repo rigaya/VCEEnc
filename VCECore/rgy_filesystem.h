@@ -30,6 +30,7 @@
 #define __RGY_FILESYSTEM_H__
 
 #include <vector>
+#include <cstdint>
 #include "rgy_tchar.h"
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -53,6 +54,8 @@ std::string GetFullPathFrom(const char *path, const char *baseDir = nullptr);
 std::string GetRelativePathFrom(const char *path, const char *baseDir = nullptr);
 bool rgy_file_exists(const std::string& filepath);
 bool rgy_file_exists(const std::wstring& filepath);
+bool rgy_directory_exists(const std::string& directorypath);
+bool rgy_directory_exists(const std::wstring& directorypath);
 bool rgy_get_filesize(const char *filepath, uint64_t *filesize);
 std::pair<int, std::string> PathRemoveFileSpecFixed(const std::string& path);
 std::string PathRemoveExtensionS(const std::string& path);

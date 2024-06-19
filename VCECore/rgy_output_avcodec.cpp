@@ -85,7 +85,7 @@ static int funcReadPacket(void *opaque, uint8_t *buf, int buf_size) {
     RGYOutputAvcodec *writer = reinterpret_cast<RGYOutputAvcodec *>(opaque);
     return writer->readPacket(buf, buf_size);
 }
-static int funcWritePacket(void *opaque, uint8_t *buf, int buf_size) {
+static int funcWritePacket(void *opaque, const uint8_t *buf, int buf_size) {
     RGYOutputAvcodec *writer = reinterpret_cast<RGYOutputAvcodec *>(opaque);
     return writer->writePacket(buf, buf_size);
 }
@@ -175,6 +175,7 @@ AVMuxAudio::AVMuxAudio() :
     filterAudioFormat(nullptr),
     filterGraph(nullptr),
     audioResampler(RGY_RESAMPLER_SWR),
+    audioResamplerPrm(),
     decodedFrameCache(nullptr),
     channelMapping(),
     streamChannelSelect(),
@@ -322,8 +323,7 @@ RGYOutputAvcodec::~RGYOutputAvcodec() {
 void RGYOutputAvcodec::CloseOther(AVMuxOther *muxOther) {
     //close decoder
     if (muxOther->outCodecDecodeCtx) {
-        avcodec_close(muxOther->outCodecDecodeCtx);
-        av_free(muxOther->outCodecDecodeCtx);
+        avcodec_free_context(&muxOther->outCodecDecodeCtx);
         muxOther->outCodecDecodeCtx = nullptr;
         muxOther->outCodecDecode = nullptr;
         AddMessage(RGY_LOG_DEBUG, _T("Closed outCodecDecodeCtx.\n"));
@@ -331,8 +331,7 @@ void RGYOutputAvcodec::CloseOther(AVMuxOther *muxOther) {
 
     //close encoder
     if (muxOther->outCodecEncodeCtx) {
-        avcodec_close(muxOther->outCodecEncodeCtx);
-        av_free(muxOther->outCodecEncodeCtx);
+        avcodec_free_context(&muxOther->outCodecEncodeCtx);
         muxOther->outCodecEncodeCtx = nullptr;
         muxOther->outCodecEncode = nullptr;
         AddMessage(RGY_LOG_DEBUG, _T("Closed outCodecEncodeCtx.\n"));
@@ -354,8 +353,7 @@ void RGYOutputAvcodec::CloseAudio(AVMuxAudio *muxAudio) {
     //close decoder
     if (muxAudio->outCodecDecodeCtx
         && muxAudio->inSubStream == 0) { //サブストリームのものは単なるコピーなので開放不要
-        avcodec_close(muxAudio->outCodecDecodeCtx);
-        av_free(muxAudio->outCodecDecodeCtx);
+        avcodec_free_context(&muxAudio->outCodecDecodeCtx);
         muxAudio->outCodecDecodeCtx = nullptr;
         muxAudio->outCodecDecode = nullptr;
         AddMessage(RGY_LOG_DEBUG, _T("Closed outCodecDecodeCtx.\n"));
@@ -363,8 +361,7 @@ void RGYOutputAvcodec::CloseAudio(AVMuxAudio *muxAudio) {
 
     //close encoder
     if (muxAudio->outCodecEncodeCtx) {
-        avcodec_close(muxAudio->outCodecEncodeCtx);
-        av_free(muxAudio->outCodecEncodeCtx);
+        avcodec_free_context(&muxAudio->outCodecEncodeCtx);
         muxAudio->outCodecEncodeCtx = nullptr;
         muxAudio->outCodecEncode = nullptr;
         AddMessage(RGY_LOG_DEBUG, _T("Closed outCodecEncodeCtx.\n"));
@@ -625,6 +622,19 @@ uniuqeRGYChannelLayout RGYOutputAvcodec::AutoSelectChannelLayout(const AVCodec *
         if (srcChannels == getChannelCount(&channelLayout[i])) {
             return createChannelLayoutCopy(&channelLayout[i]);
         }
+    }
+    //一致するチャンネルが見つからない場合、最も近いチャンネル数のものを取得するようにする
+    int selectIdx = -1;
+    int selectIdxDiff = std::numeric_limits<int>::max();
+    for (int i = 0; channelLayoutSet(&channelLayout[i]); i++) {
+        const int absDiff = std::abs(srcChannels - getChannelCount(&channelLayout[i]));
+        if (absDiff < selectIdxDiff) {
+            selectIdx = i;
+            selectIdxDiff = absDiff;
+        }
+    }
+    if (selectIdx >= 0) {
+        return createChannelLayoutCopy(&channelLayout[selectIdx]);
     }
     return createChannelLayoutCopy(&channelLayout[0]);
 }
@@ -1201,7 +1211,7 @@ RGY_ERR RGYOutputAvcodec::InitVideo(const VideoInfo *videoOutputInfo, const Avco
 #pragma warning (pop)
 
 //音声フィルタの初期化
-RGY_ERR RGYOutputAvcodec::InitAudioFilter(AVMuxAudio *muxAudio, int channels, const RGYChannelLayout *channel_layout, int sample_rate, AVSampleFormat sample_fmt) {
+RGY_ERR RGYOutputAvcodec::InitAudioFilter(AVMuxAudio *muxAudio, int channels, const RGYChannelLayout *channel_layout, int sample_rate, AVSampleFormat sample_fmt, const std::string resamplerPrm) {
     //時折channel_layoutが設定されていない場合や、OrderがUnspecの場合がある
     auto channel_layout_next = (channelLayoutSet(channel_layout) && !channelLayoutOrderUnspec(channel_layout)) ? createChannelLayoutCopy(channel_layout) : getDefaultChannelLayout(channels);
     //filterを初期化
@@ -1345,6 +1355,10 @@ RGY_ERR RGYOutputAvcodec::InitAudioFilter(AVMuxAudio *muxAudio, int channels, co
         std::string swr_opts = "";
         if (muxAudio->audioResampler == RGY_RESAMPLER_SOXR) {
             swr_opts = "resampler=soxr";
+        }
+        if (resamplerPrm.length() > 0) {
+            if (swr_opts.length() > 0) swr_opts += ";";
+            swr_opts += resamplerPrm;
         }
         muxAudio->filterGraph->scale_sws_opts = av_strdup(swr_opts.c_str());
         av_opt_set(muxAudio->filterGraph, "aresample_swr_opts", swr_opts.c_str(), 0);
@@ -1537,10 +1551,10 @@ RGY_ERR RGYOutputAvcodec::InitAudio(AVMuxAudio *muxAudio, AVOutputStreamPrm *inp
                 muxAudio->outCodecEncodeCtx->flags |= AV_CODEC_FLAG_QSCALE;
                 muxAudio->outCodecEncodeCtx->global_quality = inputAudio->quality.second * FF_QP2LAMBDA;
                 if (inputAudio->bitrate) {
-                    muxAudio->outCodecEncodeCtx->bit_rate = inputAudio->bitrate;
+                    muxAudio->outCodecEncodeCtx->bit_rate = ((inputAudio->bitrate >= 0) ? inputAudio->bitrate : AVQSV_DEFAULT_AUDIO_BITRATE) * 1000;
                 }
-            } else {
-                muxAudio->outCodecEncodeCtx->bit_rate = ((inputAudio->bitrate) ? inputAudio->bitrate : AVQSV_DEFAULT_AUDIO_BITRATE) * 1000;
+            } else if (inputAudio->bitrate) {
+                muxAudio->outCodecEncodeCtx->bit_rate = ((inputAudio->bitrate >= 0) ? inputAudio->bitrate : AVQSV_DEFAULT_AUDIO_BITRATE) * 1000;
             }
         }
         if (m_Mux.format.outputFmt->flags & AVFMT_GLOBALHEADER) {
@@ -1618,7 +1632,8 @@ RGY_ERR RGYOutputAvcodec::InitAudio(AVMuxAudio *muxAudio, AVOutputStreamPrm *inp
                     char_to_tstring(t->value).c_str());
             }
         }
-
+        
+        muxAudio->audioResamplerPrm     = inputAudio->resamplerPrm;
         muxAudio->filterInChannels      = getChannelCount(muxAudio->outCodecEncodeCtx);
         muxAudio->filterInChannelLayout = getChannelLayout(muxAudio->outCodecEncodeCtx);
         muxAudio->filterInSampleRate    = muxAudio->outCodecEncodeCtx->sample_rate;
@@ -1632,7 +1647,8 @@ RGY_ERR RGYOutputAvcodec::InitAudio(AVMuxAudio *muxAudio, AVOutputStreamPrm *inp
             // そのときにはとりあえずAV_SAMPLE_FMT_S16で適当にフィルタを初期化しておく
             // 実際のsample_fmtはAVFrameに設定されており、フィルタ実行前の再度のInitAudioFilterで
             // 必要に応じて再初期化されるので、ここでは仮の値でも問題はない
-            av_get_sample_fmt_name(muxAudio->outCodecDecodeCtx->sample_fmt) ? muxAudio->outCodecDecodeCtx->sample_fmt : AV_SAMPLE_FMT_FLTP);
+            av_get_sample_fmt_name(muxAudio->outCodecDecodeCtx->sample_fmt) ? muxAudio->outCodecDecodeCtx->sample_fmt : AV_SAMPLE_FMT_FLTP,
+            muxAudio->audioResamplerPrm);
         if (sts != RGY_ERR_NONE) return sts;
     } else if (muxAudio->bsfc == nullptr && muxAudio->streamIn->codecpar->codec_id == AV_CODEC_ID_AAC && muxAudio->streamIn->codecpar->extradata == NULL && inputAudio->src.pktSample
         && (format_is_mp4(m_Mux.format.formatCtx) || format_is_mkv(m_Mux.format.formatCtx) || format_is_flv(m_Mux.format.formatCtx) || format_is_latm(m_Mux.format.formatCtx))) {
@@ -2206,7 +2222,7 @@ RGY_ERR RGYOutputAvcodec::Init(const TCHAR *strFileName, const VideoInfo *videoO
             setvbuf(m_Mux.format.fpOutput, m_Mux.format.outputBuffer, _IOFBF, m_Mux.format.outputBufferSize);
             AddMessage(RGY_LOG_DEBUG, _T("set external output buffer %d MB.\n"), m_Mux.format.outputBufferSize / (1024 * 1024));
         }
-        if (NULL == (m_Mux.format.formatCtx->pb = avio_alloc_context(m_Mux.format.AVOutBuffer, m_Mux.format.AVOutBufferSize, 1, this, funcReadPacket, funcWritePacket, funcSeek))) {
+        if (NULL == (m_Mux.format.formatCtx->pb = avio_alloc_context(m_Mux.format.AVOutBuffer, m_Mux.format.AVOutBufferSize, 1, this, funcReadPacket, (RGYArgN<5U, decltype(avio_alloc_context)>::type)funcWritePacket, funcSeek))) {
             AddMessage(RGY_LOG_ERROR, _T("failed to alloc avio context.\n"));
             return RGY_ERR_NULL_PTR;
         }
@@ -3569,9 +3585,9 @@ vector<AVPktMuxData> RGYOutputAvcodec::AudioFilterFrame(vector<AVPktMuxData> inp
             if (pktData.frame != nullptr) {
                 //音声入力フォーマットに変更がないか確認し、もしあればresamplerを再初期化する
 #if AV_CHANNEL_LAYOUT_STRUCT_AVAIL
-                auto sts = InitAudioFilter(muxAudio, getChannelCount(&pktData.frame->ch_layout), &pktData.frame->ch_layout, pktData.frame->sample_rate, (AVSampleFormat)pktData.frame->format);
+                auto sts = InitAudioFilter(muxAudio, getChannelCount(&pktData.frame->ch_layout), &pktData.frame->ch_layout, pktData.frame->sample_rate, (AVSampleFormat)pktData.frame->format, muxAudio->audioResamplerPrm);
 #else
-                auto sts = InitAudioFilter(muxAudio, pktData.frame->channels, &pktData.frame->channel_layout, pktData.frame->sample_rate, (AVSampleFormat)pktData.frame->format);
+                auto sts = InitAudioFilter(muxAudio, pktData.frame->channels, &pktData.frame->channel_layout, pktData.frame->sample_rate, (AVSampleFormat)pktData.frame->format, muxAudio->audioResamplerPrm);
 #endif
                 if (sts != RGY_ERR_NONE) {
                     m_Mux.format.streamError = true;
@@ -4574,7 +4590,7 @@ HANDLE RGYOutputAvcodec::getThreadHandleAudEncode() {
 int RGYOutputAvcodec::readPacket(uint8_t *buf, int buf_size) {
     return (int)_fread_nolock(buf, 1, buf_size, m_Mux.format.fpOutput);
 }
-int RGYOutputAvcodec::writePacket(uint8_t *buf, int buf_size) {
+int RGYOutputAvcodec::writePacket(const uint8_t *buf, int buf_size) {
     int res = (int)_fwrite_nolock(buf, 1, buf_size, m_Mux.format.fpOutput);
     if (res < buf_size) {
         AddMessage(RGY_LOG_ERROR, _T("Error writing file.\nNot enough disk space!\""));

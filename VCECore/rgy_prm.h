@@ -54,15 +54,18 @@ static const int RGY_AUDIO_QUALITY_DEFAULT = 0;
 #define ENABLE_VPP_FILTER_AFS          (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP)
 #define ENABLE_VPP_FILTER_NNEDI        (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP || CLFILTERS_AUF)
 #define ENABLE_VPP_FILTER_YADIF        (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP)
+#define ENABLE_VPP_FILTER_DECOMB       (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP)
 #define ENABLE_VPP_FILTER_RFF          (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP)
 #define ENABLE_VPP_FILTER_RFF_AVHW     (ENCODER_QSV   || ENCODER_NVENC                   || ENCODER_MPP)
 #define ENABLE_VPP_FILTER_SELECT_EVERY (ENCODER_NVENC)
 #define ENABLE_VPP_FILTER_DECIMATE     (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP)
 #define ENABLE_VPP_FILTER_MPDECIMATE   (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP)
 #define ENABLE_VPP_FILTER_PAD          (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP || CLFILTERS_AUF)
+#define ENABLE_VPP_FILTER_NLMEANS      (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP || CLFILTERS_AUF)
 #define ENABLE_VPP_FILTER_PMD          (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP || CLFILTERS_AUF)
 #define ENABLE_VPP_FILTER_DENOISE_DCT  (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP || CLFILTERS_AUF)
 #define ENABLE_VPP_FILTER_SMOOTH       (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP || CLFILTERS_AUF)
+#define ENABLE_VPP_FILTER_FFT3D        (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP || CLFILTERS_AUF)
 #define ENABLE_VPP_FILTER_CONVOLUTION3D (ENCODER_QSV  || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP)
 #define ENABLE_VPP_FILTER_UNSHARP      (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP || CLFILTERS_AUF)
 #define ENABLE_VPP_FILTER_WARPSHARP    (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP || CLFILTERS_AUF)
@@ -125,6 +128,7 @@ enum class VppType : int {
     CL_AFS,
     CL_NNEDI,
     CL_YADIF,
+    CL_DECOMB,
     CL_DECIMATE,
     CL_MPDECIMATE,
     CL_RFF,
@@ -133,9 +137,11 @@ enum class VppType : int {
 
     CL_CONVOLUTION3D,
     CL_DENOISE_KNN,
+    CL_DENOISE_NLMEANS,
     CL_DENOISE_PMD,
     CL_DENOISE_DCT,
     CL_DENOISE_SMOOTH,
+    CL_DENOISE_FFT3D,
 
     CL_RESIZE,
 
@@ -229,6 +235,11 @@ static const bool  FILTER_DEFAULT_AFS_RFF = true;
 static const int   FILTER_DEFAULT_AFS_TIMECODE = 0;
 static const bool  FILTER_DEFAULT_AFS_LOG = false;
 
+static const bool  FILTER_DEFAULT_DECOMB_FULL = true;
+static const int   FILTER_DEFAULT_DECOMB_THRESHOLD = 20;
+static const int   FILTER_DEFAULT_DECOMB_DTHRESHOLD = 7;
+static const bool  FILTER_DEFAULT_DECOMB_BLEND = false;
+
 static const int   FILTER_DEFAULT_DECIMATE_CYCLE = 5;
 static const int   FILTER_DEFAULT_DECIMATE_DROP = 1;
 static const float FILTER_DEFAULT_DECIMATE_THRE_DUP = 1.1f;
@@ -256,6 +267,11 @@ static const float FILTER_DEFAULT_KNN_LERPC = 0.20f;
 static const float FILTER_DEFAULT_KNN_WEIGHT_THRESHOLD = 0.01f;
 static const float FILTER_DEFAULT_KNN_LERPC_THRESHOLD = 0.80f;
 
+static const float FILTER_DEFAULT_NLMEANS_FILTER_SIGMA = 0.005f;
+static const int   FILTER_DEFAULT_NLMEANS_PATCH_SIZE = 5;
+static const int   FILTER_DEFAULT_NLMEANS_SEARCH_SIZE = 11;
+static const float FILTER_DEFAULT_NLMEANS_H = 0.05f;
+
 static const float FILTER_DEFAULT_PMD_STRENGTH = 100.0f;
 static const float FILTER_DEFAULT_PMD_THRESHOLD = 100.0f;
 static const int   FILTER_DEFAULT_PMD_APPLY_COUNT = 2;
@@ -272,6 +288,14 @@ static const int   FILTER_DEFAULT_SMOOTH_MAX_QPTABLE_ERR = 10;
 static const float FILTER_DEFAULT_DENOISE_DCT_SIGMA = 4.0f;
 static const int   FILTER_DEFAULT_DENOISE_DCT_STEP = 2;
 static const int   FILTER_DEFAULT_DENOISE_DCT_BLOCK_SIZE = 8;
+
+static const float FILTER_DEFAULT_DENOISE_FFT3D_SIGMA = 1.0f;
+static const float FILTER_DEFAULT_DENOISE_FFT3D_AMOUNT = 1.0f;
+static const int   FILTER_DEFAULT_DENOISE_FFT3D_BLOCK_SIZE = 32;
+static const float FILTER_DEFAULT_DENOISE_FFT3D_OVERLAP  = 0.5;
+static const float FILTER_DEFAULT_DENOISE_FFT3D_OVERLAP2 = 0.0;
+static const int   FILTER_DEFAULT_DENOISE_FFT3D_METHOD = 0;
+static const int   FILTER_DEFAULT_DENOISE_FFT3D_TEMPORAL = 1;
 
 static const float FILTER_DEFAULT_TWEAK_BRIGHTNESS = 0.0f;
 static const float FILTER_DEFAULT_TWEAK_CONTRAST = 1.0f;
@@ -337,9 +361,11 @@ const CX_DESC list_vpp_denoise[] = {
     { _T("denoise"), 4 },
 #endif
     { _T("knn"),     1 },
+    { _T("nlmeans"), 9 },
     { _T("pmd"),     2 },
     { _T("denoise-dct"), 8 },
     { _T("smooth"),  3 },
+    { _T("fft3d"), 10 },
     { _T("convolution3d"),  5 },
 #if ENCODER_VCEENC
     { _T("preprocess"), 4 },
@@ -1082,6 +1108,19 @@ struct VppYadif {
     tstring print() const;
 };
 
+struct VppDecomb {
+    bool enable;
+    bool full;
+    int threshold;
+    int dthreshold;
+    bool blend;
+
+    VppDecomb();
+    bool operator==(const VppDecomb& x) const;
+    bool operator!=(const VppDecomb& x) const;
+    tstring print() const;
+};
+
 struct VppNnedi {
     bool              enable;
     VppNnediField     field;
@@ -1200,6 +1239,48 @@ struct VppKnn {
     tstring print() const;
 };
 
+enum VppNLMeansFP16Opt {
+    None,
+    BlockDiff,
+    All
+};
+
+const CX_DESC list_vpp_nlmeans_fp16[] = {
+    { _T("none"),      (int)VppNLMeansFP16Opt::None      },
+    { _T("blockdiff"), (int)VppNLMeansFP16Opt::BlockDiff },
+    { _T("all"),       (int)VppNLMeansFP16Opt::All       },
+    { NULL, 0 }
+};
+
+const CX_DESC list_vpp_nlmeans_block_size[] = {
+    { _T("3"),   3 },
+    { _T("5"),   5 },
+    { _T("7"),   7 },
+    { _T("9"),   9 },
+    { _T("11"), 11 },
+    { _T("13"), 13 },
+    { _T("15"), 15 },
+    { _T("17"), 17 },
+    { _T("19"), 19 },
+    { _T("21"), 21 },
+    { NULL, 0 }
+};
+
+struct VppNLMeans {
+    bool  enable;
+    float sigma;
+    int   patchSize;
+    int   searchSize;
+    float h;
+    VppNLMeansFP16Opt fp16;
+    bool sharedMem;
+
+    VppNLMeans();
+    bool operator==(const VppNLMeans &x) const;
+    bool operator!=(const VppNLMeans &x) const;
+    tstring print() const;
+};
+
 struct VppPmd {
     bool  enable;
     float strength;
@@ -1237,6 +1318,30 @@ struct VppDenoiseDct {
     VppDenoiseDct();
     bool operator==(const VppDenoiseDct &x) const;
     bool operator!=(const VppDenoiseDct &x) const;
+    tstring print() const;
+};
+
+const CX_DESC list_vpp_fft3d_block_size[] = {
+    { _T("8"),   8 },
+    { _T("16"), 16 },
+    { _T("32"), 32 },
+    { _T("64"), 64 },
+    { NULL, 0 }
+};
+
+struct VppDenoiseFFT3D {
+    bool enable;
+    float sigma;
+    float amount;
+    int block_size;
+    float overlap;
+    float overlap2;
+    int method;
+    int temporal;
+    VppFpPrecision precision;
+    VppDenoiseFFT3D();
+    bool operator==(const VppDenoiseFFT3D &x) const;
+    bool operator!=(const VppDenoiseFFT3D &x) const;
     tstring print() const;
 };
 
@@ -1467,6 +1572,7 @@ struct RGYParamVpp {
     VppAfs afs;
     VppNnedi nnedi;
     VppYadif yadif;
+    VppDecomb decomb;
     VppRff rff;
     VppSelectEvery selectevery;
     VppDecimate decimate;
@@ -1474,9 +1580,11 @@ struct RGYParamVpp {
     VppPad pad;
     VppConvolution3d convolution3d;
     VppKnn knn;
+    VppNLMeans nlmeans;
     VppPmd pmd;
     VppDenoiseDct dct;
     VppSmooth smooth;
+    VppDenoiseFFT3D fft3d;
     std::vector<VppSubburn> subburn;
     VppUnsharp unsharp;
     VppEdgelevel edgelevel;
@@ -1527,6 +1635,7 @@ struct AudioSelect {
     std::string lang;              // 言語選択
     std::string selectCodec;       // 対象コーデック
     std::vector<tstring> metadata;
+    std::string resamplerPrm;
 
     AudioSelect();
     ~AudioSelect() {};
@@ -1576,6 +1685,7 @@ struct DataSelect {
                          //  0 ... 全指定
                          //  TRACK_SELECT_BY_LANG ... langによる選択
                          //  TRACK_SELECT_BY_CODEC ... selectCodecによる選択
+    tstring encCodec;
     tstring disposition; // 指定のdisposition
     std::string lang;    // 言語選択
     std::string selectCodec; // 対象コーデック
@@ -1636,6 +1746,8 @@ struct RGYDebugLogFile {
 
 struct RGYParamInput {
     RGYResizeResMode resizeResMode;
+    bool ignoreSAR;
+    tstring avswDecoder; //avswデコーダの指定
 
     RGYParamInput();
     ~RGYParamInput();
@@ -1647,7 +1759,6 @@ struct RGYParamCommon {
     tstring muxOutputFormat;      //出力フォーマット
     VideoVUIInfo out_vui;
     RGYOptList inputOpt; //入力オプション
-
     std::string maxCll;
     std::string masterDisplay;
     CspTransfer atcSei;
@@ -1755,6 +1866,7 @@ struct RGYParamControl {
     bool skipHWEncodeCheck;
     bool skipHWDecodeCheck;
     tstring avsdll;
+    tstring vsdir;
     bool enableOpenCL;
     RGYParamAvoidIdleClock avoidIdleClock;
 

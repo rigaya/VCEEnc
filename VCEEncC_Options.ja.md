@@ -37,7 +37,7 @@
   - [--avs](#--avs)
   - [--vpy](#--vpy)
   - [--vpy-mt](#--vpy-mt)
-  - [--avsw](#--avsw)
+  - [--avsw \[\<string\>\]](#--avsw-string)
   - [--avhw](#--avhw)
   - [--interlace \<string\>](#--interlace-string)
   - [--crop \<int\>,\<int\>,\<int\>,\<int\>](#--crop-intintintint)
@@ -334,9 +334,10 @@ VCEEncCはデフォルトではUTF-8モードで動作するため、Avisynthス
 ### --vpy-mt
 入力ファイルをVapourSynthで読み込む。
 
-### --avsw
-avformat + sw decoderを使用して読み込む。
-ffmpegの対応するほとんどのコーデックを読み込み可能。
+### --avsw [&lt;string&gt;]
+avformat + sw decoderを使用して読み込む。ffmpegの対応するほとんどのコーデックを読み込み可能。
+
+追加のパラメータで使用するデコーダ名を指定可能。特に指定のない場合、デコーダは自動的に選択される。
 
 ### --avhw
 avformat + hw decoderを使用して読み込む。
@@ -389,6 +390,8 @@ avformat + hw decoderを使用して読み込む。
     指定解像度(指定枠)の縦横どちらかに合うよう、入力アスペクト比を維持しながらリサイズする。
     - increase ... 拡大してアスペクト比を維持する (指定枠に外接するよう調整)
     - decrease ... 縮小してアスペクト比を維持する (指定枠に収めるように調整)
+  - ignore_sar=&lt;bool&gt;  
+    負の値で自動リサイズする際、入出力のSAR比を無視して計算する。デフォルトでは無効(false)。
 
 - 使用例
   ```
@@ -1354,6 +1357,7 @@ vppフィルタの適用順は固定で、コマンドラインの順序によ�
   - [--vpp-afs](#--vpp-afs-param1value1param2value2)
   - [--vpp-nnedi](#--vpp-nnedi-param1value1param2value2)
   - [--vpp-yadif](#--vpp-yadif-param1value1)
+  - [--vpp-decomb](#--vpp-decomb-param1value1param2value2)
   - [--vpp-transform/rotate](#--vpp-rotate-int)
   - [--vpp-decimate](#--vpp-decimate-param1value1param2value2)
   - [--vpp-mpdecimate](#--vpp-mpdecimate-param1value1param2value2)
@@ -1362,7 +1366,9 @@ vppフィルタの適用順は固定で、コマンドラインの順序によ�
   - [--vpp-convolution3d](#--vpp-convolution3d-param1value1param2value2)
   - [--vpp-smooth](#--vpp-smooth-param1value1param2value2)
   - [--vpp-denoise-dct](#--vpp-denoise-dct-param1value1param2value2)
+  - [--vpp-fft3d](#--vpp-fft3d-param1value1param2value2)
   - [--vpp-knn](#--vpp-knn-param1value1param2value2)
+  - [--vpp-nlmeans](#--vpp-nlmeans-param1value1param2value2)
   - [--vpp-pmd](#--vpp-pmd-param1value1param2value2)
   - [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
   - [--vpp-resize](#--vpp-resize-string)
@@ -1898,6 +1904,39 @@ yadifによるインタレ解除を行う。
   - block_size=&lt;int&gt;  (default=8)  
     - 8
     - 16 (slow)
+
+### --vpp-fft3d [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+  FFTベースのノイズ除去フィルタ。
+
+- **パラメータ**
+  - sigma=&lt;float&gt;  
+    フィルタ強度。 (default=1.0, 0.0 - 100.0)
+  
+  - amount=&lt;float&gt;  (default=1.0, 0.0 - 1.0)    
+    ノイズ除去量。
+    
+  - block_size=&lt;int&gt;  (default=32)  
+    FFTの計算ブロックサイズ。
+    - 8
+    - 16
+    - 32
+    - 64
+
+  - overlap=&lt;float&gt;  (default=0.5, 0.2 - 0.8)    
+    FFTブロック同士のオーバーラップサイズ。アーティファクト発生を防ぐため、0.5以上が推奨。
+  
+  - method=&lt;int&gt; (default = 0)
+    - 0 ... wiener法
+    - 1 ... 閾値による打ち切り
+
+  - temporal=&lt;int&gt; (default = 1)
+    - 0 ... 空間方向のフィルタリングのみ
+    - 1 ... 時間方向のフィルタリングも行う
+
+  - prec=&lt;string&gt; (default = auto)
+    - auto ... 可能な場合fp16(半精度浮動小数点)で計算する (高速)
+    - fp32 ... 常にfp32(単精度浮動小数点)で計算する
     
   
 ### --vpp-knn [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
@@ -1919,6 +1958,38 @@ yadifによるインタレ解除を行う。
   ```
   例: すこし強め
   --vpp-knn radius=3,strength=0.10,lerp=0.1
+  ```
+
+### --vpp-nlmeans [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
+Non local meansを用いたノイズ除去フィルタ。
+
+- **パラメータ**
+  - sigma=&lt;float&gt;  (default=0.005, 0.0 -)   
+    ノイズの分散。 より大きな値にするとより強くノイズ除去を行う。
+  
+  - h=&lt;float&gt;  (default=0.05, 0.0 <)   
+    パラメータ。 値を大きくすると重みがより均一になる。
+  
+  - patch=&lt;int&gt;  (default=5, 3 - )  
+    パッチのサイズ。奇数で指定。
+  
+  - search=&lt;int&gt;  (default=11, 3 - )  
+    探索範囲。奇数で指定。 
+  
+  - fp16=&lt;string&gt;  (default=blockdiff)  
+    - none  
+      fp16を使用せず、fp32を使用する。高精度だが遅い。
+
+    - blockdiff  
+      ブロックの差分計算にのみfp16を使用する。精度と速度のバランスが良い。
+
+    - all  
+      重みの計算にもfp16を使用する。高速だが低精度。
+  
+- 使用例
+  ```
+  例: 探索範囲を広げてより高精度に
+  --vpp-nlmeans patch=7,search=15
   ```
 
 ### --vpp-pmd [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
@@ -2459,6 +2530,9 @@ avsw/avhw読み込み時のデバッグ情報出力。
 
 ### --avsdll &lt;string&gt;
 使用するAvsiynth.dllを指定するオプション。特に指定しない場合、システムのAvisynth.dllが使用される。
+
+### --vsdir &lt;string&gt; [Windows専用]
+VapoursynthのPortable版を使用する際に、インストールしたフォルダを指定する。特に指定しない場合、システムにインストールされたVapoursynthが使用される。
 
 ### --process-codepage &lt;string&gt;  
 - **パラメータ**  

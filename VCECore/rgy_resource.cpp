@@ -67,9 +67,12 @@ _BINARY_VPP_FILTER_FILE(rgy_filter_curves_cl);
 _BINARY_VPP_FILTER_FILE(rgy_filter_deband_cl);
 _BINARY_VPP_FILTER_FILE(rgy_filter_deband_gen_rand_cl);
 _BINARY_VPP_FILTER_FILE(rgy_filter_decimate_cl);
+_BINARY_VPP_FILTER_FILE(rgy_filter_decomb_cl);
 _BINARY_VPP_FILTER_FILE(rgy_filter_delogo_cl);
 _BINARY_VPP_FILTER_FILE(rgy_filter_denoise_dct_cl);
+_BINARY_VPP_FILTER_FILE(rgy_filter_denoise_fft3d_cl);
 _BINARY_VPP_FILTER_FILE(rgy_filter_denoise_knn_cl);
+_BINARY_VPP_FILTER_FILE(rgy_filter_denoise_nlmeans_cl);
 _BINARY_VPP_FILTER_FILE(rgy_filter_denoise_pmd_cl);
 _BINARY_VPP_FILTER_FILE(rgy_filter_edgelevel_cl);
 _BINARY_VPP_FILTER_FILE(rgy_filter_mpdecimate_cl);
@@ -134,9 +137,12 @@ static const RGYResourceData RGY_RESOURCE_DATA[] = {
     { _T("EXE_DATA"), _T("RGY_FILTER_DEBAND_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_deband_cl) },
     { _T("EXE_DATA"), _T("RGY_FILTER_DEBAND_GEN_RAND_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_deband_gen_rand_cl) },
     { _T("EXE_DATA"), _T("RGY_FILTER_DECIMATE_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_decimate_cl) },
+    { _T("EXE_DATA"), _T("RGY_FILTER_DECOMB_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_decomb_cl) },
     { _T("EXE_DATA"), _T("RGY_FILTER_DELOGO_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_delogo_cl) },
     { _T("EXE_DATA"), _T("RGY_FILTER_DENOISE_DCT_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_denoise_dct_cl) },
+    { _T("EXE_DATA"), _T("RGY_FILTER_DENOISE_FFT3D_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_denoise_fft3d_cl) },
     { _T("EXE_DATA"), _T("RGY_FILTER_DENOISE_KNN_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_denoise_knn_cl) },
+    { _T("EXE_DATA"), _T("RGY_FILTER_DENOISE_NLMEANS_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_denoise_nlmeans_cl) },
     { _T("EXE_DATA"), _T("RGY_FILTER_DENOISE_PMD_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_denoise_pmd_cl) },
     { _T("EXE_DATA"), _T("RGY_FILTER_EDGELEVEL_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_edgelevel_cl) },
     { _T("EXE_DATA"), _T("RGY_FILTER_MPDECIMATE_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_mpdecimate_cl) },

@@ -69,6 +69,7 @@ const char *get_encoder_version();
 #define VULKAN_DEFAULT_DEVICE_ONLY 0
 #define ENABLE_CPP_REGEX 1
 #define ENABLE_DTL 1
+#define ENABLE_LIBASS_SUBBURN 1
 
 #define AV_CHANNEL_LAYOUT_STRUCT_AVAIL 1
 #define AV_FRAME_DURATION_AVAIL 1
@@ -80,8 +81,6 @@ const char *get_encoder_version();
 #define GPU_VENDOR "AMD"
 #define DECODER_NAME  "vce"
 #define HW_TIMEBASE 10000000L //AMF_SECOND
-
-#define ENABLE_LIBASS_SUBBURN 0
 
 #if defined(VCE_AUO)
 #define ENCODER_NAME  "VCEEnc"

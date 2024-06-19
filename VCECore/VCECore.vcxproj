@@ -104,7 +104,25 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="rgy_filter_decomb.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="rgy_filter_denoise_dct.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="rgy_filter_denoise_fft3d.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="rgy_filter_denoise_nlmeans.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -559,7 +577,10 @@
     <ClInclude Include="rgy_faw.h" />
     <ClInclude Include="rgy_filter_cl.h" />
     <ClInclude Include="rgy_filter_curves.h" />
+    <ClInclude Include="rgy_filter_decomb.h" />
     <ClInclude Include="rgy_filter_denoise_dct.h" />
+    <ClInclude Include="rgy_filter_denoise_fft3d.h" />
+    <ClInclude Include="rgy_filter_denoise_nlmeans.h" />
     <ClInclude Include="rgy_filter_overlay.h" />
     <ClInclude Include="rgy_filter_rff.h" />
     <ClInclude Include="rgy_frame_info.h" />
@@ -662,9 +683,12 @@
     <None Include="rgy_filter_deband.cl" />
     <None Include="rgy_filter_deband_gen_rand.cl" />
     <None Include="rgy_filter_decimate.cl" />
+    <None Include="rgy_filter_decomb.cl" />
     <None Include="rgy_filter_delogo.cl" />
     <None Include="rgy_filter_denoise_dct.cl" />
+    <None Include="rgy_filter_denoise_fft3d.cl" />
     <None Include="rgy_filter_denoise_knn.cl" />
+    <None Include="rgy_filter_denoise_nlmeans.cl" />
     <None Include="rgy_filter_denoise_pmd.cl" />
     <None Include="rgy_filter_edgelevel.cl" />
     <None Include="rgy_filter_mpdecimate.cl" />
