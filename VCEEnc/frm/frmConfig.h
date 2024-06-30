@@ -725,21 +725,21 @@ private: System::Windows::Forms::Label^  fcgLBMP4RawPath;
 
 
 
-private: System::Windows::Forms::TabPage^  fcgtabPageMPG;
-private: System::Windows::Forms::Button^  fcgBTMPGMuxerPath;
-
-private: System::Windows::Forms::TextBox^  fcgTXMPGMuxerPath;
-
-private: System::Windows::Forms::Label^  fcgLBMPGMuxerPath;
-private: System::Windows::Forms::ComboBox^  fcgCXMPGMuxerCmdEx;
-private: System::Windows::Forms::Label^  fcgLBMPGMuxerCmdEx;
 
 
 
 
 
 
-private: System::Windows::Forms::CheckBox^  fcgCBMPGMuxerExt;
+
+
+
+
+
+
+
+
+
 
 private: System::Windows::Forms::ContextMenuStrip^  fcgCSExeFiles;
 private: System::Windows::Forms::ToolStripMenuItem^  fcgTSExeFileshelp;
@@ -1345,13 +1345,6 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             this->fcgCXMKVCmdEx = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBMKVMuxerCmdEx = (gcnew System::Windows::Forms::Label());
             this->fcgCBMKVMuxerExt = (gcnew System::Windows::Forms::CheckBox());
-            this->fcgtabPageMPG = (gcnew System::Windows::Forms::TabPage());
-            this->fcgBTMPGMuxerPath = (gcnew System::Windows::Forms::Button());
-            this->fcgTXMPGMuxerPath = (gcnew System::Windows::Forms::TextBox());
-            this->fcgLBMPGMuxerPath = (gcnew System::Windows::Forms::Label());
-            this->fcgCXMPGMuxerCmdEx = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgLBMPGMuxerCmdEx = (gcnew System::Windows::Forms::Label());
-            this->fcgCBMPGMuxerExt = (gcnew System::Windows::Forms::CheckBox());
             this->fcgtabPageMux = (gcnew System::Windows::Forms::TabPage());
             this->fcgCXMuxPriority = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBMuxPriority = (gcnew System::Windows::Forms::Label());
@@ -1553,6 +1546,19 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             this->fcgNUVppUnsharpWeight = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgNUVppUnsharpRadius = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcggroupBoxVppDenoise = (gcnew System::Windows::Forms::GroupBox());
+            this->fcgPNVppDenoiseFFT3D = (gcnew System::Windows::Forms::Panel());
+            this->fcgLBVppDenoiseFFT3DTemporal = (gcnew System::Windows::Forms::Label());
+            this->fcgLBVppDenoiseFFT3DPrecision = (gcnew System::Windows::Forms::Label());
+            this->fcgCXVppDenoiseFFT3DPrecision = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgNUVppDenoiseFFT3DOverlap = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgNUVppDenoiseFFT3DAmount = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgLBVppDenoiseFFT3DOverlap = (gcnew System::Windows::Forms::Label());
+            this->fcgNUVppDenoiseFFT3DSigma = (gcnew System::Windows::Forms::NumericUpDown());
+            this->fcgCXVppDenoiseFFT3DTemporal = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgLBVppDenoiseFFT3DAmount = (gcnew System::Windows::Forms::Label());
+            this->fcgLBVppDenoiseFFT3DBlockSize = (gcnew System::Windows::Forms::Label());
+            this->fcgCXVppDenoiseFFT3DBlockSize = (gcnew System::Windows::Forms::ComboBox());
+            this->fcgLBVppDenoiseFFT3DSigma = (gcnew System::Windows::Forms::Label());
             this->fcgPNVppDenoiseNLMeans = (gcnew System::Windows::Forms::Panel());
             this->fcgNUVppDenoiseNLMeansH = (gcnew System::Windows::Forms::NumericUpDown());
             this->fcgLBVppDenoiseNLMeansH = (gcnew System::Windows::Forms::Label());
@@ -1735,24 +1741,10 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             this->fcgCXAudioPriority = (gcnew System::Windows::Forms::ComboBox());
             this->fcgLBAudioPriority = (gcnew System::Windows::Forms::Label());
             this->fcgPNHideToolStripBorder = (gcnew System::Windows::Forms::Panel());
-            this->fcgPNVppDenoiseFFT3D = (gcnew System::Windows::Forms::Panel());
-            this->fcgLBVppDenoiseFFT3DTemporal = (gcnew System::Windows::Forms::Label());
-            this->fcgLBVppDenoiseFFT3DPrecision = (gcnew System::Windows::Forms::Label());
-            this->fcgCXVppDenoiseFFT3DPrecision = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgNUVppDenoiseFFT3DOverlap = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgNUVppDenoiseFFT3DAmount = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgLBVppDenoiseFFT3DOverlap = (gcnew System::Windows::Forms::Label());
-            this->fcgNUVppDenoiseFFT3DSigma = (gcnew System::Windows::Forms::NumericUpDown());
-            this->fcgCXVppDenoiseFFT3DTemporal = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgLBVppDenoiseFFT3DAmount = (gcnew System::Windows::Forms::Label());
-            this->fcgLBVppDenoiseFFT3DBlockSize = (gcnew System::Windows::Forms::Label());
-            this->fcgCXVppDenoiseFFT3DBlockSize = (gcnew System::Windows::Forms::ComboBox());
-            this->fcgLBVppDenoiseFFT3DSigma = (gcnew System::Windows::Forms::Label());
             this->fcgtoolStripSettings->SuspendLayout();
             this->fcgtabControlMux->SuspendLayout();
             this->fcgtabPageMP4->SuspendLayout();
             this->fcgtabPageMKV->SuspendLayout();
-            this->fcgtabPageMPG->SuspendLayout();
             this->fcgtabPageMux->SuspendLayout();
             this->fcgtabPageBat->SuspendLayout();
             this->fcgtabPageInternal->SuspendLayout();
@@ -1814,6 +1806,10 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppUnsharpWeight))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppUnsharpRadius))->BeginInit();
             this->fcggroupBoxVppDenoise->SuspendLayout();
+            this->fcgPNVppDenoiseFFT3D->SuspendLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseFFT3DOverlap))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseFFT3DAmount))->BeginInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseFFT3DSigma))->BeginInit();
             this->fcgPNVppDenoiseNLMeans->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseNLMeansH))->BeginInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseNLMeansSigma))->BeginInit();
@@ -1874,10 +1870,6 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             this->fcgPNAudioInternal->SuspendLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrateInternal))->BeginInit();
             this->fcgtabPageAudioOther->SuspendLayout();
-            this->fcgPNVppDenoiseFFT3D->SuspendLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseFFT3DOverlap))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseFFT3DAmount))->BeginInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseFFT3DSigma))->BeginInit();
             this->SuspendLayout();
             // 
             // fcgtoolStripSettings
@@ -2011,7 +2003,6 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             // 
             this->fcgtabControlMux->Controls->Add(this->fcgtabPageMP4);
             this->fcgtabControlMux->Controls->Add(this->fcgtabPageMKV);
-            this->fcgtabControlMux->Controls->Add(this->fcgtabPageMPG);
             this->fcgtabControlMux->Controls->Add(this->fcgtabPageMux);
             this->fcgtabControlMux->Controls->Add(this->fcgtabPageBat);
             this->fcgtabControlMux->Controls->Add(this->fcgtabPageInternal);
@@ -2307,82 +2298,6 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             this->fcgCBMKVMuxerExt->Tag = L"chValue";
             this->fcgCBMKVMuxerExt->Text = L"外部muxerを使用";
             this->fcgCBMKVMuxerExt->UseVisualStyleBackColor = true;
-            // 
-            // fcgtabPageMPG
-            // 
-            this->fcgtabPageMPG->Controls->Add(this->fcgBTMPGMuxerPath);
-            this->fcgtabPageMPG->Controls->Add(this->fcgTXMPGMuxerPath);
-            this->fcgtabPageMPG->Controls->Add(this->fcgLBMPGMuxerPath);
-            this->fcgtabPageMPG->Controls->Add(this->fcgCXMPGMuxerCmdEx);
-            this->fcgtabPageMPG->Controls->Add(this->fcgLBMPGMuxerCmdEx);
-            this->fcgtabPageMPG->Controls->Add(this->fcgCBMPGMuxerExt);
-            this->fcgtabPageMPG->Location = System::Drawing::Point(4, 23);
-            this->fcgtabPageMPG->Name = L"fcgtabPageMPG";
-            this->fcgtabPageMPG->Size = System::Drawing::Size(376, 174);
-            this->fcgtabPageMPG->TabIndex = 4;
-            this->fcgtabPageMPG->Text = L"mpg";
-            this->fcgtabPageMPG->UseVisualStyleBackColor = true;
-            // 
-            // fcgBTMPGMuxerPath
-            // 
-            this->fcgBTMPGMuxerPath->Location = System::Drawing::Point(341, 92);
-            this->fcgBTMPGMuxerPath->Name = L"fcgBTMPGMuxerPath";
-            this->fcgBTMPGMuxerPath->Size = System::Drawing::Size(30, 23);
-            this->fcgBTMPGMuxerPath->TabIndex = 23;
-            this->fcgBTMPGMuxerPath->Text = L"...";
-            this->fcgBTMPGMuxerPath->UseVisualStyleBackColor = true;
-            this->fcgBTMPGMuxerPath->Click += gcnew System::EventHandler(this, &frmConfig::fcgBTMPGMuxerPath_Click);
-            // 
-            // fcgTXMPGMuxerPath
-            // 
-            this->fcgTXMPGMuxerPath->Location = System::Drawing::Point(132, 93);
-            this->fcgTXMPGMuxerPath->Name = L"fcgTXMPGMuxerPath";
-            this->fcgTXMPGMuxerPath->Size = System::Drawing::Size(207, 21);
-            this->fcgTXMPGMuxerPath->TabIndex = 22;
-            this->fcgTXMPGMuxerPath->TextChanged += gcnew System::EventHandler(this, &frmConfig::fcgTXMPGMuxerPath_TextChanged);
-            this->fcgTXMPGMuxerPath->DragDrop += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_DragDrop);
-            this->fcgTXMPGMuxerPath->DragEnter += gcnew System::Windows::Forms::DragEventHandler(this, &frmConfig::fcgSetDragDropFilename_Enter);
-            this->fcgTXMPGMuxerPath->Enter += gcnew System::EventHandler(this, &frmConfig::fcgTXMPGMuxerPath_Enter);
-            this->fcgTXMPGMuxerPath->Leave += gcnew System::EventHandler(this, &frmConfig::fcgTXMPGMuxerPath_Leave);
-            // 
-            // fcgLBMPGMuxerPath
-            // 
-            this->fcgLBMPGMuxerPath->AutoSize = true;
-            this->fcgLBMPGMuxerPath->Location = System::Drawing::Point(5, 96);
-            this->fcgLBMPGMuxerPath->Name = L"fcgLBMPGMuxerPath";
-            this->fcgLBMPGMuxerPath->Size = System::Drawing::Size(49, 14);
-            this->fcgLBMPGMuxerPath->TabIndex = 25;
-            this->fcgLBMPGMuxerPath->Text = L"～の指定";
-            // 
-            // fcgCXMPGMuxerCmdEx
-            // 
-            this->fcgCXMPGMuxerCmdEx->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXMPGMuxerCmdEx->FormattingEnabled = true;
-            this->fcgCXMPGMuxerCmdEx->Location = System::Drawing::Point(214, 59);
-            this->fcgCXMPGMuxerCmdEx->Name = L"fcgCXMPGMuxerCmdEx";
-            this->fcgCXMPGMuxerCmdEx->Size = System::Drawing::Size(157, 22);
-            this->fcgCXMPGMuxerCmdEx->TabIndex = 21;
-            this->fcgCXMPGMuxerCmdEx->Tag = L"chValue";
-            // 
-            // fcgLBMPGMuxerCmdEx
-            // 
-            this->fcgLBMPGMuxerCmdEx->AutoSize = true;
-            this->fcgLBMPGMuxerCmdEx->Location = System::Drawing::Point(140, 62);
-            this->fcgLBMPGMuxerCmdEx->Name = L"fcgLBMPGMuxerCmdEx";
-            this->fcgLBMPGMuxerCmdEx->Size = System::Drawing::Size(68, 14);
-            this->fcgLBMPGMuxerCmdEx->TabIndex = 24;
-            this->fcgLBMPGMuxerCmdEx->Text = L"拡張オプション";
-            // 
-            // fcgCBMPGMuxerExt
-            // 
-            this->fcgCBMPGMuxerExt->AutoSize = true;
-            this->fcgCBMPGMuxerExt->Location = System::Drawing::Point(11, 61);
-            this->fcgCBMPGMuxerExt->Name = L"fcgCBMPGMuxerExt";
-            this->fcgCBMPGMuxerExt->Size = System::Drawing::Size(113, 18);
-            this->fcgCBMPGMuxerExt->TabIndex = 20;
-            this->fcgCBMPGMuxerExt->Tag = L"chValue";
-            this->fcgCBMPGMuxerExt->Text = L"外部muxerを使用";
-            this->fcgCBMPGMuxerExt->UseVisualStyleBackColor = true;
             // 
             // fcgtabPageMux
             // 
@@ -4544,6 +4459,148 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             this->fcggroupBoxVppDenoise->TabStop = false;
             this->fcggroupBoxVppDenoise->Text = L"ノイズ除去";
             // 
+            // fcgPNVppDenoiseFFT3D
+            // 
+            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgLBVppDenoiseFFT3DTemporal);
+            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgLBVppDenoiseFFT3DPrecision);
+            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgCXVppDenoiseFFT3DPrecision);
+            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgNUVppDenoiseFFT3DOverlap);
+            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgNUVppDenoiseFFT3DAmount);
+            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgLBVppDenoiseFFT3DOverlap);
+            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgNUVppDenoiseFFT3DSigma);
+            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgCXVppDenoiseFFT3DTemporal);
+            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgLBVppDenoiseFFT3DAmount);
+            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgLBVppDenoiseFFT3DBlockSize);
+            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgCXVppDenoiseFFT3DBlockSize);
+            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgLBVppDenoiseFFT3DSigma);
+            this->fcgPNVppDenoiseFFT3D->Location = System::Drawing::Point(3, 42);
+            this->fcgPNVppDenoiseFFT3D->Name = L"fcgPNVppDenoiseFFT3D";
+            this->fcgPNVppDenoiseFFT3D->Size = System::Drawing::Size(310, 92);
+            this->fcgPNVppDenoiseFFT3D->TabIndex = 73;
+            // 
+            // fcgLBVppDenoiseFFT3DTemporal
+            // 
+            this->fcgLBVppDenoiseFFT3DTemporal->AutoSize = true;
+            this->fcgLBVppDenoiseFFT3DTemporal->Location = System::Drawing::Point(7, 68);
+            this->fcgLBVppDenoiseFFT3DTemporal->Name = L"fcgLBVppDenoiseFFT3DTemporal";
+            this->fcgLBVppDenoiseFFT3DTemporal->Size = System::Drawing::Size(56, 14);
+            this->fcgLBVppDenoiseFFT3DTemporal->TabIndex = 27;
+            this->fcgLBVppDenoiseFFT3DTemporal->Text = L"temporal";
+            // 
+            // fcgLBVppDenoiseFFT3DPrecision
+            // 
+            this->fcgLBVppDenoiseFFT3DPrecision->AutoSize = true;
+            this->fcgLBVppDenoiseFFT3DPrecision->Location = System::Drawing::Point(170, 68);
+            this->fcgLBVppDenoiseFFT3DPrecision->Name = L"fcgLBVppDenoiseFFT3DPrecision";
+            this->fcgLBVppDenoiseFFT3DPrecision->Size = System::Drawing::Size(31, 14);
+            this->fcgLBVppDenoiseFFT3DPrecision->TabIndex = 26;
+            this->fcgLBVppDenoiseFFT3DPrecision->Text = L"prec";
+            // 
+            // fcgCXVppDenoiseFFT3DPrecision
+            // 
+            this->fcgCXVppDenoiseFFT3DPrecision->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXVppDenoiseFFT3DPrecision->FormattingEnabled = true;
+            this->fcgCXVppDenoiseFFT3DPrecision->Location = System::Drawing::Point(231, 64);
+            this->fcgCXVppDenoiseFFT3DPrecision->Name = L"fcgCXVppDenoiseFFT3DPrecision";
+            this->fcgCXVppDenoiseFFT3DPrecision->Size = System::Drawing::Size(72, 22);
+            this->fcgCXVppDenoiseFFT3DPrecision->TabIndex = 25;
+            this->fcgCXVppDenoiseFFT3DPrecision->Tag = L"reCmd";
+            // 
+            // fcgNUVppDenoiseFFT3DOverlap
+            // 
+            this->fcgNUVppDenoiseFFT3DOverlap->DecimalPlaces = 2;
+            this->fcgNUVppDenoiseFFT3DOverlap->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 65536 });
+            this->fcgNUVppDenoiseFFT3DOverlap->Location = System::Drawing::Point(231, 37);
+            this->fcgNUVppDenoiseFFT3DOverlap->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 8, 0, 0, 65536 });
+            this->fcgNUVppDenoiseFFT3DOverlap->Minimum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 2, 0, 0, 65536 });
+            this->fcgNUVppDenoiseFFT3DOverlap->Name = L"fcgNUVppDenoiseFFT3DOverlap";
+            this->fcgNUVppDenoiseFFT3DOverlap->Size = System::Drawing::Size(72, 21);
+            this->fcgNUVppDenoiseFFT3DOverlap->TabIndex = 24;
+            this->fcgNUVppDenoiseFFT3DOverlap->Tag = L"reCmd";
+            this->fcgNUVppDenoiseFFT3DOverlap->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            this->fcgNUVppDenoiseFFT3DOverlap->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 5, 0, 0, 65536 });
+            // 
+            // fcgNUVppDenoiseFFT3DAmount
+            // 
+            this->fcgNUVppDenoiseFFT3DAmount->DecimalPlaces = 3;
+            this->fcgNUVppDenoiseFFT3DAmount->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 196608 });
+            this->fcgNUVppDenoiseFFT3DAmount->Location = System::Drawing::Point(231, 10);
+            this->fcgNUVppDenoiseFFT3DAmount->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 0 });
+            this->fcgNUVppDenoiseFFT3DAmount->Name = L"fcgNUVppDenoiseFFT3DAmount";
+            this->fcgNUVppDenoiseFFT3DAmount->Size = System::Drawing::Size(72, 21);
+            this->fcgNUVppDenoiseFFT3DAmount->TabIndex = 23;
+            this->fcgNUVppDenoiseFFT3DAmount->Tag = L"reCmd";
+            this->fcgNUVppDenoiseFFT3DAmount->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            this->fcgNUVppDenoiseFFT3DAmount->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 196608 });
+            // 
+            // fcgLBVppDenoiseFFT3DOverlap
+            // 
+            this->fcgLBVppDenoiseFFT3DOverlap->AutoSize = true;
+            this->fcgLBVppDenoiseFFT3DOverlap->Location = System::Drawing::Point(170, 40);
+            this->fcgLBVppDenoiseFFT3DOverlap->Name = L"fcgLBVppDenoiseFFT3DOverlap";
+            this->fcgLBVppDenoiseFFT3DOverlap->Size = System::Drawing::Size(47, 14);
+            this->fcgLBVppDenoiseFFT3DOverlap->TabIndex = 22;
+            this->fcgLBVppDenoiseFFT3DOverlap->Text = L"overlap";
+            // 
+            // fcgNUVppDenoiseFFT3DSigma
+            // 
+            this->fcgNUVppDenoiseFFT3DSigma->DecimalPlaces = 2;
+            this->fcgNUVppDenoiseFFT3DSigma->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 5, 0, 0, 65536 });
+            this->fcgNUVppDenoiseFFT3DSigma->Location = System::Drawing::Point(74, 10);
+            this->fcgNUVppDenoiseFFT3DSigma->Name = L"fcgNUVppDenoiseFFT3DSigma";
+            this->fcgNUVppDenoiseFFT3DSigma->Size = System::Drawing::Size(72, 21);
+            this->fcgNUVppDenoiseFFT3DSigma->TabIndex = 21;
+            this->fcgNUVppDenoiseFFT3DSigma->Tag = L"reCmd";
+            this->fcgNUVppDenoiseFFT3DSigma->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
+            this->fcgNUVppDenoiseFFT3DSigma->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 0 });
+            // 
+            // fcgCXVppDenoiseFFT3DTemporal
+            // 
+            this->fcgCXVppDenoiseFFT3DTemporal->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXVppDenoiseFFT3DTemporal->FormattingEnabled = true;
+            this->fcgCXVppDenoiseFFT3DTemporal->Location = System::Drawing::Point(74, 64);
+            this->fcgCXVppDenoiseFFT3DTemporal->Name = L"fcgCXVppDenoiseFFT3DTemporal";
+            this->fcgCXVppDenoiseFFT3DTemporal->Size = System::Drawing::Size(72, 22);
+            this->fcgCXVppDenoiseFFT3DTemporal->TabIndex = 20;
+            this->fcgCXVppDenoiseFFT3DTemporal->Tag = L"reCmd";
+            // 
+            // fcgLBVppDenoiseFFT3DAmount
+            // 
+            this->fcgLBVppDenoiseFFT3DAmount->AutoSize = true;
+            this->fcgLBVppDenoiseFFT3DAmount->Location = System::Drawing::Point(170, 13);
+            this->fcgLBVppDenoiseFFT3DAmount->Name = L"fcgLBVppDenoiseFFT3DAmount";
+            this->fcgLBVppDenoiseFFT3DAmount->Size = System::Drawing::Size(49, 14);
+            this->fcgLBVppDenoiseFFT3DAmount->TabIndex = 19;
+            this->fcgLBVppDenoiseFFT3DAmount->Text = L"amount";
+            // 
+            // fcgLBVppDenoiseFFT3DBlockSize
+            // 
+            this->fcgLBVppDenoiseFFT3DBlockSize->AutoSize = true;
+            this->fcgLBVppDenoiseFFT3DBlockSize->Location = System::Drawing::Point(7, 40);
+            this->fcgLBVppDenoiseFFT3DBlockSize->Name = L"fcgLBVppDenoiseFFT3DBlockSize";
+            this->fcgLBVppDenoiseFFT3DBlockSize->Size = System::Drawing::Size(36, 14);
+            this->fcgLBVppDenoiseFFT3DBlockSize->TabIndex = 17;
+            this->fcgLBVppDenoiseFFT3DBlockSize->Text = L"block";
+            // 
+            // fcgCXVppDenoiseFFT3DBlockSize
+            // 
+            this->fcgCXVppDenoiseFFT3DBlockSize->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
+            this->fcgCXVppDenoiseFFT3DBlockSize->FormattingEnabled = true;
+            this->fcgCXVppDenoiseFFT3DBlockSize->Location = System::Drawing::Point(74, 37);
+            this->fcgCXVppDenoiseFFT3DBlockSize->Name = L"fcgCXVppDenoiseFFT3DBlockSize";
+            this->fcgCXVppDenoiseFFT3DBlockSize->Size = System::Drawing::Size(72, 22);
+            this->fcgCXVppDenoiseFFT3DBlockSize->TabIndex = 16;
+            this->fcgCXVppDenoiseFFT3DBlockSize->Tag = L"reCmd";
+            // 
+            // fcgLBVppDenoiseFFT3DSigma
+            // 
+            this->fcgLBVppDenoiseFFT3DSigma->AutoSize = true;
+            this->fcgLBVppDenoiseFFT3DSigma->Location = System::Drawing::Point(7, 13);
+            this->fcgLBVppDenoiseFFT3DSigma->Name = L"fcgLBVppDenoiseFFT3DSigma";
+            this->fcgLBVppDenoiseFFT3DSigma->Size = System::Drawing::Size(39, 14);
+            this->fcgLBVppDenoiseFFT3DSigma->TabIndex = 2;
+            this->fcgLBVppDenoiseFFT3DSigma->Text = L"sigma";
+            // 
             // fcgPNVppDenoiseNLMeans
             // 
             this->fcgPNVppDenoiseNLMeans->Controls->Add(this->fcgNUVppDenoiseNLMeansH);
@@ -6506,148 +6563,6 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             this->fcgPNHideToolStripBorder->TabIndex = 52;
             this->fcgPNHideToolStripBorder->Visible = false;
             // 
-            // fcgPNVppDenoiseFFT3D
-            // 
-            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgLBVppDenoiseFFT3DTemporal);
-            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgLBVppDenoiseFFT3DPrecision);
-            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgCXVppDenoiseFFT3DPrecision);
-            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgNUVppDenoiseFFT3DOverlap);
-            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgNUVppDenoiseFFT3DAmount);
-            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgLBVppDenoiseFFT3DOverlap);
-            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgNUVppDenoiseFFT3DSigma);
-            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgCXVppDenoiseFFT3DTemporal);
-            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgLBVppDenoiseFFT3DAmount);
-            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgLBVppDenoiseFFT3DBlockSize);
-            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgCXVppDenoiseFFT3DBlockSize);
-            this->fcgPNVppDenoiseFFT3D->Controls->Add(this->fcgLBVppDenoiseFFT3DSigma);
-            this->fcgPNVppDenoiseFFT3D->Location = System::Drawing::Point(3, 42);
-            this->fcgPNVppDenoiseFFT3D->Name = L"fcgPNVppDenoiseFFT3D";
-            this->fcgPNVppDenoiseFFT3D->Size = System::Drawing::Size(310, 92);
-            this->fcgPNVppDenoiseFFT3D->TabIndex = 73;
-            // 
-            // fcgLBVppDenoiseFFT3DTemporal
-            // 
-            this->fcgLBVppDenoiseFFT3DTemporal->AutoSize = true;
-            this->fcgLBVppDenoiseFFT3DTemporal->Location = System::Drawing::Point(7, 68);
-            this->fcgLBVppDenoiseFFT3DTemporal->Name = L"fcgLBVppDenoiseFFT3DTemporal";
-            this->fcgLBVppDenoiseFFT3DTemporal->Size = System::Drawing::Size(56, 14);
-            this->fcgLBVppDenoiseFFT3DTemporal->TabIndex = 27;
-            this->fcgLBVppDenoiseFFT3DTemporal->Text = L"temporal";
-            // 
-            // fcgLBVppDenoiseFFT3DPrecision
-            // 
-            this->fcgLBVppDenoiseFFT3DPrecision->AutoSize = true;
-            this->fcgLBVppDenoiseFFT3DPrecision->Location = System::Drawing::Point(170, 68);
-            this->fcgLBVppDenoiseFFT3DPrecision->Name = L"fcgLBVppDenoiseFFT3DPrecision";
-            this->fcgLBVppDenoiseFFT3DPrecision->Size = System::Drawing::Size(31, 14);
-            this->fcgLBVppDenoiseFFT3DPrecision->TabIndex = 26;
-            this->fcgLBVppDenoiseFFT3DPrecision->Text = L"prec";
-            // 
-            // fcgCXVppDenoiseFFT3DPrecision
-            // 
-            this->fcgCXVppDenoiseFFT3DPrecision->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXVppDenoiseFFT3DPrecision->FormattingEnabled = true;
-            this->fcgCXVppDenoiseFFT3DPrecision->Location = System::Drawing::Point(231, 64);
-            this->fcgCXVppDenoiseFFT3DPrecision->Name = L"fcgCXVppDenoiseFFT3DPrecision";
-            this->fcgCXVppDenoiseFFT3DPrecision->Size = System::Drawing::Size(72, 22);
-            this->fcgCXVppDenoiseFFT3DPrecision->TabIndex = 25;
-            this->fcgCXVppDenoiseFFT3DPrecision->Tag = L"reCmd";
-            // 
-            // fcgNUVppDenoiseFFT3DOverlap
-            // 
-            this->fcgNUVppDenoiseFFT3DOverlap->DecimalPlaces = 2;
-            this->fcgNUVppDenoiseFFT3DOverlap->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 65536 });
-            this->fcgNUVppDenoiseFFT3DOverlap->Location = System::Drawing::Point(231, 37);
-            this->fcgNUVppDenoiseFFT3DOverlap->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 8, 0, 0, 65536 });
-            this->fcgNUVppDenoiseFFT3DOverlap->Minimum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 2, 0, 0, 65536 });
-            this->fcgNUVppDenoiseFFT3DOverlap->Name = L"fcgNUVppDenoiseFFT3DOverlap";
-            this->fcgNUVppDenoiseFFT3DOverlap->Size = System::Drawing::Size(72, 21);
-            this->fcgNUVppDenoiseFFT3DOverlap->TabIndex = 24;
-            this->fcgNUVppDenoiseFFT3DOverlap->Tag = L"reCmd";
-            this->fcgNUVppDenoiseFFT3DOverlap->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            this->fcgNUVppDenoiseFFT3DOverlap->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 5, 0, 0, 65536 });
-            // 
-            // fcgNUVppDenoiseFFT3DAmount
-            // 
-            this->fcgNUVppDenoiseFFT3DAmount->DecimalPlaces = 3;
-            this->fcgNUVppDenoiseFFT3DAmount->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 196608 });
-            this->fcgNUVppDenoiseFFT3DAmount->Location = System::Drawing::Point(231, 10);
-            this->fcgNUVppDenoiseFFT3DAmount->Maximum = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 0 });
-            this->fcgNUVppDenoiseFFT3DAmount->Name = L"fcgNUVppDenoiseFFT3DAmount";
-            this->fcgNUVppDenoiseFFT3DAmount->Size = System::Drawing::Size(72, 21);
-            this->fcgNUVppDenoiseFFT3DAmount->TabIndex = 23;
-            this->fcgNUVppDenoiseFFT3DAmount->Tag = L"reCmd";
-            this->fcgNUVppDenoiseFFT3DAmount->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            this->fcgNUVppDenoiseFFT3DAmount->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 196608 });
-            // 
-            // fcgLBVppDenoiseFFT3DOverlap
-            // 
-            this->fcgLBVppDenoiseFFT3DOverlap->AutoSize = true;
-            this->fcgLBVppDenoiseFFT3DOverlap->Location = System::Drawing::Point(170, 40);
-            this->fcgLBVppDenoiseFFT3DOverlap->Name = L"fcgLBVppDenoiseFFT3DOverlap";
-            this->fcgLBVppDenoiseFFT3DOverlap->Size = System::Drawing::Size(47, 14);
-            this->fcgLBVppDenoiseFFT3DOverlap->TabIndex = 22;
-            this->fcgLBVppDenoiseFFT3DOverlap->Text = L"overlap";
-            // 
-            // fcgNUVppDenoiseFFT3DSigma
-            // 
-            this->fcgNUVppDenoiseFFT3DSigma->DecimalPlaces = 2;
-            this->fcgNUVppDenoiseFFT3DSigma->Increment = System::Decimal(gcnew cli::array< System::Int32 >(4) { 5, 0, 0, 65536 });
-            this->fcgNUVppDenoiseFFT3DSigma->Location = System::Drawing::Point(74, 10);
-            this->fcgNUVppDenoiseFFT3DSigma->Name = L"fcgNUVppDenoiseFFT3DSigma";
-            this->fcgNUVppDenoiseFFT3DSigma->Size = System::Drawing::Size(72, 21);
-            this->fcgNUVppDenoiseFFT3DSigma->TabIndex = 21;
-            this->fcgNUVppDenoiseFFT3DSigma->Tag = L"reCmd";
-            this->fcgNUVppDenoiseFFT3DSigma->TextAlign = System::Windows::Forms::HorizontalAlignment::Right;
-            this->fcgNUVppDenoiseFFT3DSigma->Value = System::Decimal(gcnew cli::array< System::Int32 >(4) { 1, 0, 0, 0 });
-            // 
-            // fcgCXVppDenoiseFFT3DTemporal
-            // 
-            this->fcgCXVppDenoiseFFT3DTemporal->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXVppDenoiseFFT3DTemporal->FormattingEnabled = true;
-            this->fcgCXVppDenoiseFFT3DTemporal->Location = System::Drawing::Point(74, 64);
-            this->fcgCXVppDenoiseFFT3DTemporal->Name = L"fcgCXVppDenoiseFFT3DTemporal";
-            this->fcgCXVppDenoiseFFT3DTemporal->Size = System::Drawing::Size(72, 22);
-            this->fcgCXVppDenoiseFFT3DTemporal->TabIndex = 20;
-            this->fcgCXVppDenoiseFFT3DTemporal->Tag = L"reCmd";
-            // 
-            // fcgLBVppDenoiseFFT3DAmount
-            // 
-            this->fcgLBVppDenoiseFFT3DAmount->AutoSize = true;
-            this->fcgLBVppDenoiseFFT3DAmount->Location = System::Drawing::Point(170, 13);
-            this->fcgLBVppDenoiseFFT3DAmount->Name = L"fcgLBVppDenoiseFFT3DAmount";
-            this->fcgLBVppDenoiseFFT3DAmount->Size = System::Drawing::Size(49, 14);
-            this->fcgLBVppDenoiseFFT3DAmount->TabIndex = 19;
-            this->fcgLBVppDenoiseFFT3DAmount->Text = L"amount";
-            // 
-            // fcgLBVppDenoiseFFT3DBlockSize
-            // 
-            this->fcgLBVppDenoiseFFT3DBlockSize->AutoSize = true;
-            this->fcgLBVppDenoiseFFT3DBlockSize->Location = System::Drawing::Point(7, 40);
-            this->fcgLBVppDenoiseFFT3DBlockSize->Name = L"fcgLBVppDenoiseFFT3DBlockSize";
-            this->fcgLBVppDenoiseFFT3DBlockSize->Size = System::Drawing::Size(36, 14);
-            this->fcgLBVppDenoiseFFT3DBlockSize->TabIndex = 17;
-            this->fcgLBVppDenoiseFFT3DBlockSize->Text = L"block";
-            // 
-            // fcgCXVppDenoiseFFT3DBlockSize
-            // 
-            this->fcgCXVppDenoiseFFT3DBlockSize->DropDownStyle = System::Windows::Forms::ComboBoxStyle::DropDownList;
-            this->fcgCXVppDenoiseFFT3DBlockSize->FormattingEnabled = true;
-            this->fcgCXVppDenoiseFFT3DBlockSize->Location = System::Drawing::Point(74, 37);
-            this->fcgCXVppDenoiseFFT3DBlockSize->Name = L"fcgCXVppDenoiseFFT3DBlockSize";
-            this->fcgCXVppDenoiseFFT3DBlockSize->Size = System::Drawing::Size(72, 22);
-            this->fcgCXVppDenoiseFFT3DBlockSize->TabIndex = 16;
-            this->fcgCXVppDenoiseFFT3DBlockSize->Tag = L"reCmd";
-            // 
-            // fcgLBVppDenoiseFFT3DSigma
-            // 
-            this->fcgLBVppDenoiseFFT3DSigma->AutoSize = true;
-            this->fcgLBVppDenoiseFFT3DSigma->Location = System::Drawing::Point(7, 13);
-            this->fcgLBVppDenoiseFFT3DSigma->Name = L"fcgLBVppDenoiseFFT3DSigma";
-            this->fcgLBVppDenoiseFFT3DSigma->Size = System::Drawing::Size(39, 14);
-            this->fcgLBVppDenoiseFFT3DSigma->TabIndex = 2;
-            this->fcgLBVppDenoiseFFT3DSigma->Text = L"sigma";
-            // 
             // frmConfig
             // 
             this->AutoScaleDimensions = System::Drawing::SizeF(96, 96);
@@ -6680,8 +6595,6 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             this->fcgtabPageMP4->PerformLayout();
             this->fcgtabPageMKV->ResumeLayout(false);
             this->fcgtabPageMKV->PerformLayout();
-            this->fcgtabPageMPG->ResumeLayout(false);
-            this->fcgtabPageMPG->PerformLayout();
             this->fcgtabPageMux->ResumeLayout(false);
             this->fcgtabPageMux->PerformLayout();
             this->fcgtabPageBat->ResumeLayout(false);
@@ -6763,6 +6676,11 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppUnsharpWeight))->EndInit();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppUnsharpRadius))->EndInit();
             this->fcggroupBoxVppDenoise->ResumeLayout(false);
+            this->fcgPNVppDenoiseFFT3D->ResumeLayout(false);
+            this->fcgPNVppDenoiseFFT3D->PerformLayout();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseFFT3DOverlap))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseFFT3DAmount))->EndInit();
+            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseFFT3DSigma))->EndInit();
             this->fcgPNVppDenoiseNLMeans->ResumeLayout(false);
             this->fcgPNVppDenoiseNLMeans->PerformLayout();
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseNLMeansH))->EndInit();
@@ -6842,11 +6760,6 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUAudioBitrateInternal))->EndInit();
             this->fcgtabPageAudioOther->ResumeLayout(false);
             this->fcgtabPageAudioOther->PerformLayout();
-            this->fcgPNVppDenoiseFFT3D->ResumeLayout(false);
-            this->fcgPNVppDenoiseFFT3D->PerformLayout();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseFFT3DOverlap))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseFFT3DAmount))->EndInit();
-            (cli::safe_cast<System::ComponentModel::ISupportInitialize^>(this->fcgNUVppDenoiseFFT3DSigma))->EndInit();
             this->ResumeLayout(false);
             this->PerformLayout();
 
@@ -6865,9 +6778,6 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
         ToolStripMenuItem^ CheckedStgMenuItem;
         CONF_GUIEX *cnf_stgSelected;
         String^ lastQualityStr;
-#ifdef HIDE_MPEG2
-        TabPage^ tabPageMpgMux;
-#endif
         VidEncInfo encInfo;
         Task<VidEncInfo>^ taskEncInfo;
         CancellationTokenSource^ taskEncInfoCancell;
@@ -7163,7 +7073,6 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             fcgTXTC2MP4Path_Enter(nullptr, nullptr);
             fcgTXMP4RawPath_Enter(nullptr, nullptr);
             fcgTXMKVMuxerPath_Enter(nullptr, nullptr);
-            fcgTXMPGMuxerPath_Enter(nullptr, nullptr);
         }
     private:
         System::Void frmConfig::ExeTXPathLeave() {
@@ -7173,7 +7082,6 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             fcgTXTC2MP4Path_Leave(nullptr, nullptr);
             fcgTXMP4RawPath_Leave(nullptr, nullptr);
             fcgTXMKVMuxerPath_Leave(nullptr, nullptr);
-            fcgTXMPGMuxerPath_Leave(nullptr, nullptr);
         }
     private:
         System::Void fcgBTVideoEncoderPath_Click(System::Object^  sender, System::EventArgs^  e) {
@@ -7252,18 +7160,6 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             }
         }
     private:
-        System::Void fcgTXMPGMuxerPath_Enter(System::Object^  sender, System::EventArgs^  e) {
-            if (fcgTXMPGMuxerPath->Text == LOAD_CLI_STRING(AUO_CONFIG_CX_USE_DEFAULT_EXE_PATH)) {
-                fcgTXMPGMuxerPath->Text = L"";
-            }
-        }
-    private:
-        System::Void fcgTXMPGMuxerPath_Leave(System::Object^  sender, System::EventArgs^  e) {
-            if (fcgTXMPGMuxerPath->Text->Length == 0) {
-                fcgTXMPGMuxerPath->Text = LOAD_CLI_STRING(AUO_CONFIG_CX_USE_DEFAULT_EXE_PATH);
-            }
-        }
-    private:
         System::Void fcgBTMP4MuxerPath_Click(System::Object^  sender, System::EventArgs^  e) {
             openExeFile(fcgTXMP4MuxerPath, LocalStg.MP4MuxerExeName);
         }
@@ -7283,10 +7179,6 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
     private:
         System::Void fcgBTMKVMuxerPath_Click(System::Object^  sender, System::EventArgs^  e) {
             openExeFile(fcgTXMKVMuxerPath, LocalStg.MKVMuxerExeName);
-        }
-    private:
-        System::Void fcgBTMPGMuxerPath_Click(System::Object^  sender, System::EventArgs^  e) {
-            openExeFile(fcgTXMPGMuxerPath, LocalStg.MPGMuxerExeName);
         }
     private:
         System::Void openTempFolder(TextBox^ TX) {
@@ -7525,17 +7417,6 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
             }
         }
     private:
-        System::Void fcgTXMPGMuxerPath_TextChanged(System::Object^  sender, System::EventArgs^  e) {
-            if (fcgTXMPGMuxerPath->Text == LOAD_CLI_STRING(AUO_CONFIG_CX_USE_DEFAULT_EXE_PATH)) {
-                LocalStg.MPGMuxerPath = L"";
-                fcgTXMPGMuxerPath->ForeColor = getTextBoxForeColor(themeMode, dwStgReader, DarkenWindowState::Disabled);
-            } else {
-                fcgTXMPGMuxerPath->ForeColor = getTextBoxForeColor(themeMode, dwStgReader, DarkenWindowState::Normal);
-                LocalStg.MPGMuxerPath = fcgTXMPGMuxerPath->Text;
-                fcgBTMPGMuxerPath->ContextMenuStrip = (File::Exists(fcgTXMPGMuxerPath->Text)) ? fcgCSExeFiles : nullptr;
-            }
-        }
-    private:
         System::Void fcgTXMP4BoxTempDir_TextChanged(System::Object^  sender, System::EventArgs^  e) {
             LocalStg.CustomMP4TmpDir = fcgTXMP4BoxTempDir->Text;
         }
@@ -7577,7 +7458,6 @@ private: System::Windows::Forms::Label^  fcgLBVppDenoiseFFT3DSigma;
                 { fcgBTTC2MP4Path->Name,         fcgTXTC2MP4Path->Text,         sys_dat->exstg->s_mux[MUXER_TC2MP4].help_cmd },
                 { fcgBTMP4RawPath->Name,         fcgTXMP4RawPath->Text,         sys_dat->exstg->s_mux[MUXER_MP4_RAW].help_cmd },
                 { fcgBTMKVMuxerPath->Name,       fcgTXMKVMuxerPath->Text,       sys_dat->exstg->s_mux[MUXER_MKV].help_cmd },
-                { fcgBTMPGMuxerPath->Name,       fcgTXMPGMuxerPath->Text,       sys_dat->exstg->s_mux[MUXER_MPG].help_cmd }
             };
             for (int i = 0; i < ControlList->Length; i++) {
                 if (NULL == String::Compare(CS->SourceControl->Name, ControlList[i].Name)) {
