@@ -817,7 +817,7 @@ void free_enc_prm(PRM_ENC *pe) {
     }
 }
 
-void set_enc_prm(CONF_GUIEX *conf, PRM_ENC *pe, OUTPUT_INFO *oip, const SYSTEM_DATA *sys_dat) {
+void init_enc_prm(const CONF_GUIEX *conf, PRM_ENC *pe, OUTPUT_INFO *oip, const SYSTEM_DATA *sys_dat) {
     //初期化
     ZeroMemory(pe, sizeof(PRM_ENC));
     //設定更新
@@ -825,6 +825,7 @@ void set_enc_prm(CONF_GUIEX *conf, PRM_ENC *pe, OUTPUT_INFO *oip, const SYSTEM_D
     sys_dat->exstg->load_append();
     sys_dat->exstg->load_fn_replace();
 
+    strcpy_s(pe->save_file_name, oip->savefile);
     pe->video_out_type = check_video_ouput(conf, oip);
 
     // 不明な拡張子だった場合、デフォルトの出力拡張子を付与する
@@ -842,7 +843,10 @@ void set_enc_prm(CONF_GUIEX *conf, PRM_ENC *pe, OUTPUT_INFO *oip, const SYSTEM_D
         // 再度チェック
         pe->video_out_type = check_video_ouput(conf, oip);
     }
+}
 
+void set_enc_prm(CONF_GUIEX *conf, PRM_ENC *pe, const OUTPUT_INFO *oip, const SYSTEM_DATA *sys_dat) {
+    pe->video_out_type = check_video_ouput(conf, oip);
     pe->drop_count = 0;
     memcpy(&pe->append, &sys_dat->exstg->s_append, sizeof(FILE_APPENDIX));
     ZeroMemory(&pe->append.aud, sizeof(pe->append.aud));
