@@ -187,6 +187,7 @@
   - [--vpp-tweak \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-tweak-param1value1param2value2)
   - [--vpp-deband \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-deband-param1value1param2value2)
   - [--vpp-pad \<int\>,\<int\>,\<int\>,\<int\>](#--vpp-pad-intintintint)
+  - [--vpp-frc \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-frc-param1value1param2value2)
   - [--vpp-overlay \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-overlay-param1value1param2value2)
   - [--vpp-perf-monitor](#--vpp-perf-monitor)
 - [Other Options](#other-options)
@@ -2321,6 +2322,30 @@ Apply color adjustments using curves.
 
 ### --vpp-pad &lt;int&gt;,&lt;int&gt;,&lt;int&gt;,&lt;int&gt;
 add padding to left,top,right,bottom (in pixels)
+
+### --vpp-frc [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+Frame rate conversion filter.
+
+- **Parameters**
+  - profile=&lt;string&gt;  
+    Set the profile for frame rate conversion.
+    - low
+    - high (default)
+    - super
+  
+  - search=&lt;string&gt;  
+    - native (default)
+    - performance
+  
+  <!-- 
+  - blend=&lt;bool&gt; (default: false)  
+    If true, two frames will be blended together when low confidence to do the interpolation.
+    When false, frame will be duplicated when low confidence to do the interpolation.
+  -->
+- examples
+  ```
+  --vpp-frc profile=super,search=native,blend=false
+  ```
 
 ### --vpp-overlay [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 Overlay image on top of base video.

@@ -2310,6 +2310,30 @@ unsharpフィルタ。輪郭・ディテール強調用のフィルタ。
 ### --vpp-pad &lt;int&gt;,&lt;int&gt;,&lt;int&gt;,&lt;int&gt;
 指定のピクセル数(偶数)分のパディングを行う。左、上、右、下の順にピクセル数で指定する。
 
+### --vpp-frc [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+Frame rate conversion filter.
+
+- **パラメータ**
+  - profile=&lt;string&gt;  
+    - low
+    - high (default)
+    - super
+  
+  - search=&lt;string&gt;  
+    - native (default)
+    - performance
+  <!-- 
+  - blend=&lt;bool&gt; (default: false)  
+    補間の信頼度が低い場合の処理方法。
+    有効 ... 2つのフレームをブレンドする。
+    無効 ... フレームを単純に複製する。
+    -->
+
+- 使用例
+  ```
+  --vpp-frc profile=super,search=native,blend=false
+  ```
+
 ### --vpp-overlay [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 指定の画像を動画上に焼き込む。
 

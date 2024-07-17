@@ -40,6 +40,7 @@ RGY_DISABLE_WARNING_STR("-Wclass-memaccess")
 #include "PreProcessing.h"
 #include "VQEnhancer.h"
 #include "VideoConverter.h"
+#include "FRC.h"
 RGY_DISABLE_WARNING_POP
 #include "rgy_prm.h"
 
@@ -66,6 +67,10 @@ static const int VCE_FILTER_PP_STRENGTH_DEFAULT = 4;
 static const int VCE_FILTER_PP_SENSITIVITY_DEFAULT = 4;
 static const bool VCE_FILTER_PP_ADAPT_FILTER_DEFAULT = false;
 static const int VCE_FILTER_VQENHANCER_RADIUS_DEFAULT = 2;
+
+static const AMF_FRC_PROFILE_TYPE VCE_FILTER_FRC_PROFILE_DEFAULT = FRC_PROFILE_HIGH;
+static const AMF_FRC_MV_SEARCH_MODE_TYPE VCE_FILTER_FRC_MV_SEARCH_DEFAULT = FRC_MV_SEARCH_NATIVE;
+static const bool VCE_FILTER_FRC_BLEND_DEFAULT = true;
 
 static const double VCE_FILTER_HQ_SCALER_SHARPNESS_DEFAULT = 0.5;
 
@@ -343,6 +348,21 @@ const CX_DESC list_vce_quality_preset_av1[] = {
     { NULL, 0 }
 };
 
+// FRCのAMF_FRC_PROFILE_TYPEに関するlistを作成
+const CX_DESC list_frc_profile[] = {
+    { _T("low"),   FRC_PROFILE_LOW },
+    { _T("high"),  FRC_PROFILE_HIGH },
+    { _T("super"), FRC_PROFILE_SUPER },
+    { NULL, 0 }
+};
+
+//FRCのAMF_FRC_MV_SEARCH_MODE_TYPEに関するlistを作成
+const CX_DESC list_frc_mv_search[] = {
+    { _T("native"), FRC_MV_SEARCH_NATIVE },
+    { _T("performance"), FRC_MV_SEARCH_PERFORMANCE },
+    { NULL, 0 }
+};
+
 static const CX_DESC *get_quality_preset(RGY_CODEC codec) {
     switch (codec) {
     case RGY_CODEC_H264: return list_vce_quality_preset_h264;
@@ -553,10 +573,26 @@ struct VppAMFVQEnhancer {
     tstring print() const;
 };
 
+// FRC用のパラメータの構造体を定義
+// 構造体のパラメータの型は、bool型とAMF_FRC_PROFILE_TYPEとAMF_FRC_MV_SEARCH_MODE_TYPE
+// VppAMFVQEnhancerのように、比較演算子とprint関数も定義
+struct VppAMFFRC {
+    bool enable;
+    AMF_FRC_PROFILE_TYPE profile;
+    AMF_FRC_MV_SEARCH_MODE_TYPE mvSearchMode;
+    bool enableBlend;
+
+    VppAMFFRC();
+    bool operator==(const VppAMFFRC& x) const;
+    bool operator!=(const VppAMFFRC& x) const;
+    tstring print() const;
+};
+
 struct VCEFilterParam {
     VppAMFHQScaler scaler;
     VppAMFPreProcessing pp;
     VppAMFVQEnhancer enhancer;
+    VppAMFFRC frc;
 
     VCEFilterParam();
     bool operator==(const VCEFilterParam& x) const;

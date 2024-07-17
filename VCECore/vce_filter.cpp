@@ -271,3 +271,54 @@ RGY_ERR AMFFilterVQEnhancer::init(amf::AMFFactory *factory, amf::AMFTrace *trace
     m_param = param;
     return RGY_ERR_NONE;
 }
+
+tstring AMFFilterParamFRC::print() const {
+    return frc.print();
+}
+
+const TCHAR *AMFFilterFRC::FRC_FILTER_NAME = _T("FRC");
+
+AMFFilterFRC::AMFFilterFRC(amf::AMFContextPtr context, shared_ptr<RGYLog>& log) :
+    AMFFilter(context, log) {
+    m_name = FRC_FILTER_NAME;
+}
+AMFFilterFRC::~AMFFilterFRC() {};
+
+RGY_ERR AMFFilterFRC::init(amf::AMFFactory *factory, amf::AMFTrace *trace, std::shared_ptr<RGYFilterParam> param) {
+    auto prm = std::dynamic_pointer_cast<AMFFilterParamFRC>(param);
+    if (!prm) {
+        PrintMes(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
+        return RGY_ERR_INVALID_PARAM;
+    }
+    auto res = factory->CreateComponent(m_context, AMFFRC, &m_filter);
+    if (res != AMF_OK) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to create %s: %s\n"), m_name.c_str(), AMFRetString(res));
+        return err_to_rgy(res);
+    }
+    PrintMes(RGY_LOG_DEBUG, _T("created %s.\n"), m_name.c_str());
+
+    const auto formatOut = csp_rgy_to_enc(prm->frameIn.csp);
+    //res = m_filter->SetProperty(AMF_FRC_OUTPUT_SIZE, AMFConstructSize(prm->frameIn.width, prm->frameIn.height));
+    res = m_filter->SetProperty(AMF_FRC_ENGINE_TYPE, FRC_ENGINE_DX11);
+    res = m_filter->SetProperty(AMF_FRC_MODE, FRC_x2_PRESENT);
+    res = m_filter->SetProperty(AMF_FRC_PROFILE, prm->frc.profile);
+    res = m_filter->SetProperty(AMF_FRC_INDICATOR, false);
+    res = m_filter->SetProperty(AMF_FRC_MV_SEARCH_MODE, prm->frc.mvSearchMode);
+    //res = m_filter->SetProperty(AMF_FRC_ENABLE_FALLBACK, prm->frc.enableBlend);
+    PrintMes(RGY_LOG_DEBUG, _T("initialize %s, format out %s, output size %dx%x.\n"), m_name.c_str(),
+        wstring_to_tstring(trace->SurfaceGetFormatName(formatOut)).c_str(),
+        prm->frameIn.width, prm->frameIn.height);
+    if (AMF_OK != (res = m_filter->Init(formatOut, prm->frameIn.width, prm->frameIn.height))) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to init %s with %s %dx%d: %s\n"),
+            m_name.c_str(),
+            wstring_to_tstring(trace->SurfaceGetFormatName(formatOut)).c_str(),
+            prm->frameIn.width, prm->frameIn.height,
+            AMFRetString(res));
+        return err_to_rgy(res);
+    }
+    PrintMes(RGY_LOG_DEBUG, _T("initialized %s.\n"), m_name.c_str());
+    setFilterInfo(prm->print());
+    param->baseFps *= 2;
+    m_param = param;
+    return RGY_ERR_NONE;
+}

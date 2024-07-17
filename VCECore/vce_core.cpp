@@ -1068,6 +1068,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.tweak.enable)      filterPipeline.push_back(VppType::CL_TWEAK);
     if (inputParam->vpp.deband.enable)     filterPipeline.push_back(VppType::CL_DEBAND);
     if (inputParam->vpp.pad.enable)        filterPipeline.push_back(VppType::CL_PAD);
+    if (inputParam->vppamf.frc.enable)     filterPipeline.push_back(VppType::AMF_FRC);
     if (inputParam->vpp.overlay.size() > 0)  filterPipeline.push_back(VppType::CL_OVERLAY);
 
     if (filterPipeline.size() == 0) {
@@ -1174,6 +1175,15 @@ std::tuple<RGY_ERR, std::unique_ptr<AMFFilter>> VCECore::AddFilterAMF(
         filter = std::make_unique<AMFFilterVQEnhancer>(m_dev->context(), m_pLog);
         auto param = std::make_shared<AMFFilterParamVQEnhancer>();
         param->enhancer = inputParam->vppamf.enhancer;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        m_pLastFilterParam = param;
+        } break;
+    case VppType::AMF_FRC: {
+        filter = std::make_unique<AMFFilterFRC>(m_dev->context(), m_pLog);
+        auto param = std::make_shared<AMFFilterParamFRC>();
+        param->frc = inputParam->vppamf.frc;
         param->frameIn = inputFrame;
         param->frameOut = inputFrame;
         param->baseFps = m_encFps;

@@ -172,3 +172,22 @@ public:
     virtual RGY_ERR init(amf::AMFFactory *factory, amf::AMFTrace *trace, std::shared_ptr<RGYFilterParam> param) override;
 protected:
 };
+
+class AMFFilterParamFRC : public RGYFilterParam {
+public:
+    VppAMFFRC frc;
+
+    AMFFilterParamFRC() : frc() {};
+    virtual ~AMFFilterParamFRC() {};
+    virtual tstring print() const override;
+};
+
+class AMFFilterFRC : public AMFFilter {
+public:
+    static const TCHAR *FRC_FILTER_NAME;
+    AMFFilterFRC(amf::AMFContextPtr context, std::shared_ptr<RGYLog>& log);
+    virtual ~AMFFilterFRC();
+
+    virtual RGY_ERR init(amf::AMFFactory *factory, amf::AMFTrace *trace, std::shared_ptr<RGYFilterParam> param) override;
+protected:
+};

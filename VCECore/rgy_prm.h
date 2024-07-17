@@ -106,6 +106,7 @@ enum class VppType : int {
     AMF_PREPROCESS,
     AMF_RESIZE,
     AMF_VQENHANCE,
+    AMF_FRC,
 #endif
     AMF_MAX,
 #if ENCODER_MPP

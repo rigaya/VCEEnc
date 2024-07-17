@@ -95,16 +95,45 @@ tstring VppAMFVQEnhancer::print() const {
         attenuation, fcrRadius);
 }
 
+VppAMFFRC::VppAMFFRC() :
+    enable(false),
+    profile(VCE_FILTER_FRC_PROFILE_DEFAULT),
+    mvSearchMode(VCE_FILTER_FRC_MV_SEARCH_DEFAULT),
+    enableBlend(VCE_FILTER_FRC_BLEND_DEFAULT) {
+};
+
+bool VppAMFFRC::operator==(const VppAMFFRC& x) const {
+    return enable == x.enable
+        && profile == x.profile
+        && mvSearchMode == x.mvSearchMode
+        && enableBlend == x.enableBlend;
+}
+
+bool VppAMFFRC::operator!=(const VppAMFFRC& x) const {
+    return !(*this == x);
+}
+
+tstring VppAMFFRC::print() const {
+    return strsprintf(
+        _T("frc: profile %s, mvSearchMode %s\n"),
+        get_cx_desc(list_frc_profile, profile),
+        get_cx_desc(list_frc_mv_search, mvSearchMode)/*,
+        enableBlend ? _T("on") : _T("off")*/
+    );
+}
+
 VCEFilterParam::VCEFilterParam() :
     scaler(),
     pp(),
-    enhancer() {
+    enhancer(),
+    frc() {
 
 }
 bool VCEFilterParam::operator==(const VCEFilterParam& x) const {
     return scaler == x.scaler
         && pp == x.pp
-        && enhancer == x.enhancer;
+        && enhancer == x.enhancer
+        && frc == x.frc;
 }
 bool VCEFilterParam::operator!=(const VCEFilterParam& x) const {
     return !(*this == x);

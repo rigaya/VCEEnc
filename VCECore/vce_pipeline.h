@@ -1613,10 +1613,38 @@ protected:
     std::unordered_map<int64_t, std::vector<std::shared_ptr<RGYFrameData>>> m_metadatalist;
     std::deque<std::unique_ptr<PipelineTaskOutput>> m_prevInputFrame; //前回投入されたフレーム、完了通知を待ってから解放するため、参照を保持する
     RGYFilterSsim *m_videoMetric;
+
+    struct AMFFRCTmp {
+        bool isFRC;
+        int64_t output;
+        int64_t prevPts;
+        int64_t prevDuration;
+
+        AMFFRCTmp() : isFRC(false), output(0), prevPts(0), prevDuration(0) {};
+
+        void addFrame(int64_t& pts, int64_t& duration) {
+            if (!isFRC) {
+                return;
+            }
+            if ((output++) % 2 == 0) {
+                // オリジナルのフレーム
+                prevPts = pts;
+                prevDuration = duration;
+                duration = duration / 2;
+                return;
+            }
+            if (prevDuration == 0) prevDuration = pts - prevPts;
+            auto interpPts = std::min(prevPts + prevDuration / 2, pts - 1);
+            auto interpDuration = pts - interpPts;
+            pts = interpPts;
+            duration = interpDuration;
+        }
+    } frc;
+
 public:
     PipelineTaskAMFPreProcess(amf::AMFContextPtr context, std::unique_ptr<AMFFilter>& vppfilter, std::shared_ptr<RGYOpenCLContext> cl, int outMaxQueueSize, std::shared_ptr<RGYLog> log) :
         PipelineTask(PipelineTaskType::AMFVPP, context, outMaxQueueSize, log), m_cl(cl), m_vppFilter(vppfilter), m_vppOutFrames(), m_metadatalist(), m_prevInputFrame() {
-
+        frc.isFRC = m_vppFilter->name() == AMFFilterFRC::FRC_FILTER_NAME;
     };
     virtual ~PipelineTaskAMFPreProcess() {
         m_prevInputFrame.clear();
@@ -1669,38 +1697,49 @@ public:
             surfVppIn->clearDataList();
         }
 
+        auto add_surf_to_out_queue = [&](amf::AMFSurfacePtr& surfVppOut) {
+            int64_t pts = 0, duration = 0, inputFrameId = 0;
+            surfVppOut->GetProperty(RGY_PROP_TIMESTAMP, &pts);
+            surfVppOut->GetProperty(RGY_PROP_DURATION, &duration);
+            surfVppOut->GetProperty(RGY_PROP_INPUT_FRAMEID, &inputFrameId);
+
+            frc.addFrame(pts, duration);
+
+            auto surfDecOut = std::make_unique<RGYFrameAMF>(surfVppOut);
+            surfDecOut->clearDataList();
+            surfDecOut->setTimestamp(pts);
+            surfDecOut->setDuration(duration);
+            surfDecOut->setInputFrameId((int)inputFrameId);
+            if (auto it = m_metadatalist.find(pts); it != m_metadatalist.end()) {
+                surfDecOut->setDataList(m_metadatalist[pts]);
+            }
+            m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(m_workSurfs.addSurface(surfDecOut)));
+        };
+
         auto enc_sts = RGY_ERR_NONE;
         auto ar = (drain) ? AMF_INPUT_FULL : AMF_OK;
         for (;;) {
-            {
+            while (enc_sts == RGY_ERR_NONE) {
                 //VPPからの取り出し
                 amf::AMFDataPtr data;
                 const auto ar_out = m_vppFilter->filter()->QueryOutput(&data);
                 if (ar_out == AMF_EOF) {
                     enc_sts = RGY_ERR_MORE_DATA;
                     break;
-                } else if (ar_out == AMF_REPEAT) {
-                    ; //これ重要...ここが欠けると最後の数フレームが欠落する
+                } else if (ar_out == AMF_REPEAT) { //これ重要...ここが欠けると最後の数フレームが欠落する
+                    if (data != nullptr) {
+                        add_surf_to_out_queue(amf::AMFSurfacePtr(data));
+                    }
+                    break;
                 } else if (ar_out != AMF_OK) {
                     enc_sts = err_to_rgy(ar_out);
                     break;
                 } else if (data != nullptr) {
-                    auto surfVppOut = amf::AMFSurfacePtr(data);
-                    int64_t pts = 0, duration = 0, inputFrameId = 0;
-                    surfVppOut->GetProperty(RGY_PROP_TIMESTAMP, &pts);
-                    surfVppOut->GetProperty(RGY_PROP_DURATION, &duration);
-                    surfVppOut->GetProperty(RGY_PROP_INPUT_FRAMEID, &inputFrameId);
-
-                    auto surfDecOut = std::make_unique<RGYFrameAMF>(surfVppOut);
-                    surfDecOut->clearDataList();
-                    surfDecOut->setTimestamp(pts);
-                    surfDecOut->setDuration(duration);
-                    surfDecOut->setInputFrameId(m_vppOutFrames++);
-                    if (auto it = m_metadatalist.find(pts); it != m_metadatalist.end()) {
-                        surfDecOut->setDataList(m_metadatalist[pts]);
-                    }
-                    m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(m_workSurfs.addSurface(surfDecOut)));
+                    add_surf_to_out_queue(amf::AMFSurfacePtr(data));
                 }
+            }
+            if (enc_sts != RGY_ERR_NONE) {
+                break;
             }
 
             if (drain) {

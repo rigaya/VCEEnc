@@ -123,6 +123,16 @@ tstring gen_cmd_help_vppamf() {
         VE_FCR_DEFAULT_ATTENUATION,
         VCE_FILTER_VQENHANCER_RADIUS_DEFAULT
     );
+    str += strsprintf(_T("\n")
+        _T("   --vpp-frc [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("    params\n")
+        _T("      profile=<string> (default: %s, options: low, high, super)\n")
+        _T("      search=<string> (default: %s, options: native, performance)\n")
+        //_T("      blend=<bool> (default: %s)\n")
+        ,
+        get_cx_desc(list_frc_profile, VCE_FILTER_FRC_PROFILE_DEFAULT), get_cx_desc(list_frc_mv_search, VCE_FILTER_FRC_MV_SEARCH_DEFAULT),
+        VCE_FILTER_FRC_BLEND_DEFAULT ? _T("on") : _T("off")
+    );
     return str;
 }
 
@@ -471,6 +481,73 @@ int parse_one_vppamf_option(const TCHAR *option_name, const TCHAR *strInput[], i
         }
         return 0;
     }
+
+    if (IS_OPTION("vpp-frc")) {
+        vpp->frc.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{
+            "profile", "search" /*, "blend"*/};
+
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos + 1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->frc.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("profile")) {
+                    int value = 0;
+                    if (get_list_value(list_frc_profile, param_val.c_str(), &value)) {
+                    vpp->frc.profile = (AMF_FRC_PROFILE_TYPE)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_frc_profile);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("search")) {
+                    int value = 0;
+                    if (get_list_value(list_frc_mv_search, param_val.c_str(), &value)) {
+                        vpp->frc.mvSearchMode = (AMF_FRC_MV_SEARCH_MODE_TYPE)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_frc_mv_search);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("blend")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->frc.enableBlend = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
+
     return -1;
 }
 
@@ -1534,6 +1611,7 @@ tstring gen_cmd(const VCEFilterParam *param, const VCEFilterParam *defaultPrm, b
 #define ADD_NUM(str, opt) if ((param->opt) != (defaultPrm->opt)) tmp << _T(",") << (str) << _T("=") << (param->opt);
 #define ADD_FLOAT(str, opt, prec) if ((param->opt) != (defaultPrm->opt)) tmp << _T(",") << (str) << _T("=") << std::setprecision(prec) << (param->opt);
 #define ADD_BOOL(str, opt) if ((param->opt) != (defaultPrm->opt)) tmp << _T(",") << (str) << _T("=") << ((param->opt) ? (_T("true")) : (_T("false")));
+#define ADD_LST(str, opt, list) if ((param->opt) != (defaultPrm->opt)) tmp << _T(",") << (str) << _T("=") << get_chr_from_value(list, (int)(param->opt));
 
     OPT_FLOAT(_T("--vpp-scaler-sharpness"), scaler.sharpness, 2);
 
@@ -1568,11 +1646,30 @@ tstring gen_cmd(const VCEFilterParam *param, const VCEFilterParam *defaultPrm, b
             cmd << _T(" --vpp-enhance");
         }
     }
+    // frc
+    if (param->frc != defaultPrm->frc) {
+        tmp.str(tstring());
+        if (!param->frc.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (param->frc.enable || save_disabled_prm) {
+            ADD_LST(_T("profile"), frc.profile, list_frc_profile);
+            ADD_LST(_T("search"), frc.mvSearchMode, list_frc_mv_search);
+            ADD_BOOL(_T("blend"), frc.enableBlend);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-frc ") << tmp.str().substr(1);
+        } else if (param->frc.enable) {
+            cmd << _T(" --vpp-frc");
+        }
+    }
     return cmd.str();
 #undef OPT_FLOAT
 #undef ADD_NUM
 #undef ADD_FLOAT
 #undef ADD_BOOL
+#undef ADD_LST
+
 }
 
 #pragma warning (push)
