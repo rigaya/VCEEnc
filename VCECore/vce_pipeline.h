@@ -1697,7 +1697,7 @@ public:
             surfVppIn->clearDataList();
         }
 
-        auto add_surf_to_out_queue = [&](amf::AMFSurfacePtr& surfVppOut) {
+        auto add_surf_to_out_queue = [&](amf::AMFSurfacePtr surfVppOut) {
             int64_t pts = 0, duration = 0, inputFrameId = 0;
             surfVppOut->GetProperty(RGY_PROP_TIMESTAMP, &pts);
             surfVppOut->GetProperty(RGY_PROP_DURATION, &duration);
