@@ -48,6 +48,7 @@ VCEDevice::VCEDevice(shared_ptr<RGYLog> &log, amf::AMFFactory *factory, amf::AMF
 #if ENABLE_VULKAN
     m_vk(),
 #endif
+    m_enableAV1HWDec(false),
     m_cl(),
     m_context(),
     m_factory(factory),
@@ -87,7 +88,7 @@ RGY_ERR VCEDevice::CreateContext() {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor) {
+RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor, const bool enableAV1HWDec) {
     m_devName = strsprintf(_T("device #%d"), deviceId);
     m_id = deviceId;
     {
@@ -172,7 +173,7 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
             PrintMes(RGY_LOG_WARN, openclDLLCheck);
         }
     }
-
+    m_enableAV1HWDec = enableAV1HWDec;
     m_devName = getGPUInfo();
     return RGY_ERR_NONE;
 }
@@ -358,7 +359,7 @@ amf::AMFCapsPtr VCEDevice::getDecCaps(RGY_CODEC codec) {
     if (m_decCaps.count(codec) == 0) {
         const auto codec_uvd_name = codec_rgy_to_dec(codec);
         m_decCaps[codec] = amf::AMFCapsPtr();
-        if (codec_uvd_name != nullptr && codec != RGY_CODEC_AV1) { // AV1 decodeはうまく動作しないので無効化し、swデコーダを使用するようにする
+        if (codec_uvd_name != nullptr && (codec != RGY_CODEC_AV1 || m_enableAV1HWDec)) { // AV1 decodeはうまく動作しないので無効化し、swデコーダを使用するようにする
             amf::AMFCapsPtr decodeCaps;
             amf::AMFComponentPtr p_decode;
             if (m_factory->CreateComponent(m_context, codec_uvd_name, &p_decode) == AMF_OK

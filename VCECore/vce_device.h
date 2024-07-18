@@ -54,7 +54,7 @@ public:
     VCEDevice(shared_ptr<RGYLog>& log, amf::AMFFactory *factory, amf::AMFTrace *trace);
     virtual ~VCEDevice();
 
-    virtual RGY_ERR init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor);
+    virtual RGY_ERR init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor, bool enableAV1Check);
 
     amf::AMFCapsPtr getEncCaps(RGY_CODEC codec);
     amf::AMFCapsPtr getDecCaps(RGY_CODEC codec);
@@ -127,6 +127,7 @@ protected:
 #if ENABLE_VULKAN
     DeviceVulkan m_vk;
 #endif
+    bool m_enableAV1HWDec;
     std::shared_ptr<RGYOpenCLContext> m_cl;
     amf::AMFContextPtr m_context;
     amf::AMFFactory *m_factory;

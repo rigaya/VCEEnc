@@ -1334,6 +1334,10 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->smartAccessVideo = true;
         return 0;
     }
+    if (IS_OPTION("enable-av1-hwdec")) {
+        pParams->enableAV1HWDec = true;
+        return 0;
+    }
 
     auto ret = parse_one_input_option(option_name, strInput, i, nArgNum, &pParams->input, &pParams->inprm, argData);
     if (ret >= 0) return ret;

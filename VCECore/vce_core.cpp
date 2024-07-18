@@ -3102,7 +3102,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    auto devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->interopVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance);
+    auto devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->interopVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec);
     if (devList.size() == 0) {
         PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
         return ret;
@@ -3947,9 +3947,9 @@ RGY_ERR VCEFeatures::init(int deviceId, const RGYParamLogLevel& loglevel) {
     }
 
 #if ENABLE_D3D11
-    auto devList = m_core->createDeviceList(false, true, false, true, false);
+    auto devList = m_core->createDeviceList(false, true, false, true, false, false);
 #else
-    auto devList = m_core->createDeviceList(false, false, true, true, false);
+    auto devList = m_core->createDeviceList(false, false, true, true, false, false);
 #endif
     if ((err = m_core->initDevice(devList, deviceId)) != RGY_ERR_NONE) {
         return err;

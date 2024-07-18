@@ -60,9 +60,9 @@ static void show_hw(int deviceid, const RGYParamLogLevel& loglevel) {
         && (err = core->initAMFFactory()) == RGY_ERR_NONE
         && (err = core->initTracer(loglevel.get(RGY_LOGT_AMF))) == RGY_ERR_NONE) {
 #if ENABLE_D3D11
-        const auto devList = core->createDeviceList(false, true, false, true, false);
+        const auto devList = core->createDeviceList(false, true, false, true, false, false);
 #else
-        const auto devList = core->createDeviceList(false, true, ENABLE_VULKAN != 0, true, false);
+        const auto devList = core->createDeviceList(false, true, ENABLE_VULKAN != 0, true, false, false);
 #endif
         if (devList.size() > 0) {
             _ftprintf(stdout, _T("VCE available\n"));
@@ -93,9 +93,9 @@ static void show_device(int deviceid, const RGYParamLogLevel& loglevel) {
         && (err = core->initAMFFactory()) == RGY_ERR_NONE
         && (err = core->initTracer(loglevel.get(RGY_LOGT_AMF))) == RGY_ERR_NONE) {
 #if ENABLE_D3D11
-        const auto devList = core->createDeviceList(false, true, false, true, false);
+        const auto devList = core->createDeviceList(false, true, false, true, false, false);
 #else
-        const auto devList = core->createDeviceList(false, true, ENABLE_VULKAN != 0, true, false);
+        const auto devList = core->createDeviceList(false, true, ENABLE_VULKAN != 0, true, false, false);
 #endif
         if (devList.size() > 0) {
             _ftprintf(stdout, _T("VCE available\n"));

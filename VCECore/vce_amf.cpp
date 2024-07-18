@@ -123,7 +123,7 @@ RGY_ERR VCEAMF::initTracer(int log_level) {
     return RGY_ERR_NONE;
 }
 
-std::vector<std::unique_ptr<VCEDevice>> VCEAMF::createDeviceList(bool interopD3d9, bool interopD3d11, bool interopVulkan, bool enableOpenCL, bool enableVppPerfMonitor) {
+std::vector<std::unique_ptr<VCEDevice>> VCEAMF::createDeviceList(bool interopD3d9, bool interopD3d11, bool interopVulkan, bool enableOpenCL, bool enableVppPerfMonitor, bool enableAV1HWDec) {
     std::vector<std::unique_ptr<VCEDevice>> devs;
 #if ENABLE_D3D11
     const int adapterCount = DeviceDX11::adapterCount(m_pLog.get());
@@ -149,7 +149,7 @@ std::vector<std::unique_ptr<VCEDevice>> VCEAMF::createDeviceList(bool interopD3d
     for (int i = 0; i < adapterCount; i++) {
         auto dev = std::make_unique<VCEDevice>(m_pLog, m_pFactory, m_pTrace);
         PrintMes(RGY_LOG_DEBUG, _T("Init adaptor #%d.\n"), i);
-        if (dev->init(i, interopD3d9, interopD3d11, interopVulkan, enableOpenCL, enableVppPerfMonitor) == RGY_ERR_NONE) {
+        if (dev->init(i, interopD3d9, interopD3d11, interopVulkan, enableOpenCL, enableVppPerfMonitor, enableAV1HWDec) == RGY_ERR_NONE) {
             devs.push_back(std::move(dev));
         }
     }

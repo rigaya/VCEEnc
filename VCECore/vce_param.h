@@ -675,6 +675,8 @@ struct VCEParam {
 
     bool        smartAccessVideo;
 
+    bool        enableAV1HWDec;
+
     VCEParam();
     ~VCEParam();
 };
