@@ -16,7 +16,7 @@ Aviutl 1.00 以降
 VCEが載ったハードウェア
   AMD製 GPU Radeon HD 7xxx以降
   AMD製 APU Trinity世代(第2世代)以降
-AMD Radeon Software Adrenalin Edition 23.1.2 以降
+AMD Radeon Software Adrenalin Edition 24.6.1 以降
 
 
 【VCEEnc 使用にあたっての注意事項】
@@ -181,6 +181,46 @@ Radeon RX550
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2024.07.20 (8.23)
+[VCEEncC]
+- AMFを1.4.34に更新。
+  AMD Radeon Software Adrenalin Edition 24.6.1 以降が必要。
+- ffmpeg 7.0に更新。(Windows版)
+  - ffmpeg     6.1    -> 7.0
+  - libpng     1.4.0  -> 1.4.3
+  - expat      2.5.0  -> 2.6.2
+  - opus       1.4    -> 1.5.2
+  - libxml2    2.12.0 -> 2.12.6
+  - dav1d      1.3.0  -> 1.4.1
+  - libvpl     2.11.0 (new!)
+  - nv-codec-headers 12.2.72.0 (new!)
+- VapourSynthのportable版を使用するためのオプションを追加。
+- non local meansフィルタを追加。(--vpp-nlmeans)
+- 新たなインタレ解除フィルタを追加。(--vpp-decomb)
+- 新たなノイズ除去フィルタを追加。(--vpp-fft3d)
+- フレーム補間フィルタを追加。(--vpp-frc)
+- --audio-resamplerを拡張し、文字列でパラメータ設定できるように。
+- --output-resにSAR比を無視して計算するオプションを追加。
+- --vpp-tweakにチャネルごとの制御を追加。
+- avswで使用するデコーダを指定可能に。
+- 中国語等、日本語以外の言語対応を改善。
+- --check-codecs/encoders/decodersを拡張し、映像のデコーダの情報も表示できるように。
+- --audio-bitrateあるいは--audio-copyで指定のない音声/字幕/データトラックは処理しないように。
+- 音声エンコード時に一致するチャンネル数のフォーマットで出力できない場合に、最も近いチャンネル数のフォーマットで出力するように。
+- --audio-bitrateの指定がないとき、デフォルトのビットレートを設定するのではなく、コーデックに任せるように。
+- 部分的にフレームのtimestampに欠損がある場合の処理を改善。
+- --avsw, --pa, --vpp-resize amf_* を同時に使用するとエンコードがフリーズする問題を修正。 ( #103 )
+- 音声のmux用のバッファ不足になり、音声が同時刻の映像と違うfragmentにmuxされる問題を修正。( #109 )
+- --master-displayや--max-cll等のmetadataのcopyが正常に行われていなかった問題を修正。
+- RGBなaviファイルからエンコードすると、フレームの上下が入れ替わってしまうことがある問題を修正。
+- y4m読み込みが解像度によって異常終了する問題を修正。
+- vpp-smooth/vpp-denoise-dctを高速化。
+- 存在しないドライブに出力すると異常終了する問題を修正。
+
+[VCEEnc.auo]
+- 拡張編集使用時に映像と音声の長さが異なる場合には、警告を出して一時中断し、処理を継続するか判断してもらうよう変更。
+- Windowsの登録拡張子の状況によっては、意図せず出力拡張子が設定されず、muxされなくなってしまう問題を回避。
+
 2024.03.12 (8.22)
 - ノイズ除去フィルタを追加。(--vpp-denoise-dct)
 - 音声を品質で指定するオプションを追加。 ( --audio-quality )
