@@ -1719,7 +1719,7 @@ public:
         auto enc_sts = RGY_ERR_NONE;
         auto ar = (drain) ? AMF_INPUT_FULL : AMF_OK;
         for (;;) {
-            while (enc_sts == RGY_ERR_NONE) {
+            do {
                 //VPPからの取り出し
                 amf::AMFDataPtr data;
                 const auto ar_out = m_vppFilter->filter()->QueryOutput(&data);
@@ -1737,7 +1737,7 @@ public:
                 } else if (data != nullptr) {
                     add_surf_to_out_queue(amf::AMFSurfacePtr(data));
                 }
-            }
+            } while (enc_sts == RGY_ERR_NONE);
             if (enc_sts != RGY_ERR_NONE) {
                 break;
             }
