@@ -358,12 +358,11 @@ amf::AMFCapsPtr VCEDevice::getDecCaps(RGY_CODEC codec) {
     if (m_decCaps.count(codec) == 0) {
         const auto codec_uvd_name = codec_rgy_to_dec(codec);
         m_decCaps[codec] = amf::AMFCapsPtr();
-        if (codec_uvd_name != nullptr) {
+        if (codec_uvd_name != nullptr && codec != RGY_CODEC_AV1) { // AV1 decodeはうまく動作しないので無効化し、swデコーダを使用するようにする
             amf::AMFCapsPtr decodeCaps;
             amf::AMFComponentPtr p_decode;
             if (m_factory->CreateComponent(m_context, codec_uvd_name, &p_decode) == AMF_OK
-                && p_decode->GetCaps(&decodeCaps) == AMF_OK
-                && codec != RGY_CODEC_AV1) { // AV1 10bit decodeはうまく動作しないので無効化し、swデコーダを使用するようにする
+                && p_decode->GetCaps(&decodeCaps) == AMF_OK) {
                 // 10bit深度のサポートのチェック
                 decodeCaps->SetProperty(CAP_10BITDEPTH, false);
                 const auto codec_uvd_10bit_name = codec_rgy_to_dec_10bit(codec);
