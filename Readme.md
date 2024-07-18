@@ -49,6 +49,7 @@ Debian/Ubuntu (VCEEncC)
 | VCEEnc 7.15 or later | AMD driver 22.12.1 or later |
 | VCEEnc 8.07 or later | AMD driver 23.1.2 or later |
 | VCEEnc 8.17 or later | AMD driver 23.5.2 or later |
+| VCEEnc 8.23 or later | AMD driver 24.6.1 or later |
 
 
 ## Usage and options of VCEEncC
