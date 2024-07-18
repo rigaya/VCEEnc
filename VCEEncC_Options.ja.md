@@ -1760,6 +1760,23 @@ yadifによるインタレ解除を行う。
       60fps化を行う(tff)。
     - bob_bff   
       60fps化を行う(bff)。
+  
+### --vpp-decomb [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]  
+decombによるインタレ解除を行う。
+
+- **パラメータ**
+  
+  - full=&lt;bool&gt;  
+    すべてのフレームをインタレ解除する。 デフォルト: on。
+
+  - threshold=&lt;int&gt;  
+    フレームがインタレ解除が必要か判定する際の閾値。デフォルト 20 (0 - 255)。
+
+  - dthreshold=&lt;int&gt;
+    縞検出の閾値。デフォルト 7 (0 - 255)。
+
+  - blend=&lt;bool&gt;   
+    補間の代わりにブレンドする。デフォルト: off。
 
 ### --vpp-decimate [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]  
 重複フレームを削除します。
