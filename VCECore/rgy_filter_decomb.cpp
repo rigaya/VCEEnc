@@ -115,7 +115,7 @@ RGY_ERR RGYFilterDecomb::deinterlacePlane(
         (cl_mem)pSrcPlane->ptr[0], pSrcPlane->pitch[0],
         pSrcPlane->width, pSrcPlane->height,
         (cl_mem)pDmaskPlane->ptr[0], pDmaskPlane->pitch[0],
-        pResultIsCombed->mem(), uv420);
+        pResultIsCombed->mem(), uv420 ? 1 : 0);
     if (err != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("error at %s (createMotionMap(%s)): %s.\n"),
             char_to_tstring(kernel_name).c_str(), RGY_CSP_NAMES[pSrcPlane->csp], get_err_mes(err));
