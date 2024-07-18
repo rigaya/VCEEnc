@@ -781,7 +781,7 @@ public:
                             break;
                         }
                     } while (m_state == RGY_STATE_RUNNING);
-                    if (ar != AMF_OK) {
+                    if (ar != AMF_OK && ar != AMF_NEED_MORE_INPUT) {
                         m_state = RGY_STATE_ERROR;
                         return err_to_rgy(ar);
                     }
