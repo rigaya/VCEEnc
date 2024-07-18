@@ -60,7 +60,7 @@ MAP_PAIR_0_1(codec, rgy, RGY_CODEC, dec, const wchar_t *, VCE_CODEC_UVD_NAME, RG
 
 const wchar_t * codec_rgy_to_dec_10bit(const RGY_CODEC codec) {
     switch (codec) {
-    case RGY_CODEC_AV1:  return AMFVideoDecoderHW_AV1_12BIT;
+    case RGY_CODEC_AV1:  return AMFVideoDecoderHW_AV1;
     case RGY_CODEC_HEVC: return AMFVideoDecoderHW_H265_MAIN10;
     case RGY_CODEC_VP9:  return AMFVideoDecoderHW_VP9_10BIT;
     default:
