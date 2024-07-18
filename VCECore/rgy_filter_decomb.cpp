@@ -283,7 +283,7 @@ RGY_ERR RGYFilterDecomb::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInf
         return RGY_ERR_INVALID_PARAM;
     }
     if (!m_decomb.get()) {
-        AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_YADIF_CL(m_decomb)\n"));
+        AddMessage(RGY_LOG_ERROR, _T("failed to load RGY_FILTER_DECOMB_CL(m_decomb)\n"));
         return RGY_ERR_OPENCL_CRUSH;
     }
 
