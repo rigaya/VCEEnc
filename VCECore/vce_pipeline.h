@@ -985,7 +985,11 @@ public:
             && ((m_avsync & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR)) || m_vpp_rff || m_vpp_afs_rff_aware || m_timestampPassThrough)) {
             //CFR仮定ではなく、オリジナルの時間を見る
             const auto srcTimestamp = taskSurf->surf().frame()->timestamp();
-            outPtsSource = rational_rescale(srcTimestamp, m_srcTimebase, m_outputTimebase);
+            if (srcTimestamp == AV_NOPTS_VALUE) {
+                outPtsSource = m_tsPrev + m_outFrameDuration + m_tsOutFirst/*あとでm_tsOutFirstが引かれるので*/;
+            } else {
+                outPtsSource = rational_rescale(srcTimestamp, m_srcTimebase, m_outputTimebase);
+            }
             if (taskSurf->surf().frame()->duration() > 0) {
                 outDuration = rational_rescale(taskSurf->surf().frame()->duration(), m_srcTimebase, m_outputTimebase);
                 taskSurf->surf().frame()->setDuration(outDuration);
