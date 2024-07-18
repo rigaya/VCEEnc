@@ -1696,6 +1696,13 @@ public:
             pSurface->SetProperty(RGY_PROP_DURATION, duration);
             pSurface->SetProperty(RGY_PROP_INPUT_FRAMEID, inputFrameId);
             m_vppFilter->setFrameParam(pSurface);
+
+            // これをやらないと(pSurfaceがhostメモリの場合に)、
+            // m_vppFilter->filter()->QueryOutput(&data)が返答を返さなくなる(関数内でフリーズしてしまう)
+            if (pSurface->GetMemoryType() == amf::AMF_MEMORY_HOST) {
+                pSurface->Convert(amf::AMF_MEMORY_OPENCL);
+            }
+
             m_inFrames++;
 
             surfVppIn->clearDataList();
