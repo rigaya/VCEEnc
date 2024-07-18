@@ -1262,13 +1262,13 @@ struct VppKnn {
 };
 
 enum VppNLMeansFP16Opt {
-    None,
+    NoOpt,
     BlockDiff,
     All
 };
 
 const CX_DESC list_vpp_nlmeans_fp16[] = {
-    { _T("none"),      (int)VppNLMeansFP16Opt::None      },
+    { _T("none"),      (int)VppNLMeansFP16Opt::NoOpt     },
     { _T("blockdiff"), (int)VppNLMeansFP16Opt::BlockDiff },
     { _T("all"),       (int)VppNLMeansFP16Opt::All       },
     { NULL, 0 }
