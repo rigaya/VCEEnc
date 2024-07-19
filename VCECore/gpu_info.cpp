@@ -118,7 +118,7 @@ int getGPUInfo(const char *VendorName, TCHAR *buffer, unsigned int buffer_size, 
 #if ENCODER_VCEENC && !FOR_AUO
   #if ENABLE_D3D11
     DeviceDX11 dx11;
-    auto err = dx11.Init(device_id, false, nullptr);
+    auto err = dx11.Init(device_id, nullptr);
     if (err == RGY_ERR_NONE) {
         auto str = dx11.GetDisplayDeviceName();
         str = str_replace(str, L"(TM)", L"");

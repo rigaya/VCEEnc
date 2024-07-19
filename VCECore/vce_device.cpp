@@ -139,7 +139,7 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
 #endif //#if ENABLE_D3D9
 #if ENABLE_D3D11
     if (interopD3d11 || !interopD3d9) {
-        auto err = m_dx11.Init(deviceId, false, m_log);
+        auto err = m_dx11.Init(deviceId, m_log);
         if (err != RGY_ERR_NONE) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to get directX11 device.\n"));
             return RGY_ERR_DEVICE_LOST;

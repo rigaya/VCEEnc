@@ -45,7 +45,9 @@
 #endif
 #if ENABLE_D3D11
 #include <d3d11.h>
+#if ENABLE_D3D11_DEVINFO_WMI
 #include "rgy_device_info_wmi.h"
+#endif
 #endif
 #include "rgy_err.h"
 #include "rgy_log.h"
@@ -84,42 +86,72 @@ private:
 #endif
 
 #if ENABLE_D3D11
+
+class DX11AdapterManager {
+private:
+    static DX11AdapterManager *m_instance;
+    std::vector<int> m_adaptersIndexes;
+    bool m_onlyWithOutputs;
+    bool m_initialized;
+
+    DX11AdapterManager() : m_adaptersIndexes(), m_onlyWithOutputs(false), m_initialized(false) { }
+public:
+    static DX11AdapterManager *getInstance() {
+        if (!m_instance) {
+            m_instance = new DX11AdapterManager();
+            m_instance->EnumerateAdapters();
+        }
+        return m_instance;
+    }
+
+    DX11AdapterManager(const DX11AdapterManager&) = delete;
+    DX11AdapterManager& operator=(const DX11AdapterManager&) = delete;
+
+    int adapterCount() { return (int)m_adaptersIndexes.size(); }
+    const std::vector<int>& getAdapterIndexes() { return m_adaptersIndexes; }
+private:
+    void EnumerateAdapters();
+};
+
+
 class DeviceDX11 {
 public:
     DeviceDX11();
     virtual ~DeviceDX11();
 
-    RGY_ERR Init(int adapterID, bool onlyWithOutputs, std::shared_ptr<RGYLog> log);
+    RGY_ERR Init(int adapterID, std::shared_ptr<RGYLog> log);
     RGY_ERR Terminate();
 
     bool isValid() const;
-    ATL::CComPtr<ID3D11Device>      GetDevice();
+    ID3D11Device *GetDevice();
+    ID3D11DeviceContext *GetDeviceContext();
+    IDXGIAdapter *GetAdaptor();
     LUID getLUID() const { return m_devLUID; };
     int getVendorID() const { return m_vendorID; };
     int getDeviceID() const { return m_deviceID; };
     std::wstring GetDisplayDeviceName() const { return m_displayDeviceName; }
     tstring getDriverVersion();
+#if ENABLE_D3D11_DEVINFO_WMI
     const RGYDeviceInfoWMI *getDeviceInfo();
-    static int adapterCount(RGYLog *log = nullptr);
+#endif
+    static int adapterCount();
 protected:
     void AddMessage(RGYLogLevel log_level, const tstring &str);
     void AddMessage(RGYLogLevel log_level, const TCHAR *format, ...);
 private:
-    void EnumerateAdapters(bool onlyWithOutputs);
 
     tstring                      m_name;
+    ATL::CComPtr<IDXGIAdapter>   m_pAdapter;
     ATL::CComPtr<ID3D11Device>   m_pD3DDevice;
+    ATL::CComPtr<ID3D11DeviceContext> m_pD3DDeviceCtx;
     LUID                         m_devLUID;
     int                          m_vendorID;
     int                          m_deviceID;
 
+#if ENABLE_D3D11_DEVINFO_WMI
     std::unique_ptr<RGYDeviceInfoWMI> m_deviceInfo;
     std::future<std::tuple<RGY_ERR, std::unique_ptr<RGYDeviceInfoWMI>>> m_fDeviceInfo;
-
-
-    static const int             MAXADAPTERS = 128;
-    int                          m_adaptersCount;
-    int                          m_adaptersIndexes[MAXADAPTERS];
+#endif
     std::wstring                 m_displayDeviceName;
     std::shared_ptr<RGYLog>      m_log;
 };

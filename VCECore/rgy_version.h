@@ -65,6 +65,7 @@ const char *get_encoder_version();
 #define ENABLE_AVCODEC_AUDPROCESS_THREAD 1
 #define ENABLE_D3D9 1
 #define ENABLE_D3D11 1
+#define ENABLE_D3D11_DEVINFO_WMI 1
 #define ENABLE_VULKAN 0
 #define VULKAN_DEFAULT_DEVICE_ONLY 0
 #define ENABLE_CPP_REGEX 1
@@ -118,6 +119,7 @@ const char *get_encoder_version();
 #define ENABLE_AVCODEC_AUDPROCESS_THREAD 1
 #define ENABLE_D3D9 0
 #define ENABLE_D3D11 0
+#define ENABLE_D3D11_DEVINFO_WMI   0
 #define ENABLE_VULKAN 1
 #define VULKAN_DEFAULT_DEVICE_ONLY 1
 #define ENABLE_CAPTION2ASS 0
