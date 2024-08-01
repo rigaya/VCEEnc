@@ -140,6 +140,8 @@ protected:
     bool                             m_hdr10plusMetadataCopy;
     std::unique_ptr<RGYHDRMetadata>  m_hdrsei;
     std::unique_ptr<DOVIRpu>         m_dovirpu;
+    bool                             m_dovirpuMetadataCopy;
+    RGYDOVIProfile                   m_doviProfile;
     std::unique_ptr<RGYTimestamp>    m_encTimestamp;
 
     sTrimParam m_trimParam;

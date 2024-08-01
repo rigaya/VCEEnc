@@ -102,6 +102,8 @@ VCECore::VCECore() :
     m_hdr10plusMetadataCopy(false),
     m_hdrsei(),
     m_dovirpu(),
+    m_dovirpuMetadataCopy(false),
+    m_doviProfile(RGY_DOVI_PROFILE_UNSET),
     m_encTimestamp(),
     m_trimParam(),
     m_poolPkt(),
@@ -527,7 +529,10 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCE
             PrintMes(RGY_LOG_ERROR, _T("Failed to open dovi rpu \"%s\".\n"), inputParam->common.doviRpuFile.c_str());
             return RGY_ERR_FILE_OPEN;
         }
+    } else if (inputParam->common.doviRpuMetadataCopy) {
+        m_dovirpuMetadataCopy = true;
     }
+    m_doviProfile = inputParam->common.doviProfile;
 
     m_hdrsei = createHEVCHDRSei(inputParam->common.maxCll, inputParam->common.masterDisplay, inputParam->common.atcSei, m_pFileReader.get());
     if (!m_hdrsei) {
@@ -3837,6 +3842,18 @@ tstring VCECore::GetEncoderParam() {
         mes += strsprintf( _T("Dynamic HDR10     %s\n"), m_hdr10plus->inputJson().c_str());
     } else if (m_hdr10plusMetadataCopy) {
         mes += strsprintf( _T("Dynamic HDR10     copy\n"));
+    }
+    if (m_doviProfile != RGY_DOVI_PROFILE_UNSET) {
+        tstring profile_copy;
+        if (m_doviProfile == RGY_DOVI_PROFILE_COPY) {
+            profile_copy = tstring(_T(" (")) + get_cx_desc(list_dovi_profile, m_pFileReader->getInputDOVIProfile()) + tstring(_T(")"));
+        }
+        mes += strsprintf(_T("dovi profile   %s%s\n"), get_cx_desc(list_dovi_profile, m_doviProfile), profile_copy.c_str());
+    }
+    if (m_dovirpu) {
+        mes += strsprintf(_T("dovi rpu       %s\n"), m_dovirpu->get_filepath().c_str());
+    } else if (m_dovirpuMetadataCopy) {
+        mes += strsprintf(_T("dovi rpu       copy\n"));
     }
     if (m_hdrsei) {
         const auto masterdisplay = m_hdrsei->print_masterdisplay();

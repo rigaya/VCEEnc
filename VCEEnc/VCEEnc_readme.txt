@@ -181,6 +181,11 @@ Radeon RX550
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2024.08.xx (8.24)
+- Dolby Vision profileのコピー機能を追加。(--dolby-vision-profile copy)
+- Dolby Vision rpu metadataのコピー機能を追加。(--dolby-vision-rpu copy)
+- H.264/HEVCのヘッダがうまく取得できない場合、最初のパケットから取得するように。
+
 2024.07.20 (8.23)
 [VCEEncC]
 - AMFを1.4.34に更新。
