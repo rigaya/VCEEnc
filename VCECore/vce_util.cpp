@@ -92,8 +92,8 @@ static const auto RGY_CSP_TO_VCE = make_array<std::pair<RGY_CSP, amf::AMF_SURFAC
     std::make_pair(RGY_CSP_YUV444_12, amf::AMF_SURFACE_UNKNOWN),
     std::make_pair(RGY_CSP_YUV444_14, amf::AMF_SURFACE_UNKNOWN),
     std::make_pair(RGY_CSP_YUV444_16, amf::AMF_SURFACE_UNKNOWN),
-    std::make_pair(RGY_CSP_RGB24R,    amf::AMF_SURFACE_UNKNOWN),
-    std::make_pair(RGY_CSP_RGB32R,    amf::AMF_SURFACE_UNKNOWN),
+    std::make_pair(RGY_CSP_BGR24R,    amf::AMF_SURFACE_UNKNOWN),
+    std::make_pair(RGY_CSP_BGR32R,    amf::AMF_SURFACE_UNKNOWN),
     std::make_pair(RGY_CSP_RGB24,     amf::AMF_SURFACE_UNKNOWN),
     std::make_pair(RGY_CSP_RGB32,     amf::AMF_SURFACE_ARGB),
     std::make_pair(RGY_CSP_YC48,      amf::AMF_SURFACE_UNKNOWN)
