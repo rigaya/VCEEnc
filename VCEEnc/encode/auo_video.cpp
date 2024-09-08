@@ -77,7 +77,6 @@ int get_aviutl_color_format(int use_highbit, RGY_CSP csp) {
     }
 
     switch (chromafmt) {
-    case RGY_CHROMAFMT_YUVA444:
     case RGY_CHROMAFMT_YUV444:
         return CF_YC48;
     case RGY_CHROMAFMT_YUV420:
