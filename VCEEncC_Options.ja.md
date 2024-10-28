@@ -1359,6 +1359,7 @@ vppフィルタの適用順は固定で、コマンドラインの順序によ�
 
 - フィルター一覧
   - [--vpp-colorspace](#--vpp-colorspace-param1value1param2value2)
+  - [--vpp-libplacebo-tonemapping](#--vpp-libplacebo-tonemapping-param1value1param2value2)
   - [--vpp-rff](#--vpp-rff)
   - [--vpp-delogo](#--vpp-delogo-stringparam1value1param2value2)
   - [--vpp-afs](#--vpp-afs-param1value1param2value2)
@@ -1378,6 +1379,7 @@ vppフィルタの適用順は固定で、コマンドラインの順序によ�
   - [--vpp-nlmeans](#--vpp-nlmeans-param1value1param2value2)
   - [--vpp-pmd](#--vpp-pmd-param1value1param2value2)
   - [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
+  - [--vpp-libplacebo-shader](#--vpp-libplacebo-shader-param1value1param2value2)
   - [--vpp-resize](#--vpp-resize-string)
   - [--vpp-unsharp](#--vpp-unsharp-param1value1param2value2)
   - [--vpp-edgelevel](#--vpp-edgelevel-param1value1param2value2)
@@ -1385,6 +1387,7 @@ vppフィルタの適用順は固定で、コマンドラインの順序によ�
   - [--vpp-curves](#--vpp-overlay-param1value1param2value2)
   - [--vpp-tweak](#--vpp-tweak-param1value1param2value2)
   - [--vpp-deband](#--vpp-deband-param1value1param2value2)
+  - [--vpp-libplacebo-deband](#--vpp-libplacebo-deband-param1value1param2value2)
   - [--vpp-padding](#--vpp-pad-intintintint)
   - [--vpp-tweak](#--vpp-overlay-param1value1param2value2)
 
@@ -1482,6 +1485,158 @@ vppフィルタの適用順は固定で、コマンドラインの順序によ�
   例3: hdr2sdr使用時の追加パラメータの指定例 (下記例ではデフォルトと同じ意味)
   --vpp-colorspace hdr2sdr=hable,source_peak=1000.0,ldr_nits=100.0,a=0.22,b=0.3,c=0.1,d=0.2,e=0.01,f=0.3
   ```
+
+
+### --vpp-libplacebo-tonemapping [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+[libplacebo](https://code.videolan.org/videolan/libplacebo)を使用したトーンマッピングを行います。
+
+- **パラメータ**
+  - src_csp=&lt;string&gt;  
+    入力の色空間を指定します。
+    ```
+    auto, sdr, hdr10, hlg, dovi, rgb
+    ```
+  
+  - dst_csp=&lt;string&gt;  
+    出力の色空間を指定します。
+    ```
+    auto, sdr, hdr10, hlg, dovi, rgb
+    ```
+
+  - src_max=&lt;float&gt;  
+    入力の最大輝度 (nits)。(デフォルト: 自動、可能なら入力ファイルから情報を取得、できない場合は 1000.0 (HDR) / 203.0 (SDR))
+
+  - src_min=&lt;float&gt;  
+    入力の最小輝度 (nits)。(デフォルト: 自動、可能なら入力ファイルから情報を取得、できない場合は 0.005 (HDR) / 0.2023 (SDR))
+
+  - dst_max=&lt;float&gt;  
+    出力の最大輝度 (nits)。(デフォルト: 自動、可能ならパラメータから情報を取得、できない場合は 1000.0 (HDR) / 203.0 (SDR))
+
+  - dst_min=&lt;float&gt;  
+    出力の最小輝度 (nits)。(デフォルト: 自動、可能ならパラメータから情報を取得、できない場合は 0.005 (HDR) / 0.2023 (SDR))
+
+  - dynamic_peak_detection=&lt;bool&gt;  
+    HDRトーンマッピングの品質を最適化するための統計の計算を有効にします。デフォルト: true
+
+  - smooth_period=&lt;float&gt;  
+    スムージング係数。デフォルト: 20.0
+
+  - scene_threshold_low=&lt;float&gt;  
+    シーン変更検出の下限閾値 (dB)。デフォルト: 1.0
+
+  - scene_threshold_high=&lt;float&gt;  
+    シーン変更検出の上限閾値 (dB)。デフォルト: 3.0
+
+  - percentile=&lt;float&gt;  
+    輝度ヒストグラムの考慮するパーセンタイル。デフォルト: 99.995
+
+  - black_cutoff=&lt;float&gt;  
+    黒レベルのカットオフ強度 (PQ%)。デフォルト: 1.0
+
+  - gamut_mapping=&lt;string&gt;  
+    ガンママッピングモード。 (デフォルト: perceptual)
+    ```
+    clip, perceptual, softclip, relative, saturation, absolute, desaturate, darken, highlight, linear
+    ```
+
+  - tonemapping_function=&lt;string&gt;  
+    トーンマッピング関数。 (デフォルト: bt2390)
+    ```
+    clip, st2094-40, st2094-10, bt2390, bt2446a, spline, reinhard, mobius, hable, gamma, linear, linearlight
+    ```
+
+  - tonemapping_function=st2094-40, st2094-10, splineの場合  
+  
+    - knee_adaptation=&lt;float&gt;   (float, 0.0 - 1.0, デフォルト: 0.4)  
+      PQ空間における入力と出力の平均輝度の比率としてニーポイントを設定します。
+      - 1.0: 常に入力シーンの平均を調整された出力の平均に適応させます
+      - 0.0: シーンの輝度を一切変更しません
+    
+    - knee_min=&lt;float&gt;   (0.0 - 0.5, デフォルト: 0.1)  
+      PQ輝度範囲の比率における最小ニーポイント。
+    
+    - knee_max=&lt;float&gt;   (0.5 - 1.0, デフォルト: 0.8)  
+      PQ輝度範囲の比率における最大ニーポイント。
+    
+    - knee_default=&lt;float&gt;   (knee_min - knee_max, デフォルト: 0.4)  
+      入力シーンの平均メタデータが利用できない場合に使用されるデフォルトのニーポイント。
+  
+  - tonemapping_function=bt2390の場合
+
+    - knee_offset=&lt;float&gt;   (0.5 - 2.0, デフォルト: 1.0)  
+      ニーポイントのオフセット。
+  
+  - tonemapping_function=splineの場合
+
+    - slope_tuning=&lt;float&gt;   (0.0 - 10.0, デフォルト: 1.5)  
+      スプライン曲線の傾きの係数。
+    
+    - slope_offset=&lt;float&gt;   (0.0 - 1.0, デフォルト: 0.2)  
+      スプライン曲線の傾きのオフセット。
+    
+    - spline_contrast=&lt;float&gt;   (0.0 - 1.5, デフォルト: 0.5)  
+      スプライン関数のコントラスト。高い値は中間調を保持しますが、影や高輝度部分の詳細を失う可能性があります。
+  
+  - tonemapping_function=reinhardの場合
+
+    - reinhard_contrast=&lt;float&gt;   (0.0 - 1.0, デフォルト: 0.5)  
+      reinhard関数のディスプレイピークにおけるコントラスト係数。
+  
+  - tonemapping_function=mobius, gammaの場合
+
+    - linear_knee=&lt;float&gt;   (0.0 - 1.0, デフォルト: 0.3)  
+  
+  - tonemapping_function=linear, linearlightの場合
+
+    - exposure=&lt;float&gt;   (0.0 - 10.0, デフォルト: 1.0)  
+      適用される線形露出/ゲイン。
+
+  - metadata=&lt;int&gt;  
+    トーンマッピングに使用するデータソース。
+    ```
+    any, none, hdr10, hdr10plus, cie_y
+    ```
+
+  - contrast_recovery=&lt;float&gt;  
+    コントラスト回復強度。デフォルト: 0.3
+
+  - contrast_smoothness=&lt;float&gt;  
+    コントラスト回復のローパスカーネルサイズ。デフォルト: 3.5
+
+  - visualize_lut=&lt;bool&gt;  
+    トーンマッピングカーブ/LUTを可視化します。デフォルト: false
+
+  - show_clipping=&lt;bool&gt;  
+    クリップされたピクセルを可視化します。デフォルト: false
+
+  - use_dovi=&lt;bool&gt;  
+    Dolby Vision RPUをST2086メタデータとして使用するかどうか。デフォルト: auto (Dolby Visionからトーンマッピングする場合に有効)
+
+  - dst_pl_transfer=&lt;string&gt;  
+    出力の転送関数。```dst_pl_colorprim```と一緒に使用する必要があります。
+    ```
+    unknown, srgb, bt1886, linear, gamma18, gamma20, gamma22, gamma24, gamma26, gamma28,
+    prophoto, st428, pq, hlg, vlog, slog1, slog2
+    ```
+
+  - dst_pl_colorprim=&lt;string&gt;  
+    出力の色域。```dst_pl_transfer```と一緒に使用する必要があります。
+    ```
+    unknown, bt601_525, bt601_625, bt709, bt470m, ebu_3213, bt2020, apple, adobe,
+    prophoto, cie_1931, dci_p3, display_p3, v_gamut, s_gamut, film_c, aces_ap0, aces_ap1
+    ```
+
+- **使用例**
+  ```
+  例: Dolby VisionからSDRへのトーンマッピング
+  --vpp-libplacebo-tonemapping src_csp=dovi,dst_csp=sdr
+  ```
+
+### --vpp-libplacebo-tonemapping-lut &lt;string&gt;
+
+  --vpp-libplacebo-tonemapping で使用するlutファイルの指定。
+
 
 ### --vpp-rff
 Repeat Field Flagを反映して、フレームを再構築する。rffによる音ズレ問題が解消できる。[--avsw](#--avsw-string)使用時のみ有効。
@@ -2103,6 +2258,69 @@ Non local meansを用いたノイズ除去フィルタ。
   --vpp-subburn filename="subtitle.sjis.ass",charcode=sjis,shaping=complex
   ```
 
+### --vpp-libplacebo-shader [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+[libplacebo](https://code.videolan.org/videolan/libplacebo)を使用して指定されたパスのカスタムシェーダーを適用します。
+
+- **パラメータ**
+    - shader=&lt;string&gt;  
+      対象のshaderファイルのパス。(glslファイル)
+
+    - res=&lt;int&gt;x&lt;int&gt;  
+      フィルタの出力解像度。
+
+    - colorsystem=&lt;string&gt;  
+      使用する色空間を指定。デフォルトでは入力ファイルから自動的に設定される。
+      ```
+      unknown, bt601, bt709, smpte240m, bt2020nc, bt2020c, bt2100pq, bt2100hlg, dolbyvision, ycgco, rgb, xyz
+      ```
+
+    - transfer=&lt;string&gt;  
+      出力のトランスファ関数を指定。デフォルトでは入力ファイルから自動的に設定される。
+      ```
+      unknown, srgb, bt1886, linear,
+      gamma18, gamma20, gamma22, gamma24, gamma26, gamma28,
+      prophoto, st428, pq, hlg, vlog, slog1, slog2
+      ```
+
+    - resampler=&lt;string&gt;  
+      リサンプルが必要な場合に使用するフィルタ関数を指定。デフォルトは libplacebo-ewa-lanczos 。
+      ```
+      libplacebo-spline16, libplacebo-spline36, libplacebo-spline64, libplacebo-nearest,
+      libplacebo-bilinear, libplacebo-gaussian, libplacebo-sinc, libplacebo-lanczos, 
+      libplacebo-ginseng, libplacebo-ewa-jinc, libplacebo-ewa-lanczos, 
+      libplacebo-ewa-lanczossharp, libplacebo-ewa-lanczos4sharpest, 
+      libplacebo-ewa-ginseng, libplacebo-ewa-hann, libplacebo-ewa-hanning, 
+      libplacebo-bicubic, libplacebo-triangle, libplacebo-hermite, libplacebo-catmull-rom, 
+      libplacebo-mitchell, libplacebo-mitchell-clamp, libplacebo-robidoux, 
+      libplacebo-robidouxsharp, libplacebo-ewa-robidoux, libplacebo-ewa-robidouxsharp
+      ```
+
+    - radius=&lt;float&gt;  
+      拡大縮小アルゴリズムの半径。vpp-resizeの表で "resizable" にチェックが入っているもののみ有効。 (0.0 - 16.0、デフォルト = 自動)
+
+    - clamp=&lt;float&gt;  
+      負の重みに対するクランプ係数。1.0にすると負の重みが0になります。(0.0 -   1.    0、デフォルト = 0.0)
+
+    - taper=&lt;float&gt;  
+     重み関数の中心部分を平坦化します。(0.0 - 1.0、デフォルト = 0.0)
+
+    - blur=&lt;float&gt;  
+      追加のぼかし係数。(0.0 - 100.0、デフォルト = 0.0)
+
+    - antiring=&lt;float&gt;  
+      アンチリンギング強度。(0.0 - 1.0、デフォルト = 0.0)
+    
+    - linear=&lt;bool&gt;  
+      linearize image before processing.
+
+
+- 使用例
+    ``` 
+    例: カスタムシェーダを使用した 1280x720 -> 2560x1440 へのリサイズ。
+    --vpp-libplacebo-shader shader=default-shader-pack-2.1.0\Anime4K_Upscale_CNN_x2_L.glsl,res=2560x1440
+    ```
+
 ### --vpp-resize &lt;string&gt;
 リサイズのアルゴリズムを指定する。
 
@@ -2329,6 +2547,44 @@ unsharpフィルタ。輪郭・ディテール強調用のフィルタ。
   --vpp-deband range=31,dither=12,rand_each_frame
   ```
 
+
+### --vpp-libplacebo-deband [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+  [libplacebo](https://code.videolan.org/videolan/libplacebo)を使用したバンディング低減フィルタ。
+
+- **Parameters**
+  - iterations=&lt;int&gt;  
+    イテレーション数。 (default=1, 0-)
+
+  - threshold=&lt;float&gt;  
+    カットオフ閾値。 (default=4.0, 0-)
+
+  - radius=&lt;float&gt;  
+    半径 (default=16.0, 0-)
+
+  - grain_y=&lt;float&gt;  
+    輝度用の追加ノイズ。 (default=6.0, 0-)
+
+  - grain_c=&lt;float&gt;  
+    色差用の追加ノイズ。 (default=grain_y, 0-)
+
+  - dither=&lt;string&gt;  
+    ディザリングモード、8bitのみ。
+    - none
+    - blue_noise (default)
+    - ordered_lut
+    - ordered_fixed
+    - white_noise
+
+  - lut_size=&lt;int&gt;  
+    ディザリング用のLUTのサイズ。 (default=64)
+    ```2, 4, 8, 16, 32, 64, 128, 256 ```
+  
+- 使用例
+  ```
+  例:
+  --vpp-libplacebo-deband iterations=1,radius=32
+  ```
 
 
 ### --vpp-pad &lt;int&gt;,&lt;int&gt;,&lt;int&gt;,&lt;int&gt;

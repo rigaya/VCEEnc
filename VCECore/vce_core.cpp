@@ -68,6 +68,7 @@
 #include "rgy_filter_transform.h"
 #include "rgy_filter_overlay.h"
 #include "rgy_filter_deband.h"
+#include "rgy_filter_libplacebo.h"
 #include "rgy_filesystem.h"
 #include "rgy_version.h"
 #include "rgy_bitstream.h"
@@ -100,7 +101,8 @@ VCECore::VCECore() :
     m_timecode(),
     m_hdr10plus(),
     m_hdr10plusMetadataCopy(false),
-    m_hdrsei(),
+    m_hdrseiIn(),
+    m_hdrseiOut(),
     m_dovirpu(),
     m_dovirpuMetadataCopy(false),
     m_doviProfile(RGY_DOVI_PROFILE_UNSET),
@@ -188,7 +190,8 @@ void VCECore::Terminate() {
     m_Chapters.clear();
     m_keyFile.clear();
     m_hdr10plus.reset();
-    m_hdrsei.reset();
+    m_hdrseiIn.reset();
+    m_hdrseiOut.reset();
     m_dovirpu.reset();
     m_encTimestamp.reset();
     m_pPerfMonitor.reset();
@@ -414,7 +417,7 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCE
     const bool vpp_rff = inputParam->vpp.rff.enable;
     auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, &inputParam->inprm, inputCspOfRawReader,
         m_pStatus, &inputParam->common, &inputParam->ctrl, HWDecCodecCsp, subburnTrackId,
-        inputParam->vpp.afs.enable, vpp_rff,
+        inputParam->vpp.afs.enable, vpp_rff, inputParam->vpp.libplacebo_tonemapping.enable,
         m_poolPkt.get(), m_poolFrame.get(), nullptr, m_pPerfMonitor.get(), m_pLog);
     if (err != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("failed to initialize file reader(s).\n"));
@@ -534,8 +537,13 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCE
     }
     m_doviProfile = inputParam->common.doviProfile;
 
-    m_hdrsei = createHEVCHDRSei(inputParam->common.maxCll, inputParam->common.masterDisplay, inputParam->common.atcSei, m_pFileReader.get());
-    if (!m_hdrsei) {
+    m_hdrseiIn = createHEVCHDRSei(maxCLLSource, masterDisplaySource, RGY_TRANSFER_UNKNOWN, m_pFileReader.get());
+    if (!m_hdrseiIn) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to parse HEVC HDR10 metadata.\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
+    m_hdrseiOut = createHEVCHDRSei(inputParam->common.maxCll, inputParam->common.masterDisplay, inputParam->common.atcSei, m_pFileReader.get());
+    if (!m_hdrseiOut) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to parse HEVC HDR10 metadata.\n"));
         return RGY_ERR_UNSUPPORTED;
     }
@@ -662,11 +670,6 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
 }
 
 RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
-    m_hdrsei = createHEVCHDRSei(inputParams->common.maxCll, inputParams->common.masterDisplay, inputParams->common.atcSei, m_pFileReader.get());
-    if (!m_hdrsei) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to parse HEVC HDR10 metadata.\n"));
-        return RGY_ERR_INVALID_PARAM;
-    }
     const auto outputVideoInfo = videooutputinfo(
         inputParams->codec,
         csp_rgy_to_enc(GetEncoderCSP(inputParams)),
@@ -677,7 +680,7 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
 
     auto err = initWriters(m_pFileWriter, m_pFileWriterListAudio, m_pFileReader, m_AudioReaders,
         &inputParams->common, &inputParams->input, &inputParams->ctrl, outputVideoInfo,
-        m_trimParam, m_outputTimebase, m_Chapters, m_hdrsei.get(), m_dovirpu.get(), m_encTimestamp.get(), false, false, false, 0,
+        m_trimParam, m_outputTimebase, m_Chapters, m_hdrseiOut.get(), m_dovirpu.get(), m_encTimestamp.get(), false, false, false, 0,
         m_poolPkt.get(), m_poolFrame.get(), m_pStatus, m_pPerfMonitor, m_pLog);
     if (err != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("failed to initialize file reader(s).\n"));
@@ -818,29 +821,23 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
 
     const bool cspConvRequired = inputFrame.csp != GetEncoderCSP(inputParam);
 
+    m_encWidth = croppedWidth;
+    m_encHeight = croppedHeight;
     //リサイザの出力すべきサイズ
-    int resizeWidth = croppedWidth;
-    int resizeHeight = croppedHeight;
-    m_encWidth = resizeWidth;
-    m_encHeight = resizeHeight;
-    if (inputParam->vpp.pad.enable) {
-        m_encWidth += inputParam->vpp.pad.right + inputParam->vpp.pad.left;
-        m_encHeight += inputParam->vpp.pad.bottom + inputParam->vpp.pad.top;
-    }
+    int resizeWidth = 0;
+    int resizeHeight = 0;
 
     //指定のリサイズがあればそのサイズに設定する
     if (inputParam->input.dstWidth > 0 && inputParam->input.dstHeight > 0) {
-        m_encWidth = inputParam->input.dstWidth;
-        m_encHeight = inputParam->input.dstHeight;
-        resizeWidth = m_encWidth;
-        resizeHeight = m_encHeight;
+        m_encWidth = resizeWidth = inputParam->input.dstWidth;
+        m_encHeight = resizeHeight = inputParam->input.dstHeight;
         if (inputParam->vpp.pad.enable) {
             resizeWidth -= (inputParam->vpp.pad.right + inputParam->vpp.pad.left);
             resizeHeight -= (inputParam->vpp.pad.bottom + inputParam->vpp.pad.top);
         }
     }
     RGY_VPP_RESIZE_TYPE resizeRequired = RGY_VPP_RESIZE_TYPE_NONE;
-    if (croppedWidth != resizeWidth || croppedHeight != resizeHeight) {
+    if (resizeWidth > 0 && resizeHeight > 0) {
         resizeRequired = getVppResizeType(inputParam->vpp.resize_algo);
         if (resizeRequired == RGY_VPP_RESIZE_TYPE_UNKNOWN) {
             PrintMes(RGY_LOG_ERROR, _T("Unknown resize type.\n"));
@@ -1045,6 +1042,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
         filterPipeline.push_back(VppType::CL_COLORSPACE);
 #endif
     }
+    if (inputParam->vpp.libplacebo_tonemapping.enable) filterPipeline.push_back(VppType::CL_LIBPLACEBO_TONEMAP);
     if (inputParam->vpp.rff.enable)           filterPipeline.push_back(VppType::CL_RFF);
     if (inputParam->vpp.delogo.enable)        filterPipeline.push_back(VppType::CL_DELOGO);
     if (inputParam->vpp.afs.enable)           filterPipeline.push_back(VppType::CL_AFS);
@@ -1062,7 +1060,12 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.pmd.enable)           filterPipeline.push_back(VppType::CL_DENOISE_PMD);
     if (inputParam->vppamf.pp.enable)         filterPipeline.push_back(VppType::AMF_PREPROCESS);
     if (inputParam->vpp.subburn.size()>0)     filterPipeline.push_back(VppType::CL_SUBBURN);
-    if (     resizeRequired == RGY_VPP_RESIZE_TYPE_OPENCL) filterPipeline.push_back(VppType::CL_RESIZE);
+    if (inputParam->vpp.libplacebo_shader.size() > 0)  filterPipeline.push_back(VppType::CL_LIBPLACEBO_SHADER);
+    if (     resizeRequired == RGY_VPP_RESIZE_TYPE_OPENCL
+#if ENABLE_LIBPLACEBO
+        || resizeRequired == RGY_VPP_RESIZE_TYPE_LIBPLACEBO
+#endif
+    ) filterPipeline.push_back(VppType::CL_RESIZE);
     else if (resizeRequired != RGY_VPP_RESIZE_TYPE_NONE)   filterPipeline.push_back(VppType::AMF_RESIZE);
     if (inputParam->vpp.unsharp.enable)    filterPipeline.push_back(VppType::CL_UNSHARP);
     if (inputParam->vpp.edgelevel.enable)  filterPipeline.push_back(VppType::CL_EDGELEVEL);
@@ -1072,6 +1075,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.curves.enable)     filterPipeline.push_back(VppType::CL_CURVES);
     if (inputParam->vpp.tweak.enable)      filterPipeline.push_back(VppType::CL_TWEAK);
     if (inputParam->vpp.deband.enable)     filterPipeline.push_back(VppType::CL_DEBAND);
+    if (inputParam->vpp.libplacebo_deband.enable)     filterPipeline.push_back(VppType::CL_LIBPLACEBO_DEBAND);
     if (inputParam->vpp.pad.enable)        filterPipeline.push_back(VppType::CL_PAD);
     if (inputParam->vppamf.frc.enable)     filterPipeline.push_back(VppType::AMF_FRC);
     if (inputParam->vpp.overlay.size() > 0)  filterPipeline.push_back(VppType::CL_OVERLAY);
@@ -1161,6 +1165,10 @@ std::tuple<RGY_ERR, std::unique_ptr<AMFFilter>> VCECore::AddFilterAMF(
         }
         } break;
     case VppType::AMF_RESIZE: {
+        if (resize.first == 0 || resize.second == 0
+            || (resize.first == inputFrame.width && resize.second == inputFrame.height)) {
+            return { RGY_ERR_NONE, nullptr };
+        }
         filter = std::make_unique<AMFFilterHQScaler>(m_dev->context(), m_pLog);
         auto param = std::make_shared<AMFFilterParamHQScaler>();
         param->scaler = inputParam->vppamf.scaler;
@@ -1233,6 +1241,33 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         //入力フレーム情報を更新
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //libplacebo-tonemap
+    if (vppType == VppType::CL_LIBPLACEBO_TONEMAP) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilterLibplaceboToneMapping> filter(new RGYFilterLibplaceboToneMapping(m_dev->cl()));
+        shared_ptr<RGYFilterParamLibplaceboToneMapping> param(new RGYFilterParamLibplaceboToneMapping());
+        param->toneMapping = inputParam->vpp.libplacebo_tonemapping;
+        param->hdrMetadataIn = m_hdrseiIn.get();
+        param->hdrMetadataOut = m_hdrseiOut.get();
+        param->vk = m_dev->vulkan();
+        param->vui = vuiInfo;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+#if ENABLE_LIBPLACEBO
+        vuiInfo = filter->VuiOut();
+#endif
+        //登録
+        clfilters.push_back(std::move(filter));
         return RGY_ERR_NONE;
     }
     //rff
@@ -1681,6 +1716,33 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         }
         return RGY_ERR_NONE;
     }
+    if (vppType == VppType::CL_LIBPLACEBO_SHADER) {
+        for (const auto& shader : inputParam->vpp.libplacebo_shader) {
+            amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+            unique_ptr<RGYFilter> filter(new RGYFilterLibplaceboShader(m_dev->cl()));
+            shared_ptr<RGYFilterParamLibplaceboShader> param(new RGYFilterParamLibplaceboShader());
+            param->shader = shader;
+            param->frameIn = inputFrame;
+            param->frameOut = inputFrame;
+            if (param->shader.width > 0 && param->shader.height > 0) {
+                param->frameOut.width = param->shader.width;
+                param->frameOut.height = param->shader.height;
+            }
+            param->baseFps = m_encFps;
+            param->bOutOverwrite = false;
+            param->vk = m_dev->vulkan();
+            auto sts = filter->init(param, m_pLog);
+            if (sts != RGY_ERR_NONE) {
+                return sts;
+            }
+            //入力フレーム情報を更新
+            inputFrame = param->frameOut;
+            m_encFps = param->baseFps;
+            //登録
+            clfilters.push_back(std::move(filter));
+        }
+        return RGY_ERR_NONE;
+    }
     //リサイズ
     if (vppType == VppType::CL_RESIZE) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
@@ -1691,6 +1753,13 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         param->frameOut = inputFrame;
         param->frameOut.width = resize.first;
         param->frameOut.height = resize.second;
+        if (isLibplaceboResizeFiter(inputParam->vpp.resize_algo)) {
+            param->libplaceboResample = std::make_shared<RGYFilterParamLibplaceboResample>();
+            param->libplaceboResample->resample = inputParam->vpp.resize_libplacebo;
+            param->libplaceboResample->resize_algo = inputParam->vpp.resize_algo;
+            param->libplaceboResample->vk = m_dev->vulkan();
+            param->libplaceboResample->vui = vuiInfo;
+        }
         param->baseFps = m_encFps;
         param->bOutOverwrite = false;
         auto sts = filterResize->init(param, m_pLog);
@@ -1841,6 +1910,29 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         //入力フレーム情報を更新
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //libplacebo deband
+    if (vppType == VppType::CL_LIBPLACEBO_DEBAND) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        auto filter = std::make_unique<RGYFilterLibplaceboDeband>(m_dev->cl());
+        shared_ptr<RGYFilterParamLibplaceboDeband> param(new RGYFilterParamLibplaceboDeband());
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        param->deband = inputParam->vpp.libplacebo_deband;
+        param->vk = m_dev->vulkan();
+        param->vui = vuiInfo;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        //登録
+        clfilters.push_back(std::move(filter));
         return RGY_ERR_NONE;
     }
     //padding
@@ -3855,9 +3947,9 @@ tstring VCECore::GetEncoderParam() {
     } else if (m_dovirpuMetadataCopy) {
         mes += strsprintf(_T("dovi rpu       copy\n"));
     }
-    if (m_hdrsei) {
-        const auto masterdisplay = m_hdrsei->print_masterdisplay();
-        const auto maxcll = m_hdrsei->print_maxcll();
+    if (m_hdrseiOut) {
+        const auto masterdisplay = m_hdrseiOut->print_masterdisplay();
+        const auto maxcll = m_hdrseiOut->print_maxcll();
         if (masterdisplay.length() > 0) {
             const tstring tstr = char_to_tstring(masterdisplay);
             const auto splitpos = tstr.find(_T("WP("));

@@ -26,77 +26,96 @@
 // ------------------------------------------------------------------------------------------
 
 #pragma once
-#ifndef __VCE_DEVICE_VULKAN_H__
-#define __VCE_DEVICE_VULKAN_H__
+#ifndef __RGY_DEVICE_VULKAN_H__
+#define __RGY_DEVICE_VULKAN_H__
 
 #include <unordered_map>
 
 #include "rgy_version.h"
-#include "rgy_err.h"
 #include "rgy_util.h"
 #include "rgy_log.h"
-#include "rgy_opencl.h"
-#include "rgy_device.h"
-#include "vce_param.h"
+#include "rgy_err.h"
 
-#pragma warning(push)
-#pragma warning(disable:4100)
-RGY_DISABLE_WARNING_PUSH
-RGY_DISABLE_WARNING_STR("-Wclass-memaccess")
-#include "Factory.h"
-#include "Context.h"
-#include "Trace.h"
-RGY_DISABLE_WARNING_POP
-#pragma warning(pop)
+class DeviceVulkan;
 
 #if ENABLE_VULKAN
 #include "rgy_vulkan.h"
-#include "VulkanAMF.h"
+
+#define RGY_VK_API_VER (VK_API_VERSION_1_2)
+
+#if ENCODER_VCEENC
+namespace amf {
+    class AMFVulkanDevice;
+}
+#endif // #if ENCODER_VCEENC
 
 class DeviceVulkan {
 public:
     DeviceVulkan();
     virtual ~DeviceVulkan();
 
-    RGY_ERR Init(int adapterID, amf::AMFContext *pContext, std::shared_ptr<RGYLog> log);
+    RGY_ERR Init(int adapterID, const std::vector<const char*> &extInstance, const std::vector<const char*> &extDevice, std::shared_ptr<RGYLog> log, bool logTryMode);
     RGY_ERR Terminate();
 
-    RGYVulkanFuncs* GetVulkan();
-    amf::AMFVulkanDevice*      GetDevice();
-    std::wstring GetDisplayDeviceName() { return m_displayDeviceName; }
+    RGYVulkanFuncs *GetVulkan();
+#if ENCODER_VCEENC
+    amf::AMFVulkanDevice *GetDevice();
+#endif
+    const std::string& GetDisplayDeviceName() const { return m_displayDeviceName; }
+    const uint8_t *GetUUID() const { return m_uuid; }
 
     int GetQueueGraphicFamilyIndex() { return m_uQueueGraphicsFamilyIndex; }
-    VkQueue    GetQueueGraphicQueue() { return m_hQueueGraphics; }
+    VkQueue GetQueueGraphicQueue() { return m_hQueueGraphics; }
 
     int GetQueueComputeFamilyIndex() { return m_uQueueComputeFamilyIndex; }
-    VkQueue    GetQueueComputeQueue() { return m_hQueueCompute; }
+    VkQueue GetQueueComputeQueue() { return m_hQueueCompute; }
 
     int adapterCount();
+
+    VkDevice GetDevice() { return m_vkDevice; }
+    VkPhysicalDevice GetPhysicalDevice() { return m_vkPhysicalDevice; }
+    VkInstance GetInstance() { return m_vkInstance; }
+
+#if defined(_WIN32) || defined(_WIN64)
+    HANDLE getMemHandle(VkDeviceMemory memory);
+    HANDLE getSemaphoreHandle(VkSemaphore &sempahore);
+#else
+    int getMemHandle(VkDeviceMemory memory);
+    int getSemaphoreHandle(VkSemaphore &sempahore);
+#endif
 
 protected:
     void AddMessage(RGYLogLevel log_level, const tstring &str);
     void AddMessage(RGYLogLevel log_level, const TCHAR *format, ...);
 private:
-    RGY_ERR CreateInstance();
-    RGY_ERR CreateDeviceAndFindQueues(int adapterID, std::vector<const char*> &deviceExtensions);
+    RGY_ERR CreateInstance(const std::vector<const char*> &extInstance);
+    RGY_ERR CreateDeviceAndFindQueues(int adapterID, const std::vector<const char*> &extDevice);
 
     std::vector<const char*> GetDebugInstanceExtensionNames();
     std::vector<const char*> GetDebugInstanceLayerNames();
     std::vector<const char*> GetDebugDeviceLayerNames(VkPhysicalDevice device);
 
-    tstring                         m_name;
-    amf::AMFVulkanDevice            m_VulkanDev;
-    std::wstring                    m_displayDeviceName;
-    RGYVulkanFuncs                  m_vk;
+    tstring m_name;
+    VkInstance m_vkInstance;
+    VkPhysicalDevice m_vkPhysicalDevice;
+    VkDevice m_vkDevice;
+#if ENCODER_VCEENC
+    amf::AMFVulkanDevice m_VulkanDev;
+#endif
+    std::string m_displayDeviceName;
+    uint8_t m_uuid[VK_UUID_SIZE];
+    RGYVulkanFuncs m_vk;
 
-    int                      m_uQueueGraphicsFamilyIndex;
-    int                      m_uQueueComputeFamilyIndex;
+    int m_uQueueGraphicsFamilyIndex;
+    int m_uQueueComputeFamilyIndex;
 
-    VkQueue                         m_hQueueGraphics;
-    VkQueue                         m_hQueueCompute;
+    VkQueue m_hQueueGraphics;
+    VkQueue m_hQueueCompute;
 
     std::shared_ptr<RGYLog> m_log;
+    bool m_logTryMode;
 };
+
 #endif //#if ENABLE_VULKAN
 
-#endif //#if __VCE_DEVICE_VULKAN_H__
+#endif //#if __RGY_DEVICE_VULKAN_H__

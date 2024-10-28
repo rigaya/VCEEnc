@@ -386,6 +386,17 @@ static int getAttachmentTrackIdx(const RGYParamCommon *common, const int iTrack)
     return -1;
 }
 
+static std::vector<CX_DESC> get_libplacebo_only_resize_list() {
+    std::vector<CX_DESC> libplacebo_resize_list;
+    for (size_t i = 0; list_vpp_resize[i].desc; i++) {
+        if (_tcsncmp(list_vpp_resize[i].desc, _T("libplacebo-"), _tcslen(_T("libplacebo-"))) == 0) {
+            libplacebo_resize_list.push_back(list_vpp_resize[i]);
+        }
+    }
+    libplacebo_resize_list.push_back({ nullptr, 0 });
+    return libplacebo_resize_list;
+}
+
 #pragma warning(disable: 4100) //warning C4100: 'argData': 引数は関数の本体部で 1 度も参照されません。
 #pragma warning(disable: 4127) //warning C4127: 条件式が定数です。
 
@@ -408,12 +419,113 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
     if (IS_OPTION("vpp-resize")
         || (IS_OPTION("vpp-scaling") && ENCODER_QSV)) {
         i++;
-        int value;
-        if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_vpp_resize, strInput[i]))) {
-            print_cmd_error_invalid_value(option_name, strInput[i], list_vpp_resize_help);
-            return 1;
+        if (ENABLE_LIBPLACEBO) {
+            ///////////////////////////////////////////////////////////////////////////////////////
+            // パラメータを追加したら、paramsResizeLibPlaceboにも追加する！！
+            ///////////////////////////////////////////////////////////////////////////////////////
+            std::vector<std::string> paramListResizeNVEnc;
+            for (size_t ielem = 0; ielem < _countof(paramsResizeNVEnc); ielem++) {
+                paramListResizeNVEnc.push_back(paramsResizeNVEnc[ielem]);
+            }
+            std::vector<std::string> paramList = paramListResizeNVEnc;
+            for (size_t ielem = 0; ielem < _countof(paramsResizeLibPlacebo); ielem++) {
+                paramList.push_back(paramsResizeLibPlacebo[ielem]);
+            }
+            for (const auto& param : split(strInput[i], _T(","))) {
+                auto pos = param.find_first_of(_T("="));
+                if (pos != std::string::npos) {
+                    auto param_arg = param.substr(0, pos);
+                    auto param_val = param.substr(pos + 1);
+                    param_arg = tolowercase(param_arg);
+                    if (param_arg == _T("algo")) {
+                        int value = 0;
+                        if (get_list_value(list_vpp_resize, param_val.c_str(), &value)) {
+                            vpp->resize_algo = (RGY_VPP_RESIZE_ALGO)value;
+                        } else {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_resize);
+                            return 1;
+                        }
+                        continue;
+                    }
+                    if (param_arg == _T("pl-radius")) {
+                        try {
+                            vpp->resize_libplacebo.radius = std::stof(param_val);
+                        } catch (...) {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                        continue;
+                    }
+                    if (param_arg == _T("pl-clamp")) {
+                        try {
+                            vpp->resize_libplacebo.clamp_ = std::stof(param_val);
+                        } catch (...) {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                        continue;
+                    }
+                    if (param_arg == _T("pl-taper")) {
+                        try {
+                            vpp->resize_libplacebo.taper = std::stof(param_val);
+                        } catch (...) {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                        continue;
+                    }
+                    if (param_arg == _T("pl-blur")) {
+                        try {
+                            vpp->resize_libplacebo.blur = std::stof(param_val);
+                        } catch (...) {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                        continue;
+                    }
+                    if (param_arg == _T("pl-antiring")) {
+                        try {
+                            vpp->resize_libplacebo.antiring = std::stof(param_val);
+                        } catch (...) {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                        continue;
+                    }
+                    if (param_arg == _T("pl-cplace")) {
+                        try {
+                            vpp->resize_libplacebo.cplace = std::stoi(param_val);
+                        } catch (...) {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                        continue;
+                    }
+                    if (ENCODER_NVENC && std::find_if(paramListResizeNVEnc.begin(), paramListResizeNVEnc.end(), [param_arg](const std::string& str) {
+                        return param_arg == char_to_tstring(str);
+                        }) != paramListResizeNVEnc.end()) {
+                        continue;
+                    }
+                    print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                    return 1;
+                } else {
+                    int value = 0;
+                    if (get_list_value(list_vpp_resize, param.c_str(), &value)) {
+                        vpp->resize_algo = (RGY_VPP_RESIZE_ALGO)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name), param, list_vpp_resize);
+                        return 1;
+                    }
+                }
+            }
+        } else {
+            int value;
+            if (PARSE_ERROR_FLAG == (value = get_value_from_chr(list_vpp_resize, strInput[i]))) {
+                print_cmd_error_invalid_value(option_name, strInput[i], list_vpp_resize_help);
+                return 1;
+            }
+            vpp->resize_algo = (RGY_VPP_RESIZE_ALGO)value;
         }
-        vpp->resize_algo = (RGY_VPP_RESIZE_ALGO)value;
         return 0;
     }
     if (IS_OPTION("vpp-resize-mode") && ENCODER_QSV) {
@@ -712,6 +824,396 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
         return 0;
     }
 
+    if (IS_OPTION("vpp-libplacebo-tonemapping")) {
+        vpp->libplacebo_tonemapping.enable = true;
+        if (i+1 >= nArgNum || strInput[i+1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{
+            "src_csp", "dst_csp", "src_max", "src_min", "dst_max", "dst_min", "dynamic_peak_detection", "smooth_period",
+            "scene_threshold_low", "scene_threshold_high", "percentile", "black_cutoff", "gamut_mapping",
+            "tonemapping_function", "contrast_recovery", "contrast_smoothness", "visualize_lut", "show_clipping",
+            "use_dovi", "lut_path", "lut_type", "dst_matrix", "dst_transfer", "dst_colorprim",
+            "knee_adaptation", "knee_min", "knee_max", "knee_default", "knee_offset", "slope_tuning",
+            "slope_offset", "spline_contrast", "reinhard_contrast", "linear_knee", "exposure"
+        };
+
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos + 1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->libplacebo_tonemapping.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("src_csp")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_libplacebo_tone_mapping_csp, param_val.c_str(), &value)) {
+                        vpp->libplacebo_tonemapping.src_csp = (VppLibplaceboToneMappingCSP)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_libplacebo_tone_mapping_csp);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("dst_csp")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_libplacebo_tone_mapping_csp, param_val.c_str(), &value)) {
+                        vpp->libplacebo_tonemapping.dst_csp = (VppLibplaceboToneMappingCSP)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_libplacebo_tone_mapping_csp);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("src_max")) {
+                    try {
+                        vpp->libplacebo_tonemapping.src_max = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("src_min")) {
+                    try {
+                        vpp->libplacebo_tonemapping.src_min = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("dst_max")) {
+                    try {
+                        vpp->libplacebo_tonemapping.dst_max = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("dst_min")) {
+                    try {
+                        vpp->libplacebo_tonemapping.dst_min = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("dynamic_peak_detection")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->libplacebo_tonemapping.dynamic_peak_detection = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("smooth_period")) {
+                    try {
+                        vpp->libplacebo_tonemapping.smooth_period = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;   
+                }
+                if (param_arg == _T("scene_threshold_low")) {
+                    try {
+                        vpp->libplacebo_tonemapping.scene_threshold_low = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;       
+                }
+                if (param_arg == _T("scene_threshold_high")) {
+                    try {
+                        vpp->libplacebo_tonemapping.scene_threshold_high = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;       
+                }
+                if (param_arg == _T("percentile")) {
+                    try {
+                        vpp->libplacebo_tonemapping.percentile = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;       
+                }
+                if (param_arg == _T("black_cutoff")) {
+                    try {
+                        vpp->libplacebo_tonemapping.black_cutoff = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;       
+                }
+                if (param_arg == _T("gamut_mapping")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_libplacebo_tone_mapping_gamut_mapping, param_val.c_str(), &value)) {
+                        vpp->libplacebo_tonemapping.gamut_mapping = (VppLibplaceboToneMappingGamutMapping)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_libplacebo_tone_mapping_gamut_mapping);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("tonemapping_function")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_libplacebo_tone_mapping_function, param_val.c_str(), &value)) {
+                        vpp->libplacebo_tonemapping.tonemapping_function = (VppLibplaceboToneMappingFunction)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_libplacebo_tone_mapping_function);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("metadata")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_libplacebo_tone_mapping_metadata, param_val.c_str(), &value)) {
+                        vpp->libplacebo_tonemapping.metadata = (VppLibplaceboToneMappingMetadata)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_libplacebo_tone_mapping_metadata);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("contrast_recovery")) {
+                    try {
+                        vpp->libplacebo_tonemapping.contrast_recovery = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("contrast_smoothness")) {
+                    try {
+                        vpp->libplacebo_tonemapping.contrast_smoothness = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("visualize_lut")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->libplacebo_tonemapping.visualize_lut = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("show_clipping")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->libplacebo_tonemapping.show_clipping = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("use_dovi")) {
+                    try {
+                        vpp->libplacebo_tonemapping.use_dovi = std::stoi(param_val);
+                    } catch (...) {
+                        bool b = false;
+                        if (!cmd_string_to_bool(&b, param_val)) {
+                            vpp->libplacebo_tonemapping.use_dovi = (b) ? 1 : 0;
+                        } else {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("lut_path")) {
+                    vpp->libplacebo_tonemapping.lut_path = param_val;
+                    continue;
+                }
+                if (param_arg == _T("lut_type")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_libplacebo_tone_mapping_lut_type, param_val.c_str(), &value)) {
+                        vpp->libplacebo_tonemapping.lut_type = (VppLibplaceboToneMappingLUTType)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_libplacebo_tone_mapping_lut_type);   
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("dst_pl_transfer")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_libplacebo_tone_mapping_transfer, param_val.c_str(), &value)) {
+                        vpp->libplacebo_tonemapping.dst_pl_transfer = (VppLibplaceboToneMappingTransfer)value;
+                    } else {    
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_transfer);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("dst_pl_colorprim")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_libplacebo_tone_mapping_colorprim, param_val.c_str(), &value)) {
+                        vpp->libplacebo_tonemapping.dst_pl_colorprim = (VppLibplaceboToneMappingColorprim)value;
+                    } else {    
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_colorprim);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("knee_adaptation")) {
+                    try {
+                        vpp->libplacebo_tonemapping.tone_constants.st2094.knee_adaptation = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("knee_min")) {
+                    try {
+                        vpp->libplacebo_tonemapping.tone_constants.st2094.knee_min = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("knee_max")) {
+                    try {
+                        vpp->libplacebo_tonemapping.tone_constants.st2094.knee_max = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("knee_default")) {
+                    try {
+                        vpp->libplacebo_tonemapping.tone_constants.st2094.knee_default = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("knee_offset")) {
+                    try {
+                        vpp->libplacebo_tonemapping.tone_constants.bt2390.knee_offset = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("slope_tuning")) {
+                    try {
+                        vpp->libplacebo_tonemapping.tone_constants.spline.slope_tuning = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("slope_offset")) {
+                    try {
+                        vpp->libplacebo_tonemapping.tone_constants.spline.slope_offset = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("spline_contrast")) {
+                    try {
+                        vpp->libplacebo_tonemapping.tone_constants.spline.spline_contrast = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("reinhard_contrast")) {
+                    try {
+                        vpp->libplacebo_tonemapping.tone_constants.reinhard.contrast = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                
+                if (param_arg == _T("linear_knee")) {
+                    try {
+                        vpp->libplacebo_tonemapping.tone_constants.mobius.linear_knee = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("exposure")) {
+                    try {
+                        vpp->libplacebo_tonemapping.tone_constants.linear.exposure = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                if (param == _T("dynamic_peak_detection")) {
+                    vpp->libplacebo_tonemapping.dynamic_peak_detection = true;
+                    continue;
+                }
+                if (param == _T("visualize_lut")) {
+                    vpp->libplacebo_tonemapping.visualize_lut = true;
+                    continue;
+                }
+                if (param == _T("show_clipping")) {
+                    vpp->libplacebo_tonemapping.show_clipping = true;
+                    continue;
+                }
+                if (param == _T("use_dovi")) {
+                    vpp->libplacebo_tonemapping.use_dovi = true;
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
+    if (IS_OPTION("vpp-libplacebo-tonemapping-lut")) {
+        i++;
+        vpp->libplacebo_tonemapping.lut_path = strInput[i];
+        return 0;
+    }
     if (IS_OPTION("vpp-delogo")) {
         vpp->delogo.enable = true;
 
@@ -2669,6 +3171,176 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
         return 0;
     }
 
+    if (IS_OPTION("vpp-libplacebo-shader") && ENABLE_VPP_FILTER_LIBPLACEBO) {
+        VppLibplaceboShader shader;
+        shader.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            vpp->libplacebo_shader.push_back(shader);
+            return 0;
+        }
+        i++;
+        const auto paramList = std::vector<std::string>{
+            "shader", "res", "width", "height", "chromaloc", "colorsystem", "transfer", "resampler",
+            "radius", "clamp", "taper", "blur", "antiring", "linear"
+        };
+        for (const auto &param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos + 1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        shader.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("shader")) {
+                    shader.shader = trim(param_val, _T("\""));
+                    continue;
+                }
+                if (param_arg == _T("res")) {
+                    int width = 0, height = 0;
+                    if (2 == _stscanf_s(param_val.c_str(), _T("%dx%d"), &width, &height)) {
+                        shader.width = width;
+                        shader.height = height;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("width")) {
+                    try {
+                        shader.width = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("height")) {
+                    try {
+                        shader.height = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("chromaloc")) {
+                    int value = 0;
+                    if (get_list_value(list_chromaloc_str, param_val.c_str(), &value)) {
+                        shader.chromaloc = (CspChromaloc)value;
+                    } else if (get_list_value(list_chromaloc, param_val.c_str(), &value)) {
+                        shader.chromaloc = (CspChromaloc)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_chromaloc_str);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("colorsystem")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_libplacebo_colorsystem, param_val.c_str(), &value)) {
+                        shader.colorsystem = (VppLibplaceboColorsystem)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_libplacebo_colorsystem);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("transfer")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_libplacebo_tone_mapping_transfer, param_val.c_str(), &value)) {
+                        shader.transfer = (VppLibplaceboToneMappingTransfer)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_libplacebo_tone_mapping_transfer);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("resampler")) {
+                    int value = 0;
+                    const auto libplacebo_resize_list = get_libplacebo_only_resize_list();
+                    if (get_list_value(libplacebo_resize_list.data(), param_val.c_str(), &value)) {
+                        shader.resize_algo = (RGY_VPP_RESIZE_ALGO)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, libplacebo_resize_list.data());
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("radius")) {
+                    try {
+                        shader.radius = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("clamp")) {
+                    try {
+                        shader.clamp_ = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("taper")) {
+                    try {
+                        shader.taper = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("blur")) {
+                    try {
+                        shader.blur = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("antiring")) {
+                    try {
+                        shader.antiring = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("linear")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        shader.linear = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                shader.params.push_back(std::make_pair(param_arg, param_val));
+                continue;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        vpp->libplacebo_shader.push_back(shader);
+        return 0;
+    }
+
     if (IS_OPTION("vpp-unsharp") && ENABLE_VPP_FILTER_UNSHARP) {
         vpp->unsharp.enable = true;
         if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
@@ -3357,6 +4029,107 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                     vpp->deband.randEachFrame = true;
                     continue;
                 }
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
+    if (IS_OPTION("vpp-libplacebo-deband") && ENABLE_VPP_FILTER_LIBPLACEBO) {
+        vpp->libplacebo_deband.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{
+            "iterations", "threshold", "radius", "thre_cb",
+            "grainY", "grainC", "dither", "lut_size" };
+
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos+1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->libplacebo_deband.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("iterations")) {
+                    try {
+                        vpp->libplacebo_deband.iterations = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("threshold")) {
+                    try {
+                        vpp->libplacebo_deband.threshold = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("radius")) {
+                    try {
+                        vpp->libplacebo_deband.radius = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("grainY")) {
+                    try {
+                        vpp->libplacebo_deband.grainY = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("grainC")) {
+                    try {
+                        vpp->libplacebo_deband.grainC = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("dither")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_libplacebo_deband_dither_mode, param_val.c_str(), &value)) {
+                        vpp->libplacebo_deband.dither = (VppLibplaceboDebandDitherMode)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_ass_shaping);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("lut_size")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_libplacebo_deband_lut_size, param_val.c_str(), &value)) {
+                        vpp->libplacebo_deband.lut_size = value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_ass_shaping);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
                 print_cmd_error_unknown_opt_param(option_name, param, paramList);
                 return 1;
             }
@@ -5319,10 +6092,12 @@ int parse_one_common_option(const TCHAR *option_name, const TCHAR *strInput[], i
     if (IS_OPTION("chromaloc") || IS_OPTION("chromaloc:h264") || IS_OPTION("chromaloc:hevc")) {
         i++;
         int value = 0;
-        if (get_list_value(list_chromaloc, strInput[i], &value)) {
+        if (get_list_value(list_chromaloc_str, strInput[i], &value)) {
+            common->out_vui.chromaloc = (CspChromaloc)value;
+        } else if (get_list_value(list_chromaloc, strInput[i], &value)) {
             common->out_vui.chromaloc = (CspChromaloc)value;
         } else {
-            print_cmd_error_invalid_value(option_name, strInput[i], list_chromaloc);
+            print_cmd_error_invalid_value(option_name, strInput[i], list_chromaloc_str);
             return 1;
         }
         return 0;
@@ -6176,6 +6951,14 @@ int parse_one_ctrl_option(const TCHAR *option_name, const TCHAR *strInput[], int
         return 0;
     }
 #endif
+    if (IS_OPTION("disable-vulkan")) {
+        ctrl->enableVulkan = false;
+        return 0;
+    }
+    if (IS_OPTION("enable-vulkan")) {
+        ctrl->enableVulkan = true;
+        return 0;
+    }
     return -10;
 }
 
@@ -6274,7 +7057,29 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
     }
 
     if (!isNvvfxResizeFiter(param->resize_algo) && !isNgxResizeFiter(param->resize_algo)) {
-        OPT_LST(_T("--vpp-resize"), resize_algo, list_vpp_resize);
+        if (isLibplaceboResizeFiter(param->resize_algo)) {
+            OPT_LST(_T("--vpp-resize"), resize_algo, list_vpp_resize);
+            if (param->resize_libplacebo.radius != defaultPrm->resize_libplacebo.radius) {
+                cmd << _T(",radius=") << std::setprecision(3) << param->resize_libplacebo.radius;
+            }
+            if (param->resize_libplacebo.clamp_ != defaultPrm->resize_libplacebo.clamp_) {
+                cmd << _T(",clamp=") << std::setprecision(3) << param->resize_libplacebo.clamp_;
+            }
+            if (param->resize_libplacebo.taper != defaultPrm->resize_libplacebo.taper) {
+                cmd << _T(",taper=") << std::setprecision(3) << param->resize_libplacebo.taper;
+            }
+            if (param->resize_libplacebo.blur != defaultPrm->resize_libplacebo.blur) {
+                cmd << _T(",blur=") << std::setprecision(3) << param->resize_libplacebo.blur;
+            }
+            if (param->resize_libplacebo.antiring != defaultPrm->resize_libplacebo.antiring) {
+                cmd << _T(",antiring=") << std::setprecision(3) << param->resize_libplacebo.antiring;
+            }
+            if (param->resize_libplacebo.cplace != defaultPrm->resize_libplacebo.cplace) {
+                cmd << _T(",cplace=") << param->resize_libplacebo.cplace;
+            }
+        } else {
+            OPT_LST(_T("--vpp-resize"), resize_algo, list_vpp_resize);
+        }
     }
 #if ENCODER_QSV
     OPT_LST(_T("--vpp-resize-mode"), resize_mode, list_vpp_resize_mode);
@@ -6348,6 +7153,56 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
             cmd << _T(" --vpp-colorspace");
         }
     }
+    if (param->libplacebo_tonemapping != defaultPrm->libplacebo_tonemapping) {
+        tmp.str(tstring());
+        if (!param->libplacebo_tonemapping.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (param->libplacebo_tonemapping.enable || save_disabled_prm) {
+            ADD_LST(_T("src_csp"), libplacebo_tonemapping.src_csp, list_vpp_libplacebo_tone_mapping_csp);
+            ADD_LST(_T("dst_csp"), libplacebo_tonemapping.dst_csp, list_vpp_libplacebo_tone_mapping_csp);
+            ADD_FLOAT(_T("src_max"), libplacebo_tonemapping.src_max, 3);
+            ADD_FLOAT(_T("src_min"), libplacebo_tonemapping.src_min, 3);
+            ADD_FLOAT(_T("dst_max"), libplacebo_tonemapping.dst_max, 3);
+            ADD_FLOAT(_T("dst_min"), libplacebo_tonemapping.dst_min, 3);
+            ADD_BOOL(_T("dynamic_peak_detection"), libplacebo_tonemapping.dynamic_peak_detection);
+            ADD_FLOAT(_T("smooth_period"), libplacebo_tonemapping.smooth_period, 3);
+            ADD_FLOAT(_T("scene_threshold_low"), libplacebo_tonemapping.scene_threshold_low, 3);
+            ADD_FLOAT(_T("scene_threshold_high"), libplacebo_tonemapping.scene_threshold_high, 3);
+            ADD_FLOAT(_T("percentile"), libplacebo_tonemapping.percentile, 3);
+            ADD_FLOAT(_T("black_cutoff"), libplacebo_tonemapping.black_cutoff, 3);
+            ADD_LST(_T("gamut_mapping"), libplacebo_tonemapping.gamut_mapping, list_vpp_libplacebo_tone_mapping_gamut_mapping);
+            ADD_LST(_T("tonemapping_function"), libplacebo_tonemapping.tonemapping_function, list_vpp_libplacebo_tone_mapping_function);
+            ADD_LST(_T("metadata"), libplacebo_tonemapping.metadata, list_vpp_libplacebo_tone_mapping_metadata);
+            ADD_FLOAT(_T("contrast_recovery"), libplacebo_tonemapping.contrast_recovery, 3);
+            ADD_FLOAT(_T("contrast_smoothness"), libplacebo_tonemapping.contrast_smoothness, 3);
+            ADD_BOOL(_T("visualize_lut"), libplacebo_tonemapping.visualize_lut);
+            ADD_BOOL(_T("show_clipping"), libplacebo_tonemapping.show_clipping);
+            ADD_NUM(_T("use_dovi"), libplacebo_tonemapping.use_dovi);
+            ADD_PATH(_T("lut_path"), libplacebo_tonemapping.lut_path.c_str());
+            ADD_LST(_T("lut_type"), libplacebo_tonemapping.lut_type, list_vpp_libplacebo_tone_mapping_lut_type);
+            ADD_LST(_T("dst_pl_transfer"), libplacebo_tonemapping.dst_pl_transfer, list_vpp_libplacebo_tone_mapping_transfer);
+            ADD_LST(_T("dst_pl_colorprim"), libplacebo_tonemapping.dst_pl_colorprim, list_vpp_libplacebo_tone_mapping_colorprim);
+            ADD_FLOAT(_T("knee_adaptation"), libplacebo_tonemapping.tone_constants.st2094.knee_adaptation, 3);
+            ADD_FLOAT(_T("knee_min"), libplacebo_tonemapping.tone_constants.st2094.knee_min, 3);
+            ADD_FLOAT(_T("knee_max"), libplacebo_tonemapping.tone_constants.st2094.knee_max, 3);
+            ADD_FLOAT(_T("knee_default"), libplacebo_tonemapping.tone_constants.st2094.knee_default, 3);
+            ADD_FLOAT(_T("knee_offset"), libplacebo_tonemapping.tone_constants.bt2390.knee_offset, 3);
+            ADD_FLOAT(_T("slope_tuning"), libplacebo_tonemapping.tone_constants.spline.slope_tuning, 3);
+            ADD_FLOAT(_T("slope_offset"), libplacebo_tonemapping.tone_constants.spline.slope_offset, 3);
+            ADD_FLOAT(_T("spline_contrast"), libplacebo_tonemapping.tone_constants.spline.spline_contrast, 3);
+            ADD_FLOAT(_T("reinhard_contrast"), libplacebo_tonemapping.tone_constants.reinhard.contrast, 3);
+            ADD_FLOAT(_T("linear_knee"), libplacebo_tonemapping.tone_constants.mobius.linear_knee, 3);
+            ADD_FLOAT(_T("exposure"), libplacebo_tonemapping.tone_constants.linear.exposure, 3);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-libplacebo-tonemapping ") << tmp.str().substr(1);
+        } else if (param->libplacebo_tonemapping.enable) {
+            cmd << _T(" --vpp-libplacebo-tonemapping");
+        }
+    }
+    OPT_STR_PATH(_T("--vpp-libplacebo-tonemapping-lut"), libplacebo_tonemapping.lut_path);
+
     if (param->delogo != defaultPrm->delogo) {
         tmp.str(tstring());
         if (!param->delogo.enable && save_disabled_prm) {
@@ -6701,6 +7556,37 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
             }
         }
     }
+    for (size_t i = 0; i < param->libplacebo_shader.size(); i++) {
+        const auto shaderDefault = VppLibplaceboShader();
+        if (param->libplacebo_shader[i] != shaderDefault) {
+            tmp.str(tstring());
+            if (!param->libplacebo_shader[i].enable && save_disabled_prm) {
+                tmp << _T(",enable=false");
+            }
+            if (param->libplacebo_shader[i].enable || save_disabled_prm) {
+                ADD_PATH2(_T("shader"), param->libplacebo_shader[i], shader.c_str());
+                if (param->libplacebo_shader[i].width > 0 && param->libplacebo_shader[i].height > 0) {
+                    tmp << _T(",res=") << param->libplacebo_shader[i].width << _T("x") << param->libplacebo_shader[i].height;
+                }
+                ADD_LST2(_T("chromaloc"), param->libplacebo_shader[i], shaderDefault, chromaloc, list_chromaloc_str);
+                ADD_LST2(_T("colorsystem"), param->libplacebo_shader[i], shaderDefault, colorsystem, list_vpp_libplacebo_colorsystem);
+                ADD_LST2(_T("transfer"), param->libplacebo_shader[i], shaderDefault, transfer, list_vpp_libplacebo_tone_mapping_transfer);
+                ADD_LST2(_T("filter"), param->libplacebo_shader[i], shaderDefault, resize_algo, list_vpp_resize);
+                ADD_FLOAT2(_T("radius"), param->libplacebo_shader[i], shaderDefault, radius, 3);
+                ADD_FLOAT2(_T("clamp"), param->libplacebo_shader[i], shaderDefault, clamp_, 3);
+                ADD_FLOAT2(_T("taper"), param->libplacebo_shader[i], shaderDefault, taper, 3);
+                ADD_FLOAT2(_T("blur"), param->libplacebo_shader[i], shaderDefault, blur, 3);
+                ADD_FLOAT2(_T("antiring"), param->libplacebo_shader[i], shaderDefault, antiring, 3);
+                ADD_BOOL2(_T("linear"), param->libplacebo_shader[i], shaderDefault, linear);
+            }
+            if (!tmp.str().empty()) {
+                cmd << _T(" --vpp-libplacebo-shader \"") << tmp.str().substr(1) << _T("\"");
+            } else if (param->libplacebo_shader[i].enable) {
+                cmd << _T(" --vpp-libplacebo-shader");
+            }
+        }
+    }
+
     if (param->unsharp != defaultPrm->unsharp) {
         tmp.str(tstring());
         if (!param->unsharp.enable && save_disabled_prm) {
@@ -6855,6 +7741,30 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
             cmd << _T(" --vpp-deband ") << tmp.str().substr(1);
         } else if (param->deband.enable) {
             cmd << _T(" --vpp-deband");
+        }
+    }
+    if (param->libplacebo_deband != defaultPrm->libplacebo_deband) {
+        tmp.str(tstring());
+        if (!param->libplacebo_deband.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (param->libplacebo_deband.enable || save_disabled_prm) {
+            ADD_NUM(_T("iterations"), libplacebo_deband.iterations);
+            ADD_FLOAT(_T("threshold"), libplacebo_deband.threshold, 3);
+            ADD_FLOAT(_T("radius"), libplacebo_deband.radius, 3);
+            ADD_FLOAT(_T("grain_y"), libplacebo_deband.grainY, 3);
+            if (param->libplacebo_deband.grainC >= 0.0f && param->libplacebo_deband.grainY != param->libplacebo_deband.grainC) {
+                ADD_FLOAT(_T("grain_c"), libplacebo_deband.grainC, 3);
+            }
+            ADD_LST(_T("dither"), libplacebo_deband.dither, list_vpp_libplacebo_deband_dither_mode);
+            if (param->libplacebo_deband.lut_size != defaultPrm->libplacebo_deband.lut_size) {
+                tmp << _T(",lut_size=") << rgy_pow_int<int>(2, param->libplacebo_deband.lut_size);
+            }
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-libplacebo-deband ") << tmp.str().substr(1);
+        } else if (param->libplacebo_deband.enable) {
+            cmd << _T(" --vpp-libplacebo-deband");
         }
     }
     for (size_t i = 0; i < param->overlay.size(); i++) {
@@ -7423,6 +8333,7 @@ tstring gen_cmd(const RGYParamControl *param, const RGYParamControl *defaultPrm,
 #if ENCODER_QSV || ENCODER_VCEENC || ENCODER_MPP
     OPT_BOOL(_T("--enable-opencl"), _T("--disable-opencl"), enableOpenCL);
 #endif
+    OPT_BOOL(_T("--enable-vulkan"), _T("--disable-vulkan"), enableVulkan);
     return cmd.str();
 }
 
@@ -7775,7 +8686,108 @@ tstring gen_cmd_help_vpp() {
         FILTER_DEFAULT_HDR2SDR_DESAT_EXP
     );
 #endif
+#if ENABLE_LIBPLACEBO
+    str += strsprintf(_T("\n")
+        _T("   --vpp-libplacebo-tonemapping [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     Converts colorspace of the video.\n")
+        _T("    params\n")
+        _T("      src_csp=<string>         input colorspace (default: %s)\n")
+        _T("      dst_csp=<string>         output colorspace (default: %s)\n"),
+        get_cx_desc(list_vpp_libplacebo_tone_mapping_csp, FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SRC_CSP),
+        get_cx_desc(list_vpp_libplacebo_tone_mapping_csp, FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_DST_CSP))
+        + print_list(list_vpp_libplacebo_tone_mapping_csp) + _T("\n");
+    str += strsprintf(_T("\n")
+        _T("      src_max=<float>          input max (nits) (default: %d(HDR)/%d(SDR))\n")
+        _T("      src_min=<float>          input min (nits) (default: %.4f(HDR)/%.4f(SDR))\n")
+        _T("      dst_max=<float>          output max (nits) (default: %d(HDR)/%d(SDR))\n")
+        _T("      dst_min=<float>          output min (nits) (default: %.4f(HDR)/%.4f(SDR))\n"),
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_NIT_MAX_HDR, FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_NIT_MAX_SDR,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_NIT_MIN_HDR, FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_NIT_MIN_SDR,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_NIT_MAX_HDR, FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_NIT_MAX_SDR,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_NIT_MIN_HDR, FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_NIT_MIN_SDR);
     str += strsprintf(_T("")
+        _T("      dynamic_peak_detection=<bool>  Enable dynamic peak detection (default:%s)\n")
+        _T("      smooth_period=<float>          Smoothing coefficient for detected values (default:%.1f)\n")
+        _T("      scene_threshold_low=<float>    Lower threshold for scene change detection (dB) (default:%.1f)\n")
+        _T("      scene_threshold_high=<float>   Upper threshold for scene change detection (dB) (default:%.1f)\n")
+        _T("      percentile=<float>             Percentile to consider for luminance histogram (default:%.3f)\n")
+        _T("      black_cutoff=<float>           Black level cutoff intensity (PQ) (default:%.1f)\n"),
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_DYNAMIC_PEAK_DETECTION ? _T("true") : _T("false"),
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SMOOTH_PERIOD,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SCENE_THRESHOLD_LOW,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SCENE_THRESHOLD_HIGH,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_PERCENTILE,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_BLACK_CUTOFF);
+    str += strsprintf(_T("")
+        _T("      gamut_mapping=<string>          Gamut mapping mode\n")
+        _T("                                (default:%s)\n"),
+        get_cx_desc(list_vpp_libplacebo_tone_mapping_gamut_mapping, FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_GAMUT_MAPPING));
+    str += print_list(list_vpp_libplacebo_tone_mapping_gamut_mapping);
+    str += strsprintf(_T("\n")
+        _T("      tonemapping_function=<string>   Tone mapping function\n")
+        _T("                                (default:%s)\n"),
+        get_cx_desc(list_vpp_libplacebo_tone_mapping_function, FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_TONEMAPPING_FUNCTION));
+    str += print_list(list_vpp_libplacebo_tone_mapping_function);
+    str += strsprintf(_T("\n")
+        _T("      tone_constants=<string>  Tone mapping constants (e.g. \"exposure=0.25\")\n")
+        _T("      metadata=<string>        Metadata source to use\n")
+        _T("                                (default:%s)\n"),
+        get_cx_desc(list_vpp_libplacebo_tone_mapping_metadata, FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_METADATA));
+    str += print_list(list_vpp_libplacebo_tone_mapping_metadata);
+    str += strsprintf(_T("\n")
+        _T("      contrast_recovery=<float> Contrast recovery strength (default:%.1f)\n")
+        _T("      contrast_smoothness=<float> Contrast recovery lowpass kernel size (default:%.1f)\n")
+        _T("      visualize_lut=<bool>     Visualize tone mapping curve (default:%s)\n")
+        _T("      show_clipping=<bool>     Highlight clipped pixels (default:%s)\n")
+        _T("      use_dovi=<bool>          Use Dolby Vision RPU (default:%s)\n"),
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_CONTRAST_RECOVERY,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_CONTRAST_SMOOTHNESS,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_VISUALIZE_LUT ? _T("true") : _T("false"),
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SHOW_CLIPPING ? _T("true") : _T("false"),
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_USE_DOVI < 0 ? _T("auto") : (FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_USE_DOVI ? _T("true") : _T("false")));
+    str += strsprintf(_T("")
+        _T("      lut_type=<string>         LUT interpretation method\n")
+        _T("                                (default:%s)\n"),
+        get_cx_desc(list_vpp_libplacebo_tone_mapping_lut_type, FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_LUT_TYPE));
+    str += print_list(list_vpp_libplacebo_tone_mapping_lut_type);
+    str += strsprintf(_T("\n")
+        _T("      dst_pl_transfer=<string>     Output transfer function (must be used with dst_colorprim)\n")
+        _T("                                (default:%s)\n"),
+        get_cx_desc(list_vpp_libplacebo_tone_mapping_transfer, FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_DST_PL_TRANSFER));
+    str += print_list(list_vpp_libplacebo_tone_mapping_transfer);
+    str += strsprintf(_T("\n")
+        _T("      dst_pl_colorprim=<string>    Output primaries (must be used with dst_transfer)\n")
+        _T("                                (default:%s)\n"),
+        get_cx_desc(list_vpp_libplacebo_tone_mapping_colorprim, FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_DST_PL_COLORPRIM));
+    str += print_list(list_vpp_libplacebo_tone_mapping_colorprim);
+    str += strsprintf(_T("\n")
+        _T("      knee_adaptation=<float>    Knee adaptation speed (default:%.2f)\n")
+        _T("      knee_min=<float>           Minimum knee point (default:%.2f)\n")
+        _T("      knee_max=<float>           Maximum knee point (default:%.2f)\n")
+        _T("      knee_default=<float>       Default knee point (default:%.2f)\n")
+        _T("      knee_offset=<float>        Knee offset (default:%.2f)\n")
+        _T("      slope_tuning=<float>       Slope tuning (default:%.2f)\n")
+        _T("      slope_offset=<float>       Slope offset (default:%.2f)\n")
+        _T("      spline_contrast=<float>    Spline contrast (default:%.2f)\n")
+        _T("      reinhard_contrast=<float>  Reinhard contrast (default:%.2f)\n")
+        _T("      linear_knee=<float>        Linear knee point (default:%.2f)\n")
+        _T("      exposure=<float>           Exposure adjustment (default:%.2f)\n"),
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_KNEES_ADAPTATION,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_KNEES_MIN,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_KNEES_MAX,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_KNEES_DEFAULT,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_KNEES_OFFSET,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SLOPE_TUNING,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SLOPE_OFFSET,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SPLINE_CONTRAST,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_REINHARD_CONTRAST,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_LINEAR_KNEE,
+        FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_EXPOSURE);
+    str += strsprintf(_T("\n")
+        _T("   --vpp-libplacebo-tonemapping-lut <string>\n")
+        _T("     LUT file for tone mapping.\n"));
+#endif
+    str += strsprintf(_T("\n")
         _T("   --vpp-delogo <string>[,<param1>=<value>][,<param2>=<value>][...]\n")
         _T("     remove half-transparent logo with the specified logo file.\n")
         _T("     the logo file should be created by logoscan.auf.\n")
@@ -7954,7 +8966,7 @@ tstring gen_cmd_help_vpp() {
 #if ENABLE_NVVFX || ENABLE_NVSDKNGX
     {
         str += strsprintf(_T("\n")
-            _T("--vpp-resize <string> or [<param1>=<value>][,<param2>=<value>][...]")
+            _T("--vpp-resize <string> or [<param1>=<value>][,<param2>=<value>][...]\n")
             _T("    params\n")
             _T("      algo=<string>             select algorithm"));
         const TCHAR *indent = _T("        ");
@@ -7970,7 +8982,7 @@ tstring gen_cmd_help_vpp() {
             length += (int)_tcslen(list_vpp_resize[ia].desc);
             str += list_vpp_resize[ia].desc;
         }
-        str += _T("        default: auto\n");
+        str += _T("\n        default: auto\n");
         if (ENABLE_NVVFX) {
             str += strsprintf(_T("\n")
                 _T("      superres-mode=<int>\n")
@@ -7983,6 +8995,21 @@ tstring gen_cmd_help_vpp() {
             str += strsprintf(_T("\n")
                 _T("      vsr-quality=<int>\n")
                 _T("        quality for ngx-vsr\n"));
+        }
+        if (ENABLE_LIBPLACEBO) {
+            str += strsprintf(_T("\n")
+                _T("      pl-radius=<float>\n")
+                _T("        radius for libplacebo resample (0.0 - 16.0, default unspecified)\n")
+                _T("      pl-clamp=<float>\n")
+                _T("        clamp for libplacebo resample (0.0 - 1.0, default = %.1f)\n")
+                _T("      pl-taper=<float>\n")
+                _T("        taper for libplacebo resample (0.0 - 1.0, default = %.1f)\n")
+                _T("      pl-blur=<float>\n")
+                _T("        blur for libplacebo resample (0.0 - 100.0, default = %.1f)\n")
+                _T("      pl-antiring=<float>\n")
+                _T("        antiring for libplacebo resample (0.0 - 1.0, default = %.1f)\n"),
+                FILTER_DEFAULT_LIBPLACEBO_RESAMPLE_CLAMP, FILTER_DEFAULT_LIBPLACEBO_RESAMPLE_TAPER,
+                FILTER_DEFAULT_LIBPLACEBO_RESAMPLE_BLUR, FILTER_DEFAULT_LIBPLACEBO_RESAMPLE_ANTIRING);
         }
     }
 #else
@@ -8116,6 +9143,44 @@ tstring gen_cmd_help_vpp() {
         _T("      fontsdir=<string>         directory with fonts used.\n")
         _T("      forced_subs_only=<bool>   render forced subs only.\n"),
         FILTER_DEFAULT_TWEAK_BRIGHTNESS, FILTER_DEFAULT_TWEAK_CONTRAST);
+#if ENABLE_LIBPLACEBO
+    str += strsprintf(_T("\n")
+        _T("   --vpp-libplacebo-shader [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     Apply custom shader using libplacebo.\n")
+        _T("    params\n")
+        _T("      shader=<string>           Target shader file path.\n")
+        _T("      res=<int>x<int>           Output resolution of filter, must be positive value.\n")
+        //_T("      chromaloc=<string>        Chroma location to derive chroma shift from.\n")
+        //_T("                                  default: %s\n"), get_cx_desc(list_chromaloc_str, FILTER_DEFAULT_LIBPLACEBO_SHADER_CHROMALOC)
+        ) + print_list(list_chromaloc_str) + _T("\n");
+    str += strsprintf(_T("")
+        _T("      colorsystem=<string>      Color matrix to use.\n")
+        _T("                                  default: %s\n"), get_cx_desc(list_vpp_libplacebo_colorsystem, FILTER_DEFAULT_LIBPLACEBO_SHADER_COLORSYSTEM)
+        ) + print_list(list_vpp_libplacebo_colorsystem) + _T("\n");
+    str += strsprintf(_T("")
+        _T("      transfer=<string>         Output transfer function.\n")
+        _T("                                  default: auto detect\n")
+        ) + print_list(list_vpp_libplacebo_tone_mapping_transfer) + _T("\n");
+    str += strsprintf(_T("")
+        _T("      resampler=<string>         Filter function to use when resample is required.\n")
+        _T("                                  default: %s\n"), FILTER_DEFAULT_LIBPLACEBO_SHADER_RESAMPLER_NAME
+        ) + print_list(get_libplacebo_only_resize_list().data()) + _T("\n");
+    str += strsprintf(_T("")
+        _T("      radius=<float>            Adjust the function's radius.\n")
+        _T("                                  default: %.2f, 0.0 - 16.0\n")
+        _T("      clamp=<float>             Clamping coefficient for negative weights.\n")
+        _T("                                  default: %.2f, 0.0 - 1.0\n")
+        _T("      taper=<float>             Additional taper coefficient.\n")
+        _T("                                  default: %.2f, 0.0 - 1.0\n")
+        _T("      blur=<float>              Additional blur coefficient.\n")
+        _T("                                  default: %.2f, 0.0 - 100.0\n")
+        _T("      antiring=<float>          Antiringing strength.\n")
+        _T("                                  default: %.2f, 0.0 - 1.0\n")
+        _T("      linear=<bool>             Linearize image before processing.\n"),
+        FILTER_DEFAULT_LIBPLACEBO_SHADER_RADIUS, FILTER_DEFAULT_LIBPLACEBO_SHADER_CLAMP, FILTER_DEFAULT_LIBPLACEBO_SHADER_TAPER,
+        FILTER_DEFAULT_LIBPLACEBO_SHADER_BLUR, FILTER_DEFAULT_LIBPLACEBO_SHADER_ANTIRING
+    );
+#endif
 #if ENABLE_VPP_FILTER_UNSHARP
     str += strsprintf(_T("\n")
         _T("   --vpp-unsharp [<param1>=<value>][,<param2>=<value>][...]\n")
@@ -8231,6 +9296,23 @@ tstring gen_cmd_help_vpp() {
         FILTER_DEFAULT_DEBAND_SEED,
         FILTER_DEFAULT_DEBAND_BLUR_FIRST ? _T("on") : _T("off"),
         FILTER_DEFAULT_DEBAND_RAND_EACH_FRAME ? _T("on") : _T("off"));
+#endif
+#if ENABLE_LIBPLACEBO
+    str += strsprintf(_T("\n")
+        _T("   --vpp-libplacebo-deband [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     enable deband filter.\n")
+        _T("    params\n")
+        _T("      iterations=<int>          iterations (default=%d, 0-)\n")
+        _T("      threshold=<float>         cut-off threshold (default=%.1f, 0-)\n")
+        _T("      radius=<float>            initial radius (default=%.1f, 0-)\n")
+        _T("      grain_y=<float>           extra noise for luma (default=%.1f, 0-)\n")
+        _T("      grain_c=<float>           extra noise for chroma (default=%.1f, 0-)\n")
+        _T("      dither=<string>           dither mode, only for 8bit\n")
+        _T("                                  none, blue_noise, ordered_lut, ordered_fixed, white_noise\n")
+        _T("      lut_size=<int>            size of LUT. (default=%d, 1-8)\n"),
+        FILTER_DEFAULT_LIBPLACEBO_DEBAND_ITERATIONS, FILTER_DEFAULT_LIBPLACEBO_DEBAND_THRESHOLD, FILTER_DEFAULT_LIBPLACEBO_DEBAND_RADIUS,
+        FILTER_DEFAULT_LIBPLACEBO_DEBAND_GRAINY, FILTER_DEFAULT_LIBPLACEBO_DEBAND_GRAINC, FILTER_DEFAULT_LIBPLACEBO_DEBAND_DITHER,
+        rgy_pow_int<FILTER_DEFAULT_LIBPLACEBO_DEBAND_LUT_SIZE>(2));
 #endif
 #if ENABLE_VPP_FILTER_PAD
     str += strsprintf(_T("\n")
@@ -8396,6 +9478,8 @@ tstring gen_cmd_help_ctrl() {
     str += strsprintf(_T("\n")
         _T("   --disable-opencl             disable opencl features.\n"));
 #endif
+    str += strsprintf(_T("\n")
+        _T("   --disable-vulkan             disable vulkan features.\n"));
     str += strsprintf(_T("\n")
         _T("   --perf-monitor [<string>][,<string>]...\n")
         _T("       check performance info of encoder and output to log file\n")

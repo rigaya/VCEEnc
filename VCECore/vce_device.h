@@ -35,7 +35,7 @@
 #include "rgy_log.h"
 #include "rgy_opencl.h"
 #include "rgy_device.h"
-#include "vce_device_vulkan.h"
+#include "rgy_device_vulkan.h"
 #include "vce_param.h"
 #pragma warning(push)
 #pragma warning(disable:4100)
@@ -78,6 +78,12 @@ public:
     shared_ptr<RGYOpenCLContext> cl() { return m_cl; }
     bool dx11interlop() const { return m_d3d11interlop; }
     bool dx9interlop() const { return m_d3d9interlop; }
+
+#if ENABLE_VULKAN
+    DeviceVulkan *vulkan() { return &m_vk; }
+#else
+    DeviceVulkan *vulkan() { return nullptr; }
+#endif
 
     static const wchar_t *CAP_10BITDEPTH;
 protected:

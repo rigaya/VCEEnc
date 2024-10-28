@@ -76,6 +76,7 @@ static const auto VPPTYPE_TO_STR = make_array<std::pair<VppType, tstring>>(
     std::make_pair(VppType::RGA_RESIZE,              _T("rga_resize")),
 #endif //#if ENCODER_VCEENC
     std::make_pair(VppType::CL_COLORSPACE,           _T("colorspace")),
+    std::make_pair(VppType::CL_LIBPLACEBO_TONEMAP,   _T("libplacebo-tonemapping")),
     std::make_pair(VppType::CL_AFS,                  _T("afs")),
     std::make_pair(VppType::CL_NNEDI,                _T("nnedi")),
     std::make_pair(VppType::CL_YADIF,                _T("yadif")),
@@ -92,6 +93,7 @@ static const auto VPPTYPE_TO_STR = make_array<std::pair<VppType, tstring>>(
     std::make_pair(VppType::CL_DENOISE_DCT,          _T("denoise-dct")),
     std::make_pair(VppType::CL_DENOISE_SMOOTH,       _T("smooth")),
     std::make_pair(VppType::CL_DENOISE_FFT3D,        _T("fft3d")),
+    std::make_pair(VppType::CL_LIBPLACEBO_SHADER,    _T("libplacebo-shader")),
     std::make_pair(VppType::CL_RESIZE,               _T("resize")),
     std::make_pair(VppType::CL_UNSHARP,              _T("unsharp")),
     std::make_pair(VppType::CL_EDGELEVEL,            _T("edgelevel")),
@@ -99,6 +101,7 @@ static const auto VPPTYPE_TO_STR = make_array<std::pair<VppType, tstring>>(
     std::make_pair(VppType::CL_CURVES,               _T("curves")),
     std::make_pair(VppType::CL_TWEAK,                _T("tweak")),
     std::make_pair(VppType::CL_DEBAND,               _T("deband")),
+    std::make_pair(VppType::CL_LIBPLACEBO_DEBAND,    _T("libplacebo-deband")),
     std::make_pair(VppType::CL_PAD,                  _T("pad"))
 );
 MAP_PAIR_0_1(vppfilter, type, VppType, str, tstring, VPPTYPE_TO_STR, VppType::VPP_NONE, _T("none"));
@@ -231,6 +234,10 @@ RGY_VPP_RESIZE_TYPE getVppResizeType(RGY_VPP_RESIZE_ALGO resize) {
     } else if (resize < RGY_VPP_RESIZE_NGX_MAX) {
         return RGY_VPP_RESIZE_TYPE_NGX;
 #endif
+#if ((ENCODER_NVENC || ENCODER_QSV || ENCODER_VCEENC) && (ENABLE_VPP_FILTER_LIBPLACEBO || FOR_AUO)) || CUFILTERS || CLFILTERS_AUF
+    } else if (resize < RGY_VPP_RESIZE_LIBPLACEBO_MAX) {
+        return RGY_VPP_RESIZE_TYPE_LIBPLACEBO;
+#endif
 #if ENCODER_VCEENC
     } else if (resize < RGY_VPP_RESIZE_AMF_MAX) {
         return RGY_VPP_RESIZE_TYPE_AMF;
@@ -242,6 +249,406 @@ RGY_VPP_RESIZE_TYPE getVppResizeType(RGY_VPP_RESIZE_ALGO resize) {
     } else {
         return RGY_VPP_RESIZE_TYPE_UNKNOWN;
     }
+}
+
+VppLibplaceboResample::VppLibplaceboResample() :
+    enable(false),
+    radius(FILTER_DEFAULT_LIBPLACEBO_RESAMPLE_RADIUS),
+    clamp_(FILTER_DEFAULT_LIBPLACEBO_RESAMPLE_CLAMP),
+    taper(FILTER_DEFAULT_LIBPLACEBO_RESAMPLE_TAPER),
+    blur(FILTER_DEFAULT_LIBPLACEBO_RESAMPLE_BLUR),
+    antiring(FILTER_DEFAULT_LIBPLACEBO_RESAMPLE_ANTIRING),
+    cplace(FILTER_DEFAULT_LIBPLACEBO_RESAMPLE_CPLACE) {
+}
+
+bool VppLibplaceboResample::operator==(const VppLibplaceboResample &x) const {
+    return enable == x.enable
+        && radius == x.radius
+        && clamp_ == x.clamp_
+        && taper == x.taper
+        && blur == x.blur
+        && antiring == x.antiring
+        && cplace == x.cplace;
+}
+bool VppLibplaceboResample::operator!=(const VppLibplaceboResample &x) const {
+    return !(*this == x);
+}
+
+tstring VppLibplaceboResample::print() const {
+    tstring str;
+    if (radius >= 0.0f) {
+        str += strsprintf(_T("radius=%.2f, "), radius);
+    }
+    str += strsprintf(_T("clamp=%.2f"), clamp_);
+    str += strsprintf(_T(", taper=%.2f"), taper);
+    str += strsprintf(_T(", blur=%.2f"), blur);
+    str += strsprintf(_T(", antiring=%.2f"), antiring);
+    //str += strsprintf(_T(", cplace=%d"), cplace);
+    return str;
+}
+
+VppLibplaceboDeband::VppLibplaceboDeband() :
+    enable(false),
+    iterations(FILTER_DEFAULT_LIBPLACEBO_DEBAND_ITERATIONS),
+    threshold(FILTER_DEFAULT_LIBPLACEBO_DEBAND_THRESHOLD),
+    radius(FILTER_DEFAULT_LIBPLACEBO_DEBAND_RADIUS),
+    grainY(FILTER_DEFAULT_LIBPLACEBO_DEBAND_GRAINY),
+    grainC(FILTER_DEFAULT_LIBPLACEBO_DEBAND_GRAINC),
+    dither((VppLibplaceboDebandDitherMode)FILTER_DEFAULT_LIBPLACEBO_DEBAND_DITHER),
+    lut_size(FILTER_DEFAULT_LIBPLACEBO_DEBAND_LUT_SIZE) {
+
+}
+
+bool VppLibplaceboDeband::operator==(const VppLibplaceboDeband &x) const {
+    return enable == x.enable
+        && iterations == x.iterations
+        && threshold == x.threshold
+        && radius == x.radius
+        && grainY == x.grainY
+        && grainC == x.grainC
+        && dither == x.dither
+        && lut_size == x.lut_size;
+}
+bool VppLibplaceboDeband::operator!=(const VppLibplaceboDeband &x) const {
+    return !(*this == x);
+}
+tstring VppLibplaceboDeband::print() const {
+    tstring str;
+    str += strsprintf(_T("iterations=%d, "), iterations);
+    str += strsprintf(_T("threshold=%.2f, "), threshold);
+    str += strsprintf(_T("radius=%.2f, "), radius);
+    str += strsprintf(_T("grainY=%.2f, "), grainY);
+    if (grainC >= 0.0f) {
+        str += strsprintf(_T("grainC=%.2f, "), grainC);
+    }
+    str += strsprintf(_T("dither=%d, "), dither);
+    if (dither != VppLibplaceboDebandDitherMode::None) {
+        str += strsprintf(_T("lut_size=%d"), lut_size);
+    }
+    return str;
+}
+
+VppLibplaceboToneMappingConstantsST2094::VppLibplaceboToneMappingConstantsST2094() :
+    knee_adaptation(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_KNEES_ADAPTATION),
+    knee_min(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_KNEES_MIN),
+    knee_max(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_KNEES_MAX),
+    knee_default(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_KNEES_DEFAULT) {
+
+}
+
+bool VppLibplaceboToneMappingConstantsST2094::operator==(const VppLibplaceboToneMappingConstantsST2094 &x) const {
+    return knee_adaptation == x.knee_adaptation
+        && knee_min == x.knee_min
+        && knee_max == x.knee_max
+        && knee_default == x.knee_default;
+}
+bool VppLibplaceboToneMappingConstantsST2094::operator!=(const VppLibplaceboToneMappingConstantsST2094 &x) const {
+    return !(*this == x);
+}
+tstring VppLibplaceboToneMappingConstantsST2094::print() const {
+    tstring str;
+    str += strsprintf(_T("knee_adaptation=%.2f, "), knee_adaptation);
+    str += strsprintf(_T("knee_min=%.2f, "), knee_min);
+    str += strsprintf(_T("knee_max=%.2f, "), knee_max);
+    str += strsprintf(_T("knee_default=%.2f"), knee_default);
+    return str;
+}
+
+VppLibplaceboToneMappingConstantsBT2390::VppLibplaceboToneMappingConstantsBT2390() :
+    knee_offset(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_KNEES_OFFSET) {
+
+}
+
+bool VppLibplaceboToneMappingConstantsBT2390::operator==(const VppLibplaceboToneMappingConstantsBT2390 &x) const {
+    return knee_offset == x.knee_offset;
+} 
+bool VppLibplaceboToneMappingConstantsBT2390::operator!=(const VppLibplaceboToneMappingConstantsBT2390 &x) const {
+    return !(*this == x);
+}
+tstring VppLibplaceboToneMappingConstantsBT2390::print() const {
+    tstring str;
+    str += strsprintf(_T("knee_offset=%.2f"), knee_offset);
+    return str;
+}
+
+VppLibplaceboToneMappingConstantsSpline::VppLibplaceboToneMappingConstantsSpline() :
+    slope_tuning(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SLOPE_TUNING),
+    slope_offset(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SLOPE_OFFSET),
+    spline_contrast(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SPLINE_CONTRAST) {
+
+}
+
+bool VppLibplaceboToneMappingConstantsSpline::operator==(const VppLibplaceboToneMappingConstantsSpline &x) const {
+    return slope_tuning == x.slope_tuning
+        && slope_offset == x.slope_offset
+        && spline_contrast == x.spline_contrast;
+}
+bool VppLibplaceboToneMappingConstantsSpline::operator!=(const VppLibplaceboToneMappingConstantsSpline &x) const {
+    return !(*this == x);
+}
+tstring VppLibplaceboToneMappingConstantsSpline::print() const {
+    tstring str;
+    str += strsprintf(_T("slope_tuning=%.2f, "), slope_tuning);
+    str += strsprintf(_T("slope_offset=%.2f, "), slope_offset);
+    str += strsprintf(_T("spline_contrast=%.2f"), spline_contrast);
+    return str;
+}
+
+VppLibplaceboToneMappingConstantsReinhard::VppLibplaceboToneMappingConstantsReinhard() :
+    contrast(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_REINHARD_CONTRAST) {
+}
+
+bool VppLibplaceboToneMappingConstantsReinhard::operator==(const VppLibplaceboToneMappingConstantsReinhard &x) const {
+    return contrast == x.contrast;
+}   
+bool VppLibplaceboToneMappingConstantsReinhard::operator!=(const VppLibplaceboToneMappingConstantsReinhard &x) const {
+    return !(*this == x);
+}
+tstring VppLibplaceboToneMappingConstantsReinhard::print() const {
+    tstring str;
+    str += strsprintf(_T("contrast=%.2f"), contrast);
+    return str;
+}
+
+VppLibplaceboToneMappingConstantsMobius::VppLibplaceboToneMappingConstantsMobius() :
+    linear_knee(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_LINEAR_KNEE) {
+
+}
+
+bool VppLibplaceboToneMappingConstantsMobius::operator==(const VppLibplaceboToneMappingConstantsMobius &x) const {
+    return linear_knee == x.linear_knee;
+}   
+bool VppLibplaceboToneMappingConstantsMobius::operator!=(const VppLibplaceboToneMappingConstantsMobius &x) const {
+    return !(*this == x);
+}
+tstring VppLibplaceboToneMappingConstantsMobius::print() const {
+    tstring str;
+    str += strsprintf(_T("linear_knee=%.2f"), linear_knee);
+    return str;
+}
+
+VppLibplaceboToneMappingConstantsLinear::VppLibplaceboToneMappingConstantsLinear() :
+    exposure(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_EXPOSURE) {
+
+}
+
+bool VppLibplaceboToneMappingConstantsLinear::operator==(const VppLibplaceboToneMappingConstantsLinear &x) const {
+    return exposure == x.exposure;
+}   
+bool VppLibplaceboToneMappingConstantsLinear::operator!=(const VppLibplaceboToneMappingConstantsLinear &x) const {
+    return !(*this == x);
+}
+tstring VppLibplaceboToneMappingConstantsLinear::print() const {
+    tstring str;
+    str += strsprintf(_T("exposure=%.2f"), exposure);
+    return str;
+}
+
+VppLibplaceboToneMappingConstants::VppLibplaceboToneMappingConstants() :
+    st2094(),
+    bt2390(),
+    spline(),
+    reinhard(),
+    mobius(),
+    linear() {
+
+}
+
+bool VppLibplaceboToneMappingConstants::operator==(const VppLibplaceboToneMappingConstants &x) const {
+    return st2094 == x.st2094
+        && bt2390 == x.bt2390
+        && spline == x.spline
+        && reinhard == x.reinhard
+        && mobius == x.mobius
+        && linear == x.linear;
+}
+bool VppLibplaceboToneMappingConstants::operator!=(const VppLibplaceboToneMappingConstants &x) const {
+    return !(*this == x);
+}
+tstring VppLibplaceboToneMappingConstants::print(const VppLibplaceboToneMappingFunction tonemapping_function) const {
+    tstring str;
+    if (   tonemapping_function == VppLibplaceboToneMappingFunction::st2094_10
+        || tonemapping_function == VppLibplaceboToneMappingFunction::st2094_40
+        || tonemapping_function == VppLibplaceboToneMappingFunction::spline) {
+        str += st2094.print() + _T(", ");
+    }
+    if (tonemapping_function == VppLibplaceboToneMappingFunction::bt2390) {
+        str += bt2390.print() + _T(", ");
+    }
+    if (tonemapping_function == VppLibplaceboToneMappingFunction::spline) {
+        str += spline.print() + _T(", ");
+    }
+    if (tonemapping_function == VppLibplaceboToneMappingFunction::reinhard) {
+        str += reinhard.print() + _T(", ");
+    }
+    if (   tonemapping_function == VppLibplaceboToneMappingFunction::mobius
+        || tonemapping_function == VppLibplaceboToneMappingFunction::gamma) {
+        str += mobius.print() + _T(", ");
+    }
+    if (   tonemapping_function == VppLibplaceboToneMappingFunction::linear
+        || tonemapping_function == VppLibplaceboToneMappingFunction::linearlight) {
+        str += linear.print() + _T(", ");
+    }
+    return str;
+}
+
+VppLibplaceboToneMapping::VppLibplaceboToneMapping() :
+    enable(false),
+    src_csp(VppLibplaceboToneMappingCSP::Auto),
+    dst_csp(VppLibplaceboToneMappingCSP::SDR),
+    src_max(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SRC_MAX),
+    src_min(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SRC_MIN),
+    dst_max(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_DST_MAX),
+    dst_min(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_DST_MIN),
+    dynamic_peak_detection(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_DYNAMIC_PEAK_DETECTION),
+    smooth_period(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SMOOTH_PERIOD),
+    scene_threshold_low(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SCENE_THRESHOLD_LOW),
+    scene_threshold_high(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SCENE_THRESHOLD_HIGH),
+    percentile(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_PERCENTILE),
+    black_cutoff(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_BLACK_CUTOFF),
+    gamut_mapping((VppLibplaceboToneMappingGamutMapping)FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_GAMUT_MAPPING),
+    tonemapping_function((VppLibplaceboToneMappingFunction)FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_TONEMAPPING_FUNCTION),
+    tone_constants(),
+    metadata((VppLibplaceboToneMappingMetadata)FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_METADATA),
+    contrast_recovery(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_CONTRAST_RECOVERY),
+    contrast_smoothness(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_CONTRAST_SMOOTHNESS),
+    visualize_lut(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_VISUALIZE_LUT),
+    show_clipping(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_SHOW_CLIPPING),
+    use_dovi(FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_USE_DOVI),
+    lut_path(),
+    lut_type((VppLibplaceboToneMappingLUTType)FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_LUT_TYPE),
+    dst_pl_transfer((VppLibplaceboToneMappingTransfer)FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_DST_PL_TRANSFER),
+    dst_pl_colorprim((VppLibplaceboToneMappingColorprim)FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_DST_PL_COLORPRIM) {   
+
+}
+
+bool VppLibplaceboToneMapping::operator==(const VppLibplaceboToneMapping &x) const {
+    return enable == x.enable
+        && src_csp == x.src_csp
+        && dst_csp == x.dst_csp
+        && src_max == x.src_max
+        && src_min == x.src_min
+        && dst_max == x.dst_max
+        && dst_min == x.dst_min
+        && dynamic_peak_detection == x.dynamic_peak_detection
+        && smooth_period == x.smooth_period
+        && scene_threshold_low == x.scene_threshold_low
+        && scene_threshold_high == x.scene_threshold_high
+        && percentile == x.percentile
+        && black_cutoff == x.black_cutoff
+        && gamut_mapping == x.gamut_mapping
+        && tonemapping_function == x.tonemapping_function
+        && tone_constants == x.tone_constants
+        && metadata == x.metadata
+        && contrast_recovery == x.contrast_recovery
+        && contrast_smoothness == x.contrast_smoothness
+        && visualize_lut == x.visualize_lut
+        && show_clipping == x.show_clipping
+        && use_dovi == x.use_dovi
+        && lut_path == x.lut_path
+        && lut_type == x.lut_type
+        && dst_pl_transfer == x.dst_pl_transfer
+        && dst_pl_colorprim == x.dst_pl_colorprim;
+}
+bool VppLibplaceboToneMapping::operator!=(const VppLibplaceboToneMapping &x) const {
+    return !(*this == x);
+}
+tstring VppLibplaceboToneMapping::print() const {
+    tstring str;
+    str += strsprintf(_T("src_csp=%s, "), get_cx_desc(list_vpp_libplacebo_tone_mapping_csp, (int)src_csp));
+    str += strsprintf(_T("dst_csp=%s, "), get_cx_desc(list_vpp_libplacebo_tone_mapping_csp, (int)dst_csp));
+    str += strsprintf(_T("src_max=%.2f, "), src_max);
+    str += strsprintf(_T("src_min=%.2f, "), src_min);
+    str += strsprintf(_T("dst_max=%.2f, "), dst_max);
+    str += strsprintf(_T("dst_min=%.2f, "), dst_min);
+    str += strsprintf(_T("dynamic_peak_detection=%d, "), dynamic_peak_detection);
+    str += strsprintf(_T("smooth_period=%.2f, "), smooth_period);
+    str += strsprintf(_T("scene_threshold_low=%.2f, "), scene_threshold_low);
+    str += strsprintf(_T("scene_threshold_high=%.2f, "), scene_threshold_high);
+    str += strsprintf(_T("percentile=%.2f, "), percentile);
+    str += strsprintf(_T("black_cutoff=%.2f, "), black_cutoff);
+    str += strsprintf(_T("gamut_mapping=%s, "), get_cx_desc(list_vpp_libplacebo_tone_mapping_gamut_mapping, (int)gamut_mapping));
+    str += strsprintf(_T("tonemapping_function=%s, "), get_cx_desc(list_vpp_libplacebo_tone_mapping_function, (int)tonemapping_function));
+    str += tone_constants.print(tonemapping_function);
+    str += strsprintf(_T("metadata=%s, "), get_cx_desc(list_vpp_libplacebo_tone_mapping_metadata, (int)metadata));
+    str += strsprintf(_T("contrast_recovery=%.2f, "), contrast_recovery);
+    str += strsprintf(_T("contrast_smoothness=%.2f, "), contrast_smoothness);
+    str += strsprintf(_T("visualize_lut=%d, "), visualize_lut);
+    str += strsprintf(_T("show_clipping=%d, "), show_clipping);
+    str += strsprintf(_T("use_dovi=%s, "), use_dovi < 0 ? _T("auto") : ((use_dovi > 0) ?  _T("on") : _T("off")));
+    if (lut_path.length() > 0) {
+        str += strsprintf(_T("lut_path=%s, "), lut_path.c_str());
+        str += strsprintf(_T("lut_type=%s, "), get_cx_desc(list_vpp_libplacebo_tone_mapping_lut_type, (int)lut_type));
+    }
+    if (dst_pl_transfer != (VppLibplaceboToneMappingTransfer)FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_DST_PL_TRANSFER
+        && dst_pl_colorprim != (VppLibplaceboToneMappingColorprim)FILTER_DEFAULT_LIBPLACEBO_TONEMAPPING_DST_PL_COLORPRIM) {
+        str += strsprintf(_T("dst_pl_transfer=%s, "), get_cx_desc(list_vpp_libplacebo_tone_mapping_transfer, (int)dst_pl_transfer));
+        str += strsprintf(_T("dst_pl_colorprim=%s"), get_cx_desc(list_vpp_libplacebo_tone_mapping_colorprim, (int)dst_pl_colorprim));
+    }
+    return str;
+}
+
+VppLibplaceboShader::VppLibplaceboShader() :
+    enable(false),
+    shader(),
+    width(0),
+    height(0),
+    params(),
+    resize_algo((RGY_VPP_RESIZE_ALGO)get_cx_value(list_vpp_resize, FILTER_DEFAULT_LIBPLACEBO_SHADER_RESAMPLER_NAME)),
+    colorsystem((VppLibplaceboColorsystem)FILTER_DEFAULT_LIBPLACEBO_SHADER_COLORSYSTEM),
+    transfer((VppLibplaceboToneMappingTransfer)FILTER_DEFAULT_LIBPLACEBO_SHADER_TRANSFER),
+    chromaloc((CspChromaloc)FILTER_DEFAULT_LIBPLACEBO_SHADER_CHROMALOC),
+    radius(FILTER_DEFAULT_LIBPLACEBO_SHADER_RADIUS),
+    clamp_(FILTER_DEFAULT_LIBPLACEBO_SHADER_CLAMP),
+    taper(FILTER_DEFAULT_LIBPLACEBO_SHADER_TAPER),
+    blur(FILTER_DEFAULT_LIBPLACEBO_SHADER_BLUR),
+    antiring(FILTER_DEFAULT_LIBPLACEBO_SHADER_ANTIRING),
+    linear(FILTER_DEFAULT_LIBPLACEBO_SHADER_LINEAR) {
+}
+
+bool VppLibplaceboShader::operator==(const VppLibplaceboShader &x) const {
+    return enable == x.enable
+        && shader == x.shader
+        && width == x.width
+        && height == x.height
+        && params == x.params
+        && resize_algo == x.resize_algo
+        && colorsystem == x.colorsystem
+        && transfer == x.transfer
+        && chromaloc == x.chromaloc
+        && radius == x.radius
+        && clamp_ == x.clamp_
+        && taper == x.taper
+        && blur == x.blur
+        && antiring == x.antiring
+        && linear == x.linear;
+}
+
+bool VppLibplaceboShader::operator!=(const VppLibplaceboShader &x) const {
+    return !(*this == x);
+}
+
+tstring VppLibplaceboShader::print() const {
+    tstring str;
+    str += strsprintf(_T("%s, "), shader.c_str());
+    for (const auto& param : params) {
+        str += strsprintf(_T("%s=%s, "), param.first.c_str(), param.second.c_str());
+    }
+    if (width > 0 && height > 0) {
+        str += strsprintf(_T("res=%dx%d, "), width, height);
+    }
+    str += strsprintf(_T("resampler=%s, "), get_cx_desc(list_vpp_resize, (int)resize_algo));
+    str += strsprintf(_T("colorsystem=%s, "), get_cx_desc(list_vpp_libplacebo_colorsystem, (int)colorsystem));
+    str += strsprintf(_T("transfer=%s, "), get_cx_desc(list_vpp_libplacebo_tone_mapping_transfer, (int)transfer));
+    //str += strsprintf(_T("chromaloc=%s, "), get_cx_desc(list_chromaloc_str, (int)chromaloc));
+    str += strsprintf(_T("radius=%.2f, "), radius);
+    str += strsprintf(_T("clamp=%.2f, "), clamp_);
+    str += strsprintf(_T("taper=%.2f, "), taper);
+    str += strsprintf(_T("blur=%.2f, "), blur);
+    str += strsprintf(_T("antiring=%.2f, "), antiring);
+    str += strsprintf(_T("linear=%s"), linear ? _T("on") : _T("off"));
+
+    return str;
 }
 
 ColorspaceConv::ColorspaceConv() :
@@ -1619,6 +2026,7 @@ RGYParamVpp::RGYParamVpp() :
     resize_algo(RGY_VPP_RESIZE_AUTO),
     resize_mode(RGY_VPP_RESIZE_MODE_DEFAULT),
     colorspace(),
+    libplacebo_tonemapping(),
     delogo(),
     afs(),
     nnedi(),
@@ -1637,6 +2045,7 @@ RGYParamVpp::RGYParamVpp() :
     smooth(),
     fft3d(),
     subburn(),
+    libplacebo_shader(),
     unsharp(),
     edgelevel(),
     warpsharp(),
@@ -1644,6 +2053,7 @@ RGYParamVpp::RGYParamVpp() :
     tweak(),
     transform(),
     deband(),
+    libplacebo_deband(),
     overlay(),
     fruc(),
     checkPerformance(false) {
@@ -1654,6 +2064,7 @@ bool RGYParamVpp::operator==(const RGYParamVpp& x) const {
     return resize_algo == x.resize_algo
         && resize_mode == x.resize_mode
         && colorspace == x.colorspace
+        && libplacebo_tonemapping == x.libplacebo_tonemapping
         && delogo == x.delogo
         && afs == x.afs
         && nnedi == x.nnedi
@@ -1672,12 +2083,14 @@ bool RGYParamVpp::operator==(const RGYParamVpp& x) const {
         && smooth == x.smooth
         && subburn == x.subburn
         && unsharp == x.unsharp
+        && libplacebo_shader == x.libplacebo_shader
         && edgelevel == x.edgelevel
         && warpsharp == x.warpsharp
         && curves == x.curves
         && tweak == x.tweak
         && transform == x.transform
         && deband == x.deband
+        && libplacebo_deband == x.libplacebo_deband
         && overlay == x.overlay
         && checkPerformance == x.checkPerformance;
 }
@@ -1942,6 +2355,7 @@ RGYParamControl::RGYParamControl() :
     avsdll(),
     vsdir(),
     enableOpenCL(true),
+    enableVulkan(true),
     avoidIdleClock(),
     outputBufSizeMB(RGY_OUTPUT_BUF_MB_DEFAULT) {
 
