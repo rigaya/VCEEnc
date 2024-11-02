@@ -168,6 +168,9 @@ VCEEncCでは、VCE/VCNを実行可能なGPUが複数存在する場合、
   詳細は各ソースのヘッダ部分や、VCEEnc_license.txtをご覧ください。
 - 本ソフトウェアでは、
   [ffmpeg](https://ffmpeg.org/),
+  [libplacebo](https://code.videolan.org/videolan/libplacebo),
+  [libhdr10plus](https://github.com/quietvoid/hdr10plus_tool),
+  [libdovi](https://github.com/quietvoid/dovi_tool),
   [tinyxml2](http://www.grinninglizard.com/tinyxml2/),
   [dtl](https://github.com/cubicdaiya/dtl),
   [clRNG](https://github.com/clMathLibraries/clRNG),

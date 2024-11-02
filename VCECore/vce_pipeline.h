@@ -1501,8 +1501,8 @@ public:
         std::vector<std::shared_ptr<RGYFrameData>> metadatalist;
         if (m_encCodec == RGY_CODEC_HEVC || m_encCodec == RGY_CODEC_AV1) {
             if (m_hdr10plus) {
-                if (const auto data = m_hdr10plus->getData(m_inFrames); data) {
-                    metadatalist.push_back(std::make_shared<RGYFrameDataHDR10plus>(data->data(), data->size(), dynamic_cast<PipelineTaskOutputSurf *>(frame.get())->surf().frame()->timestamp()));
+                if (const auto data = m_hdr10plus->getData(m_inFrames); data.size() > 0) {
+                    metadatalist.push_back(std::make_shared<RGYFrameDataHDR10plus>(data.data(), data.size(), dynamic_cast<PipelineTaskOutputSurf *>(frame.get())->surf().frame()->timestamp()));
                 }
             } else if (m_hdr10plusMetadataCopy && frame) {
                 metadatalist = dynamic_cast<PipelineTaskOutputSurf *>(frame.get())->surf().frame()->dataList();

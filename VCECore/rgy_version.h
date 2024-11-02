@@ -72,6 +72,7 @@ const char *get_encoder_version();
 #define ENABLE_DTL 1
 #define ENABLE_LIBASS_SUBBURN 1
 #define ENABLE_LIBDOVI 1
+#define ENABLE_LIBHDR10PLUS 1
 #define ENABLE_LIBPLACEBO 1
 
 #define AV_CHANNEL_LAYOUT_STRUCT_AVAIL 1

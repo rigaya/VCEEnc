@@ -162,6 +162,9 @@ when there are multiple GPUs available which support VCE/VCN.
   For these licenses, please see the header part of the corresponding source and VCEEnc_license.txt.
 - This software depends on
   [ffmpeg](https://ffmpeg.org/),
+  [libplacebo](https://code.videolan.org/videolan/libplacebo),
+  [libhdr10plus](https://github.com/quietvoid/hdr10plus_tool),
+  [libdovi](https://github.com/quietvoid/dovi_tool),
   [tinyxml2](http://www.grinninglizard.com/tinyxml2/),
   [dtl](https://github.com/cubicdaiya/dtl),
   [clRNG](https://github.com/clMathLibraries/clRNG),
