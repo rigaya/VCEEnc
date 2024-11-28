@@ -49,6 +49,7 @@
 #include "vce_pipeline.h"
 #include "rgy_filter.h"
 #include "rgy_filter_ssim.h"
+#include "rgy_device_usage.h"
 
 #pragma warning(pop)
 
@@ -85,7 +86,7 @@ public:
 
     virtual RGY_ERR init(VCEParam *prm);
     virtual RGY_ERR initLog(VCEParam *prm);
-    virtual RGY_ERR initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId);
+    virtual RGY_ERR initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId, int totalDeviceCount);
     virtual RGY_ERR initInput(VCEParam *pParams, std::vector<std::unique_ptr<VCEDevice>> &gpuList);
     virtual RGY_ERR initOutput(VCEParam *prm);
     virtual RGY_ERR run2();

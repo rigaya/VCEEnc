@@ -2869,6 +2869,18 @@ RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList,
     if (gpuList.size() <= 1) {
         return RGY_ERR_NONE;
     }
+    int maxDeviceUsageCount = 1;
+    std::vector<std::pair<int, int64_t>> deviceUsage;
+    if (gpuList.size() > 1) {
+        RGYDeviceUsage devUsage;
+        deviceUsage = devUsage.getUsage();
+        for (size_t i = 0; i < deviceUsage.size(); i++) {
+            maxDeviceUsageCount = std::max(maxDeviceUsageCount, deviceUsage[i].first);
+            if (deviceUsage[i].first > 0) {
+                PrintMes(RGY_LOG_DEBUG, _T("Device #%d: %d usage.\n"), i, deviceUsage[i].first);
+            }
+        }
+    }
 #if ENABLE_PERF_COUNTER
     bool counterIsIntialized = m_pPerfMonitor->isPerfCounterInitialized();
     for (int i = 0; i < 4 && !counterIsIntialized; i++) {
@@ -2882,9 +2894,11 @@ RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList,
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
     auto entries = m_pPerfMonitor->GetPerfCountersSystem();
+#endif //#if ENABLE_PERF_COUNTER
 
     std::map<int, double> gpuscore;
     for (const auto &gpu : gpuList) {
+#if ENABLE_PERF_COUNTER
         auto counters = RGYGPUCounterWinEntries(entries).filter_luid(gpu->luid()).get();
         auto ve_utilization = std::max(
             RGYGPUCounterWinEntries(counters).filter_type(L"codec").max(), //vce
@@ -2894,15 +2908,21 @@ RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList,
             RGYGPUCounterWinEntries(counters).filter_type(L"compute").max()), //vce-opencl
             RGYGPUCounterWinEntries(counters).filter_type(L"3d").max()), //qsv
             RGYGPUCounterWinEntries(counters).filter_type(L"videoprocessing").max());
-        double core_score = 0.0;
-        double cc_score = 0.0;
         double ve_score = 100.0 * (1.0 - std::pow(ve_utilization / 100.0, 1.0)) * prm->ctrl.gpuSelect.ve;
         double gpu_score = 100.0 * (1.0 - std::pow(gpu_utilization / 100.0, 1.5)) * prm->ctrl.gpuSelect.gpu;
+#else
+        double ve_score = 0.0;
+        double gpu_score = 0.0;
+#endif //#if ENABLE_PERF_COUNTER
+        const int deviceUsageCount = (int)gpu->id() < (int)deviceUsage.size() ? deviceUsage[gpu->id()].first : 0;
+        double usage_score = 100.0 * (maxDeviceUsageCount - deviceUsageCount) / (double)maxDeviceUsageCount;
+        double core_score = 0.0;
+        double cc_score = 0.0;
         double cl_score = gpu->cl() != nullptr ? 0.0 : -100.0;
 
-        gpuscore[gpu->id()] = cc_score + ve_score + gpu_score + core_score + cl_score;
-        PrintMes(RGY_LOG_DEBUG, _T("GPU #%d (%s) score: %.1f: VE %.1f, GPU %.1f, CC %.1f, Core %.1f, CL %.1f.\n"), gpu->id(), gpu->name().c_str(),
-            gpuscore[gpu->id()], ve_score, gpu_score, cc_score, core_score, cl_score);
+        gpuscore[gpu->id()] = usage_score + cc_score + ve_score + gpu_score + core_score + cl_score;
+        PrintMes(RGY_LOG_DEBUG, _T("GPU #%d (%s) score: %.1f: Use %.1f, VE %.1f, GPU %.1f, CC %.1f, Core %.1f, CL %.1f.\n"), gpu->id(), gpu->name().c_str(),
+            gpuscore[gpu->id()], usage_score, ve_score, gpu_score, cc_score, core_score, cl_score);
     }
     std::sort(gpuList.begin(), gpuList.end(), [&](const std::unique_ptr<VCEDevice> &a, const std::unique_ptr<VCEDevice> &b) {
         if (gpuscore.at(a->id()) != gpuscore.at(b->id())) {
@@ -2915,13 +2935,12 @@ RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList,
     for (const auto &gpu : gpuList) {
         PrintMes(RGY_LOG_DEBUG, _T("GPU #%d (%s): score %.1f\n"), gpu->id(), gpu->name().c_str(), gpuscore[gpu->id()]);
     }
-#endif //#if ENABLE_PERF_COUNTER
     return RGY_ERR_NONE;
 }
 
 #pragma warning(push)
 #pragma warning(disable: 4127) //C4127: 条件式が定数です。
-RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId) {
+RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId, int totalDeviceCount) {
     if (VULKAN_DEFAULT_DEVICE_ONLY && deviceId > 0) {
         PrintMes(RGY_LOG_ERROR, _T("Currently default device is always used when using vulkan!: selected device = %d\n"), deviceId);
         return RGY_ERR_UNSUPPORTED;
@@ -2937,6 +2956,10 @@ RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, in
     }
     PrintMes(RGY_LOG_DEBUG, _T("InitDevice: device #%d (%s) selected.\n"), (*gpu)->id(), (*gpu)->name().c_str());
     m_dev = std::move(*gpu);
+    if (totalDeviceCount > 1) {
+        RGYDeviceUsage devUsage;
+        devUsage.startProcessMonitor(m_dev->id());
+    }
     return RGY_ERR_NONE;
 }
 #pragma warning(pop)
@@ -3204,6 +3227,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
         return ret;
     }
+    const int totalDeviceCount = (int)devList.size();
 
 #if defined(_WIN32) || defined(_WIN64)
     if (prm->bTimerPeriodTuning) {
@@ -3239,7 +3263,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    if (RGY_ERR_NONE != (ret = initDevice(devList, prm->deviceID))) {
+    if (RGY_ERR_NONE != (ret = initDevice(devList, prm->deviceID, totalDeviceCount))) {
         return ret;
     }
 
@@ -4060,7 +4084,7 @@ RGY_ERR VCEFeatures::init(int deviceId, const RGYParamLogLevel& loglevel) {
 #else
     auto devList = m_core->createDeviceList(false, false, true, true, false, false);
 #endif
-    if ((err = m_core->initDevice(devList, deviceId)) != RGY_ERR_NONE) {
+    if ((err = m_core->initDevice(devList, deviceId, (int)devList.size())) != RGY_ERR_NONE) {
         return err;
     }
     return RGY_ERR_NONE;

@@ -518,6 +518,12 @@ int _tmain(int argc, TCHAR **argv) {
         _ftprintf(stderr, _T("destination file is equal to source file!"));
         return 1;
     }
+    if (prm.ctrl.processMonitorDevUsageReset) {
+        return processMonitorRGYDeviceResetEntry();
+    }
+    if (prm.ctrl.processMonitorDevUsage) {
+        return processMonitorRGYDeviceUsage(prm.ctrl.parentProcessID, prm.deviceID);
+    }
 
     if (vce_run(&prm)) {
         fprintf(stderr, "Finished with error in VCEEncC.\n");

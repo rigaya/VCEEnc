@@ -71,6 +71,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="rgy_device_usage.cpp" />
     <ClCompile Include="rgy_device_vulkan.cpp" />
     <ClCompile Include="rgy_faw.cpp" />
     <ClCompile Include="rgy_faw_avx2.cpp">
@@ -577,6 +578,7 @@
     <ClInclude Include="gpuz_info.h" />
     <ClInclude Include="gpu_info.h" />
     <ClInclude Include="rgy_device_info_wmi.h" />
+    <ClInclude Include="rgy_device_usage.h" />
     <ClInclude Include="rgy_device_vulkan.h" />
     <ClInclude Include="rgy_faw.h" />
     <ClInclude Include="rgy_filter_cl.h" />
