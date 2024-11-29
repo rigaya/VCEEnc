@@ -129,6 +129,7 @@ VCECore::VCECore() :
     m_picStruct(RGY_PICSTRUCT_UNKNOWN),
     m_encVUI(),
     m_dev(),
+    m_deviceUsage(),
     m_vpFilters(),
     m_pLastFilterParam(),
     m_videoQualityMetric(),
@@ -180,6 +181,7 @@ void VCECore::Terminate() {
 
     m_vpFilters.clear();
     m_pLastFilterParam.reset();
+    m_deviceUsage.reset();
     m_dev.reset();
     m_timecode.reset();
 
@@ -2957,8 +2959,8 @@ RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, in
     PrintMes(RGY_LOG_DEBUG, _T("InitDevice: device #%d (%s) selected.\n"), (*gpu)->id(), (*gpu)->name().c_str());
     m_dev = std::move(*gpu);
     if (totalDeviceCount > 1) {
-        RGYDeviceUsage devUsage;
-        devUsage.startProcessMonitor(m_dev->id());
+        m_deviceUsage = std::make_unique<RGYDeviceUsage>();
+        m_deviceUsage->startProcessMonitor(m_dev->id());
     }
     return RGY_ERR_NONE;
 }
@@ -3600,6 +3602,7 @@ RGY_ERR VCECore::run2() {
         PrintMes(RGY_LOG_DEBUG, _T("Write video quality metric results...\n"));
         m_videoQualityMetric->showResult();
     }
+    m_deviceUsage->close();
     m_pStatus->WriteResults();
     if (filter_result.size()) {
         PrintMes(RGY_LOG_INFO, _T("\nVpp Filter Performance\n"));

@@ -170,6 +170,7 @@ protected:
     VideoVUIInfo       m_encVUI;
 
     std::unique_ptr<VCEDevice> m_dev;
+    std::unique_ptr<RGYDeviceUsage> m_deviceUsage;
 
     vector<VppVilterBlock>        m_vpFilters;
     shared_ptr<RGYFilterParam>    m_pLastFilterParam;
