@@ -3602,7 +3602,9 @@ RGY_ERR VCECore::run2() {
         PrintMes(RGY_LOG_DEBUG, _T("Write video quality metric results...\n"));
         m_videoQualityMetric->showResult();
     }
-    m_deviceUsage->close();
+    if (m_deviceUsage) {
+        m_deviceUsage->close();
+    }
     m_pStatus->WriteResults();
     if (filter_result.size()) {
         PrintMes(RGY_LOG_INFO, _T("\nVpp Filter Performance\n"));
