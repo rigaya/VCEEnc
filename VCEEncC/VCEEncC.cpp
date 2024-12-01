@@ -522,7 +522,7 @@ int _tmain(int argc, TCHAR **argv) {
         return processMonitorRGYDeviceResetEntry();
     }
     if (prm.ctrl.processMonitorDevUsage) {
-        return processMonitorRGYDeviceUsage(prm.ctrl.parentProcessID, prm.deviceID);
+        return processMonitorRGYDeviceUsage(prm.deviceID);
     }
 
     if (vce_run(&prm)) {
