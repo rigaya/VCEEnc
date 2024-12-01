@@ -3996,7 +3996,7 @@ tstring VCECore::GetEncoderParam() {
     }
     tstring others;
     if (auto bvalue = GetPropertyBoolOptional(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(m_encCodec)); bvalue.has_value()) {
-        others += tstring(_T("skipframe:")) + (bvalue ? _T("on") : _T("off")) + _T(" ");
+        others += tstring(_T("skipframe:")) + (bvalue.value() ? _T("on") : _T("off")) + _T(" ");
     }
     bool bDeblock = true;
     switch (m_encCodec) {
@@ -4042,7 +4042,7 @@ tstring VCECore::GetEncoderParam() {
             others += _T("cdef:") + val.value() + _T(" ");
         }
         if (auto bvalue = GetPropertyBoolOptional(AMF_VIDEO_ENCODER_AV1_CDF_UPDATE); bvalue.has_value()) {
-            others += tstring(_T("cdf-update:")) + (bvalue ? _T("on") : _T("off")) + _T(" ");
+            others += tstring(_T("cdf-update:")) + (bvalue.value() ? _T("on") : _T("off")) + _T(" ");
         }
         if (auto ivalue = GetPropertyIntOptional(AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE); ivalue.has_value()) {
             others += tstring(_T("cdf-frame-end-update:")) + ((ivalue.value() != AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE_DISABLE) ? _T("on") : _T("off")) + _T(" ");
