@@ -2867,15 +2867,14 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm) {
+RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm, const RGYDeviceUsageLockManager *devUsageLock) {
     if (gpuList.size() <= 1) {
         return RGY_ERR_NONE;
     }
     int maxDeviceUsageCount = 1;
     std::vector<std::pair<int, int64_t>> deviceUsage;
     if (gpuList.size() > 1) {
-        RGYDeviceUsage devUsage;
-        deviceUsage = devUsage.getUsage();
+        deviceUsage = m_deviceUsage->getUsage(devUsageLock);
         for (size_t i = 0; i < deviceUsage.size(); i++) {
             maxDeviceUsageCount = std::max(maxDeviceUsageCount, deviceUsage[i].first);
             if (deviceUsage[i].first > 0) {
@@ -2942,7 +2941,7 @@ RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList,
 
 #pragma warning(push)
 #pragma warning(disable: 4127) //C4127: 条件式が定数です。
-RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId, int totalDeviceCount) {
+RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId, const RGYDeviceUsageLockManager *devUsageLock) {
     if (VULKAN_DEFAULT_DEVICE_ONLY && deviceId > 0) {
         PrintMes(RGY_LOG_ERROR, _T("Currently default device is always used when using vulkan!: selected device = %d\n"), deviceId);
         return RGY_ERR_UNSUPPORTED;
@@ -2958,9 +2957,15 @@ RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, in
     }
     PrintMes(RGY_LOG_DEBUG, _T("InitDevice: device #%d (%s) selected.\n"), (*gpu)->id(), (*gpu)->name().c_str());
     m_dev = std::move(*gpu);
-    if (totalDeviceCount > 1) {
+    if (m_deviceUsage) {
         m_deviceUsage = std::make_unique<RGYDeviceUsage>();
         m_deviceUsage->startProcessMonitor(m_dev->id());
+        // 登録を解除するプロセスを起動
+        const auto [err_run_proc, child_pid] = m_deviceUsage->startProcessMonitor(m_dev->id());
+        if (err_run_proc == RGY_ERR_NONE) {
+            // プロセスが起動できたら、その子プロセスのIDを登録する
+            m_deviceUsage->add(m_dev->id(), child_pid, devUsageLock);
+        }
     }
     return RGY_ERR_NONE;
 }
@@ -3229,7 +3234,6 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
         return ret;
     }
-    const int totalDeviceCount = (int)devList.size();
 
 #if defined(_WIN32) || defined(_WIN64)
     if (prm->bTimerPeriodTuning) {
@@ -3257,16 +3261,23 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    if (RGY_ERR_NONE != (ret = checkGPUListByEncoder(devList, prm, prm->deviceID))) {
-        return ret;
-    }
+    {
+        std::unique_ptr<RGYDeviceUsageLockManager> devUsageLock;
+        if (devList.size() > 1) {
+            m_deviceUsage = std::make_unique<RGYDeviceUsage>();
+            devUsageLock = m_deviceUsage->lock(); // ロックは親プロセス側でとる
+        }
+        if (RGY_ERR_NONE != (ret = checkGPUListByEncoder(devList, prm, prm->deviceID))) {
+            return ret;
+        }
 
-    if (RGY_ERR_NONE != (ret = gpuAutoSelect(devList, prm))) {
-        return ret;
-    }
+        if (RGY_ERR_NONE != (ret = gpuAutoSelect(devList, prm, devUsageLock.get()))) {
+            return ret;
+        }
 
-    if (RGY_ERR_NONE != (ret = initDevice(devList, prm->deviceID, totalDeviceCount))) {
-        return ret;
+        if (RGY_ERR_NONE != (ret = initDevice(devList, prm->deviceID, devUsageLock.get()))) {
+            return ret;
+        }
     }
 
     if (RGY_ERR_NONE != (ret = initDecoder(prm))) {
@@ -4089,7 +4100,13 @@ RGY_ERR VCEFeatures::init(int deviceId, const RGYParamLogLevel& loglevel) {
 #else
     auto devList = m_core->createDeviceList(false, false, true, true, false, false);
 #endif
-    if ((err = m_core->initDevice(devList, deviceId, (int)devList.size())) != RGY_ERR_NONE) {
+    std::unique_ptr<RGYDeviceUsage> devUsage;
+    std::unique_ptr<RGYDeviceUsageLockManager> devUsageLock;
+    if (devList.size() > 1) {
+        devUsage = std::make_unique<RGYDeviceUsage>();
+        devUsageLock = devUsage->lock(); // ロックは親プロセス側でとる
+    }
+    if ((err = m_core->initDevice(devList, deviceId, devUsageLock.get())) != RGY_ERR_NONE) {
         return err;
     }
     return RGY_ERR_NONE;

@@ -86,7 +86,7 @@ public:
 
     virtual RGY_ERR init(VCEParam *prm);
     virtual RGY_ERR initLog(VCEParam *prm);
-    virtual RGY_ERR initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId, int totalDeviceCount);
+    virtual RGY_ERR initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId, const RGYDeviceUsageLockManager *devUsageLock);
     virtual RGY_ERR initInput(VCEParam *pParams, std::vector<std::unique_ptr<VCEDevice>> &gpuList);
     virtual RGY_ERR initOutput(VCEParam *prm);
     virtual RGY_ERR run2();
@@ -103,7 +103,7 @@ protected:
     virtual RGY_ERR readChapterFile(tstring chapfile);
 
     RGY_ERR checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm, int deviceId);
-    RGY_ERR gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm);
+    RGY_ERR gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm, const RGYDeviceUsageLockManager *devUsageLock);
     virtual RGY_CSP GetEncoderCSP(const VCEParam *inputParam) const;
     virtual int GetEncoderBitdepth(const VCEParam *inputParam) const;
     virtual RGY_ERR checkParam(VCEParam *prm);
