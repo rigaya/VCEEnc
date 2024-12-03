@@ -919,6 +919,10 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->nMotionEst = value;
         return 0;
     }
+    if (IS_OPTION("no-vbaq")) {
+        pParams->bVBAQ = false;
+        return 0;
+    }
     if (IS_OPTION("vbaq")) {
         pParams->bVBAQ = true;
         return 0;
@@ -957,8 +961,12 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         }
         return 0;
     }
+    if (IS_OPTION("no-filler")) {
+        pParams->bFiller = false;
+        return 0;
+    }
     if (IS_OPTION("filler")) {
-        pParams->bFiller = TRUE;
+        pParams->bFiller = true;
         return 0;
     }
     if (IS_OPTION("deblock")) {
@@ -969,8 +977,12 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->deblockFilter = false;
         return 0;
     }
+    if (IS_OPTION("no-enforce-hrd")) {
+        pParams->bEnforceHRD = false;
+        return 0;
+    }
     if (IS_OPTION("enforce-hrd")) {
-        pParams->bEnforceHRD = TRUE;
+        pParams->bEnforceHRD = true;
         return 0;
     }
     if (IS_OPTION("tiles")) {
@@ -1791,15 +1803,15 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_NUM(_T("--slices"), nSlices);
     OPT_BOOL_OPTIONAL(_T("--deblock"), _T("--no-deblock"), deblockFilter);
     OPT_BOOL_OPTIONAL(_T("--skip-frame"), _T("--no-skip-frame"), enableSkipFrame);
-    OPT_BOOL_OPTIONAL(_T("--vbaq"), _T(""), bVBAQ);
+    OPT_BOOL_OPTIONAL(_T("--vbaq"), _T("--no-vbaq"), bVBAQ);
     OPT_LST(_T("--motion-est"), nMotionEst, list_mv_presicion);
     if (pParams->par[0] > 0 && pParams->par[1] > 0) {
         cmd << _T(" --sar ") << pParams->par[0] << _T(":") << pParams->par[1];
     } else if (pParams->par[0] < 0 && pParams->par[1] < 0) {
         cmd << _T(" --dar ") << -1 * pParams->par[0] << _T(":") << -1 * pParams->par[1];
     }
-    OPT_BOOL(_T("--filler"), _T(""), bFiller);
-    OPT_BOOL(_T("--enforce-hrd"), _T(""), bEnforceHRD);
+    OPT_BOOL(_T("--filler"), _T("--no-filler"), bFiller);
+    OPT_BOOL(_T("--enforce-hrd"), _T("--no-enforce-hrd"), bEnforceHRD);
 
     OPT_NUM(_T("--tiles"), tiles);
     OPT_NUM_OPTIONAL(_T("--temporal-layers"), temporalLayers);
