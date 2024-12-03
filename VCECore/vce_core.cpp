@@ -2358,8 +2358,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     if (prm->enableSkipFrame.has_value()) m_params.SetParam(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(prm->codec), prm->enableSkipFrame.value());
     m_params.SetParam(AMF_PARAM_RATE_CONTROL_METHOD(prm->codec),             (amf_int64)prm->rateControl);
 
-    m_params.SetParam(AMF_PARAM_ENFORCE_HRD(prm->codec),        prm->bEnforceHRD != 0);
-    m_params.SetParam(AMF_PARAM_FILLER_DATA_ENABLE(prm->codec), prm->bFiller != 0);
+    if (prm->bFiller) prm->bEnforceHRD = true; //FillerはHRDを強制する
+    m_params.SetParam(AMF_PARAM_ENFORCE_HRD(prm->codec),        prm->bEnforceHRD);
+    m_params.SetParam(AMF_PARAM_FILLER_DATA_ENABLE(prm->codec), prm->bFiller);
     m_params.SetParam(AMF_PARAM_GOP_SIZE(prm->codec),                       (amf_int64)nGOPLen);
 
     if (prm->pa.enable) {
