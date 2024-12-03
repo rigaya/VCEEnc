@@ -517,13 +517,13 @@ fillerデータを出力し、(名目上の)ビットレートを調整する。
 1フレームあたりのタイル数の指定。
 
 ### --cdef-mode &lt;string&gt; [AV1]
-Cdefモード。
+Cdefモード。(デフォルト:自動)
 - **パラメータ**
   - on
   - off 
 
 ### --screen-content-tools  [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]  
-Screen content toolsを有効にする。
+Screen content toolsを有効にする。(デフォルト:自動)
 
 - **パラメータ**
   - palette-mode=&lt;bool&gt;  
@@ -538,10 +538,10 @@ Screen content toolsを有効にする。
   ```
 
 ### --cdf-update [AV1]
-Enable CDF update.
+Enable CDF update. (default: auto)
 
 ### --cdf-frame-end-update [AV1]
-Enable CDF frame end update.
+Enable CDF frame end update. (default: auto)
 
 ### --temporal-layers &lt;int&gt; [HEVC/AV1]
 Temporal layersの数。

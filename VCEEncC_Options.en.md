@@ -577,13 +577,13 @@ Motion vector accuracy / default: auto
 Set number of tiles per frame.
 
 ### --cdef-mode &lt;string&gt; [AV1]
-Cdef mode.
+Cdef mode.(default: auto)
 - **params**
   - on
   - off 
 
 ### --screen-content-tools  [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]  
-Set screen content tools.
+Set screen content tools. (default: auto)
 
 - **params**
   - palette-mode=&lt;bool&gt;  
@@ -598,10 +598,10 @@ Set screen content tools.
   ```
 
 ### --cdf-update [AV1]
-Enable CDF update.
+Enable CDF update. (default: auto)
 
 ### --cdf-frame-end-update [AV1]
-Enable CDF frame end update.
+Enable CDF frame end update. (default: auto)
 
 ### --temporal-layers &lt;int&gt; [HEVC/AV1]
 Number of temporal layers.
