@@ -1052,27 +1052,22 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         return 0;
     }
     if (IS_OPTION("no-screen-content-tools")) {
-        i++;
         pParams->screenContentTools = false;
         return 0;
     }
     if (IS_OPTION("cdf-update")) {
-        i++;
         pParams->cdfUpdate = true;
         return 0;
     }
     if (IS_OPTION("no-cdf-update")) {
-        i++;
         pParams->cdfUpdate = false;
         return 0;
     }
     if (IS_OPTION("cdf-frame-end-update")) {
-        i++;
         pParams->cdfFrameEndUpdate = true;
         return 0;
     }
     if (IS_OPTION("no-cdf-frame-end-update")) {
-        i++;
         pParams->cdfFrameEndUpdate = false;
         return 0;
     }
