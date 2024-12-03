@@ -222,7 +222,7 @@ tstring encoder_help() {
         _T("                                 - q-pel (best) = default\n")
         _T("   --vbaq                       [H.264/HEVC] enable VBAQ (default: auto)\n")
         _T("   --tiles <int>                [AV1] set num of tiles per frame\n")
-        _T("   --temporal-layers <int>      [AV1] set num of temporal layers\n")
+        _T("   --temporal-layers <int>      [HEVC/AV1] set num of temporal layers\n")
         _T("   --aq-mode <string>           [AV1] set AQ mode\n")
         _T("                                 - none\n")
         _T("                                 - caq\n")

@@ -2299,7 +2299,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             vbv_bufsize_kbps = max_bitrate_kbps;
         } else {
             max_bitrate_kbps = VCE_DEFAULT_MAX_BITRATE;
-            vbv_bufsize_kbps = VCE_DEFAULT_VBV_BUFSIZE;
+            vbv_bufsize_kbps = VCE_DEFAULT_MAX_BITRATE;
         }
         if (prm->codecParam[prm->codec].nLevel == 0) {
             prm->codecParam[prm->codec].nLevel = (int16_t)level;
@@ -2425,6 +2425,10 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
     if (prm->codec == RGY_CODEC_HEVC || prm->codec == RGY_CODEC_AV1) {
         m_params.SetParam(AMF_PARAM_COLOR_BIT_DEPTH(prm->codec), (amf_int64)prm->outputDepth);
+        if (prm->temporalLayers.has_value()) {
+            m_params.SetParam(AMF_PARAM_MAX_NUM_TEMPORAL_LAYERS(prm->codec), (amf_int64)prm->temporalLayers.value());
+            m_params.SetParam(AMF_PARAM_NUM_TEMPORAL_LAYERS(prm->codec), (amf_int64)prm->temporalLayers.value());
+        }
     }
 
     if (prm->codec == RGY_CODEC_H264) {
@@ -2503,10 +2507,6 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     } else if (prm->codec == RGY_CODEC_AV1) {
         if (prm->tiles > 0) {
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_TILES_PER_FRAME, (amf_int64)prm->tiles);
-        }
-        if (prm->temporalLayers.has_value()) {
-            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_NUM_TEMPORAL_LAYERS, (amf_int64)prm->temporalLayers.value());
-            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_NUM_TEMPORAL_LAYERS,     (amf_int64)prm->temporalLayers.value());
         }
         if (prm->cdefMode.has_value()) {
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_CDEF_MODE,           (amf_int64)prm->cdefMode.value());

@@ -79,7 +79,7 @@
   - [--screen-content-tools  \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--screen-content-tools--param1value1param2value2)
   - [--cdf-update \[AV1\]](#--cdf-update-av1)
   - [--cdf-frame-end-update \[AV1\]](#--cdf-frame-end-update-av1)
-  - [--temporal-layers \<int\> \[AV1\]](#--temporal-layers-int-av1)
+  - [--temporal-layers \<int\> \[HEVC/AV1\]](#--temporal-layers-int-hevcav1)
   - [--aq-mode \<string\> \[AV1\]](#--aq-mode-string-av1)
   - [--pe](#--pe)
   - [--pa  \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--pa--param1value1param2value2)
@@ -543,7 +543,7 @@ Enable CDF update.
 ### --cdf-frame-end-update [AV1]
 Enable CDF frame end update.
 
-### --temporal-layers &lt;int&gt; [AV1]
+### --temporal-layers &lt;int&gt; [HEVC/AV1]
 Temporal layersの数。
 
 ### --aq-mode &lt;string&gt; [AV1]
