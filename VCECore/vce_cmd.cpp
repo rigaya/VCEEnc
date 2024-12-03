@@ -204,14 +204,14 @@ tstring encoder_help() {
         _T("   --qp-min <int>               set min qp\n")
         _T("   --qvbr-quality <int>         set QVBR level (0 - 51)\n")
         _T("-b,--bframes <int>              set consecutive b frames (default: %d)\n")
-        _T("   --(no-)b-pyramid             enable b-pyramid feature\n")
-        _T("   --b-deltaqp <int>            set qp offset for non-ref b frames\n")
-        _T("   --bref-deltaqp <int>         set qp offset for ref b frames\n")
+        _T("   --(no-)b-pyramid             enable b-pyramid feature (default: auto)\n")
+        _T("   --b-deltaqp <int>            set qp offset for non-ref b frames (default: auto)\n")
+        _T("   --bref-deltaqp <int>         set qp offset for ref b frames (default: auto)\n")
         _T("   --adapt-minigop              enable adaptive mini-gop [H.264]\n")
-        _T("   --ref <int>                  set num of reference frames (default: %d)\n")
-        _T("   --ltr <int>                  set num of long term reference frames (default: %d)\n")
+        _T("   --ref <int>                  set num of reference frames (default: auto)\n")
+        _T("   --ltr <int>                  set num of long term reference frames (default: auto)\n")
         _T("   --max-bitrate <int>          set max bitrate (kbps) (default: %d)\n")
-        _T("   --vbv-bufsize <int>          set vbv buffer size (kbps) (default: %d)\n")
+        _T("   --vbv-bufsize <int>          set vbv buffer size (kbps) (default: auto)\n")
         _T("   --gop-len <int>              set length of gop (default: auto)\n")
         _T("   --(no-)skip-frame            [H.264/HEVC] enable skip frame feature\n")
         _T("   --slices <int>               [H.264/HEVC] num of slices per frame (default: %d)\n")
@@ -220,7 +220,7 @@ tstring encoder_help() {
         _T("                                 - full-pel (fast)\n")
         _T("                                 - half-pel\n")
         _T("                                 - q-pel (best) = default\n")
-        _T("   --vbaq                       [H.264/HEVC] enable VBAQ\n")
+        _T("   --vbaq                       [H.264/HEVC] enable VBAQ (default: auto)\n")
         _T("   --tiles <int>                [AV1] set num of tiles per frame\n")
         _T("   --temporal-layers <int>      [AV1] set num of temporal layers\n")
         _T("   --aq-mode <string>           [AV1] set AQ mode\n")
@@ -259,8 +259,7 @@ tstring encoder_help() {
         _T("      motion-quality=<string>   high motion quality boost mode\n")
         _T("                                 - none, auto\n"),
         VCE_DEFAULT_QPI, VCE_DEFAULT_QPP, VCE_DEFAULT_QPB, VCE_DEFAULT_BFRAMES,
-        VCE_DEFAULT_REF_FRAMES, VCE_DEFAULT_LTR_FRAMES,
-        VCE_DEFAULT_MAX_BITRATE, VCE_DEFAULT_VBV_BUFSIZE, VCE_DEFAULT_SLICES
+        VCE_DEFAULT_MAX_BITRATE, VCE_DEFAULT_SLICES
     );
 
     str += PrintMultipleListOptions(_T("--level <string>"), _T("set codec level"),
@@ -804,15 +803,15 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             print_cmd_error_invalid_value(option_name, strInput[i], _T("bframes should be positive value."));
             return 1;
         }
-        pParams->nBframes = value;
+        pParams->bframes = value;
         return 0;
     }
     if (IS_OPTION("b-pyramid")) {
-        pParams->bBPyramid = true;
+        pParams->bPyramid = true;
         return 0;
     }
     if (IS_OPTION("no-b-pyramid")) {
-        pParams->bBPyramid = false;
+        pParams->bPyramid = false;
         return 0;
     }
     if (IS_OPTION("b-deltaqp")) {
@@ -822,7 +821,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             print_cmd_error_invalid_value(option_name, strInput[i]);
             return 1;
         }
-        pParams->nDeltaQPBFrame = value;
+        pParams->deltaQPBFrame = value;
         return 0;
     }
     if (IS_OPTION("bref-deltaqp")) {
@@ -832,7 +831,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             print_cmd_error_invalid_value(option_name, strInput[i]);
             return 1;
         }
-        pParams->nDeltaQPBFrameRef = value;
+        pParams->deltaQPBFrameRef = value;
         return 0;
     }
     if (IS_OPTION("adapt-minigop")) {
@@ -850,7 +849,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             print_cmd_error_invalid_value(option_name, strInput[i]);
             return 1;
         }
-        pParams->nRefFrames = value;
+        pParams->refFrames = value;
         return 0;
     }
     if (IS_OPTION("ltr")) {
@@ -860,7 +859,7 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             print_cmd_error_invalid_value(option_name, strInput[i]);
             return 1;
         }
-        pParams->nLTRFrames = value;
+        pParams->LTRFrames = value;
         return 0;
     }
     if (IS_OPTION("max-bitrate")) {
@@ -1782,17 +1781,17 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     } else {
         OPT_NUM(_T("--gop-len"), nGOPLen);
     }
-    OPT_NUM(_T("-b"), nBframes);
-    OPT_BOOL(_T("--b-pyramid"), _T("--no-b-pyramid"), bBPyramid);
-    OPT_NUM(_T("--b-deltaqp"), nDeltaQPBFrame);
-    OPT_NUM(_T("--bref-deltaqp"), nDeltaQPBFrameRef);
-    OPT_BOOL(_T("--adapt-minigop"), _T("--no-adapt-minigop"), adaptMiniGOP);
-    OPT_NUM(_T("--ref"), nRefFrames);
-    OPT_NUM(_T("--ltr"), nLTRFrames);
+    OPT_NUM_OPTIONAL(_T("-b"), bframes);
+    OPT_BOOL_OPTIONAL(_T("--b-pyramid"), _T("--no-b-pyramid"), bPyramid);
+    OPT_NUM_OPTIONAL(_T("--b-deltaqp"), deltaQPBFrame);
+    OPT_NUM_OPTIONAL(_T("--bref-deltaqp"), deltaQPBFrameRef);
+    OPT_BOOL_OPTIONAL(_T("--adapt-minigop"), _T("--no-adapt-minigop"), adaptMiniGOP);
+    OPT_NUM_OPTIONAL(_T("--ref"), refFrames);
+    OPT_NUM_OPTIONAL(_T("--ltr"), LTRFrames);
     OPT_NUM(_T("--slices"), nSlices);
     OPT_BOOL_OPTIONAL(_T("--deblock"), _T("--no-deblock"), deblockFilter);
     OPT_BOOL_OPTIONAL(_T("--skip-frame"), _T("--no-skip-frame"), enableSkipFrame);
-    OPT_BOOL(_T("--vbaq"), _T(""), bVBAQ);
+    OPT_BOOL_OPTIONAL(_T("--vbaq"), _T(""), bVBAQ);
     OPT_LST(_T("--motion-est"), nMotionEst, list_mv_presicion);
     if (pParams->par[0] > 0 && pParams->par[1] > 0) {
         cmd << _T(" --sar ") << pParams->par[0] << _T(":") << pParams->par[1];
@@ -1819,8 +1818,8 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
             cmd << _T(" --no-screen-content-tools");
         }
     }
-    OPT_BOOL(_T("--cdf-update"), _T("--no-cdf-update"), cdfUpdate);
-    OPT_BOOL(_T("--cdf-frame-end-update"), _T("--no-cdf-frame-end-update"), cdfFrameEndUpdate);
+    OPT_BOOL_OPTIONAL(_T("--cdf-update"), _T("--no-cdf-update"), cdfUpdate);
+    OPT_BOOL_OPTIONAL(_T("--cdf-frame-end-update"), _T("--no-cdf-frame-end-update"), cdfFrameEndUpdate);
     OPT_LST_OPTIONAL(_T("--aq-mode"), aqMode, list_av1_aq_mode);
 
     if (pParams->codec == RGY_CODEC_H264) {

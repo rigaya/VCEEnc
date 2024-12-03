@@ -627,9 +627,9 @@ struct VCEParam {
     int     nBitrate;
     int     nMaxBitrate;
     int     nVBVBufferSize;
-    int     nInitialVBVPercent;
+    std::optional<int> initialVBVPercent;
     int     nSlices;
-    int     nMaxLTR;
+    std::optional<int> maxLTR;
     bool    bTimerPeriodTuning;
 
     RGYQPSet qp;
@@ -640,24 +640,24 @@ struct VCEParam {
     std::optional<int> nQPMin;
     std::optional<int> nQPMaxInter;
     std::optional<int> nQPMinInter;
-    int     nDeltaQPBFrame;
-    int     nDeltaQPBFrameRef;
-    int     nBframes;
-    bool    bBPyramid;
-    bool    adaptMiniGOP;
+    std::optional<int> deltaQPBFrame;
+    std::optional<int> deltaQPBFrameRef;
+    std::optional<int> bframes;
+    std::optional<bool> bPyramid;
+    std::optional<bool> adaptMiniGOP;
     int     nMotionEst;
     bool    bEnforceHRD;
     int     nIDRPeriod;
     int     nGOPLen;
 
-    int nRefFrames;
-    int nLTRFrames;
+    std::optional<int> refFrames;
+    std::optional<int> LTRFrames;
     bool bFiller;
 
     VCEParamPA pa;
     bool       pe;
 
-    bool        bVBAQ;
+    std::optional<int> bVBAQ;
 
     //AV1
     int     tiles;
@@ -685,10 +685,7 @@ static const int VCE_DEFAULT_QPI = 22;
 static const int VCE_DEFAULT_QPP = 24;
 static const int VCE_DEFAULT_QPB = 27;
 static const int VCE_DEFAULT_BFRAMES = 0;
-static const int VCE_DEFAULT_REF_FRAMES = 2;
-static const int VCE_DEFAULT_LTR_FRAMES = 0;
 static const int VCE_DEFAULT_MAX_BITRATE = 20000;
-static const int VCE_DEFAULT_VBV_BUFSIZE = 20000;
 static const int VCE_DEFAULT_SLICES = 1;
 
 static const int VCE_MAX_BFRAMES = 3;

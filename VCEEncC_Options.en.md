@@ -515,7 +515,7 @@ Set output bit depth.
 Maximum bitrate (in kbps).
 
 ### --vbv-bufsize &lt;int&gt;
-Size of VBV buffer size (in kb). Max possible is 500000.
+Size of VBV buffer size (in kb, default auto). Max possible is 500000.
 
 ### --qp-min &lt;int&gt; or &lt;int&gt;:&lt;int&gt;:&lt;int&gt;
 Set the minimum QP value with &lt;I frame&gt;:&lt;P frame&gt;:&lt;B frame&gt;. This option will be ignored in CQP mode. 
@@ -537,22 +537,22 @@ Set maximum GOP length. When lookahead is off, this value will always be used. (
 Set the number of consecutive B frames.
 
 ### --b-pyramid
-Enable b-pyramid feature.
+Enable b-pyramid feature. (Default: auto)
 
 ### --b-deltaqp &lt;int&gt;
-Set qp offset for non-ref b frames.
+Set qp offset for non-ref b frames. (Default: auto)
 
 ### --bref-deltaqp &lt;int&gt;
-Set qp offset for ref b frames.
+Set qp offset for ref b frames. (Default: auto)
 
 ### --ref &lt;int&gt;
-Set the reference distance. In hw encoding, incresing ref frames will have minor effect on image quality or compression rate.
+Set the reference distance. In hw encoding, incresing ref frames will have minor effect on image quality or compression rate. (Default: auto)
 
 ### --ltr &lt;int&gt; [H.264/HEVC]
-Set the long term reference mode.
+Set the long term reference mode. (Default: auto)
 
 ### --vbaq [H.264/HEVC]
-Enable adaptive quantization in frame. (Default: off)
+Enable adaptive quantization in frame. (Default: auto)
 
 ### --skip-frame [H.264/HEVC]
 Enable skip frame feature. (Default: off)

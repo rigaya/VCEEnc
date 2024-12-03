@@ -617,27 +617,27 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
     if (prm->codec == RGY_CODEC_UNKNOWN) {
         prm->codec = RGY_CODEC_H264;
     }
-    if (prm->nBframes > VCE_MAX_BFRAMES) {
+    if (prm->bframes.value_or(0) > VCE_MAX_BFRAMES) {
         PrintMes(RGY_LOG_WARN, _T("Maximum consecutive B frames is %d.\n"), VCE_MAX_BFRAMES);
-        prm->nBframes = VCE_MAX_BFRAMES;
+        prm->bframes = VCE_MAX_BFRAMES;
     }
     if (prm->nGOPLen > VCE_MAX_GOP_LEN) {
         PrintMes(RGY_LOG_WARN, _T("Maximum GOP len is %d.\n"), VCE_MAX_GOP_LEN);
         prm->nGOPLen = VCE_MAX_GOP_LEN;
     }
-    if (abs(prm->nDeltaQPBFrame) > VCE_MAX_B_DELTA_QP) {
+    if (abs(prm->deltaQPBFrame.value_or(0)) > VCE_MAX_B_DELTA_QP) {
         PrintMes(RGY_LOG_WARN, _T("Maximum Delta QP for Bframes is %d.\n"), VCE_MAX_B_DELTA_QP);
-        prm->nDeltaQPBFrame = clamp(prm->nDeltaQPBFrame, -1 * VCE_MAX_B_DELTA_QP, VCE_MAX_B_DELTA_QP);
+        prm->deltaQPBFrame = clamp(prm->deltaQPBFrame.value(), -1 * VCE_MAX_B_DELTA_QP, VCE_MAX_B_DELTA_QP);
     }
-    if (abs(prm->nDeltaQPBFrameRef) > VCE_MAX_B_DELTA_QP) {
+    if (abs(prm->deltaQPBFrameRef.value_or(0)) > VCE_MAX_B_DELTA_QP) {
         PrintMes(RGY_LOG_WARN, _T("Maximum Delta QP for Bframes is %d.\n"), VCE_MAX_B_DELTA_QP);
-        prm->nDeltaQPBFrameRef = clamp(prm->nDeltaQPBFrameRef, -1 * VCE_MAX_B_DELTA_QP, VCE_MAX_B_DELTA_QP);
+        prm->deltaQPBFrameRef = clamp(prm->deltaQPBFrameRef.value(), -1 * VCE_MAX_B_DELTA_QP, VCE_MAX_B_DELTA_QP);
     }
-    if (prm->bVBAQ && prm->codec == RGY_CODEC_HEVC && prm->rateControl == AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP) {
+    if (prm->bVBAQ.has_value() && prm->bVBAQ.value() && prm->codec == RGY_CODEC_HEVC && prm->rateControl == AMF_VIDEO_ENCODER_HEVC_RATE_CONTROL_METHOD_CONSTANT_QP) {
 #ifndef VCE_AUO
         PrintMes(RGY_LOG_WARN, _T("VBAQ is not supported with CQP + HEVC encoding, disabled.\n"));
 #endif
-        prm->bVBAQ = 0;
+        prm->bVBAQ = false;
     }
     if (prm->codec == RGY_CODEC_HEVC) {
         if (prm->codecParam[prm->codec].nProfile == AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN_10) {
@@ -648,12 +648,12 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
         //    prm->codecParam[prm->codec].nProfile = AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN_10;
         //}
     }
-    if (prm->nBframes > 0 && prm->codec == RGY_CODEC_HEVC) {
+    if (prm->bframes.value_or(0) > 0 && prm->codec == RGY_CODEC_HEVC) {
         PrintMes(RGY_LOG_WARN, _T("Bframes is not supported with HEVC encoding, disabled.\n"));
-        prm->nBframes = 0;
-        prm->bBPyramid = 0;
-        prm->nDeltaQPBFrame = 0;
-        prm->nDeltaQPBFrameRef = 0;
+        prm->bframes = 0;
+        prm->bPyramid = 0;
+        prm->deltaQPBFrame = 0;
+        prm->deltaQPBFrameRef = 0;
     }
     if (prm->codec == RGY_CODEC_H264) {
         if (prm->outputDepth != 8) {
@@ -2076,16 +2076,16 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
                 prm->nMaxBitrate = maxBitrate;
             }
         }
-        {
+        if (prm->refFrames.has_value()) {
             int maxRef = 0, minRef = 0;
             encoderCaps->GetProperty(AMF_PARAM_CAP_MIN_REFERENCE_FRAMES(prm->codec), &minRef);
             encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_REFERENCE_FRAMES(prm->codec), &maxRef);
             if (maxRef > 0 // maxRefが0になって適切に取得できない場合があるので、その場合はチェックしない
-                && (prm->nRefFrames < minRef || maxRef < prm->nRefFrames)) {
+                && (prm->refFrames.value() < minRef || maxRef < prm->refFrames.value())) {
                 PrintMes(RGY_LOG_WARN, _T("%s reference frames should be in range of %d - %d (%d specified).\n"),
                     CodecToStr(prm->codec).c_str(),
-                    minRef, maxRef, prm->nRefFrames);
-                prm->nRefFrames = clamp(prm->nRefFrames, minRef, maxRef);
+                    minRef, maxRef, prm->refFrames.value());
+                prm->refFrames = clamp(prm->refFrames.value(), minRef, maxRef);
             }
         }
 
@@ -2103,12 +2103,12 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (prm->codec == RGY_CODEC_H264) {
             bool bBPictureSupported = false;
             encoderCaps->GetProperty(AMF_VIDEO_ENCODER_CAP_BFRAMES, &bBPictureSupported);
-            if (prm->nBframes > 0 && !bBPictureSupported) {
+            if (prm->bframes.value_or(0) > 0 && !bBPictureSupported) {
                 PrintMes(RGY_LOG_WARN, _T("Bframes is not supported on this device, disabled.\n"));
-                prm->nBframes = 0;
-                prm->bBPyramid = 0;
-                prm->nDeltaQPBFrame = 0;
-                prm->nDeltaQPBFrameRef = 0;
+                prm->bframes = 0;
+                prm->bPyramid = 0;
+                prm->deltaQPBFrame = 0;
+                prm->deltaQPBFrameRef = 0;
             }
         } else if (prm->codec == RGY_CODEC_HEVC) {
         } else if (prm->codec == RGY_CODEC_AV1) {
@@ -2275,7 +2275,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (prm->codec == RGY_CODEC_H264) {
             const int profile = prm->codecParam[prm->codec].nProfile;
             if (level == 0) {
-                level = calc_auto_level_h264(m_encWidth, m_encHeight, prm->nRefFrames, false,
+                level = calc_auto_level_h264(m_encWidth, m_encHeight, prm->refFrames.value_or(0), false,
                     m_encFps.n(), m_encFps.d(), profile, max_bitrate_kbps, vbv_bufsize_kbps);
                 //なんかLevel4.0以上でないと設定に失敗する場合がある
                 level = std::max(level, 40);
@@ -2284,7 +2284,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         } else if (prm->codec == RGY_CODEC_HEVC) {
             const bool high_tier = prm->codecParam[prm->codec].nTier == AMF_VIDEO_ENCODER_HEVC_TIER_HIGH;
             if (level == 0) {
-                level = calc_auto_level_hevc(m_encWidth, m_encHeight, prm->nRefFrames,
+                level = calc_auto_level_hevc(m_encWidth, m_encHeight, prm->refFrames.value_or(0),
                     m_encFps.n(), m_encFps.d(), high_tier, max_bitrate_kbps);
             }
             max_bitrate_kbps = get_max_bitrate_hevc(level, high_tier);
@@ -2292,7 +2292,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         } else if (prm->codec == RGY_CODEC_AV1) {
             const int profile = prm->codecParam[prm->codec].nProfile;
             if (level == 0) {
-                level = calc_auto_level_av1(m_encWidth, m_encHeight, prm->nRefFrames,
+                level = calc_auto_level_av1(m_encWidth, m_encHeight, prm->refFrames.value_or(0),
                     m_encFps.n(), m_encFps.d(), profile, max_bitrate_kbps, 1, 1);
             }
             max_bitrate_kbps = get_max_bitrate_av1(level, profile);
@@ -2352,12 +2352,10 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     if (prm->nBitrate != 0)       m_params.SetParam(AMF_PARAM_TARGET_BITRATE(prm->codec), (amf_int64)prm->nBitrate * 1000);
     if (prm->nMaxBitrate != 0)    m_params.SetParam(AMF_PARAM_PEAK_BITRATE(prm->codec),   (amf_int64)prm->nMaxBitrate * 1000);
     if (prm->nVBVBufferSize != 0) m_params.SetParam(AMF_PARAM_VBV_BUFFER_SIZE(prm->codec), (amf_int64)std::min(prm->nVBVBufferSize, VBV_BUFSIZE_MAX_Kbit) * 1000);
-    m_params.SetParam(AMF_PARAM_INITIAL_VBV_BUFFER_FULLNESS(prm->codec),     (amf_int64)prm->nInitialVBVPercent);
-    m_params.SetParam(AMF_PARAM_MAX_NUM_REFRAMES(prm->codec), (amf_int64)prm->nRefFrames);
-    m_params.SetParam(AMF_PARAM_MAX_LTR_FRAMES(prm->codec), (amf_int64)prm->nLTRFrames);
-    if (prm->enableSkipFrame.has_value()) {
-        m_params.SetParam(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(prm->codec), prm->enableSkipFrame.value());
-    }
+    if (prm->initialVBVPercent.has_value()) m_params.SetParam(AMF_PARAM_INITIAL_VBV_BUFFER_FULLNESS(prm->codec),     (amf_int64)prm->initialVBVPercent.value());
+    if (prm->refFrames.has_value()) m_params.SetParam(AMF_PARAM_MAX_NUM_REFRAMES(prm->codec), (amf_int64)prm->refFrames.value());
+    if (prm->LTRFrames.has_value()) m_params.SetParam(AMF_PARAM_MAX_LTR_FRAMES(prm->codec), (amf_int64)prm->LTRFrames.value());
+    if (prm->enableSkipFrame.has_value()) m_params.SetParam(AMF_PARAM_RATE_CONTROL_SKIP_FRAME_ENABLE(prm->codec), prm->enableSkipFrame.value());
     m_params.SetParam(AMF_PARAM_RATE_CONTROL_METHOD(prm->codec),             (amf_int64)prm->rateControl);
 
     m_params.SetParam(AMF_PARAM_ENFORCE_HRD(prm->codec),        prm->bEnforceHRD != 0);
@@ -2395,7 +2393,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             PrintMes(RGY_LOG_WARN, _T("Pre analysis cannot be used with pre encode, pre encode will be disabled.\n"));
             prm->pe = false;
         }
-        if (prm->bVBAQ) {
+        if (prm->bVBAQ.value_or(false)) {
             PrintMes(RGY_LOG_WARN, _T("Pre analysis cannot be used with VBAQ, VBAQ will be disabled.\n"));
             prm->bVBAQ = false;
         }
@@ -2420,7 +2418,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             m_params.SetParam(AMF_PARAM_SLICES_PER_FRAME(prm->codec), (amf_int64)prm->nSlices);
         }
         m_params.SetParam(AMF_PARAM_LOWLATENCY_MODE(prm->codec), prm->ctrl.lowLatency);
-        if (prm->bVBAQ) m_params.SetParam(AMF_PARAM_ENABLE_VBAQ(prm->codec), true);
+        if (prm->bVBAQ.has_value()) m_params.SetParam(AMF_PARAM_ENABLE_VBAQ(prm->codec), prm->bVBAQ.value());
         //m_params.SetParam(AMF_PARAM_END_OF_SEQUENCE(prm->codec),                false);
         m_params.SetParam(AMF_PARAM_INSERT_AUD(prm->codec), false);
     }
@@ -2434,14 +2432,16 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
         m_params.SetParam(AMF_VIDEO_ENCODER_SCANTYPE,           (amf_int64)((m_picStruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE));
 
-        m_params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN, (amf_int64)prm->nBframes);
-        m_params.SetParam(AMF_VIDEO_ENCODER_MAX_CONSECUTIVE_BPICTURES, (amf_int64)prm->nBframes);
-        m_params.SetParam(AMF_VIDEO_ENCODER_ADAPTIVE_MINIGOP, prm->adaptMiniGOP);
-        if (prm->nBframes > 0) {
-            m_params.SetParam(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrame);
-            m_params.SetParam(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP, (amf_int64)prm->nDeltaQPBFrameRef);
-            m_params.SetParam(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE, prm->nBframes > 0 && !!prm->bBPyramid);
-            m_params.SetParam(AMF_VIDEO_ENCODER_QP_B, (amf_int64)prm->qp.qpB);
+        if (prm->adaptMiniGOP.has_value()) m_params.SetParam(AMF_VIDEO_ENCODER_ADAPTIVE_MINIGOP, prm->adaptMiniGOP.value());
+        if (prm->bframes.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_B_PIC_PATTERN, (amf_int64)prm->bframes.value());
+            m_params.SetParam(AMF_VIDEO_ENCODER_MAX_CONSECUTIVE_BPICTURES, (amf_int64)prm->bframes.value());
+            if (prm->bframes.value() > 0) {
+                if (prm->deltaQPBFrame.has_value()) m_params.SetParam(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP, (amf_int64)prm->deltaQPBFrame.value());
+                if (prm->deltaQPBFrameRef.has_value()) m_params.SetParam(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP, (amf_int64)prm->deltaQPBFrameRef.value());
+                if (prm->bPyramid.has_value()) m_params.SetParam(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE, !!prm->bPyramid.value());
+                m_params.SetParam(AMF_VIDEO_ENCODER_QP_B, (amf_int64)prm->qp.qpB);
+            }
         }
 
         if (prm->nQPMin.has_value()) {
@@ -2792,7 +2792,7 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
         return RGY_ERR_NONE;
     }
 
-    if (prm->nBframes > 0) {
+    if (prm->bframes.value_or(0) > 0) {
         bool support_bframe = false;
         for (auto gpu = gpuList.begin(); gpu != gpuList.end(); gpu++) {
             //コーデックのチェック
