@@ -2515,7 +2515,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_CDF_UPDATE,          prm->cdfUpdate.value());
         }
         if (prm->cdfFrameEndUpdate.has_value()) {
-            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE, prm->cdfFrameEndUpdate.value() ? AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE_ENABLE_DEFAULT : AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE_DISABLE);
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE, (amf_int64)(prm->cdfFrameEndUpdate.value() ? AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE_ENABLE_DEFAULT : AMF_VIDEO_ENCODER_AV1_CDF_FRAME_END_UPDATE_MODE_DISABLE));
         }
         //これをいれないと、1920x1080などの解像度が正常に扱えない
         m_params.SetParam(AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE, (amf_int64)AMF_VIDEO_ENCODER_AV1_ALIGNMENT_MODE_NO_RESTRICTIONS);

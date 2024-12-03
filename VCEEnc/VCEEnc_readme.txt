@@ -177,14 +177,48 @@ Radeon RX5500XT
 Radeon RX550
 64GB RAM
 
+【検証環境 2024.08】
+Win11 x64
+Ryzen 9950X + MSI Pro X670-P WIFI
+Radeon RX7900XT
+64GB RAM
+
 【お断り】
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
-2024.08.xx (8.24)
+2024.12.03 (8.24)
+- 使用するffmpegのライブラリを更新。(Windows版)
+  - ffmpeg     7.0    -> 20240902
+  - dav1d      1.4.1  -> 1.4.3
+  - libvpl     2.11.0 -> 2.12.0
+  - libvpx     2.14.0
+- マルチGPU環境でのGPUの自動選択処理を改善し、より適切に空いているGPUを選択できるように。
+- マルチGPU環境でのGPUの自動選択処理をLinuxにも対応。
+- --temporal-layersをHEVCでも使用可能に。
 - Dolby Vision profileのコピー機能を追加。(--dolby-vision-profile copy)
 - Dolby Vision rpu metadataのコピー機能を追加。(--dolby-vision-rpu copy)
+- --dolby-vision-rpuと--dhdr10-infoの併用に対応。
+- --dolby-vision-profileで対象外のプロファイルも読み込めていた問題を修正。
+- --dolby-vision-rpu使用時にレターボックス部分をcropをした場合にそれを反映させるオプションを追加。 ( --dolby-vision-rpu-prm crop )
+- AV1出力時に--dhdr10-infoを使用した時の出力を改善。
+- --dhdr10-infoの実装を変更し、Linuxでの動作に対応。
+  hdr10plus_gen.exeを使用する代わりにlibhdr10plusを使用するように変更。
+- 入力ファイルにdoviがない場合に、--dolby-vision-rpuを指定するとエラー終了する問題を修正。
 - H.264/HEVCのヘッダがうまく取得できない場合、最初のパケットから取得するように。
+- 音声のmux用のバッファ不足になり、音声が同時刻の映像と違うfragmentにmuxされる問題を修正。
+- 入力ファイルの字幕のタイムスタンプが入れ違いになっている場合にエラーが発生していたのを、ソートしなおして解決するように変更。
+- libplaceboによるリサイズフィルタを追加。(Windows x64版)
+- libplaceboによるバンディング低減フィルタを追加。(--vpp-libplacebo-deband)
+- libplaceboによるtone mappingフィルタを追加。(--vpp-libplacebo-tonemapping)
+- libplaceboのcustom shaderを使用したフィルタを追加。 (--vpp-libplacebo-shader)
+- --dolby-vision-rpu copy使用時に、入力ファイルのdolby vision profile 7のとき、
+  libdoviを使用して自動的にdolby vision profile 8に変換するように。 
+- --dhdr10-infoが動作しなくなっていたのを修正。
+- --vpp-smoothの誤ったhelpを修正。
+- --vpp-tweakをなにもしない設定で実行した時クラッシュするのを回避。
+- --vpp-transformでフレームサイズが64で割り切れない場合に、不正なメモリアクセスが生じる問題を修正。
+- ログ表示の細かな変更等。
 
 2024.07.20 (8.23)
 [VCEEncC]
