@@ -3567,6 +3567,8 @@ RGY_ERR VCECore::run2() {
             }
         }
     }
+    // エラー終了の場合も含めキューをすべて開放する
+    dataqueue.clear();
 
     if (m_videoQualityMetric) {
         PrintMes(RGY_LOG_DEBUG, _T("Flushing video quality metric calc.\n"));
