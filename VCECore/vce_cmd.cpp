@@ -287,6 +287,7 @@ tstring encoder_help() {
         _T("   --filler                     use filler data\n")
         _T("\n")
         _T("   --smart-access-video         enables smart access video feature.\n")
+        _T("   --multi-instance             [HEVC/AV1] enables multi instance encode.\n")
     );
     str += _T("\n");
     str += gen_cmd_help_common();
@@ -1336,12 +1337,24 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->pa.maxQPBeforeForceSkip = value;
         return 0;
     }
+    if (IS_OPTION("no-smart-access-video")) {
+        pParams->smartAccessVideo = false;
+        return 0;
+    }
     if (IS_OPTION("smart-access-video")) {
         pParams->smartAccessVideo = true;
         return 0;
     }
     if (IS_OPTION("enable-av1-hwdec")) {
         pParams->enableAV1HWDec = true;
+        return 0;
+    }
+    if (IS_OPTION("multi-instance")) {
+        pParams->multiInstance = true;
+        return 0;
+    }
+    if (IS_OPTION("no-multi-instance")) {
+        pParams->multiInstance = false;
         return 0;
     }
 
@@ -1811,19 +1824,17 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     OPT_NUM(_T("--tiles"), tiles);
     OPT_NUM_OPTIONAL(_T("--temporal-layers"), temporalLayers);
     OPT_LST_OPTIONAL(_T("--cdef-mode"), cdefMode, list_av1_cdef_mode);
-    if (pParams->screenContentTools.has_value()) {
-        if (pParams->screenContentTools.value()) {
-            tmp.str(tstring());
-            ADD_BOOL_OPTIONAL(_T("palette-mode"), paletteMode);
-            ADD_BOOL_OPTIONAL(_T("force-integer-mv"), forceIntegerMV);
-            if (!tmp.str().empty()) {
-                cmd << _T(" --screen-content-tools ") << tmp.str().substr(1);
-            } else if (pParams->pa.enable) {
-                cmd << _T(" --screen-content-tools");
-            }
-        } else {
-            cmd << _T(" --no-screen-content-tools");
+    if (pParams->screenContentTools) {
+        tmp.str(tstring());
+        ADD_BOOL(_T("palette-mode"), paletteMode);
+        ADD_BOOL(_T("force-integer-mv"), forceIntegerMV);
+        if (!tmp.str().empty()) {
+            cmd << _T(" --screen-content-tools ") << tmp.str().substr(1);
+        } else if (pParams->screenContentTools) {
+            cmd << _T(" --screen-content-tools");
         }
+    } else {
+        cmd << _T(" --no-screen-content-tools");
     }
     OPT_BOOL_OPTIONAL(_T("--cdf-update"), _T("--no-cdf-update"), cdfUpdate);
     OPT_BOOL_OPTIONAL(_T("--cdf-frame-end-update"), _T("--no-cdf-frame-end-update"), cdfFrameEndUpdate);
@@ -1876,7 +1887,8 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
         }
     }
 
-    OPT_BOOL(_T("--smart-access-video"), _T(""), smartAccessVideo);
+    OPT_BOOL(_T("--smart-access-video"), _T("--no-smart-access-video"), smartAccessVideo);
+    OPT_BOOL(_T("--multi-instance"), _T("--no-multi-instance"), smartAccessVideo);
 
     cmd << gen_cmd(&pParams->common, &encPrmDefault.common, save_disabled_prm);
 

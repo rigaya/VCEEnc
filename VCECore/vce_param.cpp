@@ -237,9 +237,9 @@ VCEParam::VCEParam() :
     bVBAQ(),
     tiles(0),
     cdefMode(),
-    screenContentTools(),
-    paletteMode(),
-    forceIntegerMV(),
+    screenContentTools(true),
+    paletteMode(true),
+    forceIntegerMV(false),
     cdfUpdate(),
     cdfFrameEndUpdate(),
     temporalLayers(),
@@ -247,6 +247,7 @@ VCEParam::VCEParam() :
     ssim(false),
     psnr(false),
     smartAccessVideo(false),
+    multiInstance(false),
     enableAV1HWDec(false) {
     codecParam[RGY_CODEC_H264].nLevel   = 0;
 #if defined(_WIN32) || defined(_WIN64)
@@ -557,6 +558,7 @@ RGY_ERR AMFParams::SetParamTypeHEVC() {
     SetParamType(AMF_VIDEO_ENCODER_HEVC_SSIM_FEEDBACK, AMF_PARAM_FRAME, L"amf_bool; default = false; Signal encoder to calculate SSIM score");
 
     SetParamType(AMF_VIDEO_ENCODER_HEVC_ENABLE_SMART_ACCESS_VIDEO, AMF_PARAM_STATIC, L"amf_bool; default = false; true = enables smart access video feature");
+    SetParamType(AMF_VIDEO_ENCODER_HEVC_MULTI_HW_INSTANCE_ENCODE, AMF_PARAM_STATIC, L"amf_bool; flag to enable multi VCN encode.");
 
     SetParamTypePA();
 
@@ -674,6 +676,7 @@ RGY_ERR AMFParams::SetParamTypeAV1() {
     SetParamType(AMF_VIDEO_ENCODER_AV1_OUTPUT_REFERENCED_LTR_INDEX_BITFIELD,   AMF_PARAM_FRAME, L"amf_int64; default = N/A; referenced LTR bit-field");
 
     SetParamType(AMF_VIDEO_ENCODER_AV1_ENABLE_SMART_ACCESS_VIDEO,              AMF_PARAM_STATIC, L"amf_bool; default = false; true = enables smart access video feature");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MULTI_HW_INSTANCE_ENCODE,               AMF_PARAM_STATIC, L"amf_bool; flag to enable multi VCN encode.");
 
     SetParamTypePA();
 

@@ -2430,6 +2430,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             m_params.SetParam(AMF_PARAM_MAX_NUM_TEMPORAL_LAYERS(prm->codec), (amf_int64)prm->temporalLayers.value());
             m_params.SetParam(AMF_PARAM_NUM_TEMPORAL_LAYERS(prm->codec), (amf_int64)prm->temporalLayers.value());
         }
+        m_params.SetParam(AMF_PARAM_MULTI_HW_INSTANCE_ENCODE(prm->codec), (amf_int64)prm->multiInstance);
     }
 
     if (prm->codec == RGY_CODEC_H264) {
@@ -2523,18 +2524,10 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         if (prm->aqMode.has_value()) {
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_AQ_MODE,             (amf_int64)prm->aqMode.value());
         }
-        if (prm->screenContentTools.has_value()) {
-            if (prm->screenContentTools.value()) {
-                m_params.SetParam(AMF_VIDEO_ENCODER_AV1_SCREEN_CONTENT_TOOLS, true);
-                if (prm->paletteMode.has_value()) {
-                    m_params.SetParam(AMF_VIDEO_ENCODER_AV1_PALETTE_MODE, prm->paletteMode.value());
-                }
-                if (prm->forceIntegerMV.has_value()) {
-                    m_params.SetParam(AMF_VIDEO_ENCODER_AV1_FORCE_INTEGER_MV, prm->forceIntegerMV.value());
-                }
-            } else {
-                m_params.SetParam(AMF_VIDEO_ENCODER_AV1_SCREEN_CONTENT_TOOLS, false);
-            }
+        m_params.SetParam(AMF_VIDEO_ENCODER_AV1_SCREEN_CONTENT_TOOLS, prm->screenContentTools);
+        if (prm->screenContentTools) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_PALETTE_MODE, prm->paletteMode);
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_FORCE_INTEGER_MV, prm->forceIntegerMV);
         }
         if (prm->nQPMin.has_value()) {
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTRA, (amf_int64)prm->nQPMin.value());
@@ -3706,12 +3699,12 @@ tstring VCECore::GetEncoderParam() {
     auto GetPropertyStr = [pProperty](const wchar_t *pName) {
         const wchar_t *pProp = L"";
         return (pProperty->GetPropertyWString(pName, &pProp) == AMF_OK) ? wstring_to_string(pProp) : "";
-    };
+        };
 
     auto GetPropertyInt = [pProperty](const wchar_t *pName) {
         int64_t value = 0;
         return (pProperty->GetProperty(pName, &value) == AMF_OK) ? value : 0;
-    };
+        };
 
     auto GetPropertyIntOptional = [pProperty](const wchar_t *pName) {
         int64_t value = 0;
@@ -3720,24 +3713,24 @@ tstring VCECore::GetEncoderParam() {
             ret = value;
         }
         return ret;
-    };
+        };
 
     auto GetPropertyRatio = [pProperty](const wchar_t *pName) {
-        AMFRatio value = AMFConstructRatio(0,0);
+        AMFRatio value = AMFConstructRatio(0, 0);
         pProperty->GetProperty(pName, &value);
         return value;
-    };
+        };
 
     auto GetPropertyRate = [pProperty](const wchar_t *pName) {
-        AMFRate value = AMFConstructRate(0,0);
+        AMFRate value = AMFConstructRate(0, 0);
         pProperty->GetProperty(pName, &value);
         return value;
-    };
+        };
 
     auto GetPropertyBool = [pProperty](const wchar_t *pName) {
         bool value = false;
         return (pProperty->GetProperty(pName, &value) == AMF_OK) ? value : false;
-    };
+        };
 
     auto GetPropertyBoolOptional = [pProperty](const wchar_t *pName) {
         bool value = false;
@@ -3746,14 +3739,14 @@ tstring VCECore::GetEncoderParam() {
             ret = value;
         }
         return ret;
-    };
+        };
     auto GetPropertyBoolOptionalOnOffAuto = [pProperty](const wchar_t *pName) {
         bool value = false;
         if (pProperty->GetProperty(pName, &value) == AMF_OK) {
             return value ? _T("on") : _T("off");
         }
         return _T("auto");
-    };
+        };
 
     auto getPropertyDesc = [pProperty, GetPropertyInt](const wchar_t *pName, const CX_DESC *list) {
         int64_t value = 0;
@@ -3762,7 +3755,7 @@ tstring VCECore::GetEncoderParam() {
         }
         auto ptr = get_cx_desc(list, (int)value);
         return (ptr) ? tstring(ptr) : _T("");
-    };
+        };
 
     auto getPropertyDescOptional = [pProperty, GetPropertyInt](const wchar_t *pName, const CX_DESC *list) {
         int64_t value = 0;
@@ -3774,7 +3767,7 @@ tstring VCECore::GetEncoderParam() {
             ret = tstring(ptr);
         }
         return ret;
-    };
+        };
 
     tstring mes;
 
@@ -3809,6 +3802,11 @@ tstring VCECore::GetEncoderParam() {
 
     if (GetPropertyBool(AMF_PARAM_ENABLE_SMART_ACCESS_VIDEO(m_encCodec))) {
         mes += _T("Smart Access:  on\n");
+    }
+    if (m_encCodec == RGY_CODEC_AV1 || m_encCodec == RGY_CODEC_HEVC) {
+        if (GetPropertyBool(AMF_PARAM_MULTI_HW_INSTANCE_ENCODE(m_encCodec))) {
+            mes += _T("Multi Instance:on\n");
+        }
     }
     auto inputInfo = m_pFileReader->GetInputFrameInfo();
     mes += strsprintf(_T("Input Info:    %s\n"), m_pFileReader->GetInputMessage());
@@ -3954,18 +3952,14 @@ tstring VCECore::GetEncoderParam() {
             mes += strsprintf(_T("Temporal Lyrs: %d\n"), ivalue.value());
         }
         mes += strsprintf(_T("ScreenContent: "));
-        auto sct = GetPropertyBoolOptional(AMF_VIDEO_ENCODER_AV1_SCREEN_CONTENT_TOOLS);
-        if (sct.has_value()) {
-            if (sct.value()) {
-                tstring pa_str;
-                pa_str += _T("palette-mode ") + tstring(GetPropertyBoolOptionalOnOffAuto(AMF_VIDEO_ENCODER_AV1_PALETTE_MODE)) + _T(", ");
-                pa_str += _T("force-integer-mv ") + tstring(GetPropertyBoolOptionalOnOffAuto(AMF_VIDEO_ENCODER_AV1_FORCE_INTEGER_MV)) + _T(", ");
-                mes += _T("on,") + pa_str.substr(0, pa_str.length() - 2) + _T("\n");
-            } else {
-                mes += _T("off\n");
-            }
+        auto sct = GetPropertyBool(AMF_VIDEO_ENCODER_AV1_SCREEN_CONTENT_TOOLS);
+        if (sct) {
+            tstring pa_str;
+            pa_str += _T("palette-mode ") + tstring(GetPropertyBool(AMF_VIDEO_ENCODER_AV1_PALETTE_MODE) ? _T("on") : _T("off")) + _T(", ");
+            pa_str += _T("force-integer-mv ") + tstring(GetPropertyBool(AMF_VIDEO_ENCODER_AV1_FORCE_INTEGER_MV) ? _T("on") : _T("off")) + _T(", ");
+            mes += _T("on,") + pa_str.substr(0, pa_str.length() - 2) + _T("\n");
         } else {
-            mes += _T("auto\n");
+            mes += _T("off\n");
         }
     }
     { const auto &vui_str = m_encVUI.print_all();

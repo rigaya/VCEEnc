@@ -107,6 +107,7 @@
   - [--ssim](#--ssim)
   - [--psnr](#--psnr)
   - [--smart-access-video](#--smart-access-video)
+  - [--multi-instance \[HEVC/AV1\]](#--multi-instance-hevcav1)
 - [入出力 / 音声 / 字幕などのオプション](#入出力--音声--字幕などのオプション)
   - [--input-analyze \<float\>](#--input-analyze-float)
   - [--input-probesize \<int\>](#--input-probesize-int)
@@ -756,6 +757,9 @@ avhw読み込みでは、フレームの並び替えにタイムスタンプを�
 
 ### --smart-access-video  
 Smart Access Videoを使用する。
+
+### --multi-instance [HEVC/AV1]
+マルチインスタンスでのエンコードを有効にする。
 
 ## 入出力 / 音声 / 字幕などのオプション
 

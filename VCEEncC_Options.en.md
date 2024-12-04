@@ -109,6 +109,7 @@
   - [--ssim](#--ssim)
   - [--psnr](#--psnr)
   - [--smart-access-video](#--smart-access-video)
+  - [--multi-instance \[HEVC/AV1\]](#--multi-instance-hevcav1)
 - [IO / Audio / Subtitle Options](#io--audio--subtitle-options)
   - [--input-analyze \<float\>](#--input-analyze-float)
   - [--input-probesize \<int\>](#--input-probesize-int)
@@ -816,6 +817,9 @@ Calculate psnr of the encoded video.
 
 ### --smart-access-video  
 Enables smart access video feature.
+
+### --multi-instance [HEVC/AV1]
+Enables multi instance encode.
 
 ## IO / Audio / Subtitle Options
 

@@ -662,9 +662,9 @@ struct VCEParam {
     //AV1
     int     tiles;
     std::optional<int> cdefMode;
-    std::optional<bool> screenContentTools;
-    std::optional<bool> paletteMode;
-    std::optional<bool> forceIntegerMV;
+    bool screenContentTools;
+    bool paletteMode;
+    bool forceIntegerMV;
     std::optional<bool> cdfUpdate;
     std::optional<bool> cdfFrameEndUpdate;
     std::optional<int>  temporalLayers;
@@ -674,6 +674,7 @@ struct VCEParam {
     bool        psnr;
 
     bool        smartAccessVideo;
+    bool        multiInstance;
 
     bool        enableAV1HWDec;
 
@@ -762,6 +763,7 @@ AMF_PARAM_H264_HEVC(INSERT_AUD);
 AMF_PARAM_HEVC_AV1(COLOR_BIT_DEPTH);
 AMF_PARAM_HEVC_AV1(NUM_TEMPORAL_LAYERS);
 AMF_PARAM_HEVC_AV1(MAX_NUM_TEMPORAL_LAYERS);
+AMF_PARAM_HEVC_AV1(MULTI_HW_INSTANCE_ENCODE);
 AMF_PARAM(QVBR_QUALITY_LEVEL);
 AMF_PARAM(INPUT_COLOR_PROFILE);
 AMF_PARAM(INPUT_TRANSFER_CHARACTERISTIC);
