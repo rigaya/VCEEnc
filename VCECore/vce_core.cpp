@@ -2112,6 +2112,25 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             }
         } else if (prm->codec == RGY_CODEC_HEVC) {
         } else if (prm->codec == RGY_CODEC_AV1) {
+            bool bBPictureSupported = false;
+            encoderCaps->GetProperty(AMF_VIDEO_ENCODER_AV1_CAP_BFRAMES, &bBPictureSupported);
+            if (prm->bframes.value_or(0) > 0 && !bBPictureSupported) {
+                PrintMes(RGY_LOG_WARN, _T("Bframes is not supported on this device, disabled.\n"));
+                prm->bframes = 0;
+                prm->bPyramid = 0;
+                prm->deltaQPBFrame = 0;
+                prm->deltaQPBFrameRef = 0;
+            }
+            if (prm->adaptMiniGOP.value_or(false)) {
+                bool preAnalysisSupported = false;
+                encoderCaps->GetProperty(AMF_PARAM_CAP_PRE_ANALYSIS(prm->codec), &preAnalysisSupported);
+                if (!preAnalysisSupported) {
+                    PrintMes(RGY_LOG_WARN, _T("Pre Analysis is not supported on this device, adaptive MiniGOP disabled.\n"));
+                    prm->adaptMiniGOP = false;
+                } else {
+                    prm->pa.enable = true;
+                }
+            }
         } else {
             PrintMes(RGY_LOG_WARN, _T("Unsupported codec.\n"));
             return RGY_ERR_UNSUPPORTED;
@@ -2540,6 +2559,12 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         }
         if (prm->nQPMaxInter.has_value()) {
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTER, (amf_int64)prm->nQPMaxInter.value());
+        }
+        if (prm->bframes.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_B_PIC_PATTERN, (amf_int64)prm->bframes.value());
+        }
+        if (prm->adaptMiniGOP.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_ADAPTIVE_MINIGOP, prm->adaptMiniGOP.value());
         }
     } else {
         PrintMes(RGY_LOG_ERROR, _T("Unsupported codec.\n"));
@@ -3906,15 +3931,17 @@ tstring VCECore::GetEncoderParam() {
             qpminmax_str(qpmax).c_str(), qpminmax_str(qpmax_inter).c_str());
     }
     mes += strsprintf(_T("VBV Bufsize:   %d kb\n"), GetPropertyInt(AMF_PARAM_VBV_BUFFER_SIZE(m_encCodec)) / 1000);
-    if (m_encCodec == RGY_CODEC_H264 && GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN)) {
+    if (GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN)) {
         mes += strsprintf(_T("Bframes:       %d frames, b-pyramid: %s\n"),
             GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN),
             (GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN) && GetPropertyInt(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE) ? _T("on") : _T("off")));
         if (GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN)) {
             mes += strsprintf(_T("Delta QP:      Bframe: %d, RefBframe: %d\n"), GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_DELTA_QP), GetPropertyInt(AMF_VIDEO_ENCODER_REF_B_PIC_DELTA_QP));
         }
-    } else if (m_encCodec != RGY_CODEC_AV1) {
+    } else if (m_encCodec == RGY_CODEC_HEVC) {
         mes += strsprintf(_T("Bframes:       0 frames\n"));
+    } else if (m_encCodec == RGY_CODEC_AV1) {
+        mes += strsprintf(_T("Bframes:       %d frames\n"), GetPropertyInt(AMF_VIDEO_ENCODER_AV1_B_PIC_PATTERN));
     }
     const bool pa_enable = GetPropertyBool(AMF_PARAM_PRE_ANALYSIS_ENABLE(m_encCodec));
     mes += strsprintf(_T("Pre Analysis:  "));
@@ -4069,9 +4096,9 @@ tstring VCECore::GetEncoderParam() {
         if (GetPropertyBool(AMF_VIDEO_ENCODER_FULL_RANGE_COLOR)) {
             others += _T("fullrange ");
         }
-        if (GetPropertyBool(AMF_VIDEO_ENCODER_ADAPTIVE_MINIGOP)) {
-            others += _T("adaptMiniGOP ");
-        }
+    }
+    if (GetPropertyBool(AMF_PARAM_ADAPTIVE_MINIGOP(m_encCodec))) {
+        others += _T("adaptMiniGOP ");
     }
     if (others.length() > 0) {
         mes += strsprintf(_T("Others:        %s\n"), others.c_str());

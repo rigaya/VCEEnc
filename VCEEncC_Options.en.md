@@ -68,6 +68,7 @@
   - [--b-pyramid](#--b-pyramid)
   - [--b-deltaqp \<int\>](#--b-deltaqp-int)
   - [--bref-deltaqp \<int\>](#--bref-deltaqp-int)
+  - [--adapt-minigop \[H.264/AV1\]](#--adapt-minigop-h264av1)
   - [--ref \<int\>](#--ref-int)
   - [--ltr \<int\> \[H.264/HEVC\]](#--ltr-int-h264hevc)
   - [--vbaq \[H.264/HEVC\]](#--vbaq-h264hevc)
@@ -545,6 +546,9 @@ Set qp offset for non-ref b frames. (Default: auto)
 
 ### --bref-deltaqp &lt;int&gt;
 Set qp offset for ref b frames. (Default: auto)
+
+### --adapt-minigop [H.264/AV1]
+Enable adaptive mini-gop. This also enables --pa in AV1 encoding. (Default: auto)
 
 ### --ref &lt;int&gt;
 Set the reference distance. In hw encoding, incresing ref frames will have minor effect on image quality or compression rate. (Default: auto)

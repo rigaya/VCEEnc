@@ -207,7 +207,7 @@ tstring encoder_help() {
         _T("   --(no-)b-pyramid             enable b-pyramid feature (default: auto)\n")
         _T("   --b-deltaqp <int>            set qp offset for non-ref b frames (default: auto)\n")
         _T("   --bref-deltaqp <int>         set qp offset for ref b frames (default: auto)\n")
-        _T("   --adapt-minigop              enable adaptive mini-gop [H.264]\n")
+        _T("   --adapt-minigop              enable adaptive mini-gop [H.264/AV1]\n")
         _T("   --ref <int>                  set num of reference frames (default: auto)\n")
         _T("   --ltr <int>                  set num of long term reference frames (default: auto)\n")
         _T("   --max-bitrate <int>          set max bitrate (kbps) (default: %d)\n")

@@ -544,6 +544,10 @@ tstring VCEDevice::QueryEncCaps(RGY_CODEC codec, amf::AMFCapsPtr& encoderCaps) {
         amf_uint32 maxTemporalLayers = 0;
         encoderCaps->GetProperty(AMF_VIDEO_ENCODER_AV1_CAP_MAX_NUM_TEMPORAL_LAYERS, &maxTemporalLayers);
         str += strsprintf(_T("Temporal layers: %d\n"), maxTemporalLayers);
+
+        bool bBPictureSupported = false;
+        encoderCaps->GetProperty(AMF_VIDEO_ENCODER_AV1_CAP_BFRAMES, &bBPictureSupported);
+        str += strsprintf(_T("Bframe support:  %s\n"), (bBPictureSupported) ? _T("yes") : _T("no"));
     }
 
     amf_bool preAnalysis = 0;

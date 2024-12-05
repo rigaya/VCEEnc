@@ -678,6 +678,11 @@ RGY_ERR AMFParams::SetParamTypeAV1() {
     SetParamType(AMF_VIDEO_ENCODER_AV1_ENABLE_SMART_ACCESS_VIDEO,              AMF_PARAM_STATIC, L"amf_bool; default = false; true = enables smart access video feature");
     SetParamType(AMF_VIDEO_ENCODER_AV1_MULTI_HW_INSTANCE_ENCODE,               AMF_PARAM_STATIC, L"amf_bool; flag to enable multi VCN encode.");
 
+
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_CONSECUTIVE_BPICTURES,              AMF_PARAM_STATIC, L"amf_int64; default 0 or 127, determined by AMF_VIDEO_ENCODER_AV1_CAP_BFRAMES. Maximum number of consecutive B frames for B frame encoding");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_B_PIC_PATTERN,                          AMF_PARAM_STATIC, L"amf_int64; default 0. Number of B frames for B frame encoding.");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_ADAPTIVE_MINIGOP,                       AMF_PARAM_STATIC, L"amf_bool; default false. Adaptive miniGOP size for B frame encoding.");
+
     SetParamTypePA();
 
     return RGY_ERR_NONE;

@@ -66,6 +66,7 @@
   - [--b-pyramid](#--b-pyramid)
   - [--b-deltaqp \<int\>](#--b-deltaqp-int)
   - [--bref-deltaqp \<int\>](#--bref-deltaqp-int)
+  - [--adapt-minigop \[H.264/AV1\]](#--adapt-minigop-h264av1)
   - [--ref \<int\>](#--ref-int)
   - [--ltr \<int\> \[H.264/HEVC\]](#--ltr-int-h264hevc)
   - [--vbaq \[H.264/HEVC\]](#--vbaq-h264hevc)
@@ -485,6 +486,9 @@ BフレームのQPオフセット値の指定。(デフォルト:自動)
 
 ### --bref-deltaqp &lt;int&gt;
 参照BフレームのQPオフセット値の指定。(デフォルト:自動)
+
+### --adapt-minigop [H.264/AV1]
+Adaptive mini-gopを有効にする。このオプションは、AV1エンコードでは同時に--paを有効にする。 (デフォルト:自動)
 
 ### --ref &lt;int&gt;
 参照距離を設定する。VCEEncではあまり増やしても品質は向上しない。(デフォルト:自動)
