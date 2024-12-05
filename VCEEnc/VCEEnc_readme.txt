@@ -189,6 +189,7 @@ Radeon RX7900XT
 【どうでもいいメモ】
 2024.12.03 (8.24)
 - AMFを1.4.35に更新。
+  AMD Radeon Software Adrenalin Edition 24.9.1 以降が必要。
 - AV1エンコードで--bframesと--adapt-gopに対応。(VCN5の機能)
 - マルチインスタンスでのエンコードを有効にするオプションを追加。(--multi-instance)
 - 使用するffmpegのライブラリを更新。(Windows版)

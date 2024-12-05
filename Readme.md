@@ -50,6 +50,7 @@ Debian/Ubuntu (VCEEncC)
 | VCEEnc 8.07 or later | AMD driver 23.1.2 or later |
 | VCEEnc 8.17 or later | AMD driver 23.5.2 or later |
 | VCEEnc 8.23 or later | AMD driver 24.6.1 or later |
+| VCEEnc 8.24 or later | AMD driver 24.9.1 or later |
 
 
 ## Usage and options of VCEEncC
@@ -126,6 +127,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 | RDNA | RDNA1         | RX5xxx      |          | VCN2        | 8bit  | 10bit |    |
 |      | RDNA2         | RX6xxx*      | Zen4 APU | VCN3        | 8bit  | 10bit |    |
 |      | RDNA3         | RX7xxx      |          | VCN4        | 8bit  | 10bit | 10bit |
+|      | RDNA4         | RX8xxx      |          | VCN5        | 8bit  | 10bit | 10bit |
 
 * RX 6400 and RX 6500 XT not supported, due to lack of HW Encoder on these cards!
 
