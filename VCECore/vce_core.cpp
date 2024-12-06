@@ -3727,14 +3727,14 @@ tstring VCECore::GetEncoderParam() {
 
     auto GetPropertyInt = [pProperty](const wchar_t *pName) {
         int64_t value = 0;
-        return (pProperty->GetProperty(pName, &value) == AMF_OK) ? value : 0;
+        return (int)((pProperty->GetProperty(pName, &value) == AMF_OK) ? value : 0);
         };
 
     auto GetPropertyIntOptional = [pProperty](const wchar_t *pName) {
         int64_t value = 0;
-        std::optional<int64_t> ret;
+        std::optional<int> ret;
         if (pProperty->GetProperty(pName, &value) == AMF_OK) {
-            ret = value;
+            ret = (int)value;
         }
         return ret;
         };
