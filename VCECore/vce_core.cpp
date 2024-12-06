@@ -2977,7 +2977,6 @@ RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, in
     PrintMes(RGY_LOG_DEBUG, _T("InitDevice: device #%d (%s) selected.\n"), (*gpu)->id(), (*gpu)->name().c_str());
     m_dev = std::move(*gpu);
     if (m_deviceUsage) {
-        m_deviceUsage = std::make_unique<RGYDeviceUsage>();
         m_deviceUsage->startProcessMonitor(m_dev->id());
         // 登録を解除するプロセスを起動
         const auto [err_run_proc, child_pid] = m_deviceUsage->startProcessMonitor(m_dev->id());
