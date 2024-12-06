@@ -1,4 +1,4 @@
-FROM fedora:34
+FROM fedora:37
 
 ARG LOCAL_USER_ID=1000 \
     LOCAL_GROUP_ID=1000
@@ -11,13 +11,14 @@ RUN dnf update -y \
     && dnf install -y \
       which \ 
       @development-tools gcc-c++ \
-      wget python3 \
+      wget curl python3 \
       ffmpeg ffmpeg-devel \
       libass libass-devel \
       opencl-headers \
       libX11-devel \
       vulkan-loader-devel \
       rpm-build \
+      openssl openssl-devel \
     && dnf clean all
 
 RUN useradd -u $LOCAL_USER_ID -m --user-group --shell /bin/bash rigaya
