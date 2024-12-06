@@ -1389,8 +1389,8 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetNUValue(fcgNUQPP,               enc.qp.qpP);
     SetNUValue(fcgNUQPB,               enc.qp.qpB);
     SetNUValue(fcgNUGopLength,         enc.nGOPLen);
-    SetNUValue(fcgNUBframes,           enc.nBframes);
-    fcgCBBPyramid->Checked           = enc.bBPyramid != 0;
+    SetNUValue(fcgNUBframes,           enc.bframes.value_or(0));
+    fcgCBBPyramid->Checked           = enc.bPyramid.value_or(false);
     SetCXIndex(fcgCXCodecLevel,        get_cx_index(list_avc_level, enc.codecParam[RGY_CODEC_H264].nLevel));
     SetCXIndex(fcgCXCodecProfile,      get_cx_index(list_avc_profile, enc.codecParam[RGY_CODEC_H264].nProfile));
     SetCXIndex(fcgCXHEVCLevel,         get_cx_index(list_hevc_level, enc.codecParam[RGY_CODEC_HEVC].nLevel));
@@ -1407,16 +1407,16 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
 
     SetNUValue(fcgNUQPMax,               enc.nQPMax.value_or(0));
     SetNUValue(fcgNUQPMin,               enc.nQPMin.value_or(0));
-    SetNUValue(fcgNUBDeltaQP,            enc.nDeltaQPBFrame);
-    SetNUValue(fcgNUBRefDeltaQP,         enc.nDeltaQPBFrameRef);
+    SetNUValue(fcgNUBDeltaQP,            enc.deltaQPBFrame.value_or(0));
+    SetNUValue(fcgNUBRefDeltaQP,         enc.deltaQPBFrameRef.value_or(0));
 
     SetNUValue(fcgNUSlices,             enc.nSlices);
-    SetNUValue(fcgNURefFrames,          enc.nRefFrames);
+    SetNUValue(fcgNURefFrames,          enc.refFrames.value_or(0));
 
     fcgCBDeblock->Checked             = enc.deblockFilter.value_or(true);
     fcgCBSkipFrame->Checked           = enc.enableSkipFrame.value_or(false);
     fcgCBTimerPeriodTuning->Checked   = enc.bTimerPeriodTuning;
-    fcgCBVBAQ->Checked                = enc.bVBAQ;
+    fcgCBVBAQ->Checked                = enc.bVBAQ.value_or(false);
     fcgCBFullrange->Checked           = enc.common.out_vui.colorrange == RGY_COLORRANGE_FULL;
     SetCXIndex(fcgCXColorMatrix,        get_cx_index(list_colormatrix, enc.common.out_vui.matrix));
     SetCXIndex(fcgCXTransfer,           get_cx_index(list_transfer, enc.common.out_vui.transfer));
@@ -1666,14 +1666,14 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     if (fcgNUQPMax->Value > 0) enc.nQPMax       = (int)fcgNUQPMax->Value;
     if (fcgNUQPMin->Value > 0) enc.nQPMin       = (int)fcgNUQPMin->Value;
 
-    enc.nBframes                                = (int)fcgNUBframes->Value;
-    enc.bBPyramid                               = fcgCBBPyramid->Checked;
-    enc.nDeltaQPBFrame                          = (int)fcgNUBDeltaQP->Value;
-    enc.nDeltaQPBFrameRef                       = (int)fcgNUBRefDeltaQP->Value;
+    enc.bframes                                 = (int)fcgNUBframes->Value;
+    enc.bPyramid                                = fcgCBBPyramid->Checked;
+    enc.deltaQPBFrame                           = (int)fcgNUBDeltaQP->Value;
+    enc.deltaQPBFrameRef                        = (int)fcgNUBRefDeltaQP->Value;
 
     enc.input.picstruct                         = (RGY_PICSTRUCT)list_interlaced[fcgCXInterlaced->SelectedIndex].value;
     enc.nSlices                                 = (int)fcgNUSlices->Value;
-    enc.nRefFrames                              = (int)fcgNURefFrames->Value;
+    enc.refFrames                               = (int)fcgNURefFrames->Value;
 
     if (!fcgCBDeblock->Checked) enc.deblockFilter     = fcgCBDeblock->Checked;
     if (fcgCBSkipFrame->Checked) enc.enableSkipFrame = fcgCBSkipFrame->Checked;
