@@ -1945,8 +1945,8 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         param->pad = inputParam->vpp.pad;
         param->frameIn = inputFrame;
         param->frameOut = inputFrame;
-        param->frameOut.width = m_encWidth;
-        param->frameOut.height = m_encHeight;
+        param->frameOut.width += (inputParam->vpp.pad.left + inputParam->vpp.pad.right);
+        param->frameOut.height += (inputParam->vpp.pad.top + inputParam->vpp.pad.bottom);
         param->encoderCsp = GetEncoderCSP(inputParam);
         param->baseFps = m_encFps;
         param->bOutOverwrite = false;
