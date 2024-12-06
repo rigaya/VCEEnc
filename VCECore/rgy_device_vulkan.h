@@ -59,7 +59,7 @@ public:
 
     RGYVulkanFuncs *GetVulkan();
 #if ENCODER_VCEENC
-    amf::AMFVulkanDevice *GetDevice();
+    amf::AMFVulkanDevice *GetAMFDevice();
 #endif
     const std::string& GetDisplayDeviceName() const { return m_displayDeviceName; }
     const uint8_t *GetUUID() const { return m_uuid; }

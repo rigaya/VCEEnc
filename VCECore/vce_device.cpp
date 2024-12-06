@@ -112,7 +112,7 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
                 PrintMes(RGY_LOG_ERROR, _T("Failed to get vulkan device.\n"));
                 return RGY_ERR_DEVICE_LOST;
             }
-            amferr = amf::AMFContext1Ptr(m_context)->InitVulkan(m_vk.GetDevice());
+            amferr = amf::AMFContext1Ptr(m_context)->InitVulkan(m_vk.GetAMFDevice());
         }
         if (amferr != AMF_OK) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to init AMF context by vulkan.\n"));
