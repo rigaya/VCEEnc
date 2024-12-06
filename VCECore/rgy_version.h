@@ -57,6 +57,7 @@ const char *get_encoder_version();
 #define DONOTSHOW_AMF_POINT_FSR11 1
 #define ENABLE_AVOID_IDLE_CLOCK 0
 #define ENABLE_VPP_SMOOTH_QP_FRAME 0
+#define ENABLE_DOVI_METADATA_OPTIONS 1
 
 #if defined(_WIN32) || defined(_WIN64)
 
@@ -79,7 +80,6 @@ const char *get_encoder_version();
 #define AV_FRAME_DURATION_AVAIL 1
 #define AVCODEC_PAR_CODED_SIDE_DATA_AVAIL 1
 
-#define ENABLE_DOVI_METADATA_OPTIONS 0
 #define ENABLE_KEYFRAME_INSERT 0
 
 #define GPU_VENDOR "AMD"
