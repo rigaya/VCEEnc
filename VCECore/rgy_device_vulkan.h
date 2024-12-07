@@ -44,9 +44,7 @@ class DeviceVulkan;
 #define RGY_VK_API_VER (VK_API_VERSION_1_2)
 
 #if ENCODER_VCEENC
-namespace amf {
-    class AMFVulkanDevice;
-}
+#include "core/VulkanAMF.h"
 #endif // #if ENCODER_VCEENC
 
 class DeviceVulkan {

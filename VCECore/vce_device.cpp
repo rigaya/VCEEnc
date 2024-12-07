@@ -106,8 +106,16 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
         if (VULKAN_DEFAULT_DEVICE_ONLY) {
             amferr = amf::AMFContext1Ptr(m_context)->InitVulkan(NULL);
         } else {
+            amf::AMFContext1Ptr pContext1(m_context);
+            amf_size nCount = 0;
+            pContext1->GetVulkanDeviceExtensions(&nCount, NULL);
+            std::vector<const char*> deviceExtensions;
+            if (nCount > 0) { 
+                deviceExtensions.resize(nCount);
+                pContext1->GetVulkanDeviceExtensions(&nCount, deviceExtensions.data());
+            }
             //現状これをやるとなぜか異常終了してしまう
-            auto err = m_vk.Init(deviceId, m_context.GetPtr(), m_log);
+            auto err = m_vk.Init(deviceId, {}, deviceExtensions, m_log, false);
             if (err != RGY_ERR_NONE) {
                 PrintMes(RGY_LOG_ERROR, _T("Failed to get vulkan device.\n"));
                 return RGY_ERR_DEVICE_LOST;
