@@ -678,6 +678,8 @@ struct VCEParam {
 
     bool        enableAV1HWDec;
 
+    void applyDOVIProfile(const RGYDOVIProfile inputProfile);
+
     VCEParam();
     ~VCEParam();
 };

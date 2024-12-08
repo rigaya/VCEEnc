@@ -27,6 +27,7 @@
 
 #include <cmath>
 #include <numeric>
+#include <future>
 #include "rgy_version.h"
 #include "rgy_osdep.h"
 #include "rgy_util.h"
@@ -74,6 +75,7 @@
 #include "rgy_bitstream.h"
 #include "rgy_chapter.h"
 #include "rgy_codepage.h"
+#include "rgy_device_info_cache.h"
 #include "rgy_timecode.h"
 #include "rgy_aspect_ratio.h"
 #include "cpu_info.h"
@@ -369,12 +371,8 @@ int VCECore::GetEncoderBitdepth(const VCEParam *inputParam) const {
     }
 }
 
-RGY_ERR VCECore::initInput(VCEParam *inputParam, std::vector<std::unique_ptr<VCEDevice>> &gpuList) {
+RGY_ERR VCECore::initInput(VCEParam *inputParam, DeviceCodecCsp& HWDecCodecCsp) {
 #if ENABLE_RAW_READER
-    DeviceCodecCsp HWDecCodecCsp;
-    for (const auto &gpu : gpuList) {
-        HWDecCodecCsp.push_back(std::make_pair(gpu->id(), gpu->getHWDecCodecCsp()));
-    }
     m_pStatus.reset(new EncodeStatus());
 
     int subburnTrackId = 0;
@@ -3213,6 +3211,14 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
     return RGY_ERR_NONE;
 }
 
+DeviceCodecCsp VCECore::getHWDecCodecCsp(bool skipHWDecodeCheck, std::vector<std::unique_ptr<VCEDevice>>& devList) {
+    DeviceCodecCsp HWDecCodecCsp;
+    for (const auto &gpu : devList) {
+        HWDecCodecCsp.push_back(std::make_pair(gpu->id(), gpu->getHWDecCodecCsp(skipHWDecodeCheck)));
+    }
+    return HWDecCodecCsp;
+}
+
 RGY_ERR VCECore::init(VCEParam *prm) {
     RGY_ERR ret = initLog(prm);
     if (ret != RGY_ERR_NONE) {
@@ -3247,10 +3253,52 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    auto devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->interopVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec);
+    DeviceCodecCsp HWDecCodecCsp;
+    auto deviceInfoCache = std::make_shared<RGYDeviceInfoCache>();
+    if ((ret = deviceInfoCache->loadCacheFile()) != RGY_ERR_NONE) {
+        if (ret == RGY_ERR_FILE_OPEN) { // ファイルは存在するが開けない
+            deviceInfoCache.reset(); // キャッシュの存在を無視して進める
+        }
+    } else {
+        HWDecCodecCsp = deviceInfoCache->getDeviceDecCodecCsp();
+        PrintMes(RGY_LOG_DEBUG, _T("HW dec codec csp support read from cache file.\n"));
+    }
+    std::vector<std::unique_ptr<VCEDevice>> devList;
+    auto getDevIdName = [&devList]() {
+        std::map<int, std::string> devIdName;
+        for (const auto& dev : devList) {
+            devIdName[(int)dev->id()] = tchar_to_string(dev->name());
+        }
+        return devIdName;
+    };
+    if (deviceInfoCache
+        && (deviceInfoCache->getDeviceIds().size() == 0
+            || (prm->deviceID >= 0 && deviceInfoCache->getDeviceIds().size() <= prm->deviceID))) {
+        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->interopVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec);
+        if (devList.size() == 0) {
+            PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
+            return ret;
+        }
+        HWDecCodecCsp = getHWDecCodecCsp(prm->ctrl.skipHWDecodeCheck, devList);
+        deviceInfoCache->setDecCodecCsp(getDevIdName(), HWDecCodecCsp);
+        deviceInfoCache->saveCacheFile();
+        PrintMes(RGY_LOG_DEBUG, _T("HW dec codec csp support saved to cache file.\n"));
+    }
+
+    auto input_ret = std::async(std::launch::async, [&] {
+        auto sts = initInput(prm, HWDecCodecCsp);
+        if (sts == RGY_ERR_NONE) {
+            prm->applyDOVIProfile(m_pFileReader->getInputDOVIProfile());
+        }
+        return sts;
+    });
+
     if (devList.size() == 0) {
-        PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
-        return ret;
+        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->interopVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec);
+        if (devList.size() == 0) {
+            PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
+            return ret;
+        }
     }
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -3271,9 +3319,9 @@ RGY_ERR VCECore::init(VCEParam *prm) {
 
     m_nAVSyncMode = prm->common.AVSyncMode;
 
-    if (RGY_ERR_NONE != (ret = initInput(prm, devList))) {
-        return ret;
-    }
+    ret = input_ret.get();
+    if (ret < RGY_ERR_NONE) return ret;
+    PrintMes(RGY_LOG_DEBUG, _T("InitInput: Success.\n"));
 
     if (RGY_ERR_NONE != (ret = checkParam(prm))) {
         return ret;

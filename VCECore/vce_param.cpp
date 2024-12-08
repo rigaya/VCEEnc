@@ -28,7 +28,7 @@
 #include <algorithm>
 #include "rgy_util.h"
 #include "vce_param.h"
-
+#include "rgy_bitstream.h"
 
 VppAMFHQScaler::VppAMFHQScaler() :
     enable(false),
@@ -267,6 +267,38 @@ VCEParam::VCEParam() :
 
 VCEParam::~VCEParam() {
 
+}
+
+void VCEParam::applyDOVIProfile(const RGYDOVIProfile inputProfile) {
+#if !FOR_AUO
+    if (codec != RGY_CODEC_HEVC) {
+        return;
+    }
+    auto targetDoviProfile = (common.doviProfile == RGY_DOVI_PROFILE_COPY) ? inputProfile : common.doviProfile;
+    if (targetDoviProfile == 0) {
+        return;
+    }
+    auto profile = getDOVIProfile(targetDoviProfile);
+    if (profile == nullptr) {
+        return;
+    }
+
+    common.out_vui.setIfUnset(profile->vui);
+    if (profile->aud) {
+        //bOutputAud = true;
+    }
+    if (profile->HRDSEI) {
+        //bufPeriodSEI = true;
+        //bOutputPicStruct = true;
+    }
+    if (profile->profile == 50) {
+        //crQPIndexOffset = 3;
+    }
+    if (profile->profile == 81) {
+        //hdr10sei
+        //maxcll
+    }
+#endif
 }
 
 RGY_ERR AMFParams::SetParamType(const std::wstring &name, AMFParamType type, const std::wstring& desc) {

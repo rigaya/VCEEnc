@@ -668,7 +668,24 @@ tstring VCEDevice::getGPUInfo() const {
     return _T("");
 }
 
-CodecCsp VCEDevice::getHWDecCodecCsp() {
+CodecCsp VCEDevice::getHWDecCodecCsp(bool skipHWDecodeCheck) {
+    if (skipHWDecodeCheck) {
+        CodecCsp codecCsp;
+        for (int i = 0; i < _countof(HW_DECODE_LIST); i++) {
+            auto codec = HW_DECODE_LIST[i].rgy_codec;
+            if (codec != RGY_CODEC_AV1 || m_enableAV1HWDec) {
+                std::vector<RGY_CSP> csps;
+                csps.push_back(RGY_CSP_NV12);
+                csps.push_back(RGY_CSP_YV12);
+                if (codec == RGY_CODEC_HEVC || codec == RGY_CODEC_AV1) {
+                    csps.push_back(RGY_CSP_P010);
+                    csps.push_back(RGY_CSP_YV12_10);
+                }
+                codecCsp[codec] = csps;
+            }
+        }
+        return codecCsp;
+    }
 #if ENABLE_AVSW_READER
     CodecCsp codecCsp;
     for (int i = 0; i < _countof(HW_DECODE_LIST); i++) {

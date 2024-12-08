@@ -87,11 +87,12 @@ public:
     virtual RGY_ERR init(VCEParam *prm);
     virtual RGY_ERR initLog(VCEParam *prm);
     virtual RGY_ERR initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId, const RGYDeviceUsageLockManager *devUsageLock);
-    virtual RGY_ERR initInput(VCEParam *pParams, std::vector<std::unique_ptr<VCEDevice>> &gpuList);
+    virtual RGY_ERR initInput(VCEParam *pParams, DeviceCodecCsp& HWDecCodecCsp);
     virtual RGY_ERR initOutput(VCEParam *prm);
     virtual RGY_ERR run2();
     virtual void Terminate() override;
 
+    DeviceCodecCsp getHWDecCodecCsp(bool skipHWDecodeCheck, std::vector<std::unique_ptr<VCEDevice>>& devList);
     tstring GetEncoderParam();
     void PrintEncoderParam();
     void PrintResult();
