@@ -2123,7 +2123,10 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
                 bool preAnalysisSupported = false;
                 encoderCaps->GetProperty(AMF_PARAM_CAP_PRE_ANALYSIS(prm->codec), &preAnalysisSupported);
                 if (!preAnalysisSupported) {
-                    PrintMes(RGY_LOG_WARN, _T("Pre Analysis is not supported on this device, adaptive MiniGOP disabled.\n"));
+                    PrintMes(RGY_LOG_WARN, _T("adaptive MiniGOP disabled, as it requires pre-analysis which is not supported on this device.\n"));
+                    prm->adaptMiniGOP = false;
+                } else if (int encBitDepth = GetEncoderBitdepth(prm); encBitDepth > 8) {
+                    PrintMes(RGY_LOG_WARN, _T("adaptive MiniGOP disabled, as it requires pre-analysis which is not supported with %d bit depth encoding.\n"), encBitDepth);
                     prm->adaptMiniGOP = false;
                 } else {
                     prm->pa.enable = true;
