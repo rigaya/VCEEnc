@@ -1703,13 +1703,13 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     VCEParam encPrmDefault;
 
 #define OPT_NUM(str, opt) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << (str) << _T(" ") << (int)(pParams->opt);
-#define OPT_NUM_OPTIONAL(str, opt) if ((pParams->opt.has_value())) cmd << _T(" ") << (str) << _T(" ") << (int)(pParams->opt.value());
+#define OPT_NUM_OPTIONAL(str, opt) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << (str) << _T(" ") << (int)(pParams->opt.value());
 #define OPT_NUM_HEVC(str, codec, opt) if ((pParams->codecParam[RGY_CODEC_HEVC].opt) != (encPrmDefault.codecParam[RGY_CODEC_HEVC].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << (int)(pParams->codecParam[RGY_CODEC_HEVC].opt);
 #define OPT_NUM_H264(str, codec, opt) if ((pParams->codecParam[RGY_CODEC_H264].opt) != (encPrmDefault.codecParam[RGY_CODEC_H264].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << (int)(pParams->codecParam[RGY_CODEC_H264].opt);
 #define OPT_GUID(str, opt, list) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << (str) << _T(" ") << get_name_from_guid((pParams->opt), list);
 #define OPT_GUID_HEVC(str, codec, opt, list) if ((pParams->codecParam[RGY_CODEC_HEVC].opt) != (encPrmDefault.codecParam[RGY_CODEC_HEVC].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << get_name_from_value((pParams->codecParam[RGY_CODEC_HEVC].opt), list);
 #define OPT_LST(str, opt, list) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << (str) << _T(" ") << get_chr_from_value(list, (pParams->opt));
-#define OPT_LST_OPTIONAL(str, opt, list) if (pParams->opt.has_value()) cmd << _T(" ") << (str) << _T(" ") << get_chr_from_value(list, (pParams->opt.value()));
+#define OPT_LST_OPTIONAL(str, opt, list) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << (str) << _T(" ") << get_chr_from_value(list, (pParams->opt.value()));
 #define OPT_LST_AV1(str, codec, opt, list) if ((pParams->codecParam[RGY_CODEC_AV1].opt) != (encPrmDefault.codecParam[RGY_CODEC_AV1].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << get_chr_from_value(list, (pParams->codecParam[RGY_CODEC_AV1].opt));
 #define OPT_LST_HEVC(str, codec, opt, list) if ((pParams->codecParam[RGY_CODEC_HEVC].opt) != (encPrmDefault.codecParam[RGY_CODEC_HEVC].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << get_chr_from_value(list, (pParams->codecParam[RGY_CODEC_HEVC].opt));
 #define OPT_LST_H264(str, codec, opt, list) if ((pParams->codecParam[RGY_CODEC_H264].opt) != (encPrmDefault.codecParam[RGY_CODEC_H264].opt)) cmd << _T(" ") << (str) << ((save_disabled_prm) ? codec : _T("")) << _T(" ") << get_chr_from_value(list, (pParams->codecParam[RGY_CODEC_H264].opt));
@@ -1731,7 +1731,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     } \
 }
 #define OPT_BOOL(str_true, str_false, opt) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << ((pParams->opt) ? (str_true) : (str_false));
-#define OPT_BOOL_OPTIONAL(str_true, str_false, opt) if (pParams->opt.has_value()) cmd << _T(" ") << ((pParams->opt.value()) ? (str_true) : (str_false));
+#define OPT_BOOL_OPTIONAL(str_true, str_false, opt) if ((pParams->opt) != (encPrmDefault.opt)) cmd << _T(" ") << ((pParams->opt.value()) ? (str_true) : (str_false));
 #define OPT_BOOL_HEVC(str_true, str_false, codec, opt) \
     if ((pParams->codecParam[RGY_CODEC_HEVC].opt) != (encPrmDefault.codecParam[RGY_CODEC_HEVC].opt)) { \
         cmd << _T(" "); \
@@ -1759,7 +1759,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
 #define ADD_FLOAT(str, opt, prec) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << std::setprecision(prec) << (pParams->opt);
 #define ADD_LST(str, opt, list) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << get_chr_from_value(list, (int)(pParams->opt));
 #define ADD_BOOL(str, opt) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << ((pParams->opt) ? (_T("true")) : (_T("false")));
-#define ADD_BOOL_OPTIONAL(str, opt) if (pParams->opt.has_value()) tmp << _T(",") << (str) << _T("=") << ((pParams->opt.value()) ? (_T("true")) : (_T("false")));
+#define ADD_BOOL_OPTIONAL(str, opt) if ((pParams->opt) != (encPrmDefault.opt)) tmp << _T(",") << (str) << _T("=") << ((pParams->opt.value()) ? (_T("true")) : (_T("false")));
 
 
     OPT_NUM(_T("-d"), deviceID);
@@ -1802,9 +1802,11 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
         OPT_NUM(_T("--gop-len"), nGOPLen);
     }
     OPT_NUM_OPTIONAL(_T("-b"), bframes);
-    OPT_BOOL_OPTIONAL(_T("--b-pyramid"), _T("--no-b-pyramid"), bPyramid);
-    OPT_NUM_OPTIONAL(_T("--b-deltaqp"), deltaQPBFrame);
-    OPT_NUM_OPTIONAL(_T("--bref-deltaqp"), deltaQPBFrameRef);
+    if (pParams->bframes.value_or(VCE_DEFAULT_B_FRAMES) || save_disabled_prm) {
+        OPT_BOOL_OPTIONAL(_T("--b-pyramid"), _T("--no-b-pyramid"), bPyramid);
+        OPT_NUM_OPTIONAL(_T("--b-deltaqp"), deltaQPBFrame);
+        OPT_NUM_OPTIONAL(_T("--bref-deltaqp"), deltaQPBFrameRef);
+    }
     OPT_BOOL_OPTIONAL(_T("--adapt-minigop"), _T("--no-adapt-minigop"), adaptMiniGOP);
     OPT_NUM_OPTIONAL(_T("--ref"), refFrames);
     OPT_NUM_OPTIONAL(_T("--ltr"), LTRFrames);
@@ -1830,10 +1832,10 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
         ADD_BOOL(_T("force-integer-mv"), forceIntegerMV);
         if (!tmp.str().empty()) {
             cmd << _T(" --screen-content-tools ") << tmp.str().substr(1);
-        } else if (pParams->screenContentTools) {
+        } else if (pParams->screenContentTools != encPrmDefault.screenContentTools) {
             cmd << _T(" --screen-content-tools");
         }
-    } else {
+    } else if (pParams->screenContentTools != encPrmDefault.screenContentTools) {
         cmd << _T(" --no-screen-content-tools");
     }
     OPT_BOOL_OPTIONAL(_T("--cdf-update"), _T("--no-cdf-update"), cdfUpdate);

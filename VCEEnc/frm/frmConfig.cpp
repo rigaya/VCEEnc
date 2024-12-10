@@ -1389,7 +1389,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetNUValue(fcgNUQPP,               enc.qp.qpP);
     SetNUValue(fcgNUQPB,               enc.qp.qpB);
     SetNUValue(fcgNUGopLength,         enc.nGOPLen);
-    SetNUValue(fcgNUBframes,           enc.bframes.value_or(0));
+    SetNUValue(fcgNUBframes,           enc.bframes.value_or(VCE_DEFAULT_B_FRAMES));
     fcgCBBPyramid->Checked           = enc.bPyramid.value_or(false);
     SetCXIndex(fcgCXCodecLevel,        get_cx_index(list_avc_level, enc.codecParam[RGY_CODEC_H264].nLevel));
     SetCXIndex(fcgCXCodecProfile,      get_cx_index(list_avc_profile, enc.codecParam[RGY_CODEC_H264].nProfile));
@@ -1407,11 +1407,11 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
 
     SetNUValue(fcgNUQPMax,               enc.nQPMax.value_or(0));
     SetNUValue(fcgNUQPMin,               enc.nQPMin.value_or(0));
-    SetNUValue(fcgNUBDeltaQP,            enc.deltaQPBFrame.value_or(0));
-    SetNUValue(fcgNUBRefDeltaQP,         enc.deltaQPBFrameRef.value_or(0));
+    SetNUValue(fcgNUBDeltaQP,            enc.deltaQPBFrame.value_or(VCE_PARAM_DEFAULT_DELTA_QPB));
+    SetNUValue(fcgNUBRefDeltaQP,         enc.deltaQPBFrameRef.value_or(VCE_PARAM_DEFAULT_DELTA_QPB_REF));
 
     SetNUValue(fcgNUSlices,             enc.nSlices);
-    SetNUValue(fcgNURefFrames,          enc.refFrames.value_or(0));
+    SetNUValue(fcgNURefFrames,          enc.refFrames.value_or(VCE_DEFAULT_REF_FRAMES));
 
     fcgCBDeblock->Checked             = enc.deblockFilter.value_or(true);
     fcgCBSkipFrame->Checked           = enc.enableSkipFrame.value_or(false);
