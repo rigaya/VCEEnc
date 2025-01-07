@@ -187,6 +187,9 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2025.01.08 (8.27)
+- SAR比が設定されていない(例えば0:0)と、mp4 muxerの出力する"tkhd: Track Header Box"(L-SMASH boxdumper)、"Visual Track layout"(mp4box -info)のwidthが0になってしまう問題を回避。
+
 2025.01.06 (8.26)
 - --vpp-libplacebo-tonemappingで一部のパラメータが正常に動作しない問題を修正。
 - tsファイルなどで途中からエンコードする場合に、OpenGOPが使用されているとtrim位置がずれてしまう問題を修正。
