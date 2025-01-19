@@ -86,9 +86,8 @@
 #include "VideoDecoderUVD.h"
 #include "Factory.h"
 
-#include "rgy_level_h264.h"
+#include "rgy_level.h"
 #include "rgy_level_hevc.h"
-#include "rgy_level_av1.h"
 
 static const int VBV_BUFSIZE_MAX_Kbit = 500000;
 
@@ -2289,38 +2288,22 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     }
     //VCEにはlevelを自動で設定してくれる機能はないようで、"0"などとするとエラー終了してしまう。
     if (prm->codecParam[prm->codec].nLevel == 0 || prm->nMaxBitrate == 0) {
+        auto codecLevel = createCodecLevel(prm->codec);
+        const int profile = prm->codecParam[prm->codec].nProfile;
+        const bool hevc_high_tier = prm->codecParam[prm->codec].nTier == AMF_VIDEO_ENCODER_HEVC_TIER_HIGH;
         int level = prm->codecParam[prm->codec].nLevel;
         int max_bitrate_kbps = prm->nMaxBitrate;
         int vbv_bufsize_kbps = prm->nVBVBufferSize;
-        if (prm->codec == RGY_CODEC_H264) {
-            const int profile = prm->codecParam[prm->codec].nProfile;
-            if (level == 0) {
-                level = calc_auto_level_h264(m_encWidth, m_encHeight, prm->refFrames.value_or(0), false,
-                    m_encFps.n(), m_encFps.d(), profile, max_bitrate_kbps, vbv_bufsize_kbps);
+        if (level == 0) {
+            level = codecLevel->calc_auto_level(m_encWidth, m_encHeight, prm->refFrames.value_or(0), false,
+                m_encFps.n(), m_encFps.d(), profile, hevc_high_tier, max_bitrate_kbps, vbv_bufsize_kbps, 1, 1);
+            if (prm->codec == RGY_CODEC_H264) {
                 //なんかLevel4.0以上でないと設定に失敗する場合がある
                 level = std::max(level, 40);
             }
-            get_vbv_value_h264(&max_bitrate_kbps, &vbv_bufsize_kbps, level, profile);
-        } else if (prm->codec == RGY_CODEC_HEVC) {
-            const bool high_tier = prm->codecParam[prm->codec].nTier == AMF_VIDEO_ENCODER_HEVC_TIER_HIGH;
-            if (level == 0) {
-                level = calc_auto_level_hevc(m_encWidth, m_encHeight, prm->refFrames.value_or(0),
-                    m_encFps.n(), m_encFps.d(), high_tier, max_bitrate_kbps);
-            }
-            max_bitrate_kbps = get_max_bitrate_hevc(level, high_tier);
-            vbv_bufsize_kbps = max_bitrate_kbps;
-        } else if (prm->codec == RGY_CODEC_AV1) {
-            const int profile = prm->codecParam[prm->codec].nProfile;
-            if (level == 0) {
-                level = calc_auto_level_av1(m_encWidth, m_encHeight, prm->refFrames.value_or(0),
-                    m_encFps.n(), m_encFps.d(), profile, max_bitrate_kbps, 1, 1);
-            }
-            max_bitrate_kbps = get_max_bitrate_av1(level, profile);
-            vbv_bufsize_kbps = max_bitrate_kbps;
-        } else {
-            max_bitrate_kbps = VCE_DEFAULT_MAX_BITRATE;
-            vbv_bufsize_kbps = VCE_DEFAULT_MAX_BITRATE;
         }
+        max_bitrate_kbps = codecLevel->get_max_bitrate(level, profile, hevc_high_tier);
+        vbv_bufsize_kbps = (prm->codec == RGY_CODEC_H264) ? codecLevel->get_max_vbv_buf(level, profile) : max_bitrate_kbps;
         if (prm->codecParam[prm->codec].nLevel == 0) {
             prm->codecParam[prm->codec].nLevel = (int16_t)level;
         }
