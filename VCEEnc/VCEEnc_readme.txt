@@ -187,6 +187,11 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2025.01.23 (8.28)
+- AACを--audio-copyしてmkv出力すると、音声が再生できないファイルができる問題を修正。
+- colormatrix/colorprim/transferの値が意図した値にならないことがある問題を修正。
+- コーデックのlevelと最大ビットレートのチェックを追加。
+
 2025.01.08 (8.27)
 - SAR比が設定されていない(例えば0:0)と、mp4 muxerの出力する"tkhd: Track Header Box"(L-SMASH boxdumper)、"Visual Track layout"(mp4box -info)のwidthが0になってしまう問題を回避。
 
