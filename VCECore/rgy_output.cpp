@@ -194,14 +194,8 @@ RGY_ERR RGYOutput::InitVideoBsf(const VideoInfo *videoOutputInfo) {
         || (ENCODER_QSV
             && (videoOutputInfo->codec == RGY_CODEC_H264 || videoOutputInfo->codec == RGY_CODEC_HEVC || videoOutputInfo->codec == RGY_CODEC_AV1)
             && videoOutputInfo->vui.chromaloc != 0)
-        || (ENCODER_VCEENC
-            && (videoOutputInfo->codec == RGY_CODEC_HEVC // HEVCの時は常に上書き
-                || (videoOutputInfo->vui.format != 5
-                    || videoOutputInfo->vui.colorprim != 2
-                    || videoOutputInfo->vui.transfer != 2
-                    || videoOutputInfo->vui.matrix != 2
-                    || videoOutputInfo->vui.chromaloc != 0)
-                || (videoOutputInfo->codec == RGY_CODEC_AV1 && videoOutputInfo->vui.colorrange == RGY_COLORRANGE_FULL)))
+        || (ENCODER_VCEENC // VCEEncの場合、常に上書き
+            && (videoOutputInfo->codec == RGY_CODEC_H264 || videoOutputInfo->codec == RGY_CODEC_HEVC || videoOutputInfo->codec == RGY_CODEC_AV1))
         || (ENCODER_MPP
             && ((videoOutputInfo->codec == RGY_CODEC_H264 || videoOutputInfo->codec == RGY_CODEC_HEVC) // HEVCの時は常に上書き)
                 || (videoOutputInfo->sar[0] * videoOutputInfo->sar[1] > 0
