@@ -251,7 +251,7 @@ RGY_ERR RGYOutput::InitVideoBsf(const VideoInfo *videoOutputInfo) {
         }
         if (ENCODER_VCEENC || ENCODER_MPP) {
             // HEVCの10bitの時、エンコーダがおかしなVUIを設定することがあるのでこれを常に上書き
-            const bool override_always = ENCODER_VCEENC && (videoOutputInfo->codec == RGY_CODEC_HEVC || videoOutputInfo->codec == RGY_CODEC_AV1);
+            const bool override_always = ENCODER_VCEENC;
             if (override_always || videoOutputInfo->vui.format != 5 /*undef*/) {
                 if (videoOutputInfo->codec == RGY_CODEC_H264 || videoOutputInfo->codec == RGY_CODEC_HEVC) {
                     av_dict_set_int(&bsfPrm, "video_format", videoOutputInfo->vui.format, 0);

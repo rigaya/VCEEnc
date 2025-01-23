@@ -187,6 +187,9 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2025.01.24 (8.29)
+- AV1エンコードで、colormatrix/colorprim/transferの値が意図した値にならないことがある問題を修正。
+
 2025.01.23 (8.28)
 - AACを--audio-copyしてmkv出力すると、音声が再生できないファイルができる問題を修正。
 - colormatrix/colorprim/transferの値が意図した値にならないことがある問題を修正。
