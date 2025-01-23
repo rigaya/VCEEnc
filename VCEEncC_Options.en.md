@@ -499,6 +499,8 @@ Generally, it is recommended to set the QP value to be I &lt; P &lt; B.
 ### --qvbr &lt;int&gt; [H.264/AV1]
 Set bitrate in kbps.
 
+```--qvbr <x>``` is short of ```--vbr 0 --qvbr-quality <x>```.
+
 ## Other Options for Encoder
 
 ### -u, --preset
