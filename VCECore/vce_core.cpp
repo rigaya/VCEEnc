@@ -3093,7 +3093,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
         const auto inputFrameInfo = m_pFileReader->GetInputFrameInfo();
         const auto inputFpsTimebase = rgy_rational<int>((int)inputFrameInfo.fpsD, (int)inputFrameInfo.fpsN);
         const auto srcTimebase = (m_pFileReader->getInputTimebase().n() > 0 && m_pFileReader->getInputTimebase().is_valid()) ? m_pFileReader->getInputTimebase() : inputFpsTimebase;
-        if (m_trimParam.list.size() > 0) {
+        if (m_trimParam.list.size() > 0 || prm->common.seekToSec > 0.0f) {
             m_pipelineTasks.push_back(std::make_unique<PipelineTaskTrim>(m_dev->context(), m_trimParam, m_pFileReader.get(), srcTimebase, 0, m_pLog));
         }
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskCheckPTS>(m_dev->context(), srcTimebase, srcTimebase, m_outputTimebase, outFrameDuration, m_nAVSyncMode, m_timestampPassThrough, VppAfsRffAware() && m_pFileReader->rffAware(), (pReader) ? pReader->GetFramePosList() : nullptr, m_pLog));
