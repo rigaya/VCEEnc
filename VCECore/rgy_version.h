@@ -79,6 +79,7 @@ const char *get_encoder_version();
 #define AV_CHANNEL_LAYOUT_STRUCT_AVAIL 1
 #define AV_FRAME_DURATION_AVAIL 1
 #define AVCODEC_PAR_CODED_SIDE_DATA_AVAIL 1
+#define AVS_INTERF_VER 11
 
 #define ENABLE_KEYFRAME_INSERT 0
 
