@@ -187,6 +187,9 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2025.02.18 (8.30)
+- 8.29でavswが動作しなくなっていたのを修正。
+
 2025.02.17 (8.29)
 - mp4/mkv/ts出力等でcolormatrix/colorprim/transfer/SAR比の値が意図した値にならないことがある問題を修正。
 - dolby vision profile 4への処理を改善。
