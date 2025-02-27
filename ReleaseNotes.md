@@ -1,5 +1,11 @@
 # VCEEnc Release Notes
 
+## 8.31
+
+- Fix some codecs not being able to decode with [--avsw](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--avsw) since version 8.29.
+- Add options 10.0, 10.1, 10.2, 10.4 to [--dolby-vision-profile](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--dolby-vision-profile-string-hevc-av1).
+- Fix [--dolby-vision-profile](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--dolby-vision-profile-string-hevc-av1) not working with inputs other than avhw/avsw.
+
 ## 8.30
 
 - Fix --avsw not working in VCEEnc 8.29.
