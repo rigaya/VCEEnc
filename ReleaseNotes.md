@@ -1,5 +1,9 @@
 # VCEEnc Release Notes
 
+## 8.32
+
+- Fix [--dolby-vision-rpu](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--dolby-vision-rpu-string) in AV1 encoding.
+
 ## 8.31
 
 - Fix some codecs not being able to decode with [--avsw](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--avsw) since version 8.29.
