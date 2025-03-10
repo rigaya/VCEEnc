@@ -3664,7 +3664,7 @@ RGY_ERR VCECore::run2() {
             }
         }
     }
-    // エラー終了の場合も含めキューをすべて開放する
+    // エラー終了の場合も含めキューをすべて開放する (m_pipelineTasksを解放する前に行う)
     dataqueue.clear();
 
     if (m_videoQualityMetric) {
@@ -3704,6 +3704,10 @@ RGY_ERR VCECore::run2() {
     }
     //この中でフレームの解放がなされる
     PrintMes(RGY_LOG_DEBUG, _T("Clear pipeline tasks and allocated frames...\n"));
+    // 依存関係があるため、m_pipelineTasksを後ろから解放する
+    for (auto it = m_pipelineTasks.rbegin(); it != m_pipelineTasks.rend(); ++it) {
+        it->reset();
+    }
     m_pipelineTasks.clear();
     PrintMes(RGY_LOG_DEBUG, _T("Waiting for writer to finish...\n"));
     m_pFileWriter->WaitFin();
