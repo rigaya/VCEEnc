@@ -1402,12 +1402,12 @@ protected:
     RGYTimestamp *m_encTimestamp;
     rgy_rational<int> m_outputTimebase;
     RGYListRef<RGYBitstream> m_bitStreamOut;
-    RGYHDR10Plus *m_hdr10plus;
+    const RGYHDR10Plus *m_hdr10plus;
     const DOVIRpu *m_doviRpu;
 public:
     PipelineTaskAMFEncode(
         amf::AMFComponentPtr enc, RGY_CODEC encCodec, AMFParams& encParams, amf::AMFContextPtr context, int outMaxQueueSize,
-        RGYTimecode *timecode, RGYTimestamp *encTimestamp, rgy_rational<int> outputTimebase, RGYHDR10Plus *hdr10plus, const DOVIRpu *doviRpu, std::shared_ptr<RGYLog> log)
+        RGYTimecode *timecode, RGYTimestamp *encTimestamp, rgy_rational<int> outputTimebase, const RGYHDR10Plus *hdr10plus, const DOVIRpu *doviRpu, std::shared_ptr<RGYLog> log)
         : PipelineTask(PipelineTaskType::AMFENC, context, outMaxQueueSize, log),
         m_encoder(enc), m_encCodec(encCodec), m_encParams(encParams), m_timecode(timecode), m_encTimestamp(encTimestamp), m_outputTimebase(outputTimebase), m_bitStreamOut(), m_hdr10plus(hdr10plus), m_doviRpu(doviRpu) {
     };
@@ -1503,7 +1503,7 @@ public:
             if (frame) {
                 metadatalist = dynamic_cast<PipelineTaskOutputSurf *>(frame.get())->surf().frame()->dataList();
             }
-            if (m_hdr10plus && frame) {
+            if (m_hdr10plus) {
                 // 外部からHDR10+を読み込む場合、metadatalist 内のHDR10+の削除
                 for (auto it = metadatalist.begin(); it != metadatalist.end(); ) {
                     if ((*it)->dataType() == RGY_FRAME_DATA_HDR10PLUS) {
@@ -1511,10 +1511,6 @@ public:
                     } else {
                         it++;
                     }
-                }
-                // 外部からHDR10+を読み込み追加
-                if (const auto data = m_hdr10plus->getData(m_inFrames); data.size() > 0) {
-                    metadatalist.push_back(std::make_shared<RGYFrameDataHDR10plus>(data.data(), data.size(), dynamic_cast<PipelineTaskOutputSurf *>(frame.get())->surf().frame()->timestamp()));
                 }
             }
             if (m_doviRpu) {
