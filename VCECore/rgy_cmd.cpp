@@ -7065,6 +7065,77 @@ int parse_one_ctrl_option(const TCHAR *option_name, const TCHAR *strInput[], int
         ctrl->enableVulkan = true;
         return 0;
     }
+    if (IS_OPTION("parallel")) {
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+        const auto paramList = std::vector<std::string>{ "id" };
+        for (const auto &param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos + 1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("mp")) {
+                    if (param == _T("auto")) {
+                        ctrl->parallelEnc.parallelCount = -1;
+                    } else {
+                        try {
+                            ctrl->parallelEnc.parallelCount = std::stoi(param_val);
+                        } catch (...) {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                    }
+                    continue;
+                }
+                if (param_arg == _T("id")) {
+                    try {
+                        ctrl->parallelEnc.parallelId = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("chunks")) {
+                    try {
+                        ctrl->parallelEnc.chunks = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("cache")) {
+                    int value = 0;
+                    if (get_list_value(list_parallel_enc_cache, param_val.c_str(), &value)) {
+                        ctrl->parallelEnc.cacheMode = (RGYParamParallelEncCache)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_parallel_enc_cache);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                if (param == _T("auto")) {
+                    ctrl->parallelEnc.parallelCount = -1;
+                } else {
+                    try {
+                        ctrl->parallelEnc.parallelCount = std::stoi(param);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name), param);
+                        return 1;
+                    }
+                }
+                continue;
+            }
+        }
+        return 0;
+    }
     if (IS_OPTION("process-monitor-dev-usage")) {
         ctrl->processMonitorDevUsage = true;
         return 0;
@@ -8463,6 +8534,17 @@ tstring gen_cmd(const RGYParamControl *param, const RGYParamControl *defaultPrm,
     OPT_BOOL(_T("--enable-vulkan"), _T("--disable-vulkan"), enableVulkan);
     OPT_BOOL(_T("--process-monitor-dev-usage"), _T(""), processMonitorDevUsage);
     OPT_BOOL(_T("--process-monitor-dev-usage-reset"), _T(""), processMonitorDevUsageReset);
+
+    if (param->parallelEnc != defaultPrm->parallelEnc) {
+        std::basic_stringstream<TCHAR> tmp;
+        tmp.str(tstring());
+        ADD_NUM(_T("mp"), parallelEnc.parallelCount);
+        ADD_NUM(_T("id"), parallelEnc.parallelId);
+        ADD_LST(_T("cache"), parallelEnc.cacheMode, list_parallel_enc_cache);
+        if (!tmp.str().empty()) {
+            cmd << _T(" --parallel ") << tmp.str().substr(1);
+        }
+    }
     return cmd.str();
 }
 
@@ -9490,6 +9572,9 @@ tstring gen_cmd_help_vpp() {
 
 tstring gen_cmd_help_ctrl() {
     tstring str = strsprintf(_T("\n")
+#if ENCODER_QSV || ENCODER_NVENC || ENCODER_VCEENC
+        _T("   --parallel <int> or auto     Enable parallel encoding by file splitting.\n")
+#endif
         _T("   --log <string>               set log file name\n")
         _T("   --log-level <string>         set log level\n")
         _T("                                  debug, info(default), warn, error, quiet\n")

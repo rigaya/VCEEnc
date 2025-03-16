@@ -35,11 +35,13 @@
 #include <memory>
 #include <vector>
 #include <cmath>
+#include <numeric>
 #include <algorithm>
 #include "rgy_log.h"
 #include "cpu_info.h"
 #include "rgy_err.h"
 #include "rgy_perf_monitor.h"
+#include "rgy_parallel_enc.h"
 #include "gpuz_info.h"
 #include "rgy_status.h"
 
@@ -60,10 +62,11 @@ EncodeStatus::~EncodeStatus() {
 
 void EncodeStatus::Init(uint32_t outputFPSRate, uint32_t outputFPSScale,
     uint32_t totalInputFrames, double totalDuration, const sTrimParam& trim,
-    shared_ptr<RGYLog> pRGYLog, shared_ptr<CPerfMonitor> pPerfMonitor) {
+    shared_ptr<RGYLog> pRGYLog, shared_ptr<CPerfMonitor> pPerfMonitor, RGYParallelEncodeStatusData *peStatusShare) {
     m_pause = false;
     m_pRGYLog = pRGYLog;
     m_pPerfMonitor = pPerfMonitor;
+    m_peStatusShare = peStatusShare;
     m_sData.outputFPSRate = outputFPSRate;
     m_sData.outputFPSScale = outputFPSScale;
     m_sData.frameTotal = totalInputFrames;
@@ -134,7 +137,7 @@ RGY_ERR EncodeStatus::UpdateDisplayByCurrentDuration(double currentDuration) {
     return UpdateDisplay(progressPercent);
 }
 RGY_ERR EncodeStatus::UpdateDisplay(double progressPercent) {
-    if (m_pRGYLog != nullptr && m_pRGYLog->getLogLevel(RGY_LOGT_CORE_PROGRESS) > RGY_LOG_INFO) {
+    if (m_peStatusShare == nullptr && m_pRGYLog != nullptr && m_pRGYLog->getLogLevel(RGY_LOGT_CORE_PROGRESS) > RGY_LOG_INFO) {
         return RGY_ERR_NONE;
     }
     if (m_sData.frameOut + m_sData.frameDrop <= 0) {
@@ -145,6 +148,7 @@ RGY_ERR EncodeStatus::UpdateDisplay(double progressPercent) {
         return RGY_ERR_NONE;
     }
     m_tmLastUpdate = tm;
+    m_sData.progressPercent = progressPercent;
 
     bool qsv_metric = false;
     bool bVideoEngineUsage = false;
@@ -233,11 +237,23 @@ RGY_ERR EncodeStatus::UpdateDisplay(double progressPercent) {
 #endif //#if defined(_WIN32) || defined(_WIN64)
         m_sData.encodeFps = (m_sData.frameOut + m_sData.frameDrop) * 1000.0 / elapsedTime;
         m_sData.bitrateKbps = (double)m_sData.outFileSize * (m_sData.outputFPSRate / (double)m_sData.outputFPSScale) / ((1000 / 8) * (m_sData.frameOut + m_sData.frameDrop));
+        std::vector<EncodeStatusData> childStsList;
+        for (size_t i = 1; i < m_childStatus.size(); i++) { // 最初のエンコーダは自分自身と同じなので飛ばして1から
+            if (m_childStatus[i].second) {
+                EncodeStatusData data;
+                if (m_childStatus[i].second->get(data)) { // 進捗表示を取得できたら
+                    data.progressPercent *= m_childStatus[i].first; // 個々の進捗率を全体の進捗率に換算する
+                    childStsList.push_back(data);
+                }
+            }
+        }
         enum {
             MES_PROGRESS_PERCENT,
             MES_CURRENT_FRAME,
             MES_FRAME_TOTAL,
-            MES_FPS_KBPS,
+            MES_FRAMES,
+            MES_FPS,
+            MES_KBPS,
             MES_REMAIN,
             MES_DROP,
             MES_GPU,
@@ -253,31 +269,50 @@ RGY_ERR EncodeStatus::UpdateDisplay(double progressPercent) {
         for (auto &c : chunks) {
             c.len = 0;
         }
+        double totalProgressPercent = 0.0;
         if (m_sData.frameTotal > 0 || progressPercent > 0.0) { //progress percent
+            totalProgressPercent = progressPercent; // std::accumulate(childStsList.begin(), childStsList.end(), progressPercent, [](double sum, const EncodeStatusData& child) { return sum + child.progressPercent; });
             if (progressPercent == 0.0) {
-                progressPercent = (m_sData.frameIn) * 100 / (double)m_sData.frameTotal;
+                progressPercent = m_sData.frameIn * 100 / (double)m_sData.frameTotal;
+                m_sData.progressPercent = progressPercent;
             }
-            progressPercent = (std::min)(progressPercent, 100.0);
-            uint32_t remaining_time = (uint32_t)(elapsedTime * (100.0 - progressPercent) / progressPercent + 0.5);
+            if (totalProgressPercent == 0.0) {
+                const auto totalFrameIn = std::accumulate(childStsList.begin(), childStsList.end(), m_sData.frameIn, [](uint32_t sum, const EncodeStatusData& child) { return sum + child.frameIn; });
+                totalProgressPercent = totalFrameIn * 100 / (double)m_sData.frameTotal;
+            }
+            totalProgressPercent = (std::min)(totalProgressPercent, 100.0);
+            uint32_t remaining_time = (uint32_t)(elapsedTime * (100.0 - totalProgressPercent) / totalProgressPercent + 0.5);
             const int hh = remaining_time / (60*60*1000);
             remaining_time -= hh * (60*60*1000);
             const int mm = remaining_time / (60*1000);
             remaining_time -= mm * (60*1000);
             const int ss = remaining_time / 1000;
 
-            chunks[MES_PROGRESS_PERCENT].len = _stprintf_s(chunks[MES_PROGRESS_PERCENT].str, _T("[%.1lf%%] "), progressPercent);
+            chunks[MES_PROGRESS_PERCENT].len = _stprintf_s(chunks[MES_PROGRESS_PERCENT].str, _T("[%.1lf%%] "), totalProgressPercent);
             chunks[MES_REMAIN].len           = _stprintf_s(chunks[MES_REMAIN].str, _T(", remain %d:%02d:%02d"), hh, mm, ss);
 
-            const double est_file_size = (double)m_sData.outFileSize / (progressPercent * 0.01);
+            const auto totalOutFileSize = m_sData.outFileSize; // std::accumulate(childStsList.begin(), childStsList.end(), m_sData.outFileSize, [](uint64_t sum, const EncodeStatusData& child) { return sum + child.outFileSize; });
+            const double est_file_size = (double)totalOutFileSize / (totalProgressPercent * 0.01);
             chunks[MES_EST_FILE_SIZE].len = _stprintf_s(chunks[MES_EST_FILE_SIZE].str, _T(", est out size %.1fMB"), est_file_size * (1.0 / (1024.0 * 1024.0)));
         }
-        chunks[MES_CURRENT_FRAME].len = _stprintf_s(chunks[MES_CURRENT_FRAME].str, _T("%d"), m_sData.frameOut + m_sData.frameDrop);
+        const auto totalFrameOut = m_sData.frameOut + m_sData.frameDrop; // std::accumulate(childStsList.begin(), childStsList.end(), m_sData.frameOut + m_sData.frameDrop, [](uint32_t sum, const EncodeStatusData& child) { return sum + child.frameOut + child.frameDrop; });
+        chunks[MES_CURRENT_FRAME].len = _stprintf_s(chunks[MES_CURRENT_FRAME].str, _T("%d"), totalFrameOut);
         if (m_sData.frameTotal > 0) {
             chunks[MES_FRAME_TOTAL].len = _stprintf_s(chunks[MES_FRAME_TOTAL].str, _T("/%d"), m_sData.frameTotal);
         }
-        chunks[MES_FPS_KBPS].len = _stprintf_s(chunks[MES_FPS_KBPS].str, _T(" frames: %.2lf fps, %d kb/s"), m_sData.encodeFps, (int)(m_sData.bitrateKbps + 0.5));
+        chunks[MES_FRAMES].len = _stprintf_s(chunks[MES_FRAMES].str, _T(" frames: "));
+        const double totalEncodeFps = m_sData.encodeFps; // std::accumulate(childStsList.begin(), childStsList.end(), m_sData.encodeFps, [](double sum, const EncodeStatusData& child) { return sum + child.encodeFps; });
+        chunks[MES_FPS].len = _stprintf_s(chunks[MES_FPS].str, _T("%.2lf"), totalEncodeFps);
+        chunks[MES_FPS].len += _stprintf_s(chunks[MES_FPS].str + chunks[MES_FPS].len, _countof(chunks[MES_FPS].str) - chunks[MES_FPS].len, _T(" fps, "));
+        auto totalBitrateKbps = m_sData.bitrateKbps;
+        if (false && childStsList.size() > 0 && totalProgressPercent > 0.0) {
+            totalBitrateKbps = std::accumulate(childStsList.begin(), childStsList.end(), m_sData.bitrateKbps * m_sData.progressPercent,
+                [](double sum, const EncodeStatusData& child) { return sum + child.bitrateKbps * child.progressPercent; }) / totalProgressPercent;
+        }
+        chunks[MES_KBPS].len = _stprintf_s(chunks[MES_KBPS].str, _T("%d kbps"), (int)(totalBitrateKbps + 0.5));
         if (m_sData.frameDrop) {
-            chunks[MES_DROP].len = _stprintf_s(chunks[MES_DROP].str, _T(", afs drop %d/%d"), m_sData.frameDrop, (m_sData.frameOut + m_sData.frameDrop));
+            auto totalFrameDrop = m_sData.frameDrop; // std::accumulate(childStsList.begin(), childStsList.end(), m_sData.frameDrop, [](uint32_t sum, const EncodeStatusData& child) { return sum + child.frameDrop; });
+            chunks[MES_DROP].len = _stprintf_s(chunks[MES_DROP].str, _T(", afs drop %d/%d"), totalFrameDrop, totalFrameOut);
         }
         if (bGPUUsage) {
             chunks[MES_GPU].len = _stprintf_s(chunks[MES_GPU].str, _T(", GPU %d%%"), std::min((int)(gpuusage + 0.5), 100));
@@ -299,7 +334,10 @@ RGY_ERR EncodeStatus::UpdateDisplay(double progressPercent) {
         };
         check_add_length(MES_PROGRESS_PERCENT);
         check_add_length(MES_CURRENT_FRAME);
-        check_add_length(MES_FPS_KBPS);
+        check_add_length(MES_FRAME_TOTAL);
+        check_add_length(MES_FRAMES);
+        check_add_length(MES_FPS);
+        check_add_length(MES_KBPS);
         check_add_length(MES_REMAIN);
         check_add_length(MES_DROP);
         check_add_length(MES_GPU);
@@ -319,6 +357,9 @@ RGY_ERR EncodeStatus::UpdateDisplay(double progressPercent) {
             mes[len] = _T(' ');
         }
         mes[len] = _T('\0');
+        if (m_peStatusShare) {
+            m_peStatusShare->set(m_sData);
+        }
         UpdateDisplay(mes, progressPercent);
     }
     return RGY_ERR_NONE;
@@ -421,6 +462,10 @@ void EncodeStatus::SetPrivData(void *pPrivateData) {
 #pragma warning(pop)
 EncodeStatusData EncodeStatus::GetEncodeData() {
     return m_sData;
+}
+
+void EncodeStatus::addChildStatus(const std::pair<double, RGYParallelEncodeStatusData*>& encStatus) {
+    m_childStatus.push_back(encStatus);
 }
 
 void EncodeStatus::WriteResultLine(const TCHAR *mes) {

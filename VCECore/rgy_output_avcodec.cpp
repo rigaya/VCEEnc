@@ -82,6 +82,9 @@ static bool format_is_latm(const AVFormatContext *formatCtx) {
 static bool format_is_ivf(const AVFormatContext *formatCtx) {
     return _stricmp(formatCtx->oformat->name, "ivf") == 0;
 }
+static bool format_is_mpegts(const AVFormatContext *formatCtx) {
+    return _stricmp(formatCtx->oformat->name, "mpegts") == 0;
+}
 
 #if ENABLE_AVSW_READER
 #if USE_CUSTOM_IO
@@ -835,7 +838,10 @@ RGY_ERR RGYOutputAvcodec::InitVideo(const VideoInfo *videoOutputInfo, const Avco
         AddMessage(RGY_LOG_DEBUG, _T("Set Video Codec Tag: %s\n"), char_to_tstring(tagToStr(m_Mux.video.codecCtx->codec_tag)).c_str());
     } else if (videoOutputInfo->codec == RGY_CODEC_HEVC) {
         // 特に指定の場合、HEVCでは再生互換性改善のため、 "hvc1"をデフォルトとする (libavformatのデフォルトは"hev1")
-        m_Mux.video.codecCtx->codec_tag = tagFromStr("hvc1");
+        // ただし、parallelEncodeが有効な場合は、"hve1"を使用する
+        m_Mux.video.codecCtx->codec_tag = (prm->parallelEncode) ? tagFromStr("hev1") : tagFromStr("hvc1");
+    } else if (videoOutputInfo->codec == RGY_CODEC_H264) {
+        m_Mux.video.codecCtx->codec_tag = (prm->parallelEncode) ? tagFromStr("avc3") : tagFromStr("avc1");
     }
     if (videoOutputInfo->vui.descriptpresent
         //atcSeiを設定する場合は、コンテナ側にはVUI情報をもたせないようにする
@@ -2953,10 +2959,6 @@ RGY_ERR RGYOutputAvcodec::WriteNextFrameInternal(RGYBitstream *bitstream, int64_
 #else
         m_Mux.video.dtsUnavailable = true;
 #endif
-        RGY_ERR sts = WriteFileHeader(bitstream);
-        if (sts != RGY_ERR_NONE) {
-            return sts;
-        }
 
         //dts生成を初期化
         //何フレーム前からにすればよいかは、b-pyramid次第で異なるので、可能な限りエンコーダの情報を使用する
@@ -2966,12 +2968,19 @@ RGY_ERR RGYOutputAvcodec::WriteNextFrameInternal(RGYBitstream *bitstream, int64_
             m_VideoOutputInfo.videoDelay = (m_VideoOutputInfo.codec == RGY_CODEC_AV1 && AV1_TIMESTAMP_OVERRIDE) ? 0 : -1 * (int)av_rescale_q(bitstream->dts() - bitstream->pts(), srcTimebase, av_inv_q(m_Mux.video.outputFps));
         }
 #endif
+        RGY_ERR sts = WriteFileHeader(bitstream);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+
+        // WriteFileHeaderでstreamOut->time_baseが変わることがあるので、まずWriteFileHeaderを先に行ってから、この処理を行う
         m_Mux.video.fpsBaseNextDts = 0 - m_VideoOutputInfo.videoDelay;
         AddMessage(RGY_LOG_DEBUG, _T("calc dts, first dts %d x (timebase).\n"), m_Mux.video.fpsBaseNextDts);
 
         const AVRational fpsTimebase = (m_Mux.video.afs) ? av_inv_q(av_mul_q(m_Mux.video.outputFps, av_make_q(4, 5))) : av_inv_q(m_Mux.video.outputFps);
         const AVRational streamTimebase = m_Mux.video.streamOut->time_base;
         const auto firstPacketPts = av_rescale_q(bitstream->pts(), srcTimebase, streamTimebase);
+        bitstream->setDts(firstPacketPts + av_rescale_q(m_Mux.video.fpsBaseNextDts, fpsTimebase, streamTimebase));
         for (int i = m_Mux.video.fpsBaseNextDts; i < 0; i++) {
             m_Mux.video.timestampList.add(firstPacketPts + av_rescale_q(i, fpsTimebase, streamTimebase));
         }

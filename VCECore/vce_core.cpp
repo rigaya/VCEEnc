@@ -129,8 +129,10 @@ VCECore::VCECore() :
     m_sar(),
     m_picStruct(RGY_PICSTRUCT_UNKNOWN),
     m_encVUI(),
+    m_devNames(),
     m_dev(),
     m_deviceUsage(),
+    m_parallelEnc(),
     m_vpFilters(),
     m_pLastFilterParam(),
     m_videoQualityMetric(),
@@ -185,6 +187,7 @@ void VCECore::Terminate() {
     m_deviceUsage.reset();
     m_dev.reset();
     m_timecode.reset();
+    m_parallelEnc.reset();
 
     m_pFileWriterListAudio.clear();
     m_pFileWriter.reset();
@@ -282,6 +285,9 @@ RGY_ERR VCECore::initChapters(VCEParam *prm) {
 
 RGY_ERR VCECore::initLog(VCEParam *prm) {
     m_pLog.reset(new RGYLog(prm->ctrl.logfile.c_str(), prm->ctrl.loglevel, prm->ctrl.logAddTime));
+    if (prm->ctrl.parallelEnc.isChild() && prm->ctrl.parallelEnc.sendData) {
+        m_pLog->setLock(prm->ctrl.parallelEnc.sendData->logMutex);
+    }
     if ((prm->ctrl.logfile.length() > 0 || prm->common.outputFilename.length() > 0) && prm->input.type != RGY_INPUT_FMT_SM) {
         m_pLog->writeFileHeader(prm->common.outputFilename.c_str());
     }
@@ -304,14 +310,27 @@ RGY_ERR VCECore::initPowerThrottoling(VCEParam *prm) {
     } else if (outputResolution <= 2560 * 1440) {
         score_resolution += 1;
     }
+    const int parallelMul = (prm->ctrl.parallelEnc.isEnabled()) ? prm->ctrl.parallelEnc.parallelCount : 1;
     const bool speedLimit = prm->ctrl.procSpeedLimit > 0 && prm->ctrl.procSpeedLimit <= 240;
-    const int score = (speedLimit) ? 0 : score_resolution;
+    const int score = (speedLimit) ? 0 : score_resolution * parallelMul;
 
     //一定以上のスコアなら、throttolingをAuto、それ以外はthrottolingを有効にして消費電力を削減
     const int score_threshold = 3;
     const auto mode = (score >= score_threshold) ? RGYThreadPowerThrottlingMode::Auto : RGYThreadPowerThrottlingMode::Enabled;
     PrintMes(RGY_LOG_DEBUG, _T("selected mode %s : score %d: resolution %d, speed limit %s.\n"),
         rgy_thread_power_throttoling_mode_to_str(mode), score, score_resolution, speedLimit ? _T("on") : _T("off"));
+
+    if (prm->ctrl.parallelEnc.isEnabled()) {
+        // 並列エンコード時には音声スレッドと出力スレッドが重要なので、throttolingを有効にはならないように
+        auto& target = prm->ctrl.threadParams.get(RGYThreadType::AUDIO);
+        if (target.throttling == RGYThreadPowerThrottlingMode::Unset) {
+            target.throttling = RGYThreadPowerThrottlingMode::Auto;
+        }
+        target = prm->ctrl.threadParams.get(RGYThreadType::OUTPUT);
+        if (target.throttling == RGYThreadPowerThrottlingMode::Unset) {
+            target.throttling = RGYThreadPowerThrottlingMode::Auto;
+        }
+    }
 
     for (int i = (int)RGYThreadType::ALL + 1; i < (int)RGYThreadType::END; i++) {
         auto& target = prm->ctrl.threadParams.get((RGYThreadType)i);
@@ -343,6 +362,50 @@ RGY_ERR VCECore::initPerfMonitor(VCEParam *prm) {
         m_pLog, &perfMonitorPrm)) {
         PrintMes(RGY_LOG_WARN, _T("Failed to initialize performance monitor, disabled.\n"));
         m_pPerfMonitor.reset();
+    }
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR VCECore::InitParallelEncode(VCEParam *inputParam, const int maxEncoders) {
+    if (!inputParam->ctrl.parallelEnc.isEnabled()) {
+        return RGY_ERR_NONE;
+    }
+    const bool isChild = inputParam->ctrl.parallelEnc.isChild();
+    auto [sts, errmes] = RGYParallelEnc::isParallelEncPossible(inputParam, m_pFileReader.get());
+    if (sts != RGY_ERR_NONE) {
+        PrintMes(RGY_LOG_WARN, _T("%s"), errmes);
+        inputParam->ctrl.parallelEnc.parallelCount = 0;
+        inputParam->ctrl.parallelEnc.parallelId = -1;
+        return (isChild) ? sts : RGY_ERR_NONE; // 子スレッド側でエラーが起こった場合はエラー、親の場合は正常終了(並列動作を無効化して継続)を返す
+    }
+    // 並列処理が有効の場合、メインスレッドではエンコードは行わないので、m_deviceUsageは解放する
+    if (inputParam->ctrl.parallelEnc.isParent() && m_deviceUsage) {
+        m_deviceUsage->close();
+    }
+    if (inputParam->ctrl.parallelEnc.parallelCount < 0) {
+        inputParam->ctrl.parallelEnc.parallelCount = maxEncoders;
+        PrintMes(RGY_LOG_DEBUG, _T("parallelCount set to %d\n"), inputParam->ctrl.parallelEnc.parallelCount);
+    }
+    m_parallelEnc = std::make_unique<RGYParallelEnc>(m_pLog);
+    if ((sts = m_parallelEnc->parallelRun(inputParam, m_pFileReader.get(), m_outputTimebase, m_pStatus.get())) != RGY_ERR_NONE) {
+        if (inputParam->ctrl.parallelEnc.isChild()) {
+            return sts; // 子スレッド側でエラーが起こった場合はエラー
+        }
+        // うまくいかなかった場合、並列処理を無効化して続行する
+        PrintMes(RGY_LOG_WARN, _T("Failed to initialize parallel encoding, disabled.\n"));
+        m_parallelEnc.reset();
+        // m_deviceUsageはいったん解放したので、登録を再追加
+        if (m_deviceUsage) {
+            m_deviceUsage = std::make_unique<RGYDeviceUsage>();
+            auto devUsageLock = m_deviceUsage->lock(); // ロックは親プロセス側でとる
+            // 登録を解除するプロセスを起動
+            const auto [err_run_proc, child_pid] = m_deviceUsage->startProcessMonitor((int)m_dev->id());
+            if (err_run_proc == RGY_ERR_NONE) {
+                // プロセスが起動できたら、その子プロセスのIDを登録する
+                m_deviceUsage->add((int)m_dev->id(), child_pid, devUsageLock.get());
+            }
+        }
+        return RGY_ERR_NONE; // 親の場合は正常終了(並列動作を無効化して継続)を返す
     }
     return RGY_ERR_NONE;
 }
@@ -3079,10 +3142,23 @@ bool VCECore::VppAfsRffAware() const {
 RGY_ERR VCECore::initPipeline(VCEParam *prm) {
     m_pipelineTasks.clear();
 
+    if (m_parallelEnc && m_parallelEnc->id() < 0) {
+        // 親プロセスの子プロセスのデータ回収用
+        std::unique_ptr<PipelineTaskAudio> taskAudio;
+        if (m_pFileWriterListAudio.size() > 0) {
+            taskAudio = std::make_unique<PipelineTaskAudio>(m_dev->context(), m_pFileReader.get(), m_AudioReaders, m_pFileWriterListAudio, m_vpFilters, 0, m_pLog);
+        }
+        const auto encOutputTimebase = (ENCODER_QSV) ? to_rgy(HW_NATIVE_TIMEBASE) : m_outputTimebase;
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskParallelEncBitstream>(m_dev->context(), m_pFileReader.get(), m_encTimestamp.get(), m_timecode.get(), m_parallelEnc.get(), m_pStatus.get(), m_encFps, encOutputTimebase, taskAudio, 0, m_pLog));
+        return RGY_ERR_NONE;
+    }   
+
+    // 並列処理時用の終了時刻 (この時刻は含まないようにする) -1の場合は制限なし(最後まで)
+    const auto parallelEncEndPts = (m_parallelEnc) ? m_parallelEnc->getVideoEndKeyPts() : -1ll;
     if (m_pDecoder) {
-        m_pipelineTasks.push_back(std::make_unique<PipelineTaskAMFDecode>(m_pDecoder, m_dev->context(), 1, m_pFileReader.get(), m_pLog));
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskAMFDecode>(m_pDecoder, m_dev->context(), parallelEncEndPts, 1, m_pFileReader.get(), m_pLog));
     } else {
-        m_pipelineTasks.push_back(std::make_unique<PipelineTaskInput>(m_dev->context(), 0, m_pFileReader.get(), m_dev->cl(), m_pLog));
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskInput>(m_dev->context(), parallelEncEndPts, 0, m_pFileReader.get(), m_dev->cl(), m_pLog));
     }
     if (m_pFileWriterListAudio.size() > 0) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskAudio>(m_dev->context(), m_pFileReader.get(), m_AudioReaders, m_pFileWriterListAudio, m_vpFilters, 0, m_pLog));
@@ -3093,8 +3169,8 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
         const auto inputFrameInfo = m_pFileReader->GetInputFrameInfo();
         const auto inputFpsTimebase = rgy_rational<int>((int)inputFrameInfo.fpsD, (int)inputFrameInfo.fpsN);
         const auto srcTimebase = (m_pFileReader->getInputTimebase().n() > 0 && m_pFileReader->getInputTimebase().is_valid()) ? m_pFileReader->getInputTimebase() : inputFpsTimebase;
-        if (m_trimParam.list.size() > 0 || prm->common.seekToSec > 0.0f) {
-            m_pipelineTasks.push_back(std::make_unique<PipelineTaskTrim>(m_dev->context(), m_trimParam, m_pFileReader.get(), srcTimebase, 0, m_pLog));
+        if (m_trimParam.list.size() > 0 || prm->common.seekToSec > 0.0f || m_parallelEnc) {
+            m_pipelineTasks.push_back(std::make_unique<PipelineTaskTrim>(m_dev->context(), m_trimParam, m_pFileReader.get(), m_parallelEnc.get(), srcTimebase, 0, m_pLog));
         }
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskCheckPTS>(m_dev->context(), srcTimebase, srcTimebase, m_outputTimebase, outFrameDuration, m_nAVSyncMode, m_timestampPassThrough, VppAfsRffAware() && m_pFileReader->rffAware(), (pReader) ? pReader->GetFramePosList() : nullptr, m_pLog));
     }
@@ -3332,6 +3408,11 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         }
     }
 
+    m_devNames.clear();
+    for (const auto& dev : devList) {
+        m_devNames.push_back(dev->name());
+    }
+
 #if defined(_WIN32) || defined(_WIN64)
     if (prm->bTimerPeriodTuning) {
         m_bTimerPeriodTuning = true;
@@ -3377,6 +3458,12 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         }
     }
 
+    // 並列動作の子は読み込みが終了したらすぐに並列動作を呼び出し
+    if (prm->ctrl.parallelEnc.isChild()) {
+        ret = InitParallelEncode(prm, (int)m_devNames.size());
+        if (ret != RGY_ERR_NONE) return ret;
+    }
+
     if (RGY_ERR_NONE != (ret = initDecoder(prm))) {
         return ret;
     }
@@ -3389,8 +3476,6 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
-    m_encTimestamp = std::make_unique<RGYTimestamp>(prm->common.timestampPassThrough);
-
     if (RGY_ERR_NONE != (ret = initPowerThrottoling(prm))) {
         return ret;
     }
@@ -3402,6 +3487,14 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     if (RGY_ERR_NONE != (ret = initPerfMonitor(prm))) {
         return ret;
     }
+
+    // 親はエンコード設定が完了してから並列動作を呼び出し
+    if (prm->ctrl.parallelEnc.isParent()) {
+        ret = InitParallelEncode(prm, (int)m_devNames.size());
+        if (ret != RGY_ERR_NONE) return ret;
+    }
+
+    m_encTimestamp = std::make_unique<RGYTimestamp>(prm->common.timestampPassThrough, prm->ctrl.parallelEnc.isParent() /*durationは子エンコーダで修正済み*/);
 
     if (RGY_ERR_NONE != (ret = initOutput(prm))) {
         return ret;
@@ -3734,7 +3827,11 @@ RGY_ERR VCECore::run2() {
         }
     }
     PrintMes(RGY_LOG_DEBUG, _T("RunEncode2: finished.\n"));
-    return (err == RGY_ERR_NONE || err == RGY_ERR_MORE_DATA || err == RGY_ERR_MORE_SURFACE || err == RGY_ERR_MORE_BITSTREAM || err > RGY_ERR_NONE) ? RGY_ERR_NONE : err;
+    err = (err == RGY_ERR_NONE || err == RGY_ERR_MORE_DATA || err == RGY_ERR_MORE_SURFACE || err == RGY_ERR_MORE_BITSTREAM || err > RGY_ERR_NONE) ? RGY_ERR_NONE : err;
+    if (m_parallelEnc) {
+        m_parallelEnc->close(err == RGY_ERR_NONE);
+    }
+    return err;
 }
 
 RGY_ERR VCECore::run_output() {

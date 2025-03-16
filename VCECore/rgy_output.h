@@ -81,8 +81,9 @@ private:
     int64_t offset;
     int64_t last_clean_id;
     bool timestampPassThrough;
+    bool noDurationFix; // durationの修正を行わない場合にtrue
 public:
-    RGYTimestamp(bool timestampPassThrough_) : m_frame(), mtx(), last_add_pts(-1), last_check_pts(-1), offset(0), last_clean_id(-1), timestampPassThrough(timestampPassThrough_) {};
+    RGYTimestamp(bool timestampPassThrough_, bool noDurationFix_) : m_frame(), mtx(), last_add_pts(-1), last_check_pts(-1), offset(0), last_clean_id(-1), timestampPassThrough(timestampPassThrough_), noDurationFix(noDurationFix_) {};
     ~RGYTimestamp() {};
     void clear() {
         std::lock_guard<std::mutex> lock(mtx);
@@ -94,7 +95,7 @@ public:
         std::lock_guard<std::mutex> lock(mtx);
         if (last_add_pts >= 0) { // 前のフレームのdurationの更新
             auto& last_add_pos = m_frame.find(last_add_pts)->second;
-            last_add_pos.duration = pts - last_add_pos.timestamp;
+            if (!noDurationFix) last_add_pos.duration = pts - last_add_pos.timestamp;
             if (duration == 0) duration = last_add_pos.duration;
         }
         m_frame[pts] = RGYTimestampMapVal(pts, inputFrameId, encodeFrameId, duration, metadatalist);
@@ -143,7 +144,7 @@ public:
         if (pos == m_frame.end()) {
             return RGYTimestampMapVal();
         }
-        auto& ret = pos->second;
+        auto ret = pos->second;
         clean(ret.inputFrameId);
         return ret;
     }
@@ -153,9 +154,51 @@ public:
         if (pos == m_frame.end()) {
             return RGYTimestampMapVal();
         }
-        auto& ret = pos->second;
+        auto ret = pos->second;
         clean(ret.inputFrameId);
         return ret;
+    }
+};
+
+class RGYDurationCheck {
+private:
+    std::array<int64_t, 64> m_ts;
+    int m_idx;
+    std::unordered_map<int, int64_t> m_duration;
+public:
+    RGYDurationCheck() : m_ts(), m_idx(0), m_duration() {};
+    void add(int64_t ts) {
+        m_ts[m_idx] = ts;
+        m_idx++;
+        if (m_idx >= (int)m_ts.size()) {
+            std::sort(m_ts.begin(), m_ts.end());
+            // [ 0 - 1 ] ... [ 30 - 31 ] までのフレーム長さをチェック
+            for (size_t i = 1; i < m_ts.size() / 2; i++) {
+                const int duration = (int)(m_ts[i] - m_ts[i - 1]);
+                if (m_duration.count(duration) > 0) {
+                    m_duration[duration]++;
+                } else {
+                    m_duration[duration] = 1;
+                }
+            }
+            // [ 31 - 63 ] までを先頭に移動
+            memmove(m_ts.data(), m_ts.data() + (m_ts.size() / 2 - 1), (m_ts.size() / 2 + 1) * sizeof(int64_t));
+            m_idx = (int)(m_ts.size() / 2) + 1;
+        }
+    }
+    std::unordered_map<int, int64_t> getDuration(int64_t& lastDuration) {
+        std::sort(m_ts.begin(), m_ts.begin() + m_idx);
+        for (int i = 1; i < m_idx; i++) {
+            const int duration = (int)(m_ts[i] - m_ts[i - 1]);
+            if (m_duration.count(duration) > 0) {
+                m_duration[duration]++;
+            } else {
+                m_duration[duration] = 1;
+            }
+        }
+        lastDuration = (m_idx >= 2) ? m_ts[m_idx - 1] - m_ts[m_idx - 2] : 0;
+        m_idx = 0;
+        return m_duration;
     }
 };
 
@@ -221,6 +264,25 @@ struct RGYOutputInsertMetadata {
     };
     RGYOutputInsertMetadata(std::vector<uint8_t>& data, bool onSeqHeader, RGYOutputInsertMetadataPosition pos_) : mdata(data), onSequenceHeader(onSeqHeader), pos(pos_), written(false) {};
 };
+
+#pragma pack(push, 1)
+struct RGYOutputRawPEExtHeader {
+    size_t allocSize; // ヘッダを含んだメモリの確保サイズ
+    int64_t pts;
+    int64_t dts;
+    int64_t duration;
+    int64_t inputFrameIdx;
+    int64_t encodeFrameIdx;
+    RGY_PICSTRUCT picstruct;
+    RGY_FRAMETYPE frameType;
+    uint32_t flags;
+    size_t size; // この後のデータのサイズ
+};
+#pragma pack(pop)
+
+static_assert(std::is_trivially_copyable<RGYOutputRawPEExtHeader>::value);
+
+static const size_t RGY_PE_EXT_HEADER_DATA_NORMAL_BUF_SIZE = 32 * 1024;
  
 class RGYOutput {
 public:
@@ -323,10 +385,13 @@ protected:
     decltype(parse_nal_unit_hevc_c) *m_parse_nal_hevc; // HEVC用のnal unit分解関数へのポインタ
 };
 
+struct RGYOutputRawPEExtHeader;
+
 struct RGYOutputRawPrm {
     bool benchmark;
     bool debugDirectAV1Out;
     bool debugRawOut;
+    bool extPERaw;
     bool HEVCAlphaChannel;
     int  HEVCAlphaChannelMode;
     tstring outReplayFile;
@@ -341,6 +406,9 @@ struct RGYOutputRawPrm {
     bool doviRpuMetadataCopy;     //doviのmetadataのコピー
     RGYDOVIRpuConvertParam doviRpuConvertParam;
     RGYTimestamp *vidTimestamp;
+    RGYQueueMPMP<RGYOutputRawPEExtHeader*> *qFirstProcessData;
+    RGYQueueMPMP<RGYOutputRawPEExtHeader*> *qFirstProcessDataFree;
+    RGYQueueMPMP<RGYOutputRawPEExtHeader*> *qFirstProcessDataFreeLarge;
 };
 
 class RGYOutputRaw : public RGYOutput {
@@ -367,6 +435,10 @@ protected:
     int64_t m_prevInputFrameId;
     int64_t m_prevEncodeFrameId;
     bool m_debugDirectAV1Out;
+    bool m_extPERaw;
+    RGYQueueMPMP<RGYOutputRawPEExtHeader*> *m_qFirstProcessData;
+    RGYQueueMPMP<RGYOutputRawPEExtHeader*> *m_qFirstProcessDataFree;
+    RGYQueueMPMP<RGYOutputRawPEExtHeader*> *m_qFirstProcessDataFreeLarge;
 };
 
 std::unique_ptr<RGYHDRMetadata> createHEVCHDRSei(const std::string &maxCll, const std::string &masterDisplay, CspTransfer atcSei, const RGYInput *reader);

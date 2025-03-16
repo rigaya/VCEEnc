@@ -2429,6 +2429,7 @@ struct RGYParamCommon {
     std::string videoCodecTag;
     std::vector<tstring> videoMetadata;
     std::vector<tstring> formatMetadata;
+    float seekRatio;               //指定された秒数分先頭を飛ばす
     float seekSec;               //指定された秒数分先頭を飛ばす
     float seekToSec;
     int nSubtitleSelectCount;
@@ -2503,6 +2504,33 @@ struct RGYParamAvoidIdleClock {
     bool operator!=(const RGYParamAvoidIdleClock &x) const;
 };
 
+struct RGYParallelEncSendData;
+
+enum class RGYParamParallelEncCache {
+    Mem,
+    File,
+};
+
+const CX_DESC list_parallel_enc_cache[] = {
+    { _T("mem"),  (int)RGYParamParallelEncCache::Mem  },
+    { _T("file"), (int)RGYParamParallelEncCache::File },
+    { NULL, 0 }
+};
+
+struct RGYParamParallelEnc {
+    int parallelCount; // 並列処理数
+    int parallelId; // 親=-1, 子=0～
+    int chunks; // 分割数
+    RGYParamParallelEncCache cacheMode;
+    RGYParallelEncSendData *sendData; // 並列処理時に親-子間のデータやり取り用
+    RGYParamParallelEnc();
+    bool operator==(const RGYParamParallelEnc &x) const;
+    bool operator!=(const RGYParamParallelEnc &x) const;
+    bool isParent() const { return (parallelCount > 1 || parallelCount == -1) && parallelId < 0; }
+    bool isChild()  const { return parallelCount > 1 && parallelId >= 0; }
+    bool isEnabled() const { return parallelCount > 1 || parallelCount == -1; }
+};
+
 struct RGYParamControl {
     int threadCsp;
     RGY_SIMD simdCsp;
@@ -2535,6 +2563,8 @@ struct RGYParamControl {
     bool processMonitorDevUsageReset;
 
     int outputBufSizeMB;         //出力バッファサイズ
+
+    RGYParamParallelEnc parallelEnc;
 
     RGYParamControl();
     ~RGYParamControl();

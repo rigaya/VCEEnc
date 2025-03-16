@@ -739,6 +739,7 @@ struct AVDemuxVideo {
     AVFrame                  *frame;                 //動画デコード用のフレーム
     int                       index;                 //動画のストリームID
     int64_t                   streamFirstKeyPts;     //動画ファイルの最初のpts
+    int64_t                   beforeSeekStreamFirstKeyPts; //シーク前の動画ファイルの最初のpts (checkTimeSeekToでしか使わないはず)
     AVPacket                 *firstPkt;              //動画の最初のpacket
     uint32_t                  streamPtsInvalid;      //動画ファイルのptsが無効 (H.264/ES, 等)
     int                       RFFEstimate;           //動画がRFFの可能性がある
@@ -834,6 +835,7 @@ public:
     DataSelect   **ppAttachmentSelect;      //muxするAttachmentのトラック番号のリスト 1,2,...(1から連番で指定)
     RGYAVSync      AVSyncMode;              //音声・映像同期モード
     int            procSpeedLimit;          //プリデコードする場合の処理速度制限 (0で制限なし)
+    float          seekRatio;               //指定された割合に頭出しする
     float          seekSec;                 //指定された秒数分先頭を飛ばす
     float          seekToSec;               //終了時刻(秒)
     tstring        logFramePosList;         //FramePosListの内容を入力終了時に出力する (デバッグ用)
@@ -848,9 +850,9 @@ public:
     bool           hdr10plusMetadataCopy;   //HDR10plus関連のmeta情報を取得する
     bool           doviRpuMetadataCopy;     //dovi rpuのmeta情報を取得する
     bool           interlaceAutoFrame;      //フレームごとにインタレの検出を行う
-    RGYListRef<RGYFrameDataQP> *qpTableListRef; //qp tableを格納するときのベース構造体
     bool           lowLatency;
     bool           timestampPassThrough;    //timestampをそのまま出力する
+    RGYListRef<RGYFrameDataQP> *qpTableListRef; //qp tableを格納するときのベース構造体
     RGYOptList     inputOpt;                //入力オプション
     RGYHEVCBsf     hevcbsf;
     tstring        avswDecoder;             //avswデコーダの指定
@@ -880,7 +882,7 @@ public:
     const AVDictionary *GetInputFormatMetadata();
 
     //動画の入力情報を取得する
-    const AVStream *GetInputVideoStream();
+    const AVStream *GetInputVideoStream() const;
 
     //動画の長さを取得する
     double GetInputVideoDuration();
@@ -900,11 +902,17 @@ public:
     //フレーム情報構造へのポインタを返す
     FramePosList *GetFramePosList();
 
-    virtual rgy_rational<int> getInputTimebase() override;
+    virtual rgy_rational<int> getInputTimebase() const override;
 
     virtual RGYDOVIProfile getInputDOVIProfile() override;
 
-    virtual bool rffAware() override;
+    virtual bool rffAware() const override;
+
+    virtual bool seekable() const override;
+
+    virtual bool timestampStable() const override;
+
+    virtual bool isPipe() const override;
 
     //入力ファイルに存在する音声のトラック数を返す
     int GetAudioTrackCount() override;
@@ -916,7 +924,7 @@ public:
     int GetDataTrackCount() override;
 
     //動画の最初のフレームのptsを取得する
-    int64_t GetVideoFirstKeyPts();
+    virtual int64_t GetVideoFirstKeyPts() const override;
 
     //入力に使用可能なdeviceIDを取得する
     const std::set<int>& GetHWDecDeviceID() const;
@@ -935,6 +943,9 @@ public:
 
     //seektoで指定された時刻の範囲内かチェックする
     bool checkTimeSeekTo(int64_t pts, rgy_rational<int> timebase, float marginSec) override;
+
+    //並列エンコードの親側で不要なデコーダを終了させる
+    void CloseVideoDecoder();
 
 #if USE_CUSTOM_INPUT
     int readPacket(uint8_t *buf, int buf_size);

@@ -109,6 +109,7 @@ protected:
     virtual int GetEncoderBitdepth(const VCEParam *inputParam) const;
     virtual RGY_ERR checkParam(VCEParam *prm);
     virtual RGY_ERR initPerfMonitor(VCEParam *prm);
+    virtual RGY_ERR InitParallelEncode(VCEParam *inputParam, const int maxEncoders);
     virtual RGY_ERR initDecoder(VCEParam *prm);
     virtual RGY_ERR initFilters(VCEParam *prm);
     virtual std::vector<VppType> InitFiltersCreateVppList(const VCEParam *inputParam,
@@ -170,8 +171,10 @@ protected:
     RGY_PICSTRUCT      m_picStruct;
     VideoVUIInfo       m_encVUI;
 
+    std::vector<tstring> m_devNames;
     std::unique_ptr<VCEDevice> m_dev;
     std::unique_ptr<RGYDeviceUsage> m_deviceUsage;
+    std::unique_ptr<RGYParallelEnc> m_parallelEnc;
 
     vector<VppVilterBlock>        m_vpFilters;
     shared_ptr<RGYFilterParam>    m_pLastFilterParam;
