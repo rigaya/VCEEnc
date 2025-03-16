@@ -118,6 +118,7 @@ AVMuxFormat::AVMuxFormat() :
     headerOptions(nullptr),
     disableMp4Opt(false),
     lowlatency(false),
+    offsetVideoDtsAdvance(false),
     allowOtherNegativePts(false),
     timestampPassThrough(false) {
 }
@@ -2110,6 +2111,7 @@ RGY_ERR RGYOutputAvcodec::Init(const TCHAR *strFileName, const VideoInfo *videoO
     m_Mux.format.isMatroska = format_is_mkv(m_Mux.format.formatCtx);
     m_Mux.format.disableMp4Opt = prm->disableMp4Opt;
     m_Mux.format.lowlatency = prm->lowlatency;
+    m_Mux.format.offsetVideoDtsAdvance = prm->offsetVideoDtsAdvance;
     m_Mux.format.allowOtherNegativePts = prm->allowOtherNegativePts;
     m_Mux.format.timestampPassThrough = prm->timestampPassThrough;
 
@@ -2527,6 +2529,20 @@ RGY_ERR RGYOutputAvcodec::WriteFileHeader(const RGYBitstream *bitstream) {
         }
     }
     av_dict_set(&m_Mux.format.headerOptions, "strict", "experimental", 0);
+    if (m_Mux.format.offsetVideoDtsAdvance && m_VideoOutputInfo.videoDelay > 0) {
+        // output_ts_offset で補正する
+        // まず、output_ts_offsetの指定があるかを検索
+        double orig_offset = 0.0;
+        auto entry = av_dict_get(m_Mux.format.headerOptions, "output_ts_offset", nullptr, AV_DICT_MATCH_CASE | AV_DICT_IGNORE_SUFFIX);
+        if (!entry || sscanf_s(entry->value, "%lf", &orig_offset) != 1) {
+            orig_offset = 0.0;
+        }
+        const AVRational fpsTimebase = (m_Mux.video.afs) ? av_inv_q(av_mul_q(m_Mux.video.outputFps, av_make_q(4, 5))) : av_inv_q(m_Mux.video.outputFps);
+        const auto new_offset = orig_offset + m_VideoOutputInfo.videoDelay * av_q2d(fpsTimebase);
+        const auto new_offset_str = strsprintf("%.17lf", new_offset);
+        AddMessage(RGY_LOG_DEBUG, _T("Change output_ts_offset for %lf to avoid negative dts: %.17lf -> %.17lf.\n"), -1.0 * bitstream->dts() * av_q2d(m_Mux.video.streamOut->time_base), orig_offset, new_offset);
+        av_dict_set(&m_Mux.format.headerOptions, "output_ts_offset", new_offset_str.c_str(), AV_DICT_MATCH_CASE);
+    }
 
     //なんらかの問題があると、ここでよく死ぬ
     int ret = 0;

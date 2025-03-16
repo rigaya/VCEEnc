@@ -27,6 +27,7 @@
 
 #include <set>
 #include <fstream>
+#include <sstream>
 #include <iostream>
 #include <iomanip>
 #include "rgy_util.h"
@@ -6426,6 +6427,10 @@ int parse_one_common_option(const TCHAR *option_name, const TCHAR *strInput[], i
         common->debugRawOut = true;
         return 0;
     }
+    if (IS_OPTION("offset-video-dts-advance")) {
+        common->offsetVideoDtsAdvance = true;
+        return 0;
+    }
     if (IS_OPTION("allow-other-negative-pts")) {
         common->allowOtherNegativePts = true;
         return 0;
@@ -8353,6 +8358,7 @@ tstring gen_cmd(const RGYParamCommon *param, const RGYParamCommon *defaultPrm, b
             cmd << _T(" --vmaf ") << tmp.str().substr(1);
         }
     }
+    OPT_BOOL(_T("--offset-video-dts-advance"), _T(""), offsetVideoDtsAdvance);
     OPT_BOOL(_T("--allow-other-negative-pts"), _T(""), allowOtherNegativePts);
     OPT_BOOL(_T("--disable-av1-write-parser"), _T("--no-disable-av1-write-parser"), debugDirectAV1Out);
     OPT_BOOL(_T("--debug-raw-out"), _T("--no-debug-raw-out"), debugRawOut);
