@@ -674,6 +674,9 @@ protected:
     RGYQueueMPMP<RGYFrameDataMetadata*> m_queueHDR10plusMetadata;
     RGYQueueMPMP<FrameFlags> m_dataFlag;
     RGYRunState m_state;
+    bool m_gotFrameFirstKeyPts;
+    bool m_reachedEndPts;
+    int64_t m_firstKeyPts;
     int64_t m_endPts; // 並列処理時用の終了時刻 (この時刻は含まないようにする) -1の場合は制限なし(最後まで)
     int m_decOutFrames;
 #if THREAD_DEC_USE_FUTURE
@@ -683,9 +686,9 @@ protected:
 #endif //#if THREAD_DEC_USE_FUTURE
 public:
     PipelineTaskAMFDecode(amf::AMFComponentPtr dec, amf::AMFContextPtr context, int64_t endPts, int outMaxQueueSize, RGYInput *input, std::shared_ptr<RGYLog> log)
-        : PipelineTask(PipelineTaskType::AMFDEC, context, outMaxQueueSize, log), m_dec(dec), m_input(input), m_endPts(endPts),
+        : PipelineTask(PipelineTaskType::AMFDEC, context, outMaxQueueSize, log), m_dec(dec), m_input(input),
         m_queueHDR10plusMetadata(), m_dataFlag(),
-        m_state(RGY_STATE_STOPPED), m_decOutFrames(0), m_thDecoder() {
+        m_state(RGY_STATE_STOPPED), m_gotFrameFirstKeyPts(false), m_reachedEndPts(false), m_firstKeyPts(AV_NOPTS_VALUE), m_endPts(endPts), m_decOutFrames(0), m_thDecoder() {
         m_queueHDR10plusMetadata.init(256);
         m_dataFlag.init();
     };
@@ -739,7 +742,9 @@ public:
                 }
 
                 amf::AMFBufferPtr pictureBuffer;
-                if (sts == RGY_ERR_NONE) {
+                if (m_reachedEndPts) { // endPtsに到達したらファイル読み込み終了と同じ動作をさせる
+                    sts = RGY_ERR_MORE_BITSTREAM;
+                } else if (sts == RGY_ERR_NONE) {
                     m_inFrames++;
 
                     auto ar = m_context->AllocBuffer(amf::AMF_MEMORY_HOST, bitstream.size(), &pictureBuffer);
@@ -752,6 +757,9 @@ public:
                     //const auto pts = rgy_change_scale(bitstream.pts(), to_rgy(inTimebase), VCE_TIMEBASE);
                     pictureBuffer->SetDuration(bitstream.duration());
                     pictureBuffer->SetPts(bitstream.pts());
+                    if (m_firstKeyPts == AV_NOPTS_VALUE) {
+                        m_firstKeyPts = bitstream.pts();
+                    }
 
                     for (auto& frameData : bitstream.getFrameDataList()) {
                         if (frameData->dataType() == RGY_FRAME_DATA_HDR10PLUS) {
@@ -856,16 +864,21 @@ protected:
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
-        if (ar == AMF_EOF) {
+        if (ar == AMF_EOF || m_state == RGY_STATE_EOF) {
             ret = RGY_ERR_MORE_BITSTREAM;
         } else if (ar != AMF_OK) {
             ret = err_to_rgy(ar); m_state = RGY_STATE_ERROR;
             PrintMes(RGY_LOG_ERROR, _T("Failed to load input frame: %s.\n"), get_err_mes(ret));
             return ret;
         }
+        if (!m_gotFrameFirstKeyPts && surfDecOut->GetPts() < m_firstKeyPts) {
+            return RGY_ERR_NONE;
+        }
+        m_gotFrameFirstKeyPts = true;
         if (m_endPts >= 0
             && surfDecOut != nullptr
             && surfDecOut->GetPts() >= m_endPts) { // m_endPtsは含まないようにする(重要)
+            m_reachedEndPts = true; // 読み込みスレッドに終了を通知
             return RGY_ERR_MORE_BITSTREAM; //入力ビットストリームは終了
         }
         if (surfDecOut != nullptr) {
