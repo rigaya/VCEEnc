@@ -65,7 +65,6 @@ vceencc
 *.vspscc
 *.vssscc
 .builds
-.vscode/
 *.pidb
 *.log
 *.scc
