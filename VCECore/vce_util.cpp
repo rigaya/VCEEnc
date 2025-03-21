@@ -288,12 +288,13 @@ VideoInfo videooutputinfo(
     const VideoVUIInfo& vui) {
 
     const int bframes = (codec == RGY_CODEC_H264) ? prm.get<int>(AMF_VIDEO_ENCODER_B_PIC_PATTERN) : 0;
+    const int b_ref   = (codec == RGY_CODEC_H264) ? prm.get<bool>(AMF_VIDEO_ENCODER_B_REFERENCE_ENABLE) : false;
 
     VideoInfo info;
     info.codec = codec;
     info.codecLevel = prm.get<int>(AMF_PARAM_PROFILE_LEVEL(codec));
     info.codecProfile = prm.get<int>(AMF_PARAM_PROFILE(codec));
-    info.videoDelay = (codec == RGY_CODEC_AV1) ? 0 : ((bframes > 0) + (bframes > 2));
+    info.videoDelay = (codec == RGY_CODEC_AV1) ? 0 : (bframes > 0) + ((bframes > 0 && b_ref) ? 1 : 0);
     info.dstWidth = prm.get<int>(VCE_PARAM_KEY_OUTPUT_WIDTH);
     info.dstHeight = prm.get<int>(VCE_PARAM_KEY_OUTPUT_HEIGHT);
     info.fpsN = prm.get<AMFRate>(AMF_PARAM_FRAMERATE(codec)).num;
