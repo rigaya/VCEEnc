@@ -508,7 +508,7 @@ Encode qulaity preset.
 - balanced
 - fast
 - slow
-- slower (for AV1 only)
+- slower
 
 ### --output-depth &lt;int&gt;
 Set output bit depth.

@@ -2467,6 +2467,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     }
     m_params.SetParam(AMF_PARAM_QP_I(prm->codec), (amf_int64)prm->qp.qpI);
     m_params.SetParam(AMF_PARAM_QP_P(prm->codec), (amf_int64)prm->qp.qpP);
+    if (prm->codec == RGY_CODEC_H264 || prm->codec == RGY_CODEC_AV1) {
+        m_params.SetParam(AMF_PARAM_QP_B(prm->codec), (amf_int64)prm->qp.qpB);
+    }
     if (prm->nBitrate != 0)       m_params.SetParam(AMF_PARAM_TARGET_BITRATE(prm->codec), (amf_int64)prm->nBitrate * 1000);
     if (prm->nMaxBitrate != 0)    m_params.SetParam(AMF_PARAM_PEAK_BITRATE(prm->codec),   (amf_int64)prm->nMaxBitrate * 1000);
     if (prm->nVBVBufferSize != 0) m_params.SetParam(AMF_PARAM_VBV_BUFFER_SIZE(prm->codec), (amf_int64)std::min(prm->nVBVBufferSize, VBV_BUFSIZE_MAX_Kbit) * 1000);
@@ -2660,6 +2663,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTER, (amf_int64)prm->nQPMaxInter.value());
         }
         if (prm->bframes.has_value()) {
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_CONSECUTIVE_BPICTURES, (amf_int64)prm->bframes.value());
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_B_PIC_PATTERN, (amf_int64)prm->bframes.value());
         }
         if (prm->adaptMiniGOP.has_value()) {
@@ -4093,6 +4097,9 @@ tstring VCECore::GetEncoderParam() {
             GetPropertyInt(AMF_PARAM_QP_P(m_encCodec)));
         if (m_encCodec == RGY_CODEC_H264 && GetPropertyInt(AMF_VIDEO_ENCODER_B_PIC_PATTERN)) {
             mes += strsprintf(_T(", B:%d"), GetPropertyInt(AMF_VIDEO_ENCODER_QP_B));
+        }
+        if (m_encCodec == RGY_CODEC_AV1 && GetPropertyInt(AMF_VIDEO_ENCODER_AV1_B_PIC_PATTERN)) {
+            mes += strsprintf(_T(", InterB:%d"), GetPropertyInt(AMF_VIDEO_ENCODER_AV1_Q_INDEX_INTER_B));
         }
         mes += _T("\n");
     } else {

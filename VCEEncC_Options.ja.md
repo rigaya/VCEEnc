@@ -444,7 +444,7 @@ CQP(固定量子化量)でエンコードを行う。&lt;Iフレーム&gt;:&lt;P
 - balanced
 - fast
 - slow
-- slower (AV1 のみ)
+- slower
 
 ### --output-depth &lt;int&gt;
 出力ビット深度を設定。

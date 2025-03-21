@@ -328,8 +328,6 @@ const CX_DESC list_pa_motion_quality_mode[] = {
     { NULL, 0 }
 };
 
-static const int AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY = AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY+1;
-
 const CX_DESC list_vce_quality_preset_h264[] = {
     { _T("balanced"), AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED },
     { _T("fast"),     AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED },
@@ -342,6 +340,7 @@ const CX_DESC list_vce_quality_preset_hevc[] = {
     { _T("balanced"), AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_BALANCED },
     { _T("fast"),     AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_SPEED },
     { _T("slow"),     AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_QUALITY },
+    { _T("slower"),   AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_HIGH_QUALITY },
     { NULL, 0 }
 };
 
@@ -859,6 +858,14 @@ static const wchar_t *AMF_PARAM_QP_P(RGY_CODEC codec) {
     case RGY_CODEC_HEVC: return AMF_VIDEO_ENCODER_HEVC_QP_P;
     case RGY_CODEC_H264:
     default:             return AMF_VIDEO_ENCODER_QP_P;
+    }
+}
+static const wchar_t *AMF_PARAM_QP_B(RGY_CODEC codec) {
+    switch (codec) {
+    case RGY_CODEC_AV1:  return AMF_VIDEO_ENCODER_AV1_Q_INDEX_INTER_B;
+    case RGY_CODEC_HEVC: return nullptr;
+    case RGY_CODEC_H264:
+    default:             return AMF_VIDEO_ENCODER_QP_B;
     }
 }
 static const wchar_t *AMF_PARAM_MIN_QP(RGY_CODEC codec) {

@@ -54,6 +54,8 @@ Debian/Ubuntu系 (VCEEncC)
 | VCEEnc 8.07以降 | AMD ドライバ 23.1.2 以降 |
 | VCEEnc 8.17以降 | AMD ドライバ 23.5.2 以降 |
 | VCEEnc 8.23以降 | AMD ドライバ 24.6.1 以降 |
+| VCEEnc 8.24以降 | AMD ドライバ 24.9.1 以降 |
+| VCEEnc 8.33以降 | AMD ドライバ 25.1.1 以降 |
 
 ## VCEEncCの使用方法とオプション  
 [VCEEncCのオプションの説明](./VCEEncC_Options.ja.md)
@@ -131,6 +133,7 @@ Debian/Ubuntu系 (VCEEncC)
 | RDNA | RDNA1         | RX5xxx      |          | VCN2        | 8bit  | 10bit |    |
 |      | RDNA2         | RX6xxx*     | Zen4 APU | VCN3        | 8bit  | 10bit |    |
 |      | RDNA3         | RX7xxx      |          | VCN4        | 8bit  | 10bit | 10bit |
+|      | RDNA4         | RX9xxx      |          | VCN5        | 8bit  | 10bit | 10bit |
 
 * RX6400とRX6500XTは非対応です。
 
