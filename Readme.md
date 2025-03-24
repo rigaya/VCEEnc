@@ -30,30 +30,18 @@ Aviutl 1.00 or later (VCEEnc.auo)
 Hardware which supports VCE  
   AMD GPU Radeon HD 7xxx or later  
   AMD APU Trinity (2nd Gen) or later  
+AMD driver 25.1.1 or later  
 
 ### Linux
-Debian/Ubuntu (VCEEncC)  
-  It may be possible to run on other distributions (not tested).
+Debian/Ubuntu (x64)  
+  AMD GPU Radeon RX5xxx (RDNA1) or later (dGPU only)  
+  AMD driver 25.1.1 or later  
 
-| VCEEnc | required graphics driver version |
-|:---|:---|
-| VCEEnc 3.00 or later | AMD driver 17.1.1 (16.50.2611) or later |
-| VCEEnc 5.00 or later | AMD driver 19.7.1 or later |
-| VCEEnc 5.01 or later | AMD driver 19.12.1 or later |
-| VCEEnc 5.02 or later | AMD driver 20.2.1 or later |
-| VCEEnc 6.09 or later | AMD driver 20.11.2 or later |
-| VCEEnc 6.13 or later | AMD driver 21.6.1 or later |
-| VCEEnc 6.17 or later | AMD driver 21.12.1 or later |
-| VCEEnc 7.00 or later | AMD driver 22.3.1 or later |
-| VCEEnc 7.03 or later | AMD driver 22.7.1 or later |
-| VCEEnc 7.15 or later | AMD driver 22.12.1 or later |
-| VCEEnc 8.07 or later | AMD driver 23.1.2 or later |
-| VCEEnc 8.17 or later | AMD driver 23.5.2 or later |
-| VCEEnc 8.23 or later | AMD driver 24.6.1 or later |
-| VCEEnc 8.24 or later | AMD driver 24.9.1 or later |
-| VCEEnc 8.24 or later | AMD driver 24.9.1 or later |
-| VCEEnc 8.33 or later | AMD driver 25.1.1 or later |
+  > [!WARNING]
+  > Please note that it is currently difficult to run VCEEncC on iGPUs with Linux drivers.
 
+  > [!NOTE]
+  > It may be possible to run on other distributions (not tested).
 
 ## Usage and options of VCEEncC
 [Option list and details of VCEEncC](./VCEEncC_Options.en.md)
@@ -159,6 +147,27 @@ when there are multiple GPUs available which support VCE/VCN.
   Please note that VE and GPU ulitization are check at the initialization pahse of the app,
   and there are delays in values taken. Therefore, it is likely that the multiple tasks started at the same time
   to run on the same GPU, and divided into multiple GPUs, even if the options are supported in every GPUs.
+
+## AMD Driver Requirements of previous versions
+
+| VCEEnc | required graphics driver version |
+|:---|:---|
+| VCEEnc 3.00 or later | AMD driver 17.1.1 (16.50.2611) or later |
+| VCEEnc 5.00 or later | AMD driver 19.7.1 or later |
+| VCEEnc 5.01 or later | AMD driver 19.12.1 or later |
+| VCEEnc 5.02 or later | AMD driver 20.2.1 or later |
+| VCEEnc 6.09 or later | AMD driver 20.11.2 or later |
+| VCEEnc 6.13 or later | AMD driver 21.6.1 or later |
+| VCEEnc 6.17 or later | AMD driver 21.12.1 or later |
+| VCEEnc 7.00 or later | AMD driver 22.3.1 or later |
+| VCEEnc 7.03 or later | AMD driver 22.7.1 or later |
+| VCEEnc 7.15 or later | AMD driver 22.12.1 or later |
+| VCEEnc 8.07 or later | AMD driver 23.1.2 or later |
+| VCEEnc 8.17 or later | AMD driver 23.5.2 or later |
+| VCEEnc 8.23 or later | AMD driver 24.6.1 or later |
+| VCEEnc 8.24 or later | AMD driver 24.9.1 or later |
+| VCEEnc 8.24 or later | AMD driver 24.9.1 or later |
+| VCEEnc 8.33 or later | AMD driver 25.1.1 or later |
 
 ## VCEEnc source code
 - MIT license.

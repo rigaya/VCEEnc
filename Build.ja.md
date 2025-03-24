@@ -3,15 +3,14 @@
 
 - [Windows](./Build.ja.md#windows)
 - Linux
-  - [Linux (Ubuntu 20.04)](./Build.ja.md#linux-ubuntu-2004)
-  - [Linux (CentOS 8)](./Build.ja.md#linux-centos-8)
+  - [Linux (Ubuntu 24.04)](./Build.ja.md#linux-ubuntu-2404)
 
 ## Windows 
 
 ### 0. 準備
 ビルドには、下記のものが必要です。
 
-- Visual Studio 2019
+- Visual Studio 2022
 - [Avisynth](https://github.com/AviSynth/AviSynthPlus) SDK
 - [VapourSynth](http://www.vapoursynth.com/) SDK
 - Intel OpenCL SDK
@@ -57,7 +56,7 @@ VCEEnc.slnを開きます。
 |VCEEncC(64).exe | DebugStatic | RelStatic |
 
 
-## Linux (Ubuntu 20.04)
+## Linux (Ubuntu 24.04)
 
 ### 0. ビルドに必要なもの
 
@@ -66,7 +65,7 @@ VCEEnc.slnを開きます。
 - git
 - libraries
   - libva, libdrm, libmfx 
-  - ffmpeg 4.x libs (libavcodec58, libavformat58, libavfilter7, libavutil56, libswresample3, libavdevice58)
+  - ffmpeg libs (libavcodec58, libavformat58, libavfilter7, libavutil56, libswresample3, libavdevice58)
   - libass9
   - [Optional] VapourSynth
 
@@ -76,23 +75,24 @@ VCEEnc.slnを開きます。
 sudo apt install build-essential libtool git
 ```
 
-### 2. Intel ドライバのインストール
-[AMDのWebページ](https://www.amd.com/ja/support)からUbuntu 20.04向けのドライバをダウンロードします。
+### 2. AMD ドライバのインストール
 
-その後、パッケージを展開し、amdgpu-pro-installを下記のように実行してドライバをインストールします。
+[AMDのWebページ](https://www.amd.com/ja/support)からUbuntu 24.04向けのドライバをダウンロードします。
+
+その後、パッケージを展開し、amdgpu-installを下記のように実行してドライバをインストールし、再起動します。
 
 ```Shell
 cd ~/Downloads
-tar -xf amdgpu-pro-*.tar.xz
-cd amdgpu-pro-*
-sudo ./amdgpu-pro-install --pro --opencl=rocr,legacy --no-32
+sudo apt-get install ./amdgpu-install-VERSION.deb
+sudo apt-get update
+sudo amdgpu-install -y --accept-eula --usecase=graphics,amf,opencl --opencl=rocr --vulkan=amdvlk --no-32
+sudo reboot
 ```
 
 ### 3. ビルドに必要なライブラリのインストール
 
 ```Shell
 sudo apt install \
-  amf-amdgpu-pro \
   opencl-headers \
   libvulkan-dev \
   libx11-dev
@@ -180,140 +180,6 @@ sudo gpasswd -a ${USER} render
 ```
 
 ### 5. VCEEncCのビルド
-```Shell
-git clone https://github.com/rigaya/VCEEnc --recursive
-cd VCEEnc
-./configure
-make -j8
-```
-動作するか確認します。
-```Shell
-./vceencc --check-hw
-```
-
-## Linux (CentOS 8)
-
-### 0. ビルドに必要なもの
-
-- C++17 Compiler
-- Intel Driver
-- git
-- libraries
-  - libva, libdrm, libmfx 
-  - ffmpeg 4.x libs (libavcodec58, libavformat58, libavfilter7, libavutil56, libswresample3, libavdevice58)
-  - libass9
-  - [Optional] VapourSynth
-
-### 1. コンパイラ等のインストール
-
-```Shell
-sudo dnf install @development-tools
-```
-
-### 2. AMD ドライバのインストール
-
-[AMDのWebページ](https://www.amd.com/ja/support)からCentOS 8向けのドライバをダウンロードします。
-
-その後、パッケージを展開し、amdgpu-pro-installを下記のように実行してドライバをインストールします。
-
-```Shell
-cd ~/Downloads
-tar -xf amdgpu-pro-*.tar.xz
-cd amdgpu-pro-*
-sudo ./amdgpu-pro-install --pro --opencl=rocr,legacy --no-32
-```
-
-### 3. ビルドに必要なライブラリのインストール
-
-```Shell
-sudo dnf install 'dnf-command(config-manager)'
-sudo dnf config-manager --set-enabled powertools
-sudo dnf install https://download.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-sudo dnf localinstall --nogpgcheck https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm
-
-sudo dnf install opencl-headers libX11-devel vulkan-loader-devel
-sudo dnf install ffmpeg ffmpeg-devel
-```
-
-
-### 4. [オプション] VapourSynthのビルド
-VapourSynthのインストールは必須ではありませんが、インストールしておくとvpyを読み込めるようになります。
-
-必要のない場合は 5. VCEEncCのビルド に進んでください。
-
-<details><summary>VapourSynthのビルドの詳細はこちら</summary>
-
-#### 4.1 ビルドに必要なツールのインストール
-```Shell
-sudo apt install python3-pip autoconf automake libtool meson
-```
-
-#### 4.2 zimgのインストール
-```Shell
-git clone https://github.com/sekrit-twc/zimg.git
-cd zimg
-./autogen.sh
-./configure
-sudo make install -j16
-cd ..
-```
-
-#### 4.3 cythonのインストール
-```Shell
-sudo pip3 install Cython
-```
-
-#### 4.4 VapourSynthのビルド
-```Shell
-git clone https://github.com/vapoursynth/vapoursynth.git
-cd vapoursynth
-./autogen.sh
-./configure
-make -j16
-sudo make install
-
-# vapoursynthが自動的にロードされるようにする
-# "python3.x" は環境に応じて変えてください。これを書いた時点ではpython3.7でした
-sudo ln -s /usr/local/lib/python3.x/site-packages/vapoursynth.so /usr/lib/python3.x/lib-dynload/vapoursynth.so
-sudo ldconfig
-```
-
-#### 4.5 VapourSynthの動作確認
-エラーが出ずにバージョンが表示されればOK。
-```Shell
-vspipe --version
-```
-
-#### 4.6 [おまけ] vslsmashsourceのビルド
-```Shell
-# lsmashのビルド
-git clone https://github.com/l-smash/l-smash.git
-cd l-smash
-./configure --enable-shared
-sudo make install -j16
-cd ..
- 
-# vslsmashsourceのビルド
-git clone https://github.com/HolyWu/L-SMASH-Works.git
-# ffmpegのバージョンが合わないので、下記バージョンを取得する
-cd L-SMASH-Works
-git checkout -b 20200531 refs/tags/20200531
-cd VapourSynth
-meson build
-cd build
-sudo ninja install
-cd ../../../
-```
-
-</details>
-
-### 5. OpenCLの使用のため、ユーザーを下記グループに追加
-```Shell
-# OpenCL
-sudo gpasswd -a ${USER} render
-```
-
-### 6. VCEEncCのビルド
 ```Shell
 git clone https://github.com/rigaya/VCEEnc --recursive
 cd VCEEnc
