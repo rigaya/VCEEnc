@@ -734,11 +734,12 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
             print_cmd_error_invalid_value(option_name, strInput[i]);
             return 1;
         } else if (value < 0) {
-            print_cmd_error_invalid_value(option_name, strInput[i], _T("bitrate should be positive value."));
+            print_cmd_error_invalid_value(option_name, strInput[i], _T("qvbr should be positive value."));
             return 1;
         }
         pParams->rateControl = AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_QUALITY_VBR;
-        pParams->nBitrate = value;
+        pParams->nBitrate = 0;
+        pParams->qvbrLevel = value;
         return 0;
     }
     if (IS_OPTION("qvbr-quality")) {
