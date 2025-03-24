@@ -1,14 +1,25 @@
 # VCEEnc Release Notes
 
+## 8.33
+
+- Update AMF to 1.4.36.
+  Requires AMD Radeon Software Adrenalin Edition 25.1.1 or later.
+- Add ```slower``` option to ([--preset](./VCEEncC_Options.en.md#-u---preset)) for H.264/HEVC.
+- Add parallel encoding feature with file splitting. ([--parallel](./VCEEncC_Options.en.md#--parallel-int-or-param1value1param2value2))
+- Add support for ISO 639-2 T-codes in language code specification.
+- Continue processing even when DirectX11/Vulkan initialization fails.
+- Fix timestamps occasionally becoming incorrect when using --seek with certain input files.
+- Fix --qvbr not reflected properly. ( #115 )
+
 ## 8.32
 
-- Fix [--dolby-vision-rpu](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--dolby-vision-rpu-string) in AV1 encoding.
+- Fix [--dolby-vision-rpu](./VCEEncC_Options.en.md#--dolby-vision-rpu-string) in AV1 encoding.
 
 ## 8.31
 
-- Fix some codecs not being able to decode with [--avsw](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--avsw) since version 8.29.
-- Add options 10.0, 10.1, 10.2, 10.4 to [--dolby-vision-profile](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--dolby-vision-profile-string-hevc-av1).
-- Fix [--dolby-vision-profile](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--dolby-vision-profile-string-hevc-av1) not working with inputs other than avhw/avsw.
+- Fix some codecs not being able to decode with [--avsw](./VCEEncC_Options.en.md#--avsw) since version 8.29.
+- Add options 10.0, 10.1, 10.2, 10.4 to [--dolby-vision-profile](./VCEEncC_Options.en.md#--dolby-vision-profile-string-hevc-av1).
+- Fix [--dolby-vision-profile](./VCEEncC_Options.en.md#--dolby-vision-profile-string-hevc-av1) not working with inputs other than avhw/avsw.
 
 ## 8.30
 
@@ -30,8 +41,8 @@
 
 ## 8.26
 
-- Fix some of the parameters of [--vpp-libplacebo-tonemapping](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-libplacebo-tonemapping-param1value1param2value2) not working properly.
-- Fix [--trim](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--trim-intintintintintint) being offset for a few frames when input file is a "cut" file (which does not start from key frame) and is coded using OpenGOP.
+- Fix some of the parameters of [--vpp-libplacebo-tonemapping](./VCEEncC_Options.en.md#--vpp-libplacebo-tonemapping-param1value1param2value2) not working properly.
+- Fix [--trim](./VCEEncC_Options.en.md#--trim-intintintintintint) being offset for a few frames when input file is a "cut" file (which does not start from key frame) and is coded using OpenGOP.
 
 ## 8.25
 
@@ -41,7 +52,7 @@
 
 - Update AMF to 1.4.35.
   Requires AMD Radeon Software Adrenalin Edition 24.9.1 or later.
-- Add support for AV1 [--bframes](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#-b---bframes-int) and [--adapt-minigop](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--adapt-minigop-h264av1) for upcoming VCN5 hardware.
+- Add support for AV1 [--bframes](./VCEEncC_Options.en.md#-b---bframes-int) and [--adapt-minigop](./VCEEncC_Options.en.md#--adapt-minigop-h264av1) for upcoming VCN5 hardware.
 - Update ffmpeg libraries. (Windows)
   - ffmpeg 7.0 -> 20240822
   - dav1d 1.4.1 -> 1.4.3
@@ -49,27 +60,27 @@
   - libvpx 2.14.0
 - Improve auto GPU device selection on multi GPU environments.
   Now will be able to select unutilized GPU more correctly.
-- Now [--temporal-layers](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--temporal-layers-int-hevcav1) can also be used for HEVC encoding. ( #112 )
+- Now [--temporal-layers](./VCEEncC_Options.en.md#--temporal-layers-int-hevcav1) can also be used for HEVC encoding. ( #112 )
 - Add Linux support for auto GPU device selection on multi GPU environments.
-- Add feature to copy Dolby Vision profile from input file. ([--dolby-vision-profile](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--dolby-vision-profile-string-hevc-av1) copy)
+- Add feature to copy Dolby Vision profile from input file. ([--dolby-vision-profile](./VCEEncC_Options.en.md#--dolby-vision-profile-string-hevc-av1) copy)
   Supported on Windows and Ubuntu 24.04.
-- Add feature to copy Dolby Vision rpu metadata from input HEVC file. ([--dolby-vision-rpu](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--dolby-vision-rpu-string-hevc-av1) copy)
-- Now [--dolby-vision-rpu](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--dolby-vision-rpu-string-hevc-av1) and [--dhdr10-info](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--dhdr10-info-string-hevc-av1) can be used together.
+- Add feature to copy Dolby Vision rpu metadata from input HEVC file. ([--dolby-vision-rpu](./VCEEncC_Options.en.md#--dolby-vision-rpu-string-hevc-av1) copy)
+- Now [--dolby-vision-rpu](./VCEEncC_Options.en.md#--dolby-vision-rpu-string-hevc-av1) and [--dhdr10-info](./VCEEncC_Options.en.md#--dhdr10-info-string-hevc-av1) can be used together.
 - Add option to set active area offsets to 0 for dolby vision rpu metadata.
-- Fix invalid value not returning error when using [--dolby-vision-profile](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--dolby-vision-profile-string-hevc-av1) .
-- Now [--dolby-vision-rpu](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--dolby-vision-rpu-string-hevc-av1) copy will automatically convert to dolby vision profile 8 when input files is dolby vision profile 7 using libdovi.
-- Improve AV1 output when using [--dhdr10-info](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--dhdr10-info-string-hevc-av1).
-- Changed implementation of [--dhdr10-info](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--dhdr10-info-string-hevc-av1) to work on Linux.
+- Fix invalid value not returning error when using [--dolby-vision-profile](./VCEEncC_Options.en.md#--dolby-vision-profile-string-hevc-av1) .
+- Now [--dolby-vision-rpu](./VCEEncC_Options.en.md#--dolby-vision-rpu-string-hevc-av1) copy will automatically convert to dolby vision profile 8 when input files is dolby vision profile 7 using libdovi.
+- Improve AV1 output when using [--dhdr10-info](./VCEEncC_Options.en.md#--dhdr10-info-string-hevc-av1).
+- Changed implementation of [--dhdr10-info](./VCEEncC_Options.en.md#--dhdr10-info-string-hevc-av1) to work on Linux.
   Changed to use libhdr10plus instead of hdr10plus_gen.exe.
 - Add libplacebo resize filters for Windows build (--vpp-resize).
-- Add custom shader filter using libplacebo. ([--vpp-libplaceo-shader](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-libplacebo-shader-param1value1param2value2))
-- Add deband filter by libplacebo. ([--vpp-libplacebo-deband](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-libplacebo-deband-param1value1param2value2))
-- Add tone mapping filter by libplacebo. ([--vpp-libplacebo-tonemapping](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-libplacebo-tonemapping-param1value1param2value2))
+- Add custom shader filter using libplacebo. ([--vpp-libplaceo-shader](./VCEEncC_Options.en.md#--vpp-libplacebo-shader-param1value1param2value2))
+- Add deband filter by libplacebo. ([--vpp-libplacebo-deband](./VCEEncC_Options.en.md#--vpp-libplacebo-deband-param1value1param2value2))
+- Add tone mapping filter by libplacebo. ([--vpp-libplacebo-tonemapping](./VCEEncC_Options.en.md#--vpp-libplacebo-tonemapping-param1value1param2value2))
 - Avoid "failed to get header." error on some HEVC input files.
   When H.264/HEVC header cannot be extracted, it can be now retrieved from the actual data packets.
-- Fix help of [--vpp-smooth](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-smooth-param1value1param2value2) showing wrong value range for qp option.
-- Fix [--vpp-transform](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-transform-param1value1param2value2) causing illegal memory access error when width or height cannot be divided by 64.
-- Fix timestamp error caused when using [--vpp-afs](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2) with VFR inputs. 
+- Fix help of [--vpp-smooth](./VCEEncC_Options.en.md#--vpp-smooth-param1value1param2value2) showing wrong value range for qp option.
+- Fix [--vpp-transform](./VCEEncC_Options.en.md#--vpp-transform-param1value1param2value2) causing illegal memory access error when width or height cannot be divided by 64.
+- Fix timestamp error caused when using [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2) with VFR inputs. 
 - Fix seek issue caused by audio getting muxed to a different fragment than the video at the same time, due to insufficient buffer for audio mux.
 - Fix muxer error copying PGS subtitles (using --sub-copy) when the input has unsorted subtitle packets.
   Now is able to avoid "Application provided invalid, non monotonically increasing dts to muxer" error.
@@ -90,23 +101,23 @@
   - dav1d 1.3.0 -> 1.4.1
   - libvpl 2.11.0 (new!)
   - nv-codec-headers 12.2.72.0 (new!)
-- Add new denoise filter ([--vpp-fft3d](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-fft3d-param1value1param2value2))
-- Add new denoise filter. ([--vpp-nlmeans](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-nlmeans-param1value1param2value2))
-- Add new deinterlace filter. ([--vpp-decomb](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-decomb-param1value1param2value2)).
-- Add per channel options to [--vpp-tweak](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-tweak-param1value1param2value2).
-- Add frame rate conversion filter. ([--vpp-frc](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-frc-param1value1param2value2))
+- Add new denoise filter ([--vpp-fft3d](./VCEEncC_Options.en.md#--vpp-fft3d-param1value1param2value2))
+- Add new denoise filter. ([--vpp-nlmeans](./VCEEncC_Options.en.md#--vpp-nlmeans-param1value1param2value2))
+- Add new deinterlace filter. ([--vpp-decomb](./VCEEncC_Options.en.md#--vpp-decomb-param1value1param2value2)).
+- Add per channel options to [--vpp-tweak](./VCEEncC_Options.en.md#--vpp-tweak-param1value1param2value2).
+- Add frame rate conversion filter. ([--vpp-frc](./VCEEncC_Options.en.md#--vpp-frc-param1value1param2value2))
 - Add ```ignore_sar``` options to [--output-res](output-res).
-- Add option to specify portable VapourSynth dir when using vpy reader. ([--vsdir](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vsdir-string))
-- Extend [--audio-resampler](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--audio-resampler-string) to take extra options.
-- Now [--avsw](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--avsw-string) can specify the decoder name to be used.
-- When [--audio-bitrate](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--audio-bitrate-intstringint) is not specified, let codec decide it's bitrate instead of setting a default bitrate of 192kbps.
+- Add option to specify portable VapourSynth dir when using vpy reader. ([--vsdir](./VCEEncC_Options.en.md#--vsdir-string))
+- Extend [--audio-resampler](./VCEEncC_Options.en.md#--audio-resampler-string) to take extra options.
+- Now [--avsw](./VCEEncC_Options.en.md#--avsw-string) can specify the decoder name to be used.
+- When [--audio-bitrate](./VCEEncC_Options.en.md#--audio-bitrate-intstringint) is not specified, let codec decide it's bitrate instead of setting a default bitrate of 192kbps.
 - Improve audio channel selection when output codec does not support the same audio channels as the input audio. 
 - Improve Windows language locale settings.
-- Don't process audio/subtitle/data tracks specified by [--audio-bitrate](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--audio-bitrate-intstringint) or [--audio-copy](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--audio-copy-intstringintstring).
+- Don't process audio/subtitle/data tracks specified by [--audio-bitrate](./VCEEncC_Options.en.md#--audio-bitrate-intstringint) or [--audio-copy](./VCEEncC_Options.en.md#--audio-copy-intstringintstring).
 - Improve handling of missing partial frame timestamps.
-- Slightly improve performance of [--vpp-smooth](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-smooth-param1value1param2value2) and [--vpp-denoise-dct](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-denoise-dct-param1value1param2value2).
+- Slightly improve performance of [--vpp-smooth](./VCEEncC_Options.en.md#--vpp-smooth-param1value1param2value2) and [--vpp-denoise-dct](./VCEEncC_Options.en.md#--vpp-denoise-dct-param1value1param2value2).
 - Fix crush of y4m reader when width cannot be divided by 16.
-- Fix encode freezing when [--avsw](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--avsw-string), [--pa](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--pa--param1value1param2value2), [--vpp-resize](https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.en.md#--vpp-resize-string) amf_* are used at the same time. ( #103 )
+- Fix encode freezing when [--avsw](./VCEEncC_Options.en.md#--avsw-string), [--pa](./VCEEncC_Options.en.md#--pa--param1value1param2value2), [--vpp-resize](./VCEEncC_Options.en.md#--vpp-resize-string) amf_* are used at the same time. ( #103 )
 - Fix seek issue caused by audio getting muxed to a different fragment than the video at the same time, due to insufficient buffer for audio mux. ( #109 )
 
 ## 8.22
