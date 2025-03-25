@@ -5,7 +5,7 @@
 - Update AMF to 1.4.36.
   Requires AMD Radeon Software Adrenalin Edition 25.1.1 or later.
 - Add ```slower``` option to ([--preset](./VCEEncC_Options.en.md#-u---preset)) for H.264/HEVC.
-- Add parallel encoding feature with file splitting. ([--parallel](./VCEEncC_Options.en.md#--parallel-int-or-param1value1param2value2))
+- Add parallel encoding feature with file splitting. ([--parallel](./VCEEncC_Options.en.md#--parallel-int-or-param1value1param2value2), Windows only)
 - Add support for ISO 639-2 T-codes in language code specification.
 - Continue processing even when DirectX11/Vulkan initialization fails.
 - Fix timestamps occasionally becoming incorrect when using --seek with certain input files.
