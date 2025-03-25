@@ -38,7 +38,8 @@ Debian/Ubuntu (x64)
   AMD driver 25.1.1 or later  
 
   > [!WARNING]
-  > Please note that it is currently difficult to run VCEEncC on iGPUs with Linux drivers.
+  > - Polaris GPUs and before is [not supported on Linux systems](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/408).
+  > - Target AMD Radeon GPU must be recognized as "GPU0" in ```vulkaninfo --summary```, otherwise it might fail to run.
 
   > [!NOTE]
   > It may be possible to run on other distributions (not tested).

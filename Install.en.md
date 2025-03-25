@@ -18,6 +18,11 @@ VCEEncC could be run directly from the extracted directory.
   
 ## Linux (Ubuntu 24.04)
 
+  > [!WARNING]
+  > Target AMD Radeon GPU must be recognized as "GPU0" in ```vulkaninfo --summary```, otherwise it might fail to run.
+  >
+  > Device selection on Linux [is not available](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/194).
+
 ### 1. Install AMD Graphics driver  
 
 Download AMD Graphics driver packages for Ubuntu 24.04 from [the webpage of AMD](https://support.amd.com/en-us/download).
@@ -38,14 +43,32 @@ sudo reboot
 sudo gpasswd -a ${USER} render
 ```
 
-### 3. Install VCEEncC
+### 3. Check GPU Recognition Status
+
+Check if your GPU is properly recognized.
+
+```Shell
+sudo apt install vulkan-utils clinfo
+```
+
+Check GPU recognition status using ```clinfo``` and ```vulkaninfo```. Especially with ```vulkaninfo```, confirm that your target AMD GPU is recognized as "GPU0".
+
+```Shell
+# Check GPU recognition status with OpenCL
+clinfo
+
+# Check GPU recognition status with Vulkan
+vulkaninfo --summary
+```
+
+### 4. Install VCEEncC
 Download deb package from [this link](https://github.com/rigaya/VCEEnc/releases), and install running the following command line. Please note "x.xx" should be replaced to the target version name.
 
 ```Shell
 sudo apt install ./VCEEncC_x.xx_Ubuntu24.04_amd64.deb
 ```
 
-### 4. Addtional Tools
+### 5. Addtional Tools
 
 There are some features which require additional installations.  
 
@@ -54,7 +77,7 @@ There are some features which require additional installations.
 | avs reader       | [AvisynthPlus](https://github.com/AviSynth/AviSynthPlus) |
 | vpy reader       | [VapourSynth](https://www.vapoursynth.com/)              |
 
-### 5. Others
+### 6. Others
 
 - Error: "Failed to load OpenCL." when running VCEEncC  
   Please check if /lib/x86_64-linux-gnu/libOpenCL.so exists. There are some cases that only libOpenCL.so.1 exists. In that case, please create a link using following command line.

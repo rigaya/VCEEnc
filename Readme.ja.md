@@ -38,11 +38,12 @@ AMD ドライバ 25.1.1 以降
   
 ### Linux
 Debian/Ubuntu系 (x64)  
-  AMD製 GPU Radeon RX5xxx(RDNA1) 以降 (dGPUのみ)  
+  AMD製 GPU Radeon RX5xxx(RDNA1) 以降  
   AMD ドライバ 25.1.1 以降  
 
   > [!WARNING]
-  > 2025/3現在のLinuxドライバでは、APU等の内蔵GPUでのVCEEncCの実行は困難です。
+  > - Polarisとそれ以前のGPUは[Linux環境では動作しません](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/408)。
+  > - 対象のAMD GPUが ```vulkaninfo --summary``` において、"GPU0" として認識されている必要があります。
 
   > [!NOTE]
   > そのほかのディストリビューションでも動作する可能性があります。

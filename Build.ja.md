@@ -58,6 +58,9 @@ VCEEnc.slnを開きます。
 
 ## Linux (Ubuntu 24.04)
 
+  > [!WARNING]
+  > 対象のAMD GPUが ```vulkaninfo --summary``` において、"GPU0" として認識されている必要があります。
+
 ### 0. ビルドに必要なもの
 
 - C++17 Compiler
