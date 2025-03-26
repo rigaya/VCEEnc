@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------
 //     VCEEnc by rigaya
 // -----------------------------------------------------------------------------------------
 // The MIT License
@@ -3345,7 +3345,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     }
 
 #if !(defined(_WIN32) || defined(_WIN64))
-    if (inputParam->ctrl.enableVulkan == RGYParamInitVulkan::TargetVendor) {
+    if (prm->ctrl.enableVulkan == RGYParamInitVulkan::TargetVendor) {
         setenv("VK_LOADER_DRIVERS_SELECT", "*amd*", 1);
     }
 #endif // #if !(defined(_WIN32) || defined(_WIN64))
