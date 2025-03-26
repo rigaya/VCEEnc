@@ -3344,6 +3344,12 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
+#if !(defined(_WIN32) || defined(_WIN64))
+    if (inputParam->ctrl.enableVulkan == RGYParamInitVulkan::TargetVendor) {
+        setenv("VK_LOADER_DRIVERS_SELECT", "*amd*", 1);
+    }
+#endif // #if !(defined(_WIN32) || defined(_WIN64))
+
     if (const auto affinity = prm->ctrl.threadParams.get(RGYThreadType::PROCESS).affinity; affinity.mode != RGYThreadAffinityMode::ALL) {
         SetProcessAffinityMask(GetCurrentProcess(), affinity.getMask());
         PrintMes(RGY_LOG_DEBUG, _T("Set Process Affinity Mask: %s (0x%llx).\n"), affinity.to_string().c_str(), affinity.getMask());
