@@ -618,7 +618,6 @@ struct VCEParam {
 
     bool    interopD3d9;
     bool    interopD3d11;
-    bool    interopVulkan;
 
     int     outputDepth;
 

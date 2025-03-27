@@ -123,11 +123,16 @@ RGY_ERR VCEAMF::initTracer(int log_level) {
     return RGY_ERR_NONE;
 }
 
-std::vector<std::unique_ptr<VCEDevice>> VCEAMF::createDeviceList(bool interopD3d9, bool interopD3d11, bool interopVulkan, bool enableOpenCL, bool enableVppPerfMonitor, bool enableAV1HWDec) {
+std::vector<std::unique_ptr<VCEDevice>> VCEAMF::createDeviceList(bool interopD3d9, bool interopD3d11, RGYParamInitVulkan interopVulkan, bool enableOpenCL, bool enableVppPerfMonitor, bool enableAV1HWDec) {
     std::vector<std::unique_ptr<VCEDevice>> devs;
 #if ENABLE_D3D11
     const int adapterCount = DeviceDX11::adapterCount();
 #elif ENABLE_VULKAN
+#if !(defined(_WIN32) || defined(_WIN64))
+    if (interopVulkan == RGYParamInitVulkan::TargetVendor) {
+        setenv("VK_LOADER_DRIVERS_SELECT", "*amd*", 1);
+    }
+#endif // #if !(defined(_WIN32) || defined(_WIN64))
     int adapterCount = 1;
     if (VULKAN_DEFAULT_DEVICE_ONLY == 0) {
         auto devVk = std::make_unique<DeviceVulkan>();

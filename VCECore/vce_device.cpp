@@ -44,7 +44,7 @@ VCEDevice::VCEDevice(shared_ptr<RGYLog> &log, amf::AMFFactory *factory, amf::AMF
 #if ENABLE_D3D11
     m_dx11(),
 #endif //#if ENABLE_D3D11
-    m_vulkaninterlop(false),
+    m_vulkaninterlop(RGYParamInitVulkan::Disable),
 #if ENABLE_VULKAN
     m_vk(),
 #endif
@@ -88,7 +88,7 @@ RGY_ERR VCEDevice::CreateContext() {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor, const bool enableAV1HWDec) {
+RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const RGYParamInitVulkan interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor, const bool enableAV1HWDec) {
     m_devName = strsprintf(_T("device #%d"), deviceId);
     m_id = deviceId;
     {
@@ -101,7 +101,10 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
     m_d3d11interlop = interopD3d11;
     m_vulkaninterlop = interopVulkan;
 #if ENABLE_VULKAN
-    if (interopVulkan) {
+    if (enableVulkan == RGYParamInitVulkan::TargetVendor) {
+        setenv("VK_LOADER_DRIVERS_SELECT", "*amd*", 1);
+    }
+    if (interopVulkan != RGYParamInitVulkan::Disable) {
         auto amferr = AMF_OK;
         if (VULKAN_DEFAULT_DEVICE_ONLY) {
             amferr = amf::AMFContext1Ptr(m_context)->InitVulkan(NULL);

@@ -42,7 +42,7 @@ Debian/Ubuntu系 (x64)
   AMD ドライバ 25.1.1 以降  
 
   > [!WARNING]
-  > - Polarisとそれ以前のGPUは[Linux環境では動作しません](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/408)。
+  > - Vegaとそれ以前のGPUは、導入難度の高めのPro版ドライバが必要とされるため、Linux環境での動作が難しいです。
   > - 対象のAMD GPUが ```vulkaninfo --summary``` において、"GPU0" として認識されている必要があります。
 
   > [!NOTE]

@@ -190,15 +190,9 @@ VCEParam::VCEParam() :
 #if ENABLE_D3D11
     interopD3d9(false),
     interopD3d11(true),
-    interopVulkan(false),
-#elif ENABLE_VULKAN
-    interopD3d9(false),
-    interopD3d11(false),
-    interopVulkan(true),
 #else
     interopD3d9(false),
     interopD3d11(false),
-    interopVulkan(false),
 #endif
     outputDepth(8),
     par(),
@@ -262,6 +256,9 @@ VCEParam::VCEParam() :
     codecParam[RGY_CODEC_AV1].nLevel = -1; // as auto
     codecParam[RGY_CODEC_AV1].nProfile = AMF_VIDEO_ENCODER_AV1_PROFILE_MAIN;
     par[0] = par[1] = 0;
+#if ENABLE_VULKAN
+    ctrl.enableVulkan = RGYParamInitVulkan::TargetVendor;
+#endif
     input.vui = VideoVUIInfo();
 }
 
