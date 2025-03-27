@@ -18,9 +18,7 @@ VCEEncC could be run directly from the extracted directory.
   
 ## Linux (Ubuntu 24.04)
 
-  > [!WARNING]
-  > Target AMD Radeon GPU must be recognized as "GPU0" in ```vulkaninfo --summary```, otherwise it might fail to run.
-  >
+  > [!NOTE]
   > Device selection on Linux [is not available](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/194).
 
 ### 1. Install AMD Graphics driver  

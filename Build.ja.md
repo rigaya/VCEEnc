@@ -58,9 +58,6 @@ VCEEnc.slnを開きます。
 
 ## Linux (Ubuntu 24.04)
 
-  > [!WARNING]
-  > 対象のAMD GPUが ```vulkaninfo --summary``` において、"GPU0" として認識されている必要があります。
-
 ### 0. ビルドに必要なもの
 
 - C++17 Compiler
@@ -68,7 +65,7 @@ VCEEnc.slnを開きます。
 - git
 - libraries
   - libva, libdrm, libmfx 
-  - ffmpeg libs (libavcodec58, libavformat58, libavfilter7, libavutil56, libswresample3, libavdevice58)
+  - ffmpeg libs (libavcodec*, libavformat*, libavfilter*, libavutil*, libswresample*, libavdevice*)
   - libass9
   - [Optional] VapourSynth
 

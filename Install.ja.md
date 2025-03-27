@@ -18,8 +18,8 @@
   
 ## Linux (Ubuntu 24.04)
 
-  > [!WARNING]
-  > 対象のAMD GPUが ```vulkaninfo --summary``` において、"GPU0" として認識されている必要があります。Linux環境では[使用するGPUを選択することはできません](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/194)。
+  > [!NOTE]
+  > Linux環境では[使用するGPUを選択することはできません](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/194)。
 
 ### 1. AMD ドライバのインストール  
 [AMDのWebページ](https://www.amd.com/ja/support)からUbuntu 24.04向けのドライバをダウンロードします。

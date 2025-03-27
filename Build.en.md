@@ -56,9 +56,6 @@ Finally, open VCEEnc.sln, and start build of VCEEnc by Visual Studio.
 
 ## Linux (Ubuntu 24.04)
 
-  > [!WARNING]
-  > Target AMD Radeon GPU must be recognized as "GPU0" in ```vulkaninfo --summary```, otherwise it might fail to run.
-
 ### 0. Requirements
 
 - C++17 Compiler
@@ -66,7 +63,7 @@ Finally, open VCEEnc.sln, and start build of VCEEnc by Visual Studio.
 - git
 - libraries
   - libva, libdrm, libmfx 
-  - ffmpeg libs (libavcodec58, libavformat58, libavfilter7, libavutil56, libswresample3, libavdevice58)
+  - ffmpeg libs  (libavcodec*, libavformat*, libavfilter*, libavutil*, libswresample*, libavdevice*)
   - libass9
   - [Optional] VapourSynth
 
