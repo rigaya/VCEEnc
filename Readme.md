@@ -34,7 +34,7 @@ AMD driver 25.1.1 or later
 
 ### Linux
 Debian/Ubuntu (x64)  
-  AMD GPU Radeon RX5xxx (RDNA1) or later (dGPU only)  
+  AMD GPU Radeon RX5xxx (RDNA1) or later  
   AMD driver 25.1.1 or later  
   It may be possible to run on other distributions (not tested).
 
@@ -68,6 +68,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 - Supports various formats such as avs, vpy, y4m, and raw
 - Supports demux/muxing using libavformat
 - Supports decode using libavcodec
+- Parallel encoding supporting multi GPU
 - Calculation of ssim/psnr of the encode
 - High performance filtering (VPP, Video Pre-Processing)
   - GPU filtering by OpenCL
