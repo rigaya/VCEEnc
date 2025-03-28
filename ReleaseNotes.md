@@ -8,8 +8,9 @@
 - Add parallel encoding feature with file splitting. ([--parallel](./VCEEncC_Options.en.md#--parallel-int-or-param1value1param2value2), Windows only)
 - Add support for ISO 639-2 T-codes in language code specification.
 - Continue processing even when DirectX11/Vulkan initialization fails.
-- Fix timestamps occasionally becoming incorrect when using --seek with certain input files.
+- Fix timestamps occasionally becoming incorrect when using [--seek](./VCEEncC_Options.en.md#--seek-intintintint) with certain input files.
 - Fix --qvbr not reflected properly. ( #115 )
+- Fix error when AMD GPU is not recognized as first GPU in Vulkan.
 
 ## 8.32
 
