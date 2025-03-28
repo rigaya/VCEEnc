@@ -75,6 +75,15 @@ VCEEnc.slnを開きます。
 sudo apt install build-essential libtool git
 ```
 
+- rust + cargo-cのインストール (libdovi, libhdr10plusビルド用)
+
+  ```Shell
+  sudo apt install libssl-dev curl
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal \
+    && . ~/.cargo/env \
+    && cargo install cargo-c
+  ```
+
 ### 2. AMD ドライバのインストール
 
 [AMDのWebページ](https://www.amd.com/ja/support)からUbuntu 24.04向けのドライバをダウンロードします。

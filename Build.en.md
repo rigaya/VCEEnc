@@ -73,6 +73,15 @@ Finally, open VCEEnc.sln, and start build of VCEEnc by Visual Studio.
 sudo apt install build-essential libtool pkg-config git
 ```
 
+- Install rust + cargo-c (for libdovi, libhdr10plus build)
+
+  ```Shell
+  sudo apt install libssl-dev curl
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal \
+    && . ~/.cargo/env \
+    && cargo install cargo-c
+  ```
+
 ### 2. Install AMD Graphics driver
 
 Download AMD Graphics driver packages for Ubuntu 24.04 from [the webpage of AMD](https://support.amd.com/en-us/download).
