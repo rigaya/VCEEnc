@@ -101,7 +101,7 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
     m_d3d11interlop = interopD3d11;
     m_vulkaninterlop = interopVulkan;
 #if ENABLE_VULKAN
-    if (enableVulkan == RGYParamInitVulkan::TargetVendor) {
+    if (interopVulkan == RGYParamInitVulkan::TargetVendor) {
         setenv("VK_LOADER_DRIVERS_SELECT", "*amd*", 1);
     }
     if (interopVulkan != RGYParamInitVulkan::Disable) {
