@@ -126,6 +126,7 @@
   - [--audio-copy \[\<int/string\>;\[,\<int/string\>\]...\]](#--audio-copy-intstringintstring)
   - [--audio-codec \[\[\<int/string\>?\]\<string\>\[:\<string\>=\<string\>\[,\<string\>=\<string\>\]...\]...\]](#--audio-codec-intstringstringstringstringstringstring)
   - [--audio-bitrate \[\<int/string\>?\]\<int\>](#--audio-bitrate-intstringint)
+  - [--audio-quality \[\<int/string\>?\]\<int\>](#--audio-quality-intstringint)
   - [--audio-profile \[\<int/string\>?\]\<string\>](#--audio-profile-intstringstring)
   - [--audio-stream \[\<int/string\>?\]{\<string1\>}\[:\<string2\>\]](#--audio-stream-intstringstring1string2)
   - [--audio-samplerate \[\<int/string\>?\]\<int\>](#--audio-samplerate-intstringint)
@@ -155,6 +156,7 @@
   - [-m, --mux-option \<string1\>:\<string2\>](#-m---mux-option-string1string2)
   - [--metadata \<string\> or \<string\>=\<string\>](#--metadata-string-or-stringstring)
   - [--avsync \<string\>](#--avsync-string)
+  - [--timestamp-passthrough](#--timestamp-passthrough)
   - [--timecode \[\<string\>\]](#--timecode-string)
   - [--tcfile-in \<string\>](#--tcfile-in-string)
   - [--timebase \<int\>/\<int\>](#--timebase-intint)
@@ -971,6 +973,11 @@ Example 1: --audio-bitrate 192 (set bitrate of audio track to 192 kbps)
 Example 2: --audio-bitrate 2?256 (set bitrate of 2nd audio track to to 256 kbps)
 ```
 
+### --audio-quality [&lt;int/string&gt;?]&lt;int&gt;
+Specify the quality when encoding audio. The value depends on the codec used.
+
+You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
+
 ### --audio-profile [&lt;int/string&gt;?]&lt;string&gt;
 Specify audio codec profile when encoding audio.You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
 
@@ -1426,6 +1433,10 @@ Set global metadata for output file.
 
   - vfr  
     Honor source timestamp and enable vfr output. Only available for avsw/avhw reader, and could not be used with --trim.
+    
+### --timestamp-passthrough  
+
+Passthrough original timestamp. Implies ```--avsync vfr```.
     
 ### --timecode [&lt;string&gt;]  
   Write timecode file to the specified path. If the path is not set, it will be written to "&lt;output file path&gt;.timecode.txt".

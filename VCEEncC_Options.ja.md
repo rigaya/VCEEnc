@@ -124,6 +124,7 @@
   - [--audio-copy \[\<int/string\>;\[,\<int/string\>\]...\]](#--audio-copy-intstringintstring)
   - [--audio-codec \[\[\<int/string\>?\]\<string\>\[:\<string\>=\<string\>\[,\<string\>=\<string\>\]...\]...\]](#--audio-codec-intstringstringstringstringstringstring)
   - [--audio-bitrate \[\<int/string\>?\]\<int\>](#--audio-bitrate-intstringint)
+  - [--audio-quality \[\<int/string\>?\]\<int\>](#--audio-quality-intstringint)
   - [--audio-profile \[\<int/string\>?\]\<string\>](#--audio-profile-intstringstring)
   - [--audio-stream \[\<int/string\>?\]{\<string1\>}\[:\<string2\>\]](#--audio-stream-intstringstring1string2)
   - [--audio-samplerate \[\<int/string\>?\]\<int\>](#--audio-samplerate-intstringint)
@@ -907,6 +908,11 @@ tsなどでエラーが出るなどしてうまく動作しない場合は、[--
   例2: --audio-bitrate 2?256 (音声の第2トラックを256kbpsで変換)
   ```
 
+### --audio-quality [&lt;int/string&gt;?]&lt;int&gt;
+音声をエンコードする際の品質を指定する。値は使用するコーデックに依存する。
+
+[&lt;int&gt;]で音声トラック(1,2,...)を選択したり、[&lt;string&gt;]で指定した言語の音声トラックを選択することもできる。
+
 ### --audio-profile [&lt;int/string&gt;?]&lt;string&gt;
 音声をエンコードする際、そのプロファイルを指定する。
 
@@ -1353,6 +1359,10 @@ mux時にオプションパラメータを渡す。&lt;string1&gt;にオプシ�
 
   - vfr  
     入力に従い、フレームのタイムスタンプをそのまま引き渡す。avsw/avhwリーダによる読み込みの時のみ使用可能。
+    
+### --timestamp-passthrough  
+
+オリジナルのタイムスタンプをそのまま引き渡す。```--avsync vfr```が自動的に指定される。
     
 ### --timecode [&lt;string&gt;]  
   指定のパスにtimecodeファイルを出力する。パスを省略した場合には、"&lt;出力ファイル名&gt;.timecode.txt"に出力する。
