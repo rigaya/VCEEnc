@@ -204,6 +204,7 @@
   - [--vpp-overlay \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-overlay-param1value1param2value2)
   - [--vpp-perf-monitor](#--vpp-perf-monitor)
 - [Other Options](#other-options)
+  - [--parallel \[\<int\>\] or \[\<string\>\]](#--parallel-int-or-string)
   - [--output-buf \<int\>](#--output-buf-int)
   - [--output-thread \<int\>](#--output-thread-int)
   - [--log \<string\>](#--log-string)
@@ -2719,6 +2720,34 @@ Print processing time for each filter enabled. This is meant for profiling purpo
 overall performance will decrease as the application waits each filter to finish when checking processing time of them. 
 
 ## Other Options
+
+### --parallel [&lt;int&gt;] or [&lt;string&gt;]
+Enables parallel encoding by file splitting. Divides the input file into multiple chunks and encodes them in parallel using separate threads to accelerate processing. Available on Windows system only.
+
+- **Restrictions**
+  Parallel encoding will be automatically disabled in the following cases:
+  - Input is from pipe
+  - Input is not seekable
+  - Frame timestamps are unstable
+  - No encoding is performed (-c raw)
+  - --dynamic-rc is enabled
+  - --trim option is enabled
+  - --timecode option is specified
+  - --tcfile-in option is specified
+  - --keyfile option is specified
+  - --key-on-chapter option is enabled
+  - ssim/psnr/vmaf is enabled
+  - --vpp-subburn (subtitle burn-in) is specified
+  - --vpp-fruc (frame interpolation) is enabled
+
+- **Examples**
+  ```
+  Example: Auto-determine number of parallel processes
+  --parallel auto
+
+  Example: Run with 3 parallel threads
+  --parallel 3
+  ```
 
 ### --output-buf &lt;int&gt;
 Specify the output buffer size in MB. The default is 8 and the maximum value is 128.
