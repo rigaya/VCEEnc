@@ -4009,14 +4009,30 @@ tstring VCECore::GetEncoderParam() {
     mes += strsprintf(_T("OS:            %s %s\n"), getOSVersion().c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"));
 #endif
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
-    mes += strsprintf(_T("GPU:           %s"), gpu_info.c_str());
+    {
+        if (m_parallelEnc && m_devNames.size() > 1) {
+            mes += strsprintf(_T("GPU:           %s"), m_devNames[0].c_str());
 #if defined(_WIN32) || defined(_WIN64)
-    const auto driverVersion = m_dev->getDriverVersion();
-    if (driverVersion.length() > 0) {
-        mes += _T(" [") + driverVersion + _T("]");
-    }
+            const auto driverVersion = m_dev->getDriverVersion();
+            if (driverVersion.length() > 0) {
+                mes += _T(" [") + driverVersion + _T("]");
+            }
 #endif
-    mes += _T("\n");
+            mes += _T("\n");
+            for (size_t i = 1; i < m_devNames.size(); i++) {
+                mes += strsprintf(_T("               %s\n"), m_devNames[i].c_str());
+            }
+        } else {
+            mes += strsprintf(_T("GPU:           %s"), gpu_info.c_str());
+#if defined(_WIN32) || defined(_WIN64)
+            const auto driverVersion = m_dev->getDriverVersion();
+            if (driverVersion.length() > 0) {
+                mes += _T(" [") + driverVersion + _T("]");
+            }
+#endif
+            mes += _T("\n");
+        }
+    }
     mes += strsprintf(_T("AMF:           Runtime %d.%d.%d / SDK %d.%d.%d\n"),
         (int)AMF_GET_MAJOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_MINOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_SUBMINOR_VERSION(m_AMFRuntimeVersion),
         AMF_VERSION_MAJOR, AMF_VERSION_MINOR, AMF_VERSION_RELEASE);
@@ -4033,6 +4049,13 @@ tstring VCECore::GetEncoderParam() {
     mes += strsprintf(_T("Input Info:    %s\n"), m_pFileReader->GetInputMessage());
     if (cropEnabled(inputInfo.crop)) {
         mes += strsprintf(_T("Crop:          %d,%d,%d,%d\n"), inputInfo.crop.e.left, inputInfo.crop.e.up, inputInfo.crop.e.right, inputInfo.crop.e.bottom);
+    }
+    if (m_parallelEnc) {
+        tstring parallelEncMes = strsprintf(_T("%d"), m_parallelEnc->parallelCount());
+        if (m_parallelEnc->chunks() != m_parallelEnc->parallelCount()) {
+            parallelEncMes += strsprintf(_T(" [chunks: %d]"), m_parallelEnc->chunks());
+        }
+        mes += strsprintf(_T("Parallel Enc   %s\n"), parallelEncMes.c_str());
     }
     if (m_vpFilters.size() > 0 || m_videoQualityMetric) {
         const TCHAR *m = _T("VPP            ");
