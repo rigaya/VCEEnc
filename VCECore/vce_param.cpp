@@ -662,13 +662,16 @@ RGY_ERR AMFParams::SetParamTypeAV1() {
     SetParamType(AMF_VIDEO_ENCODER_AV1_PEAK_BITRATE,                           AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Peak bit rate in bits");
 
     SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_COMPRESSED_FRAME_SIZE,              AMF_PARAM_DYNAMIC, L"amf_int64; default = 0; Max compressed frame Size in bits. 0 - no limit");
-    SetParamType(AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTRA,                      AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Min QIndex for intra frames; range = 0-255");
-    SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTRA,                      AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Max QIndex for intra frames; range = 0-255");
-    SetParamType(AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTER,                      AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Min QIndex for inter frames; range = 0-255");
-    SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTER,                      AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Max QIndex for inter frames; range = 0-255");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTRA,                      AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Min QIndex for intra frames; range = 1-255");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTRA,                      AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Max QIndex for intra frames; range = 1-255");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTER,                      AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Min QIndex for inter frames; range = 1-255");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTER,                      AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Max QIndex for inter frames; range = 1-255");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MIN_Q_INDEX_INTER_B,                    AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Min QIndex for inter frames (bi-directional); range = 1-255");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTER_B,                    AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; Max QIndex for inter frames (bi-directional); range = 1-255");
 
-    SetParamType(AMF_VIDEO_ENCODER_AV1_Q_INDEX_INTRA,                          AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; intra-frame QIndex; range = 0-255");
-    SetParamType(AMF_VIDEO_ENCODER_AV1_Q_INDEX_INTER,                          AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; inter-frame QIndex; range = 0-255");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_Q_INDEX_INTRA,                          AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; intra-frame QIndex; range = 1-255");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_Q_INDEX_INTER,                          AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; inter-frame QIndex; range = 1-255");
+    SetParamType(AMF_VIDEO_ENCODER_AV1_Q_INDEX_INTER_B,                        AMF_PARAM_DYNAMIC, L"amf_int64; default = depends on USAGE; inter-frame QIndex (bi-directional); range = 1-255");
 
     SetParamType(AMF_VIDEO_ENCODER_AV1_RATE_CONTROL_SKIP_FRAME,                AMF_PARAM_DYNAMIC, L"bool; default = depends on USAGE; If true, rate control may code skip frame when needed; if false, rate control will not code skip frame.");
 
