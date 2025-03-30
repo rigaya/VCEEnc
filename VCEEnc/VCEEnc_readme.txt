@@ -187,6 +187,14 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2025.03.30 (8.34)
+[VCEEncC]
+- AV1のSAR比指定に対応。
+- AV1でのBフレームへのQP値指定に対応。
+
+[VCEEnc.auo]
+- QVBRの品質の値の設定に対応。
+
 2025.03.29 (8.33)
 - AMFを1.4.36に更新。
   AMD Radeon Software Adrenalin Edition 25.1.1 以降が必要。

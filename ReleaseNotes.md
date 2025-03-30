@@ -1,5 +1,10 @@
 # VCEEnc Release Notes
 
+## 8.34
+
+- Add support for SAR (Sample Aspect Ratio) in AV1 encoding (on container side).
+- Fix B-frame QP value in AV1 encoding.
+
 ## 8.33
 
 - Update AMF to 1.4.36.

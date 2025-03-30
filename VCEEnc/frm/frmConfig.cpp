@@ -946,16 +946,18 @@ System::Void frmConfig::fcgChangeEnabled(System::Object^  sender, System::EventA
     fcgNUQPMin->Maximum = qp_max;
     fcgNUQPMax->Maximum = qp_max;
 
-    fcgPNBitrate->Visible = cbr_vbr_mode;
+    fcgPNBitrate->Visible = cbr_vbr_mode || qvbr_mode;
+    fcgNUBitrate->Visible = cbr_vbr_mode;
+    fcgLBBitrate->Visible = cbr_vbr_mode;
     fcgNUBitrate->Enabled = cbr_vbr_mode;
     fcgLBBitrate->Enabled = cbr_vbr_mode;
-    fcgNUMaxkbps->Enabled = cbr_vbr_mode;
-    fcgLBMaxkbps->Enabled = cbr_vbr_mode;
-    fcgLBMaxBitrate2->Enabled = cbr_vbr_mode;
-    fcgNUVBVBufSize->Visible = cbr_vbr_mode;
-    fcgNUVBVBufSize->Enabled = cbr_vbr_mode;
-    fcgLBVBVBufSize->Visible = cbr_vbr_mode;
-    fcgLBVBVBufSizeKbps->Visible = cbr_vbr_mode;
+    fcgNUMaxkbps->Enabled = cbr_vbr_mode || qvbr_mode;
+    fcgLBMaxkbps->Enabled = cbr_vbr_mode || qvbr_mode;
+    fcgLBMaxBitrate2->Enabled = cbr_vbr_mode || qvbr_mode;
+    fcgNUVBVBufSize->Visible = cbr_vbr_mode || qvbr_mode;
+    fcgNUVBVBufSize->Enabled = cbr_vbr_mode || qvbr_mode;
+    fcgLBVBVBufSize->Visible = cbr_vbr_mode || qvbr_mode;
+    fcgLBVBVBufSizeKbps->Visible = cbr_vbr_mode || qvbr_mode;
     fcgPNQVBR->Visible = qvbr_mode;
     fcgLBQVBRQuality->Enabled = qvbr_mode;
     fcgNUQVBRQuality->Enabled = qvbr_mode;
@@ -1381,13 +1383,14 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     this->SuspendLayout();
 
     VCEParam enc;
+    const int defaultBitrate = enc.nBitrate;
     parse_cmd(&enc, cnf->enc.cmd);
 
     SetCXIndex(fcgCXDevice,            enc.deviceID+1 /*先頭はAutoなので*/);
     SetCXIndex(fcgCXEncCodec,          get_cx_index(list_codec, enc.codec));
     SetCXIndex(fcgCXEncMode,           get_cx_index(get_rc_method(enc.codec), enc.rateControl));
     SetCXIndex(fcgCXQualityPreset,     get_cx_index(get_quality_preset(enc.codec), enc.qualityPreset));
-    SetNUValue(fcgNUBitrate,           enc.nBitrate);
+    SetNUValue(fcgNUBitrate,           enc.nBitrate == 0 ? defaultBitrate : enc.nBitrate);
     SetNUValue(fcgNUMaxkbps,           enc.nMaxBitrate);
     SetNUValue(fcgNUVBVBufSize,        enc.nVBVBufferSize);
     SetNUValue(fcgNUQVBRQuality,       enc.qvbrLevel);
@@ -1654,6 +1657,7 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     enc.codec                                   = (RGY_CODEC)list_codec[fcgCXEncCodec->SelectedIndex].value;
     conf->enc.codec = enc.codec;
     enc.rateControl                             = get_rc_method(enc.codec)[fcgCXEncMode->SelectedIndex].value;
+    const bool qvbr_mode                        = (enc.rateControl == VCE_RC_QVBR_IDX);
     enc.qualityPreset                           = get_quality_preset(enc.codec)[fcgCXQualityPreset->SelectedIndex].value;
     enc.codecParam[RGY_CODEC_H264].nProfile     = list_avc_profile[fcgCXCodecProfile->SelectedIndex].value;
     enc.codecParam[RGY_CODEC_H264].nLevel       = list_avc_level[fcgCXCodecLevel->SelectedIndex].value;
@@ -1662,7 +1666,7 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     enc.codecParam[RGY_CODEC_AV1].nProfile      = list_av1_profile[fcgCXAV1Profile->SelectedIndex].value;
     enc.codecParam[RGY_CODEC_AV1].nLevel        = list_av1_level[fcgCXAV1Level->SelectedIndex].value;
     enc.outputDepth                             = list_hevc_bitdepth[fcgCXBitdepth->SelectedIndex].value;
-    enc.nBitrate                                = (int)fcgNUBitrate->Value;
+    enc.nBitrate                                = (qvbr_mode) ? 0 : (int)fcgNUBitrate->Value;
     enc.nMaxBitrate                             = (int)fcgNUMaxkbps->Value;
     enc.nVBVBufferSize                          = (int)fcgNUVBVBufSize->Value;
     enc.qvbrLevel                               = (int)fcgNUQVBRQuality->Value;
