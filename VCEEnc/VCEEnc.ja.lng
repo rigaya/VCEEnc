@@ -461,6 +461,7 @@ AuofcgLBQPMin=下限
 AuofcgLBSkipFrame=スキップフレーム
 AuofcgLBVBVBufSize=VBVバッファサイズ
 AuofcgLBVBVBufSizeKbps=kbps
+AuofcgLBQVBRQuality=QVBR品質
 AuofcgLBQPMax=上限
 AuofcgLBQPMinMAX=QP 最小
 AuofcgLBMotionEst=動き予測

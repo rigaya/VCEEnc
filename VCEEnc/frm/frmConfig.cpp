@@ -924,8 +924,9 @@ System::Void frmConfig::InitStgFileList() {
 System::Void frmConfig::fcgChangeEnabled(System::Object^  sender, System::EventArgs^  e) {
     const auto enc_codec = (RGY_CODEC)list_codec[fcgCXEncCodec->SelectedIndex].value;
     int vce_rc_method = get_rc_method(enc_codec)[fcgCXEncMode->SelectedIndex].value;
-    bool cqp_mode = (vce_rc_method == 0);
-    bool cbr_vbr_mode = (vce_rc_method == 1 || vce_rc_method == 2);
+    bool cqp_mode = (vce_rc_method == VCE_RC_CQP_IDX);
+    bool qvbr_mode = (vce_rc_method == VCE_RC_QVBR_IDX);
+    bool cbr_vbr_mode = (!cqp_mode && !qvbr_mode);
 
     this->SuspendLayout();
 
@@ -945,9 +946,9 @@ System::Void frmConfig::fcgChangeEnabled(System::Object^  sender, System::EventA
     fcgNUQPMin->Maximum = qp_max;
     fcgNUQPMax->Maximum = qp_max;
 
-    fcgPNBitrate->Visible = !cqp_mode;
-    fcgNUBitrate->Enabled = !cqp_mode;
-    fcgLBBitrate->Enabled = !cqp_mode;
+    fcgPNBitrate->Visible = cbr_vbr_mode;
+    fcgNUBitrate->Enabled = cbr_vbr_mode;
+    fcgLBBitrate->Enabled = cbr_vbr_mode;
     fcgNUMaxkbps->Enabled = cbr_vbr_mode;
     fcgLBMaxkbps->Enabled = cbr_vbr_mode;
     fcgLBMaxBitrate2->Enabled = cbr_vbr_mode;
@@ -955,6 +956,9 @@ System::Void frmConfig::fcgChangeEnabled(System::Object^  sender, System::EventA
     fcgNUVBVBufSize->Enabled = cbr_vbr_mode;
     fcgLBVBVBufSize->Visible = cbr_vbr_mode;
     fcgLBVBVBufSizeKbps->Visible = cbr_vbr_mode;
+    fcgPNQVBR->Visible = qvbr_mode;
+    fcgLBQVBRQuality->Enabled = qvbr_mode;
+    fcgNUQVBRQuality->Enabled = qvbr_mode;
 
     fcggroupBoxResize->Enabled = fcgCBVppResize->Checked;
     fcgPNVppDenoiseKnn->Visible = (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("knn")));
@@ -1195,6 +1199,7 @@ System::Void frmConfig::LoadLangText() {
     LOAD_CLI_TEXT(fcgLBSkipFrame);
     LOAD_CLI_TEXT(fcgLBVBVBufSize);
     LOAD_CLI_TEXT(fcgLBVBVBufSizeKbps);
+    LOAD_CLI_TEXT(fcgLBQVBRQuality);
     LOAD_CLI_TEXT(fcgLBQPMax);
     LOAD_CLI_TEXT(fcgLBQPMinMAX);
     LOAD_CLI_TEXT(fcgLBMotionEst);
@@ -1385,6 +1390,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetNUValue(fcgNUBitrate,           enc.nBitrate);
     SetNUValue(fcgNUMaxkbps,           enc.nMaxBitrate);
     SetNUValue(fcgNUVBVBufSize,        enc.nVBVBufferSize);
+    SetNUValue(fcgNUQVBRQuality,       enc.qvbrLevel);
     SetNUValue(fcgNUQPI,               enc.qp.qpI);
     SetNUValue(fcgNUQPP,               enc.qp.qpP);
     SetNUValue(fcgNUQPB,               enc.qp.qpB);
@@ -1659,6 +1665,7 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     enc.nBitrate                                = (int)fcgNUBitrate->Value;
     enc.nMaxBitrate                             = (int)fcgNUMaxkbps->Value;
     enc.nVBVBufferSize                          = (int)fcgNUVBVBufSize->Value;
+    enc.qvbrLevel                               = (int)fcgNUQVBRQuality->Value;
     enc.nGOPLen                                 = (int)fcgNUGopLength->Value;
     enc.qp.qpI                                  = (int)fcgNUQPI->Value;
     enc.qp.qpP                                  = (int)fcgNUQPP->Value;

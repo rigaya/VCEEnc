@@ -461,6 +461,7 @@ AuofcgLBQPMin=下限
 AuofcgLBSkipFrame=跳过帧
 AuofcgLBVBVBufSize=VBV缓存大小
 AuofcgLBVBVBufSizeKbps=kbps
+fcgLBQVBRQuality=QVBR质量
 AuofcgLBQPMax=上限
 AuofcgLBQPMinMAX=最小量化值
 AuofcgLBMotionEst=运动估计

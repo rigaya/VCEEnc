@@ -222,6 +222,17 @@ const CX_DESC list_mv_presicion[] = {
     { NULL, 0 }
 };
 
+enum {
+    VCE_RC_CQP_IDX,
+    VCE_RC_CBR_IDX,
+    VCE_RC_VBR_IDX,
+    VCE_RC_VBR_LAT_IDX,
+    VCE_RC_QVBR_IDX,
+    VCE_RC_VBR_HQ_IDX,
+    VCE_RC_CBR_HQ_IDX
+};
+
+
 const CX_DESC list_vce_h264_rc_method[] = {
     { _T("CQP"), AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CONSTANT_QP          },
     { _T("CBR"), AMF_VIDEO_ENCODER_RATE_CONTROL_METHOD_CBR                  },

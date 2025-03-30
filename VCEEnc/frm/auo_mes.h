@@ -589,6 +589,7 @@ enum AuoMes {
         AuofcgLBSkipFrame,
         AuofcgLBVBVBufSize,
         AuofcgLBVBVBufSizeKbps,
+        AuofcgLBQVBRQuality,
         AuofcgLBQPMax,
         AuofcgLBQPMinMAX,
         AuofcgLBMotionEst,
