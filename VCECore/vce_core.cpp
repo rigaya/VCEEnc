@@ -743,6 +743,7 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
         inputParams->codec,
         csp_rgy_to_enc(GetEncoderCSP(inputParams)),
         m_params,
+        m_sar,
         m_picStruct,
         m_encVUI
     );
@@ -3106,6 +3107,7 @@ RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
             prm->codec,
             formatOut,
             m_params,
+            m_sar,
             m_picStruct,
             m_encVUI
         );
@@ -4088,8 +4090,6 @@ tstring VCECore::GetEncoderParam() {
         getPropertyDesc(AMF_PARAM_PROFILE_LEVEL(m_encCodec), get_level_list(m_encCodec)).c_str(),
         (m_encCodec == RGY_CODEC_HEVC) ? (tstring(_T(" (")) + getPropertyDesc(AMF_VIDEO_ENCODER_HEVC_TIER, get_tier_list(m_encCodec)) + _T(" tier)")).c_str() : _T(""));
     const AMF_VIDEO_ENCODER_SCANTYPE_ENUM scan_type = (m_encCodec == RGY_CODEC_H264) ? (AMF_VIDEO_ENCODER_SCANTYPE_ENUM)GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE) : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE;
-    AMFRatio aspectRatio = AMFConstructRatio(0,0);
-    m_params.GetParam(AMF_PARAM_ASPECT_RATIO(m_encCodec), aspectRatio);
     auto frameRate = GetPropertyRate(AMF_PARAM_FRAMERATE(m_encCodec));
     int64_t outWidth = 0, outHeight = 0;
     m_params.GetParam(VCE_PARAM_KEY_OUTPUT_WIDTH, outWidth);
@@ -4097,7 +4097,7 @@ tstring VCECore::GetEncoderParam() {
     mes += strsprintf(_T("               %dx%d%s %d:%d %0.3ffps (%d/%dfps)\n"),
         (int)outWidth, (int)outHeight,
         scan_type == AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED ? _T("i") : _T("p"),
-        aspectRatio.num, aspectRatio.den,
+        m_sar.n(), m_sar.d(),
         frameRate.num / (double)frameRate.den, frameRate.num, frameRate.den);
     if (m_pFileWriter) {
         auto mesSplitted = split(m_pFileWriter->GetOutputMessage(), _T("\n"));

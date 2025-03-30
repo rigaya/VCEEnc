@@ -429,6 +429,7 @@ VideoInfo videooutputinfo(
     RGY_CODEC codec,
     amf::AMF_SURFACE_FORMAT encFormat,
     const AMFParams &prm,
+    const rgy_rational<int>& sar,
     RGY_PICSTRUCT picstruct,
     const VideoVUIInfo& vui);
 

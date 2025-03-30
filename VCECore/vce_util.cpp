@@ -284,6 +284,7 @@ VideoInfo videooutputinfo(
     RGY_CODEC codec,
     amf::AMF_SURFACE_FORMAT encFormat,
     const AMFParams& prm,
+    const rgy_rational<int>& sar,
     RGY_PICSTRUCT picstruct,
     const VideoVUIInfo& vui) {
 
@@ -299,8 +300,8 @@ VideoInfo videooutputinfo(
     info.dstHeight = prm.get<int>(VCE_PARAM_KEY_OUTPUT_HEIGHT);
     info.fpsN = prm.get<AMFRate>(AMF_PARAM_FRAMERATE(codec)).num;
     info.fpsD = prm.get<AMFRate>(AMF_PARAM_FRAMERATE(codec)).den;
-    info.sar[0] = prm.get<AMFRatio>(AMF_PARAM_ASPECT_RATIO(codec)).num;
-    info.sar[1] = prm.get<AMFRatio>(AMF_PARAM_ASPECT_RATIO(codec)).den;
+    info.sar[0] = (codec == RGY_CODEC_AV1) ? sar.n() : prm.get<AMFRatio>(AMF_PARAM_ASPECT_RATIO(codec)).num;
+    info.sar[1] = (codec == RGY_CODEC_AV1) ? sar.d() : prm.get<AMFRatio>(AMF_PARAM_ASPECT_RATIO(codec)).den;
     adjust_sar(&info.sar[0], &info.sar[1], info.dstWidth, info.dstHeight);
     info.picstruct = picstruct;
     info.csp = csp_enc_to_rgy(encFormat);
