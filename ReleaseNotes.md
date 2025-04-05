@@ -1,5 +1,14 @@
 # VCEEnc Release Notes
 
+## 8.35
+
+- Improve audio and video synchronization to achieve more uniform mixing when muxing with subtitles or data tracks.
+- Improve invalid input data hadling to avoid freeze when "failed to run h264_mp4toannexb bitstream filter" error occurs.
+  Now properly exits with error.
+- Add support for uyvy as input color format.
+- Improve B-frame settings in AV1 encoding. ( #120 )
+- Automatically disable --parallel when number of encoders is 1 when using ```--parallel auto```.
+
 ## 8.34
 
 - Add support for SAR (Sample Aspect Ratio) in AV1 encoding (on container side).
