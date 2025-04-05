@@ -2670,7 +2670,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_Q_INDEX_INTER, (amf_int64)prm->nQPMaxInter.value());
         }
         if (prm->bframes.has_value()) {
-            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_CONSECUTIVE_BPICTURES, (amf_int64)(prm->bframes.value() > 0 ? 127 : 0));
+            m_params.SetParam(AMF_VIDEO_ENCODER_AV1_MAX_CONSECUTIVE_BPICTURES, (amf_int64)(prm->bframes.value() > 0 ? 3 : 0));
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_B_PIC_PATTERN, (amf_int64)prm->bframes.value());
         }
         if (prm->adaptMiniGOP.has_value()) {
