@@ -54,7 +54,7 @@ public:
     VCEDevice(shared_ptr<RGYLog>& log, amf::AMFFactory *factory, amf::AMFTrace *trace);
     virtual ~VCEDevice();
 
-    virtual RGY_ERR init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const RGYParamInitVulkan interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor, bool enableAV1Check);
+    virtual RGY_ERR init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const RGYParamInitVulkan interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor, bool enableAV1Check, const int openCLBuildThreads);
 
     amf::AMFCapsPtr getEncCaps(RGY_CODEC codec);
     amf::AMFCapsPtr getDecCaps(RGY_CODEC codec);
@@ -87,7 +87,7 @@ public:
 
     static const wchar_t *CAP_10BITDEPTH;
 protected:
-    RGY_ERR initOpenCL(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool enableVppPerfMonitor);
+    RGY_ERR initOpenCL(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool enableVppPerfMonitor, const int openCLBuildThreads);
     virtual RGY_ERR CreateContext();
     void getAllCaps();
 

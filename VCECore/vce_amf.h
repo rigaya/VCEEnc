@@ -74,7 +74,7 @@ public:
 
     void PrintMes(RGYLogLevel log_level, const TCHAR *format, ...);
 
-    virtual std::vector<std::unique_ptr<VCEDevice>> createDeviceList(bool interopD3d9, bool interopD3d11, RGYParamInitVulkan interopVulkan, bool enableOpenCL, bool enableVppPerfMonitor, bool enableAV1HWDec);
+    virtual std::vector<std::unique_ptr<VCEDevice>> createDeviceList(bool interopD3d9, bool interopD3d11, RGYParamInitVulkan interopVulkan, bool enableOpenCL, bool enableVppPerfMonitor, bool enableAV1HWDec, int openCLBuildThreads);
 
     amf::AMFFactory *factory() { return m_pFactory; }
     uint64_t runtimeVersion() const { return m_AMFRuntimeVersion;}

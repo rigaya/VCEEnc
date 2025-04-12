@@ -88,7 +88,7 @@ RGY_ERR VCEDevice::CreateContext() {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const RGYParamInitVulkan interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor, const bool enableAV1HWDec) {
+RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const RGYParamInitVulkan interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor, const bool enableAV1HWDec, const int openCLBuildThreads) {
     m_devName = strsprintf(_T("device #%d"), deviceId);
     m_id = deviceId;
     {
@@ -176,7 +176,7 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
 #endif //#if ENABLE_D3D11
 
     if (enableOpenCL) {
-        const auto openclerr = initOpenCL(deviceId, interopD3d9, interopD3d11, enableVppPerfMonitor);
+        const auto openclerr = initOpenCL(deviceId, interopD3d9, interopD3d11, enableVppPerfMonitor, openCLBuildThreads);
         //OpenCLの初期化に失敗してもOpenCL無効のまま処理を継続してみる
         if (openclerr != RGY_ERR_NONE) {
             const auto openclDLLCheck = checkOpenCLDLL();
@@ -189,7 +189,7 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool enableVppPerfMonitor) {
+RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool enableVppPerfMonitor, const int openCLBuildThreads) {
     const auto loglevelOpenCLError = RGY_LOG_WARN;
     RGYOpenCL cl(m_log);
     auto platforms = cl.getPlatforms("AMD");
@@ -252,7 +252,7 @@ RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const 
 #endif //#if ENABLE_D3D11
         nullptr);
 
-    m_cl = std::make_shared<RGYOpenCLContext>(selectedPlatform, m_log);
+    m_cl = std::make_shared<RGYOpenCLContext>(selectedPlatform, openCLBuildThreads, m_log);
     if (m_cl->createContext((enableVppPerfMonitor) ? CL_QUEUE_PROFILING_ENABLE : 0) != CL_SUCCESS) {
         PrintMes(loglevelOpenCLError, _T("Failed to create OpenCL context.\n"));
         return RGY_ERR_UNKNOWN;

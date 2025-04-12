@@ -578,6 +578,7 @@
     <ClCompile Include="vce_param.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\NVEnc\NVEncCore\rgy_thread_pool.h" />
     <ClInclude Include="api_hook.h" />
     <ClInclude Include="convert_const.h" />
     <ClInclude Include="convert_csp.h" />

@@ -689,6 +689,9 @@
     <ClInclude Include="rgy_parallel_enc.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\NVEnc\NVEncCore\rgy_thread_pool.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="rgy_filter.cl">

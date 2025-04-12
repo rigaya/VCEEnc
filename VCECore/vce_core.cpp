@@ -400,7 +400,7 @@ RGY_ERR VCECore::InitParallelEncode(VCEParam *inputParam, const int maxEncoders)
         }
     }
     m_parallelEnc = std::make_unique<RGYParallelEnc>(m_pLog);
-    if ((sts = m_parallelEnc->parallelRun(inputParam, m_pFileReader.get(), m_outputTimebase, m_pStatus.get())) != RGY_ERR_NONE) {
+    if ((sts = m_parallelEnc->parallelRun(inputParam, m_pFileReader.get(), m_outputTimebase, inputParam->ctrl.parallelEnc.parallelCount > maxEncoders, m_pStatus.get())) != RGY_ERR_NONE) {
         if (inputParam->ctrl.parallelEnc.isChild()) {
             return sts; // 子スレッド側でエラーが起こった場合はエラー
         }
@@ -3406,7 +3406,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     if (deviceInfoCache
         && (deviceInfoCache->getDeviceIds().size() == 0
             || (prm->deviceID >= 0 && deviceInfoCache->getDeviceIds().size() <= prm->deviceID))) {
-        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec);
+        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads);
         if (devList.size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
             return ret;
@@ -3426,7 +3426,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     });
 
     if (devList.size() == 0) {
-        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec);
+        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads);
         if (devList.size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
             return ret;
@@ -4348,9 +4348,9 @@ RGY_ERR VCEFeatures::init(int deviceId, const RGYParamLogLevel& loglevel) {
     }
 
 #if ENABLE_D3D11
-    auto devList = m_core->createDeviceList(false, true, RGYParamInitVulkan::Disable, true, false, false);
+    auto devList = m_core->createDeviceList(false, true, RGYParamInitVulkan::Disable, true, false, false, 0);
 #else
-    auto devList = m_core->createDeviceList(false, false, RGYParamInitVulkan::TargetVendor, true, false, false);
+    auto devList = m_core->createDeviceList(false, false, RGYParamInitVulkan::TargetVendor, true, false, false, 0);
 #endif
     std::unique_ptr<RGYDeviceUsage> devUsage;
     std::unique_ptr<RGYDeviceUsageLockManager> devUsageLock;
