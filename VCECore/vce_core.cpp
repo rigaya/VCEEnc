@@ -3484,7 +3484,8 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     }
 
     // 並列動作の子は読み込みが終了したらすぐに並列動作を呼び出し
-    if (prm->ctrl.parallelEnc.isChild()) {
+    // ただし、親-子間のデータやり取りを少し遅らせる場合(delayChildSync)は親と同じタイミングで処理する
+    if (prm->ctrl.parallelEnc.isChild() && !prm->ctrl.parallelEnc.delayChildSync) {
         ret = InitParallelEncode(prm, (int)m_devNames.size());
         if (ret != RGY_ERR_NONE) return ret;
     }
@@ -3514,7 +3515,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     }
 
     // 親はエンコード設定が完了してから並列動作を呼び出し
-    if (prm->ctrl.parallelEnc.isParent()) {
+    if (prm->ctrl.parallelEnc.isParent() || (prm->ctrl.parallelEnc.isChild() && prm->ctrl.parallelEnc.delayChildSync)) {
         ret = InitParallelEncode(prm, (int)m_devNames.size());
         if (ret != RGY_ERR_NONE) return ret;
     }
