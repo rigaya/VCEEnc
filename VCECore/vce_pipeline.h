@@ -93,6 +93,67 @@ enum class PipelineTaskSurfaceType {
     AMF
 };
 
+class PipelineTaskStopWatch {
+    std::array<std::vector<std::pair<tstring, int64_t>>, 2> m_ticks;
+    std::array<std::chrono::high_resolution_clock::time_point, 2> m_prevTimepoints;
+public:
+    PipelineTaskStopWatch(const std::vector<tstring>& tickSend, const std::vector<tstring>& tickGet) : m_ticks(), m_prevTimepoints() {
+        for (size_t i = 0; i < tickSend.size(); i++) {
+            m_ticks[0].push_back({ tickSend[i], 0 });
+        }
+        for (size_t i = 0; i < tickGet.size(); i++) {
+            m_ticks[1].push_back({ tickGet[i], 0 });
+        }
+    };
+    void set(const int type) {
+        m_prevTimepoints[type] = std::chrono::high_resolution_clock::now();
+    }
+    void add(const int type, const int idx) {
+        auto now = std::chrono::high_resolution_clock::now();
+        m_ticks[type][idx].second += std::chrono::duration_cast<std::chrono::nanoseconds>(now - m_prevTimepoints[type]).count();
+        m_prevTimepoints[type] = now;
+    }
+    int64_t totalTicks() const {
+        int64_t total = 0;
+        for (int itype = 0; itype < 2; itype++) {
+            for (int i = 0; i < (int)m_ticks[itype].size(); i++) {
+                total += m_ticks[itype][i].second;
+            }
+        }
+        return total;
+    }
+    size_t maxWorkStrLen() const {
+        size_t maxLen = 0;
+        for (size_t itype = 0; itype < m_ticks.size(); itype++) {
+            for (int i = 0; i < (int)m_ticks[itype].size(); i++) {
+                maxLen = (std::max)(maxLen, m_ticks[itype][i].first.length());
+            }
+        }
+        return maxLen;
+    }
+    tstring print(const int64_t totalTicks, const size_t maxLen) {
+        const TCHAR *type[] = {_T("send"), _T("get ")};
+        tstring str;
+        for (size_t itype = 0; itype < m_ticks.size(); itype++) {
+            int64_t total = 0;
+            for (int i = 0; i < (int)m_ticks[itype].size(); i++) {
+                str += type[itype] + tstring(_T(":"));
+                str += m_ticks[itype][i].first;
+                str += tstring(maxLen - m_ticks[itype][i].first.length(), _T(' '));
+                str += strsprintf(_T(" : %8d ms [%5.1f]\n"), ((m_ticks[itype][i].second + 500000) / 1000000), m_ticks[itype][i].second * 100.0 / totalTicks);
+                total += m_ticks[itype][i].second;
+            }
+            if (m_ticks[itype].size() > 1) {
+                str += type[itype] + tstring(_T(":"));
+                str += _T("total");
+                str += tstring(maxLen - _tcslen(_T("total")), _T(' '));
+                str += strsprintf(_T(" : %8d ms [%5.1f]\n"), ((total + 500000) / 1000000), total * 100.0 / totalTicks);
+            }
+        }
+        return str;
+    }
+};
+
 class PipelineTaskSurface {
 private:
     RGYFrame *surf;
@@ -428,13 +489,31 @@ protected:
     int m_outFrames;
     int m_outMaxQueueSize;
     std::shared_ptr<RGYLog> m_log;
+    std::unique_ptr<PipelineTaskStopWatch> m_stopwatch;
 public:
     PipelineTask() : m_type(PipelineTaskType::UNKNOWN), m_context(), m_outQeueue(), m_workSurfs(), m_inFrames(0), m_outFrames(0), m_outMaxQueueSize(0), m_log() {};
     PipelineTask(PipelineTaskType type, amf::AMFContextPtr conetxt, int outMaxQueueSize, std::shared_ptr<RGYLog> log) :
-        m_type(type), m_context(conetxt), m_outQeueue(), m_workSurfs(), m_inFrames(0), m_outFrames(0), m_outMaxQueueSize(outMaxQueueSize), m_log(log) {
+        m_type(type), m_context(conetxt), m_outQeueue(), m_workSurfs(), m_inFrames(0), m_outFrames(0), m_outMaxQueueSize(outMaxQueueSize), m_log(log), m_stopwatch() {
     };
     virtual ~PipelineTask() {
         m_workSurfs.clear();
+    }
+    virtual void setStopWatch() {};
+    virtual void printStopWatch(const int64_t totalTicks, const size_t maxLen) {
+        if (m_stopwatch) {
+            const auto strlines = split(m_stopwatch->print(totalTicks, maxLen), _T("\n"));
+            for (auto& str : strlines) {
+                if (str.length() > 0) {
+                    PrintMes(RGY_LOG_INFO, _T("%s\n"), str.c_str());
+                }
+            }
+        }
+    }
+    virtual int64_t getStopWatchTotal() const {
+        return (m_stopwatch) ? m_stopwatch->totalTicks() : 0ll;
+    }
+    virtual size_t getStopWatchMaxWorkStrLen() const {
+        return (m_stopwatch) ? m_stopwatch->maxWorkStrLen() : 0u;
     }
     virtual bool isPassThrough() const { return false; }
     virtual tstring print() const { return getPipelineTaskTypeName(m_type); }
@@ -443,6 +522,7 @@ public:
     virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) = 0;
     virtual RGY_ERR getOutputFrameInfo(RGYFrameInfo& info) { info = RGYFrameInfo(); return RGY_ERR_NONE; }
     virtual std::vector<std::unique_ptr<PipelineTaskOutput>> getOutput(const bool sync) {
+        if (m_stopwatch) m_stopwatch->set(1);
         std::vector<std::unique_ptr<PipelineTaskOutput>> output;
         while ((int)m_outQeueue.size() > m_outMaxQueueSize) {
             auto out = std::move(m_outQeueue.front());
@@ -454,6 +534,7 @@ public:
             m_outFrames++;
             output.push_back(std::move(out));
         }
+        if (m_stopwatch) m_stopwatch->add(1, 0);
         return output;
     }
     bool isAMFTask() const { return isAMFTask(m_type); }
@@ -569,6 +650,12 @@ public:
 
     };
     virtual ~PipelineTaskInput() {};
+    virtual void setStopWatch() override {
+        m_stopwatch = std::make_unique<PipelineTaskStopWatch>(
+            std::vector<tstring>{ _T("getWorkSurf"), _T("queueMapBuffer"), _T("LoadNextFrame"), _T("unmapBuffer") },
+            std::vector<tstring>{_T("")}
+        );
+    }
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override { return std::nullopt; };
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override {
         const auto inputFrameInfo = m_input->GetInputFrameInfo();
@@ -581,6 +668,7 @@ public:
             PrintMes(RGY_LOG_ERROR, _T("failed to get work surface for input.\n"));
             return RGY_ERR_NOT_ENOUGH_BUFFER;
         }
+        if (m_stopwatch) m_stopwatch->add(0, 0);
         auto clframe = surfWork.cl();
         auto err = clframe->queueMapBuffer(m_cl->queue(), CL_MAP_WRITE); // CPUが書き込むためにMapする
         if (err != RGY_ERR_NONE) {
@@ -588,6 +676,7 @@ public:
             return err;
         }
         clframe->mapWait(); //すぐ終わるはず
+        if (m_stopwatch) m_stopwatch->add(0, 1);
         auto mappedframe = clframe->mappedHost();
         err = m_input->LoadNextFrame(mappedframe);
         if (err != RGY_ERR_NONE) {
@@ -598,6 +687,7 @@ public:
                 PrintMes(RGY_LOG_ERROR, _T("Error in reader: %s.\n"), get_err_mes(err));
             }
         }
+        if (m_stopwatch) m_stopwatch->add(0, 2);
         clframe->setPropertyFrom(mappedframe);
         auto clerr = clframe->unmapBuffer();
         if (clerr != RGY_ERR_NONE) {
@@ -621,6 +711,7 @@ public:
             surfWork.frame()->setInputFrameId(m_inFrames++);
             m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(surfWork));
         }
+        if (m_stopwatch) m_stopwatch->add(0, 3);
         return err;
     }
     RGY_ERR LoadNextFrameAMF() {
@@ -634,6 +725,7 @@ public:
             PrintMes(RGY_LOG_ERROR, _T("Failed to allocate surface: %s.\n"), get_err_mes(err_to_rgy(ar)));
             return err_to_rgy(ar);
         }
+        if (m_stopwatch) m_stopwatch->add(0, 0);
         pSurface->SetFrameType(frametype_rgy_to_enc(inputFrameInfo.picstruct));
         auto inputFrame = std::make_unique<RGYFrameAMF>(pSurface);
         auto err = m_input->LoadNextFrame(inputFrame.get());
@@ -650,9 +742,11 @@ public:
             inputFrame->setInputFrameId(m_inFrames++);
             m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(m_workSurfs.addSurface(inputFrame)));
         }
+        if (m_stopwatch) m_stopwatch->add(0, 2);
         return err;
     }
     virtual RGY_ERR sendFrame([[maybe_unused]] std::unique_ptr<PipelineTaskOutput>& frame) override {
+        if (m_stopwatch) m_stopwatch->set(0);
         if (workSurfaceType() == PipelineTaskSurfaceType::CL) {
             return LoadNextFrameCL();
         }
@@ -697,6 +791,12 @@ public:
         closeThread();
         m_queueHDR10plusMetadata.close([](RGYFrameDataMetadata **ptr) { if (*ptr) { delete *ptr; *ptr = nullptr; }; });
     };
+    virtual void setStopWatch() override {
+        m_stopwatch = std::make_unique<PipelineTaskStopWatch>(
+            std::vector<tstring>{ _T("QueryOutput"), _T("Duplicate") },
+            std::vector<tstring>{_T("")}
+        );
+    }
     void setDec(amf::AMFComponentPtr dec) { m_dec = dec; };
 
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override { return std::nullopt; };
@@ -829,6 +929,7 @@ public:
     }
 protected:
     RGY_ERR getOutput() {
+        if (m_stopwatch) m_stopwatch->set(0);
         auto ret = RGY_ERR_NONE;
         amf::AMFSurfacePtr surfDecOut;
         auto ar = AMF_REPEAT;
@@ -864,6 +965,7 @@ protected:
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
+        if (m_stopwatch) m_stopwatch->add(0, 0);
         if (ar == AMF_EOF || m_state == RGY_STATE_EOF) {
             ret = RGY_ERR_MORE_BITSTREAM;
         } else if (ar != AMF_OK) {
@@ -913,6 +1015,7 @@ protected:
                 m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(m_workSurfs.addSurface(surfDecOutCopy)));
             }
         }
+        if (m_stopwatch) m_stopwatch->add(0, 1);
         return ret;
     }
     RGY_FRAME_FLAGS getDataFlag(const int64_t timestamp) {
@@ -991,6 +1094,13 @@ public:
     };
     virtual ~PipelineTaskCheckPTS() {};
 
+    virtual void setStopWatch() override {
+        m_stopwatch = std::make_unique<PipelineTaskStopWatch>(
+            std::vector<tstring>{ _T("") },
+            std::vector<tstring>{_T("")}
+        );
+    }
+
     virtual bool isPassThrough() const override {
         // そのまま渡すのでpaththrough
         return true;
@@ -1001,6 +1111,7 @@ public:
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override { return std::nullopt; };
 
     virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        if (m_stopwatch) m_stopwatch->set(0);
         if (!frame) {
             //PipelineTaskCheckPTSは、getOutputで1フレームずつしか取り出さない
             //そのためm_outQeueueにまだフレームが残っている可能性がある
@@ -1159,6 +1270,7 @@ public:
         }
         std::unique_ptr<PipelineTaskOutputDataCustom> timestampOverride(new PipelineTaskOutputDataCheckPts(outPtsSource));
         m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(outSurf, timestampOverride));
+        if (m_stopwatch) m_stopwatch->add(0, 0);
         return RGY_ERR_NONE;
     }
     //checkptsではtimestampを上書きするため特別に常に1フレームしか取り出さない
@@ -1166,6 +1278,7 @@ public:
     //mfxSurface1自体は同じデータを指すため、複数のタイムスタンプを持つことができないため、
     //1フレームずつgetOutputし、都度タイムスタンプを上書きしてすぐに後続のタスクに投入してタイムスタンプを反映させる必要があるため
     virtual std::vector<std::unique_ptr<PipelineTaskOutput>> getOutput(const bool sync) override {
+        if (m_stopwatch) m_stopwatch->set(1);
         std::vector<std::unique_ptr<PipelineTaskOutput>> output;
         if ((int)m_outQeueue.size() > m_outMaxQueueSize) {
             auto out = std::move(m_outQeueue.front());
@@ -1189,6 +1302,7 @@ public:
         if (output.size() > 1) {
             PrintMes(RGY_LOG_ERROR, _T("output queue more than 1, invalid!\n"));
         }
+        if (m_stopwatch) m_stopwatch->add(1, 0);
         return output;
     }
 };
@@ -1226,6 +1340,13 @@ public:
         }
     };
     virtual ~PipelineTaskAudio() {};
+
+    virtual void setStopWatch() override {
+        m_stopwatch = std::make_unique<PipelineTaskStopWatch>(
+            std::vector<tstring>{ _T("") },
+            std::vector<tstring>{_T("")}
+        );
+    }
 
     virtual bool isPassThrough() const override { return true; }
 
@@ -1306,6 +1427,7 @@ public:
     };
 
     virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        if (m_stopwatch) m_stopwatch->set(0);
         m_inFrames++;
         auto err = extractAudio(m_inFrames);
         if (err != RGY_ERR_NONE) {
@@ -1317,6 +1439,7 @@ public:
         }
         PipelineTaskOutputSurf *taskSurf = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
         m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(taskSurf->surf()));
+        if (m_stopwatch) m_stopwatch->add(0, 0);
         return RGY_ERR_NONE;
     }
 };
@@ -1636,11 +1759,19 @@ public:
     };
     virtual ~PipelineTaskTrim() {};
 
+    virtual void setStopWatch() override {
+        m_stopwatch = std::make_unique<PipelineTaskStopWatch>(
+            std::vector<tstring>{ _T("") },
+            std::vector<tstring>{_T("")}
+        );
+    }
+
     virtual bool isPassThrough() const override { return true; }
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override { return std::nullopt; };
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override { return std::nullopt; };
 
     virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        if (m_stopwatch) m_stopwatch->set(0);
         if (!frame) {
             return RGY_ERR_MORE_DATA;
         }
@@ -1661,6 +1792,7 @@ public:
             return RGY_ERR_NONE; //seektoにより脱落させるフレーム
         }
         m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(taskSurf->surf()));
+        if (m_stopwatch) m_stopwatch->add(0, 0);
         return RGY_ERR_NONE;
     }
 };
@@ -1759,6 +1891,12 @@ public:
         m_outQeueue.clear(); // m_bitStreamOutが解放されるよう前にこちらを解放する
     };
     void setEnc(amf::AMFComponentPtr encode) { m_encoder = encode; };
+    virtual void setStopWatch() override {
+        m_stopwatch = std::make_unique<PipelineTaskStopWatch>(
+            std::vector<tstring>{ _T("GetFramePorperties"), _T("getOutputBitstream"), _T("SubmitInput"), _T("Drain") },
+            std::vector<tstring>{_T("")}
+        );
+    }
 
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override {
         int outWidth = 0, outHeight = 0;
@@ -1837,6 +1975,7 @@ public:
     }
 
     virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        if (m_stopwatch) m_stopwatch->set(0);
         if (frame && frame->type() != PipelineTaskOutputType::SURFACE) {
             PrintMes(RGY_LOG_ERROR, _T("Invalid frame type.\n"));
             return RGY_ERR_UNSUPPORTED;
@@ -1909,10 +2048,12 @@ public:
             //エンコーダまでたどり着いたフレームについてはdataListを解放
             surfEncodeIn->clearDataList();
         }
+        if (m_stopwatch) m_stopwatch->add(0, 0);
 
         auto enc_sts = RGY_ERR_NONE;
         auto ar = (drain) ? AMF_INPUT_FULL : AMF_OK;
         for (;;) {
+            if (m_stopwatch) m_stopwatch->set(0);
             //エンコーダからの取り出し
             auto outBs = getOutputBitstream();
             const auto out_ret = outBs.first;
@@ -1929,6 +2070,7 @@ public:
                 enc_sts = out_ret;
                 break;
             }
+            if (m_stopwatch) m_stopwatch->add(0, 1);
 
             if (drain) {
                 if (ar == AMF_INPUT_FULL) {
@@ -1945,6 +2087,7 @@ public:
                         enc_sts = err_to_rgy(ar);
                     }
                 }
+                if (m_stopwatch) m_stopwatch->add(0, 3);
             } else {
                 //エンコードへの投入
                 try {
@@ -1963,6 +2106,7 @@ public:
                     enc_sts = err_to_rgy(ar);
                     break;
                 }
+                if (m_stopwatch) m_stopwatch->add(0, 2);
             }
         };
         return enc_sts;
@@ -2014,7 +2158,12 @@ public:
         m_prevInputFrame.clear();
         m_cl.reset();
     };
-
+    virtual void setStopWatch() override {
+        m_stopwatch = std::make_unique<PipelineTaskStopWatch>(
+            std::vector<tstring>{ _T("depend_clear"), _T("Convert"), _T("QueryOutput"), _T("SubmitInput"), _T("Drain") },
+            std::vector<tstring>{_T("")}
+        );
+    }
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override {
         return std::make_pair(m_vppFilter->GetFilterParam()->frameIn, 0);
     };
@@ -2022,6 +2171,7 @@ public:
         return std::make_pair(m_vppFilter->GetFilterParam()->frameOut, 0);
     };
     virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        if (m_stopwatch) m_stopwatch->set(0);
         if (m_prevInputFrame.size() > 0) {
             //前回投入したフレームの処理が完了していることを確認したうえで参照を破棄することでロックを解放する
             auto prevframe = std::move(m_prevInputFrame.front());
@@ -2034,6 +2184,7 @@ public:
             return RGY_ERR_UNSUPPORTED;
         }
 
+        if (m_stopwatch) m_stopwatch->add(0, 0);
         amf::AMFSurfacePtr pSurface = nullptr;
         RGYFrameAMF *surfVppIn = (frame) ? dynamic_cast<PipelineTaskOutputSurf *>(frame.get())->surf().amf() : nullptr;
         const bool drain = surfVppIn == nullptr;
@@ -2067,6 +2218,7 @@ public:
 
             surfVppIn->clearDataList();
         }
+        if (m_stopwatch) m_stopwatch->add(0, 1);
 
         auto add_surf_to_out_queue = [&](amf::AMFSurfacePtr surfVppOut) {
             int64_t pts = 0, duration = 0, inputFrameId = 0;
@@ -2090,6 +2242,7 @@ public:
         auto enc_sts = RGY_ERR_NONE;
         auto ar = (drain) ? AMF_INPUT_FULL : AMF_OK;
         for (;;) {
+            if (m_stopwatch) m_stopwatch->set(0);
             do {
                 //VPPからの取り出し
                 amf::AMFDataPtr data;
@@ -2112,6 +2265,7 @@ public:
             if (enc_sts != RGY_ERR_NONE) {
                 break;
             }
+            if (m_stopwatch) m_stopwatch->add(0, 2);
 
             if (drain) {
                 if (ar == AMF_INPUT_FULL) {
@@ -2128,6 +2282,7 @@ public:
                         enc_sts = err_to_rgy(ar);
                     }
                 }
+                if (m_stopwatch) m_stopwatch->add(0, 4);
             } else {
                 //VPPへの投入
                 try {
@@ -2146,6 +2301,7 @@ public:
                     enc_sts = err_to_rgy(ar);
                     break;
                 }
+                if (m_stopwatch) m_stopwatch->add(0, 3);
             }
         };
         return enc_sts;
@@ -2168,6 +2324,12 @@ public:
         m_prevInputFrame.clear();
         m_cl.reset();
     };
+    virtual void setStopWatch() override {
+        m_stopwatch = std::make_unique<PipelineTaskStopWatch>(
+            std::vector<tstring>{ _T("depend_clear"), _T("Convert"), _T("filter"), _T("getOutFrame"), _T("setOutFrame") },
+            std::vector<tstring>{_T("")}
+        );
+    }
 
     void setVideoQualityMetricFilter(RGYFilterSsim *videoMetric) {
         m_videoMetric = videoMetric;
@@ -2176,12 +2338,14 @@ public:
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override { return std::nullopt; };
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override { return std::nullopt; };
     virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        if (m_stopwatch) m_stopwatch->set(0);
         if (m_prevInputFrame.size() > 0) {
             //前回投入したフレームの処理が完了していることを確認したうえで参照を破棄することでロックを解放する
             auto prevframe = std::move(m_prevInputFrame.front());
             m_prevInputFrame.pop_front();
             prevframe->depend_clear();
         }
+        if (m_stopwatch) m_stopwatch->add(0, 0);
 
         deque<std::pair<RGYFrameInfo, uint32_t>> filterframes;
         bool drain = !frame;
@@ -2224,10 +2388,12 @@ public:
             //これを行わないとこのフレームが再度使われてしまうことになる
             m_prevInputFrame.push_back(std::move(frame));
         }
+        if (m_stopwatch) m_stopwatch->add(0, 1);
 #define FRAME_COPY_ONLY 0
 #if !FRAME_COPY_ONLY
         std::vector<std::unique_ptr<PipelineTaskOutputSurf>> outputSurfs;
         while (filterframes.size() > 0 || drain) {
+            if (m_stopwatch) m_stopwatch->set(0);
             //フィルタリングするならここ
             for (uint32_t ifilter = filterframes.front().second; ifilter < m_vpFilters.size() - 1; ifilter++) {
                 // コピーを作ってそれをfilter関数に渡す
@@ -2259,6 +2425,7 @@ public:
             if (drain) {
                 return RGY_ERR_MORE_DATA; //最後までdrain = trueなら、drain完了
             }
+            if (m_stopwatch) m_stopwatch->add(0, 2);
             PipelineTaskSurface surfVppOut;
             RGYFrameInfo surfVppOutInfo;
             if (workSurfaceType() == PipelineTaskSurfaceType::CL) {
@@ -2298,6 +2465,7 @@ public:
                 surfVppOutInfo = surfVppOutAMF->getInfoCopy();
                 surfVppOut = m_workSurfs.addSurface(surfVppOutAMF);
             }
+            if (m_stopwatch) m_stopwatch->add(0, 3);
             //エンコードバッファにコピー
             auto &lastFilter = m_vpFilters[m_vpFilters.size() - 1];
             //最後のフィルタはRGYFilterCspCropでなければならない
@@ -2334,7 +2502,7 @@ public:
             surfVppOut.frame()->setDataList(surfVppOutInfo.dataList);
 
             outputSurfs.push_back(std::make_unique<PipelineTaskOutputSurf>(surfVppOut, frame, clevent));
-
+            if (m_stopwatch) m_stopwatch->add(0, 4);
             #undef clFrameOutInteropRelease
         }
         m_outQeueue.insert(m_outQeueue.end(),

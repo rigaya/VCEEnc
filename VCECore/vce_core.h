@@ -160,6 +160,7 @@ protected:
 
     int                m_pipelineDepth;
     int                m_nProcSpeedLimit;       //処理速度制限 (0で制限なし)
+    bool               m_taskPerfMonitor;       //タスクのパフォーマンス監視を有効にする
     RGYAVSync          m_nAVSyncMode;           //映像音声同期設定
     bool               m_timestampPassThrough;  //タイムスタンプをそのまま通す
     rgy_rational<int>  m_inputFps;              //入力フレームレート

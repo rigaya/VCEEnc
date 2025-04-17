@@ -6622,7 +6622,7 @@ int parse_one_ctrl_option(const TCHAR *option_name, const TCHAR *strInput[], int
         }
         return 0;
     }
-    if (IS_OPTION("task-perf-monitor") && ENCODER_QSV) {
+    if (IS_OPTION("task-perf-monitor")) {
         ctrl->taskPerfMonitor = true;
         return 0;
     }
