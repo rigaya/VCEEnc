@@ -3022,13 +3022,13 @@ RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList,
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
         counterIsIntialized = m_pPerfMonitor->isPerfCounterInitialized();
     }
-    if (!counterIsIntialized) {
-        return RGY_ERR_NONE;
+    std::vector<CounterEntry> entries;
+    if (counterIsIntialized) {
+        while (!m_pPerfMonitor->isPerfCounterRefreshed()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+        entries = m_pPerfMonitor->GetPerfCountersSystem();
     }
-    while (!m_pPerfMonitor->isPerfCounterRefreshed()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    }
-    auto entries = m_pPerfMonitor->GetPerfCountersSystem();
 #endif //#if ENABLE_PERF_COUNTER
 
     std::map<int, double> gpuscore;
