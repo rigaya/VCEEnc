@@ -401,7 +401,9 @@ RGY_ERR VCECore::InitParallelEncode(VCEParam *inputParam, const int maxEncoders)
         }
     }
     m_parallelEnc = std::make_unique<RGYParallelEnc>(m_pLog);
-    if ((sts = m_parallelEnc->parallelRun(inputParam, m_pFileReader.get(), m_outputTimebase, inputParam->ctrl.parallelEnc.parallelCount > maxEncoders, m_pStatus.get())) != RGY_ERR_NONE) {
+    if ((sts = m_parallelEnc->parallelRun(inputParam, m_pFileReader.get(), m_outputTimebase, inputParam->ctrl.parallelEnc.parallelCount > maxEncoders, m_pStatus.get(),
+        // 子スレッドの場合はパフォーマンスカウンタは親と共有する
+        inputParam->ctrl.parallelEnc.isParent() ? m_pPerfMonitor.get() : nullptr)) != RGY_ERR_NONE) {
         if (inputParam->ctrl.parallelEnc.isChild()) {
             return sts; // 子スレッド側でエラーが起こった場合はエラー
         }
@@ -3375,7 +3377,12 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     // そのため、AMF関係の初期化前にperf counterを初期化する
     m_pPerfMonitor = std::make_unique<CPerfMonitor>();
 #if ENABLE_PERF_COUNTER
-    m_pPerfMonitor->runCounterThread();
+    if (prm->ctrl.parallelEnc.isChild()) {
+        // 子スレッドの場合はパフォーマンスカウンタは親と共有するので初期化不要
+        m_pPerfMonitor->setCounter(prm->ctrl.parallelEnc.sendData->perfCounter);
+    } else {
+        m_pPerfMonitor->runCounterThread();
+    }
 #endif //#if ENABLE_PERF_COUNTER
 
     ret = initAMFFactory();
