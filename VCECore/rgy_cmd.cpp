@@ -9643,9 +9643,7 @@ tstring gen_cmd_help_ctrl() {
         _T("                                 when number omitted: %.2f percent load\n"),
         DEFAULT_DUMMY_LOAD_PERCENT);
     str += strsprintf(_T("")
-#if ENCODER_QSV
         _T("   --task-perf-monitor          enable task performance monitoring.\n")
-#endif
         _T("   --lowlatency                 minimize latency (might have lower throughput).\n"));
     str += strsprintf(_T("")
         _T("   --output-buf <int>           buffer size for output in MByte\n")
