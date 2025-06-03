@@ -285,7 +285,7 @@ RGY_ERR VCECore::initChapters(VCEParam *prm) {
 }
 
 RGY_ERR VCECore::initLog(VCEParam *prm) {
-    m_pLog.reset(new RGYLog(prm->ctrl.logfile.c_str(), prm->ctrl.loglevel, prm->ctrl.logAddTime));
+    m_pLog.reset(new RGYLog(prm->ctrl.logfile.c_str(), prm->ctrl.loglevel, prm->ctrl.logOpt.addTime, prm->ctrl.logOpt.addLogLevel, prm->ctrl.logOpt.disableColor));
     if (prm->ctrl.parallelEnc.isChild() && prm->ctrl.parallelEnc.sendData) {
         m_pLog->setLock(prm->ctrl.parallelEnc.sendData->logMutex);
     }
