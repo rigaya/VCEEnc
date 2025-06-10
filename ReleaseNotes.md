@@ -1,5 +1,10 @@
 # VCEEnc Release Notes
 
+## 8.36
+
+- Fix black/white processing in 10-bit depth for [--vpp-edgelevel](./QSVEncC_Options.en.md#--vpp-edgelevel-param1value1param2value2).
+- Improve interlace detection when using [--avsw](./QSVEncC_Options.en.md#--avsw-string).
+
 ## 8.35
 
 - Improve audio and video synchronization to achieve more uniform mixing when muxing with subtitles or data tracks.
