@@ -900,7 +900,7 @@ public:
                         } else if (ar == AMF_INPUT_FULL || ar == AMF_DECODER_NO_FREE_SURFACES) {
                             std::this_thread::sleep_for(std::chrono::milliseconds(1));
                         } else if (ar == AMF_REPEAT) {
-                            pictureBuffer = nullptr;
+                            continue; // データはまだ使用されていないので、再度呼び出し
                         } else {
                             break;
                         }
