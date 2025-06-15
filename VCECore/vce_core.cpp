@@ -812,7 +812,8 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
     //AMF_VIDEO_DECODER_SURFACE_COPYを使用すると、pre-analysis使用時などに発生するSubmitInput時のAMF_DECODER_NO_FREE_SURFACESを回避できる
     //しかし、メモリ確保エラーが発生することがある(AMF_DIRECTX_FAIL)
     //そこで、AMF_VIDEO_DECODER_SURFACE_COPYは使用せず、QueryOutput後、明示的にsurface->Duplicateを行って同様の挙動を再現する
-    //m_pDecoder->SetProperty(AMF_VIDEO_DECODER_SURFACE_COPY, true);
+    //AV1デコードでは、これを有効にしないとAMF_DECODER_NO_FREE_SURFACESで止まってしまうことがわかったので、再度有効にする
+    m_pDecoder->SetProperty(AMF_VIDEO_DECODER_SURFACE_COPY, true);
 
     m_pDecoder->SetProperty(AMF_VIDEO_DECODER_ENABLE_SMART_ACCESS_VIDEO, prm->smartAccessVideo);
 
