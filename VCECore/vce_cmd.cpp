@@ -1349,6 +1349,10 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->enableAV1HWDec = true;
         return 0;
     }
+    if (IS_OPTION("no-av1-hwdec")) {
+        pParams->enableAV1HWDec = false;
+        return 0;
+    }
     if (IS_OPTION("multi-instance")) {
         pParams->multiInstance = true;
         return 0;
