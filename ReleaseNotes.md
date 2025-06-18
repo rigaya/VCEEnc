@@ -2,8 +2,11 @@
 
 ## 8.36
 
-- Fix black/white processing in 10-bit depth for [--vpp-edgelevel](./QSVEncC_Options.en.md#--vpp-edgelevel-param1value1param2value2).
-- Improve interlace detection when using [--avsw](./QSVEncC_Options.en.md#--avsw-string).
+- Fix black/white processing in 10-bit depth for [--vpp-edgelevel](./VCEEncC_Options.en.md#--vpp-edgelevel-param1value1param2value2).
+- Improve interlace detection when using [--avsw](./VCEEncC_Options.en.md#--avsw-string).
+- Fixed an issue with [--vpp-decimate](./VCEEncC_Options.en.md#--vpp-decimate-param1value1param2value2) where timestamp and duration of frames became incorrect due to improper handling of the final frame's timing.
+- Use thread pool to prevent unlimited OpenCL build threads.
+- Improve stability of [--parallel](./VCEEncC_Options.en.md#--parallel-int-or-param1value1param2value2). ( #248 )
 
 ## 8.35
 
