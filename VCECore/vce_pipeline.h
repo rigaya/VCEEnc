@@ -973,7 +973,7 @@ protected:
             PrintMes(RGY_LOG_ERROR, _T("Failed to load input frame: %s.\n"), get_err_mes(ret));
             return ret;
         }
-        if (!m_gotFrameFirstKeyPts && surfDecOut->GetPts() < m_firstKeyPts) {
+        if (!m_gotFrameFirstKeyPts && surfDecOut != nullptr && surfDecOut->GetPts() < m_firstKeyPts) {
             return RGY_ERR_NONE;
         }
         m_gotFrameFirstKeyPts = true;
