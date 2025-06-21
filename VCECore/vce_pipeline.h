@@ -907,6 +907,7 @@ public:
                     } while (m_state == RGY_STATE_RUNNING);
                     if (ar != AMF_OK && ar != AMF_NEED_MORE_INPUT) {
                         m_state = RGY_STATE_ERROR;
+                        PrintMes(RGY_LOG_ERROR, _T("ERROR: Unexpected error while submitting bitstream to decoder: %s.\n"), get_err_mes(err_to_rgy(ar)));
                         return err_to_rgy(ar);
                     }
                 }
