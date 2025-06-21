@@ -368,6 +368,8 @@ public:
     }
 
     RGY_ERR writeAMF(RGYOutput *writer) {
+        auto amfsurf = m_surf.amf();
+        amfsurf->amf()->Convert(amf::AMF_MEMORY_HOST);
         auto err = writer->WriteNextFrame(m_surf.frame());
         return err;
     }
@@ -2337,7 +2339,9 @@ public:
     }
 
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override { return std::nullopt; };
-    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override { return std::nullopt; };
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override {
+        return std::make_pair(m_vpFilters.back()->GetFilterParam()->frameOut, m_outMaxQueueSize);
+    };
     virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
         if (m_stopwatch) m_stopwatch->set(0);
         if (m_prevInputFrame.size() > 0) {
@@ -2547,16 +2551,24 @@ public:
     }
 };
 
+class PipelineTaskOutputRaw : public PipelineTask {
+public:
+    PipelineTaskOutputRaw(amf::AMFContextPtr context, int outMaxQueueSize, std::shared_ptr<RGYLog> log) :
+        PipelineTask(PipelineTaskType::OUTPUTRAW, context, outMaxQueueSize, log) {};
+    virtual ~PipelineTaskOutputRaw() {};
 
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override { return std::nullopt; };
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override { return std::nullopt; };
 
-
-
-
-
-
-
-
-
+    virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        if (!frame) {
+            return RGY_ERR_MORE_DATA;
+        }
+        m_inFrames++;
+        m_outQeueue.push_back(std::move(frame));
+        return RGY_ERR_NONE;
+    }
+};
 
 #endif //__VCE_PIPELINE_H__
 
