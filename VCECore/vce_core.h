@@ -102,7 +102,7 @@ public:
     void SetAbortFlagPointer(bool *abortFlag);
 protected:
     virtual RGY_ERR readChapterFile(tstring chapfile);
-
+    std::pair<RGY_ERR, VideoInfo> GetOutputVideoInfo();
     RGY_ERR checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm, int deviceId);
     RGY_ERR gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm, const RGYDeviceUsageLockManager *devUsageLock);
     virtual RGY_CSP GetEncoderCSP(const VCEParam *inputParam) const;
@@ -134,6 +134,7 @@ protected:
     virtual RGY_ERR run_output();
 
     RGY_CODEC          m_encCodec;
+    RGY_CSP            m_encCSP;
     bool m_bTimerPeriodTuning;
 #if ENABLE_AVSW_READER
     bool                          m_keyOnChapter;        //チャプター上にキーフレームを配置する

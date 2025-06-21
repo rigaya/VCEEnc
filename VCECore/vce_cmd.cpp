@@ -1591,6 +1591,8 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
             pParams->qualityPreset = AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_BALANCED;
             break;
         }
+    } else if (pParams->codec == RGY_CODEC_RAW) {
+        ; // 何もしない
     } else {
         _ftprintf(stderr, _T("Unsupported codec!\n"));
         return 1;

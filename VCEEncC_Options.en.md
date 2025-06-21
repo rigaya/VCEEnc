@@ -12,6 +12,8 @@
     - [example of pipe usage](#example-of-pipe-usage)
     - [pipe usage from ffmpeg](#pipe-usage-from-ffmpeg)
     - [Passing video \& audio from ffmpeg](#passing-video--audio-from-ffmpeg)
+    - [Passing filtered results \& audio to ffmpeg](#passing-filtered-results--audio-to-ffmpeg)
+    - [Copy all tracks and metadata during video encode](#copy-all-tracks-and-metadata-during-video-encode)
 - [Option format](#option-format)
 - [Display options](#display-options)
   - [-h, -? --help](#-h-----help)
@@ -261,9 +263,21 @@ ffmpeg -y -i "<inputfile>" -an -pix_fmt yuv420p -f yuv4mpegpipe - | VCEEncC --y4
 ```
 
 #### Passing video & audio from ffmpeg
---> use "nut" to pass both video & audio thorough pipe.
+--> use "nut" to pass both video & audio through pipe.
 ```Batchfile
 ffmpeg -y -i "<input>" <options for ffmpeg> -codec:a copy -codec:v rawvideo -pix_fmt yuv420p -f nut - | VCEEncC --avsw -i - --audio-codec aac -o "<outfilename.mp4>"
+```
+
+#### Passing filtered results & audio to ffmpeg
+--> use "nut" to pass both video & audio through pipe.
+```Batchfile
+VCEEncC -i "<input>" <filter options> --audio-copy -c raw --output-format nut -o - | ffmpeg -y -f nut -i - <encode options for ffmpeg> -o output.mp4
+```
+
+#### Copy all tracks and metadata during video encode
+
+```Batchfile
+VCEEncC -i "<input>" <encode options> --colormatrix auto --transfer auto --colorprim auto --chromaloc auto --max-cll copy --master-display copy --dhdr10-info copy --dolby-vision-rpu copy --video-metadata copy --audio-copy --audio-metadata copy  --sub-copy --sub-metadata copy --data-copy --attachment-copy --chapter-copy -o output.mkv
 ```
 
 ## Option format
@@ -337,6 +351,7 @@ Specify the output codec
  - h264 (default)
  - hevc
  - av1
+ - raw
 
 ### -o, --output &lt;string&gt;
 Set output file name, pipe output with "-"

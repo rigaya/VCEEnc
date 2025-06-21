@@ -1,5 +1,11 @@
 # VCEEnc Release Notes
 
+
+## 8.37
+
+- Add raw output. (-c raw)
+- Switch to sw decode when hw decode fails to start. ( #101 )
+
 ## 8.36
 
 - Fix black/white processing in 10-bit depth for [--vpp-edgelevel](./VCEEncC_Options.en.md#--vpp-edgelevel-param1value1param2value2).

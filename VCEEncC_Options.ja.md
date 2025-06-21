@@ -10,6 +10,8 @@
     - [パイプ利用の例](#パイプ利用の例)
     - [ffmpegからパイプ渡し](#ffmpegからパイプ渡し)
     - [ffmpegから映像と音声を両方パイプ渡したい](#ffmpegから映像と音声を両方パイプ渡したい)
+    - [ffmpegにVCEEncCでのフィルタ処理の結果を渡したい](#ffmpegにvceenccでのフィルタ処理の結果を渡したい)
+    - [可能な限り入力ファイルから音声・字幕・metadataなどをコピーする](#可能な限り入力ファイルから音声字幕metadataなどをコピーする)
     - [raw H.264/ESのmux](#raw-h264esのmux)
 - [オプションの指定方法](#オプションの指定方法)
 - [表示系オプション](#表示系オプション)
@@ -190,7 +192,19 @@ ffmpeg -y -i "<ソース動画>" -an -pix_fmt yuv420p -f yuv4mpegpipe - | VCEEnc
 #### ffmpegから映像と音声を両方パイプ渡したい
 --> "nut"フォーマットでくるんで受け渡しするとよいでしょう
 ```Batchfile
-ffmpeg -y -i "<input>" <options for ffmpeg> -codec:a copy -codec:v rawvideo -pix_fmt yuv420p -f nut - | VCEEncC --avsw -i - --audio-codec aac -o "<outfilename.mp4>"
+ffmpeg -y -i "<input>" <options for ffmpeg> -codec:a copy -codec:v rawvideo -pix_fmt yuv420p -f nut - | QSVEncC --avsw -i - --audio-codec aac -o "<outfilename.mp4>"
+```
+
+#### ffmpegにVCEEncCでのフィルタ処理の結果を渡したい
+--> "nut"フォーマットでフレームと音声を渡すとよいでしょう。
+```Batchfile
+VCEEncC -i "<input>" <filter options> --audio-copy -c raw --output-format nut -o - | ffmpeg -y -f nut -i - <encode options for ffmpeg> -o output.mp4
+```
+
+#### 可能な限り入力ファイルから音声・字幕・metadataなどをコピーする
+
+```Batchfile
+VCEEncC -i "<input>" <encode options> --colormatrix auto --transfer auto --colorprim auto --chromaloc auto --max-cll copy --master-display copy --dhdr10-info copy --dolby-vision-rpu copy --video-metadata copy --audio-copy --audio-metadata copy  --sub-copy --sub-metadata copy --data-copy --attachment-copy --chapter-copy -o output.mkv
 ```
 
 #### raw H.264/ESのmux
@@ -284,6 +298,7 @@ VCEEncで使用するDeviceIdを指定する。
  - h264 (デフォルト)
  - hevc
  - av1
+ - raw
 
 ### -o, --output &lt;string&gt;
 出力ファイル名の表示、"-"でパイプ出力

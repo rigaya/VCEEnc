@@ -368,6 +368,8 @@ public:
     }
 
     RGY_ERR writeAMF(RGYOutput *writer) {
+        auto amfsurf = m_surf.amf();
+        amfsurf->amf()->Convert(amf::AMF_MEMORY_HOST);
         auto err = writer->WriteNextFrame(m_surf.frame());
         return err;
     }
