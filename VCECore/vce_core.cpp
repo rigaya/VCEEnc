@@ -782,8 +782,8 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
 
 #pragma warning(push)
 #pragma warning(disable: 4100)
-RGY_ERR VCECore::initDecoder(VCEParam *prm) {
-#if ENABLE_AVSW_READER
+
+RGY_ERR VCECore::createDecoder(VCEParam *prm, amf::AMFComponentPtr& decoder) {
     const auto inputCodec = m_pFileReader->getInputCodec();
     if (inputCodec == RGY_CODEC_UNKNOWN) {
         PrintMes(RGY_LOG_DEBUG, _T("decoder not required.\n"));
@@ -802,7 +802,7 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
         }
     }
     PrintMes(RGY_LOG_DEBUG, _T("decoder: use codec \"%s\".\n"), wstring_to_tstring(codec_uvd_name).c_str());
-    auto res = m_pFactory->CreateComponent(m_dev->context(), codec_uvd_name, &m_pDecoder);
+    auto res = m_pFactory->CreateComponent(m_dev->context(), codec_uvd_name, &decoder);
     if (res != AMF_OK) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to create decoder context: %s\n"), AMFRetString(res));
         return err_to_rgy(res);
@@ -813,13 +813,13 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
     //しかし、メモリ確保エラーが発生することがある(AMF_DIRECTX_FAIL)
     //そこで、AMF_VIDEO_DECODER_SURFACE_COPYは使用せず、QueryOutput後、明示的にsurface->Duplicateを行って同様の挙動を再現する
     //AV1デコードでは、これを有効にしないとAMF_DECODER_NO_FREE_SURFACESで止まってしまうことがわかったので、再度有効にする
-    m_pDecoder->SetProperty(AMF_VIDEO_DECODER_SURFACE_COPY, true);
+    decoder->SetProperty(AMF_VIDEO_DECODER_SURFACE_COPY, true);
 
-    m_pDecoder->SetProperty(AMF_VIDEO_DECODER_ENABLE_SMART_ACCESS_VIDEO, prm->smartAccessVideo);
+    decoder->SetProperty(AMF_VIDEO_DECODER_ENABLE_SMART_ACCESS_VIDEO, prm->smartAccessVideo);
 
     //RGY_CODEC_VC1のときはAMF_TS_SORTを選択する必要がある
     const AMF_TIMESTAMP_MODE_ENUM timestamp_mode = (inputCodec == RGY_CODEC_VC1) ? AMF_TS_SORT : AMF_TS_PRESENTATION;
-    if (AMF_OK != (res = m_pDecoder->SetProperty(AMF_TIMESTAMP_MODE, amf_int64(timestamp_mode)))) {
+    if (AMF_OK != (res = decoder->SetProperty(AMF_TIMESTAMP_MODE, amf_int64(timestamp_mode)))) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to set deocder: %s\n"), AMFRetString(res));
         return err_to_rgy(res);
     }
@@ -836,19 +836,138 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
         m_dev->context()->AllocBuffer(amf::AMF_MEMORY_HOST, header.size(), &buffer);
 
         memcpy(buffer->GetNative(), header.data(), header.size());
-        m_pDecoder->SetProperty(AMF_VIDEO_DECODER_EXTRADATA, amf::AMFVariant(buffer));
+        decoder->SetProperty(AMF_VIDEO_DECODER_EXTRADATA, amf::AMFVariant(buffer));
     }
 
     PrintMes(RGY_LOG_DEBUG, _T("initialize %s decoder: %dx%d, %s.\n"),
         CodecToStr(inputCodec).c_str(), prm->input.srcWidth, prm->input.srcHeight,
         wstring_to_tstring(m_pTrace->SurfaceGetFormatName(csp_rgy_to_enc(prm->input.csp))).c_str());
-    if (AMF_OK != (res = m_pDecoder->Init(csp_rgy_to_enc(prm->input.csp), prm->input.srcWidth, prm->input.srcHeight))) {
+    if (AMF_OK != (res = decoder->Init(csp_rgy_to_enc(prm->input.csp), prm->input.srcWidth, prm->input.srcHeight))) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to init %s decoder (%s %dx%d): %s\n"), CodecToStr(inputCodec).c_str(),
             wstring_to_tstring(m_pTrace->SurfaceGetFormatName(csp_rgy_to_enc(prm->input.csp))).c_str(), prm->input.srcWidth, prm->input.srcHeight,
             AMFRetString(res));
         return err_to_rgy(res);
     }
     PrintMes(RGY_LOG_DEBUG, _T("Initialized decoder.\n"));
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR VCECore::tryDecode(amf::AMFComponentPtr& decoder) {
+    auto sts = RGY_ERR_NONE;
+    RGYBitstream bitstream = RGYBitstreamInit();
+    for (int i = 0; i < 1000; i++) {
+        sts = m_pFileReader->GetNextBitstreamNoDelete(&bitstream, i);
+        if (sts != RGY_ERR_NONE && sts != RGY_ERR_MORE_DATA) {
+            return sts;
+        }
+        amf::AMFBufferPtr pictureBuffer;
+        if (sts == RGY_ERR_NONE) {
+            auto ar = m_dev->context()->AllocBuffer(amf::AMF_MEMORY_HOST, bitstream.size(), &pictureBuffer);
+            if (ar != AMF_OK) {
+                return err_to_rgy(ar);
+            }
+            memcpy(pictureBuffer->GetNative(), bitstream.data(), bitstream.size());
+            pictureBuffer->SetDuration(bitstream.duration());
+            pictureBuffer->SetPts(bitstream.pts());
+        }
+        bitstream.setSize(0);
+        bitstream.setOffset(0);
+        if (pictureBuffer || sts == RGY_ERR_MORE_BITSTREAM /*EOFの場合はDrainを送る*/) {
+            auto ar = AMF_OK;
+            do {
+                if (sts == RGY_ERR_MORE_BITSTREAM) {
+                    ar = decoder->Drain();
+                } else {
+                    try {
+                        ar = decoder->SubmitInput(pictureBuffer);
+                    } catch (...) {
+                        //PrintMes(RGY_LOG_ERROR, _T("ERROR: Unexpected error while submitting bitstream to decoder.\n"));
+                        ar = AMF_UNEXPECTED;
+                    }
+                }
+                if (ar == AMF_NEED_MORE_INPUT) {
+                    break;
+                } else if (ar == AMF_RESOLUTION_CHANGED || ar == AMF_RESOLUTION_UPDATED) {
+                    //PrintMes(RGY_LOG_ERROR, _T("ERROR: Resolution changed during decoding.\n"));
+                    break;
+                } else if (ar == AMF_INPUT_FULL || ar == AMF_DECODER_NO_FREE_SURFACES) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    break;
+                } else if (ar == AMF_REPEAT) {
+                    continue; // データはまだ使用されていないので、再度呼び出し
+                } else {
+                    break;
+                }
+            } while (true);
+            if (   ar != AMF_OK
+                && ar != AMF_NEED_MORE_INPUT
+                && ar != AMF_INPUT_FULL
+                && ar != AMF_DECODER_NO_FREE_SURFACES) {
+                //PrintMes(RGY_LOG_ERROR, _T("ERROR: Unexpected error while submitting bitstream to decoder: %s.\n"), get_err_mes(err_to_rgy(ar)));
+                return err_to_rgy(ar);
+            }
+            for (;;) {
+                amf::AMFDataPtr data;
+                try {
+                    ar = decoder->QueryOutput(&data);
+                } catch (...) {
+                    PrintMes(RGY_LOG_ERROR, _T("ERROR: Unexpected error while getting frame from decoder.\n"));
+                    ar = AMF_UNEXPECTED;
+                }
+                if (ar == AMF_EOF) {
+                    break;
+                }
+                if (ar == AMF_REPEAT) {
+                    ar = AMF_OK; //これ重要...ここが欠けると最後の数フレームが欠落する
+                }
+                if (ar == AMF_OK) {
+                    if (data != nullptr) {
+                        return RGY_ERR_NONE;
+                    }
+                    break;
+                }
+                if (ar != AMF_OK) break;
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            if (ar == AMF_EOF || m_state == RGY_STATE_EOF) {
+                sts = RGY_ERR_MORE_BITSTREAM;
+            } else if (ar != AMF_OK) {
+                sts = err_to_rgy(ar); m_state = RGY_STATE_ERROR;
+                PrintMes(RGY_LOG_ERROR, _T("Failed to load input frame: %s.\n"), get_err_mes(sts));
+                return sts;
+            }
+        }
+    }
+    return sts;
+}
+
+RGY_ERR VCECore::initDecoder(VCEParam *prm) {
+#if ENABLE_AVSW_READER
+    if (m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN) {
+        amf::AMFComponentPtr testDecoder;
+        auto err = createDecoder(prm, testDecoder);
+        if (err != RGY_ERR_NONE) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to create decoder.\n"));
+            return err;
+        }
+        if (testDecoder) {
+            err = tryDecode(testDecoder);
+            if (err != RGY_ERR_NONE) {
+                PrintMes(RGY_LOG_WARN, _T("Failed to try hw decoder, switching to sw decoder.\n"));
+                auto avswreader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
+                if (avswreader == nullptr) {
+                    PrintMes(RGY_LOG_ERROR, _T("Failed to switch to sw decoder, unknown reader type.\n"));
+                    return err;
+                }
+                return avswreader->initSWVideoDecoder(_T(""));
+            }
+        }
+    }
+    auto err = createDecoder(prm, m_pDecoder);
+    if (err != RGY_ERR_NONE) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to create decoder.\n"));
+        return err;
+    }
     return RGY_ERR_NONE;
 #else
     return RGY_ERR_NONE;

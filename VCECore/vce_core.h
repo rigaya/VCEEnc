@@ -110,6 +110,8 @@ protected:
     virtual RGY_ERR checkParam(VCEParam *prm);
     virtual RGY_ERR initPerfMonitor(VCEParam *prm);
     virtual RGY_ERR InitParallelEncode(VCEParam *inputParam, const int maxEncoders);
+    virtual RGY_ERR createDecoder(VCEParam *prm, amf::AMFComponentPtr& decoder);
+    virtual RGY_ERR tryDecode(amf::AMFComponentPtr& decoder);
     virtual RGY_ERR initDecoder(VCEParam *prm);
     virtual RGY_ERR initFilters(VCEParam *prm);
     virtual std::vector<VppType> InitFiltersCreateVppList(const VCEParam *inputParam,
