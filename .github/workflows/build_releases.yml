@@ -200,6 +200,7 @@ jobs:
           xcopy /e /y Aviutl_VCEEnc_release\plugins   Aviutl_VCEEnc_release2\Plugin
           del Aviutl_VCEEnc_release2\Plugin\auo_setup.auf
           del Aviutl_VCEEnc_release2\Plugin\exe_files\auo_setup.exe
+          rmdir /s /q Aviutl_VCEEnc_release2\Plugin\exe_files\VCEEncC\x86
           7z a -t7z -m0=lzma -mx=9 -mmt Aviutl2_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.7z .\Aviutl_VCEEnc_release2\*
           copy /b VCEEnc\7zSD.noadmin.sfx + VCEEnc\7zInstallerConfig.txt + Aviutl2_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.7z Aviutl2_VCEEnc_${{ needs.get_version_name.outputs.version_name }}_install.exe
 
