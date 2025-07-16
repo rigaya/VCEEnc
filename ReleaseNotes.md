@@ -1,5 +1,10 @@
 # VCEEnc Release Notes
 
+## 8.38
+
+- Fix 10-bit processing in [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2).
+- Improve precision of [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2).
+- Updates for VCEEnc.auo (AviUtl/AviUtl2 plugin).
 
 ## 8.37
 

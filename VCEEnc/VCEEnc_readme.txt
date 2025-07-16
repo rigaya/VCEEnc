@@ -188,6 +188,17 @@ Radeon RX7900XT
 
 【どうでもいいメモ】
 
+2025.07.16 (8.38)
+- Aviutl2に対応。
+- AviUtl2向け簡易インストーラを追加。
+  - 7zipの自己解凍形式からPlugin\exe_files\auo_setup2.exeを呼び出している。
+- AviUtl2で発生する問題を修正。
+  - Pluginフォルダ内のexe_filesから実行ファイルを検索できるように。
+  - AviUtl2で、YUV444出力と10bit出力ができなくなっていた問題を修正。
+    - rgb→yuv444/yuv444(16bit)、yuy2→nv12/yv12(16bit)のAVX2版の実装。
+- --vpp-afsの10bitでの処理を修正。
+- --vpp-afsの精度を改善。
+
 2025.06.22 (8.37)
 - raw出力機能を追加。
 - うまくhwデコードが開始できないとき、自動的にswデコードに切り替えるように。
