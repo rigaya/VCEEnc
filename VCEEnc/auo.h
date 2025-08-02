@@ -80,6 +80,13 @@ static const char *ENCODER_REPLACE_MACRO = "%{svtav1path}";
 static const char *const OUTPUT_FILE_EXT[]        = {  ".mp4",     ".mkv",     ".av1"    };
 static const char *const OUTPUT_FILE_EXT_FILTER[] = { "*.mp4",    "*.mkv",    "*.av1"    };
 static const char *const OUTPUT_FILE_EXT_DESC[]   = { "mp4 file", "mkv file", "raw file" };
+#elif ENCODER_FFMPEG
+static const char    *ENCODER_NAME   =  "ffmpeg";
+static const wchar_t *ENCODER_NAME_W = L"ffmpeg";
+static const char    *ENOCDER_RAW_EXT = ".264";
+static const char    *ENCODER_APP_NAME = "ffmpeg";
+static const wchar_t *ENCODER_APP_NAME_W = L"ffmpeg";
+static const char    *ENCODER_REPLACE_MACRO = "%{ffmpegpath}";
 #elif ENCODER_QSV
 static const wchar_t *ENCODER_NAME_W = L"QSV";
 static const char    *ENOCDER_RAW_EXT = ".264";

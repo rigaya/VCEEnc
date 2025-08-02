@@ -33,6 +33,7 @@
 #include "auo_version.h"
 #include "auo_frm.h"
 #include "auo_faw2aac.h"
+#include "auo_encode.h"
 #include "frmConfig.h"
 #include "frmSaveNewStg.h"
 #include "frmOtherSettings.h"
@@ -227,8 +228,8 @@ System::Void frmConfig::LoadLocalStg() {
     LocalStg.CustomMP4TmpDir = String(_ex_stg->s_local.custom_mp4box_tmp_dir).ToString();
     LocalStg.LastAppDir      = String(_ex_stg->s_local.app_dir).ToString();
     LocalStg.LastBatDir      = String(_ex_stg->s_local.bat_dir).ToString();
-    LocalStg.vidEncName      = String(_ex_stg->s_vid.filename).ToString();
-    LocalStg.vidEncPath      = String(_ex_stg->s_vid.fullpath).ToString();
+    LocalStg.vidEncName      = String(_ex_stg->s_enc.filename).ToString();
+    LocalStg.vidEncPath      = String(_ex_stg->s_enc.fullpath).ToString();
     LocalStg.MP4MuxerExeName = String(_ex_stg->s_mux[MUXER_MP4].filename).ToString();
     LocalStg.MP4MuxerPath    = String(_ex_stg->s_mux[MUXER_MP4].fullpath).ToString();
     LocalStg.MKVMuxerExeName = String(_ex_stg->s_mux[MUXER_MKV].filename).ToString();
@@ -298,7 +299,7 @@ System::Void frmConfig::SaveLocalStg() {
     GetCHARfromString(_ex_stg->s_local.custom_audio_tmp_dir,  sizeof(_ex_stg->s_local.custom_audio_tmp_dir),  LocalStg.CustomAudTmpDir);
     GetCHARfromString(_ex_stg->s_local.app_dir,               sizeof(_ex_stg->s_local.app_dir),               LocalStg.LastAppDir);
     GetCHARfromString(_ex_stg->s_local.bat_dir,               sizeof(_ex_stg->s_local.bat_dir),               LocalStg.LastBatDir);
-    GetCHARfromString(_ex_stg->s_vid.fullpath,                sizeof(_ex_stg->s_vid.fullpath),                LocalStg.vidEncPath);
+    GetCHARfromString(_ex_stg->s_enc.fullpath,                sizeof(_ex_stg->s_enc.fullpath),                LocalStg.vidEncPath);
     GetCHARfromString(_ex_stg->s_mux[MUXER_MP4].fullpath,     sizeof(_ex_stg->s_mux[MUXER_MP4].fullpath),     LocalStg.MP4MuxerPath);
     GetCHARfromString(_ex_stg->s_mux[MUXER_MKV].fullpath,     sizeof(_ex_stg->s_mux[MUXER_MKV].fullpath),     LocalStg.MKVMuxerPath);
     GetCHARfromString(_ex_stg->s_mux[MUXER_TC2MP4].fullpath,  sizeof(_ex_stg->s_mux[MUXER_TC2MP4].fullpath),  LocalStg.TC2MP4Path);
@@ -898,7 +899,7 @@ System::Void frmConfig::SetTXMaxLen(TextBox^ TX, int max_len) {
 
 System::Void frmConfig::SetTXMaxLenAll() {
     //MaxLengthに最大文字数をセットし、それをもとにバイト数計算を行うイベントをセットする。
-    SetTXMaxLen(fcgTXVideoEncoderPath,   sizeof(sys_dat->exstg->s_vid.fullpath) - 1);
+    SetTXMaxLen(fcgTXVideoEncoderPath,   sizeof(sys_dat->exstg->s_enc.fullpath) - 1);
     SetTXMaxLen(fcgTXCmdEx,              sizeof(CONF_ENC::cmdex) - 1);
     SetTXMaxLen(fcgTXAudioEncoderPath,   sizeof(sys_dat->exstg->s_aud_ext[0].fullpath) - 1);
     SetTXMaxLen(fcgTXMP4MuxerPath,       sizeof(sys_dat->exstg->s_mux[MUXER_MP4].fullpath) - 1);
@@ -1655,7 +1656,6 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     VCEParam enc;
     enc.deviceID                                = fcgCXDevice->SelectedIndex - 1; // 先頭はAutoなので
     enc.codec                                   = (RGY_CODEC)list_codec[fcgCXEncCodec->SelectedIndex].value;
-    conf->enc.codec = enc.codec;
     enc.rateControl                             = get_rc_method(enc.codec)[fcgCXEncMode->SelectedIndex].value;
     const bool qvbr_mode                        = (enc.rateControl == VCE_RC_QVBR_IDX);
     enc.qualityPreset                           = get_quality_preset(enc.codec)[fcgCXQualityPreset->SelectedIndex].value;

@@ -45,9 +45,6 @@
     <ClCompile Include="encode\auo_audio_parallel.cpp">
       <Filter>ソース ファイル\encode</Filter>
     </ClCompile>
-    <ClCompile Include="encode\auo_chapter.cpp">
-      <Filter>ソース ファイル\encode</Filter>
-    </ClCompile>
     <ClCompile Include="encode\auo_encode.cpp">
       <Filter>ソース ファイル\encode</Filter>
     </ClCompile>
@@ -134,9 +131,6 @@
       <Filter>ヘッダー ファイル\encode</Filter>
     </ClInclude>
     <ClInclude Include="encode\auo_audio_parallel.h">
-      <Filter>ヘッダー ファイル\encode</Filter>
-    </ClInclude>
-    <ClInclude Include="encode\auo_chapter.h">
       <Filter>ヘッダー ファイル\encode</Filter>
     </ClInclude>
     <ClInclude Include="encode\auo_encode.h">

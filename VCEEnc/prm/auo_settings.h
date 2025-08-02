@@ -50,9 +50,13 @@ static const BOOL   DEFAULT_DISABLE_VISUAL_STYLES = 0;
 static const BOOL   DEFAULT_ENABLE_STG_ESC_KEY    = 0;
 static const BOOL   DEFAULT_SAVE_RELATIVE_PATH    = 1;
 static const BOOL   DEFAULT_CHAP_NERO_TO_UTF8     = 0;
+#if ENCODER_FFMPEG
+static const int    DEFAULT_AUDIO_ENCODER_EXT     = 0;
+#else
 static const int    DEFAULT_AUDIO_ENCODER_EXT     = 15;
+#endif
 static const int    DEFAULT_AUDIO_ENCODER_IN      = 1;
-static const BOOL   DEFAULT_AUDIO_ENCODER_USE_IN  = 1;
+static const BOOL   DEFAULT_AUDIO_ENCODER_USE_IN  = (ENCODER_X264 || ENCODER_X265 || ENCODER_SVTAV1) ? 0 : 1;
 static const int    DEFAULT_THREAD_PTHROTTLING    = 0;
 static const int    DEFAULT_AMP_RETRY_LIMIT       = 2;
 static const double DEFAULT_AMP_MARGIN            = 0.05;

@@ -1074,6 +1074,9 @@ void set_enc_prm(CONF_GUIEX *conf, PRM_ENC *pe, const OUTPUT_INFO *oip, const SY
     avoid_exsisting_tmp_file(pe->temp_filename, _countof(pe->temp_filename));
 
 #if !ENCODER_FFMPEG
+    if (ENCODER_X264 || ENCODER_X265 || ENCODER_SVTAV1) {
+        conf->mux.use_internal = FALSE;
+    }
     pe->muxer_to_be_used = check_muxer_to_be_used(conf, pe, sys_dat, pe->temp_filename, pe->video_out_type, (oip->flag & OUTPUT_INFO_FLAG_AUDIO) != 0);
     if (pe->muxer_to_be_used >= 0) {
         const MUXER_CMD_EX *muxer_mode = &sys_dat->exstg->s_mux[pe->muxer_to_be_used].ex_cmd[get_mux_excmd_mode(conf, pe)];
@@ -1590,6 +1593,7 @@ int check_muxer_to_be_used(const CONF_GUIEX *conf, const PRM_ENC *pe, const SYST
         muxer_to_be_used = is_afsvfr(conf) ? MUXER_TC2MP4 : MUXER_MP4;
     else if (video_output_type == VIDEO_OUTPUT_MKV && !conf->mux.disable_mkvext)
         muxer_to_be_used = MUXER_MKV;
+#else
     if (conf->mux.use_internal)
         muxer_to_be_used = MUXER_INTERNAL;
     else if (video_output_type == VIDEO_OUTPUT_MP4 && !conf->mux.disable_mp4ext)
