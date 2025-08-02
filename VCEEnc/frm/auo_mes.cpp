@@ -1132,17 +1132,6 @@ static const char * AUO_MES_ID_NAME_STR[] = {
 
 static_assert(AUO_MESSAGE_FIN + 1 == _countof(AUO_MES_ID_NAME_STR));
 
-#if ENCODER_X264 || ENCODER_X265 || ENCODER_SVTAV1
-std::string str_replace(std::string str, const std::string& from, const std::string& to) {
-	std::string::size_type pos = 0;
-	while (pos = str.find(from, pos), pos != std::string::npos) {
-		str.replace(pos, from.length(), to);
-		pos += to.length();
-	}
-	return str;
-}
-#endif
-
 AuoMesSections AuoMessages::getSectionId(const std::string& section) const {
 	for (size_t i = 0; i < AUO_MES_SECTIONS_STR.size(); i++) {
 		if (strcmp(AUO_MES_SECTIONS_STR[i].first, section.c_str()) == 0) {

@@ -45,6 +45,7 @@
 #define ENCODER_X264   0
 #define ENCODER_X265   0
 #define ENCODER_SVTAV1 0
+#define ENCODER_FFMPEG 0
 
 #ifdef DEBUG
 #define VER_DEBUG   VS_FF_DEBUG

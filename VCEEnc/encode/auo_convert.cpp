@@ -36,6 +36,7 @@
 #include "auo_video.h"
 #include "auo_frm.h"
 #include "convert.h"
+#include "rgy_simd.h"
 
 //音声の16bit->8bit変換の選択
 func_audio_16to8 get_audio_16to8_func(BOOL split) {
@@ -44,9 +45,12 @@ func_audio_16to8 get_audio_16to8_func(BOOL split) {
         { convert_audio_16to8_sse2, split_audio_16to8x2_sse2 },
         { convert_audio_16to8_avx2, split_audio_16to8x2_avx2 },
     };
-    int simd = 0;
-    if (0 == (simd = (!!check_avx2() * 2)))
-        simd = check_sse2();
-    return FUNC_CONVERT_AUDIO[simd][!!split];
+    const auto simd = get_availableSIMD();
+    int simdidx = 0;
+    if ((simd & RGY_SIMD::AVX2) != RGY_SIMD::NONE)
+        simdidx = 2;
+    else if ((simd & RGY_SIMD::SSE2) != RGY_SIMD::NONE)
+        simdidx = 1;
+    return FUNC_CONVERT_AUDIO[simdidx][!!split];
 }
 

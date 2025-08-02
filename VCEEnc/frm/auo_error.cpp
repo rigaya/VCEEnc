@@ -31,7 +31,7 @@
 #include "auo_mes.h"
 #include "auo_version.h"
 #include "auo_pipe.h"
-#include "auo_chapter.h"
+#include "rgy_chapter.h"
 #include "auo_settings.h"
 #include "auo_util.h"
 

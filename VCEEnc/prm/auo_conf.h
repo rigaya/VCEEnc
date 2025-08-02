@@ -157,7 +157,7 @@ static const ENC_OPTION_STR AUDIO_DELAY_CUT_MODE[] = {
 
 #pragma pack(push, 1)
 typedef struct CONF_ENC {
-    int codec;
+    RGY_CODEC codec_rgy;
     int reserved[128];
 #if ENCODER_QSV
     char reserved3[1024];
@@ -270,6 +270,14 @@ public:
     static int  load_guiEx_conf(CONF_GUIEX *conf, const char *stg_file);       //設定をstgファイルから読み込み
     static int  save_guiEx_conf(const CONF_GUIEX *conf, const char *stg_file); //設定をstgファイルとして保存
 };
+
+static bool cnf_disable_guicmd(const CONF_OTHER *oth) {
+#if ENCODER_QSV || ENCODER_NVENC || ENCODER_VCEENC
+    return false;
+#else
+    return oth->disable_guicmd;
+#endif    
+}
 
 void init_CONF_GUIEX(CONF_GUIEX *conf, BOOL use_highbit); //初期化し、デフォルトを設定
 
