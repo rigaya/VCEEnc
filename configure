@@ -793,8 +793,8 @@ SRC_VCECORE=" \
 convert_csp.cpp             convert_csp_avx.cpp \
 convert_csp_avx2.cpp        convert_csp_sse2.cpp           convert_csp_sse41.cpp       convert_csp_ssse3.cpp \
 cpu_info.cpp                gpu_info.cpp                   gpuz_info.cpp               logo.cpp \
-rgy_aspect_ratio.cpp        rgy_avlog.cpp \
-rgy_avutil.cpp              rgy_bitstream.cpp              rgy_bitstream_avx2.cpp      rgy_bitstream_avx512bw.cpp \
+rgy_aspect_ratio.cpp        rgy_avlog.cpp                  rgy_avutil.cpp \
+rgy_bitstream.cpp           rgy_bitstream_aac.cpp          rgy_bitstream_avx2.cpp      rgy_bitstream_avx512bw.cpp \
 rgy_chapter.cpp \
 rgy_cmd.cpp                 rgy_codepage.cpp               rgy_def.cpp \
 rgy_device.cpp              rgy_device_info_cache.cpp      rgy_device_usage.cpp        rgy_device_vulkan.cpp \
