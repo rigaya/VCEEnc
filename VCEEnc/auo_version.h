@@ -32,15 +32,19 @@
 
 #define AUO_VERSION          VER_FILEVERSION
 #define AUO_VERSION_STR      VER_STR_FILEVERSION
+#define AUO_VERSION_STR_W    VER_STR_FILEVERSION_TCHAR
 #define AUO_NAME_WITHOUT_EXT "VCEEnc"
+#define AUO_NAME_WITHOUT_EXT_W L"VCEEnc"
 #define AUO_NAME             "VCEEnc.auo"
 #define AUO_NAME_W          L"VCEEnc.auo"
 #define AUO_NAME_R            VCEEnc
 #define AUO_FULL_NAME        "拡張 VCE 出力"
 #define AUO_FULL_NAME_W     L"拡張 VCE 出力"
 #define AUO_VERSION_NAME     "拡張 VCE 出力 " AUO_VERSION_STR
-#define AUO_VERSION_INFO     AUO_VERSION_NAME" by rigaya"
+#define AUO_VERSION_INFO     "拡張 VCE 出力 " AUO_VERSION_STR " by rigaya"
+#define AUO_VERSION_INFO_W  L"拡張 VCE 出力 " AUO_VERSION_STR_W L" by rigaya"
 #define AUO_EXT_FILTER       "All Support Formats (*.*)\0*.mp4;*.mkv;*.264;*.mp4\0mp4 file (*.mp4)\0*.mp4\0mkv file (*.mkv)\0*.mkv\0raw file (*.264)\0*.264\0"
+#define AUO_EXT_FILTER_W    L"All Support Formats (*.*)\0*.mp4;*.mkv;*.264;*.mp4\0mp4 file (*.mp4)\0*.mp4\0mkv file (*.mkv)\0*.mkv\0raw file (*.264)\0*.264\0"
 
 #define ENCODER_X264   0
 #define ENCODER_X265   0
@@ -62,8 +66,8 @@
 #define VER_STR_FILEDESCRIPTION  AUO_FULL_NAME
 #define VER_STR_INTERNALNAME     AUO_FULL_NAME
 #define VER_STR_ORIGINALFILENAME AUO_NAME
-#define VER_STR_LEGALCOPYRIGHT   "拡張 VCE 出力 by rigaya"
-#define VER_STR_PRODUCTNAME      "VCEEnc"
+#define VER_STR_LEGALCOPYRIGHT   AUO_VERSION_INFO
+#define VER_STR_PRODUCTNAME      AUO_NAME_WITHOUT_EXT
 #define VER_PRODUCTVERSION       VER_FILEVERSION
 #define VER_STR_PRODUCTVERSION   VER_STR_FILEVERSION
 

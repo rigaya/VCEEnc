@@ -73,7 +73,7 @@ namespace VCEEnc {
     {
         String^ Name;
         String^ Path;
-        const char* args;
+        const wchar_t* args;
     };
 
     value struct TrackBarNU {

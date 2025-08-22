@@ -66,6 +66,8 @@ bool rgy_file_exists(const std::wstring& filepath);
 bool rgy_directory_exists(const std::string& directorypath);
 bool rgy_directory_exists(const std::wstring& directorypath);
 bool rgy_get_filesize(const char *filepath, uint64_t *filesize);
+bool PathRemoveFileSpecFixed(char *path);
+bool PathRemoveFileSpecFixed(wchar_t *path);
 std::pair<int, std::string> PathRemoveFileSpecFixed(const std::string& path);
 std::string PathRemoveExtensionS(const std::string& path);
 bool CreateDirectoryRecursive(const char *dir, const bool errorIfAlreadyExists = false);
@@ -108,12 +110,14 @@ void apply_appendix(wchar_t *new_filename, size_t new_filename_size, const wchar
 void insert_before_ext(char *filename, size_t nSize, const char *insert_str);
 void insert_before_ext(wchar_t *filename, size_t nSize, const wchar_t *insert_str);
 void insert_before_ext(char *filename, size_t nSize, int insert_num);
+#if defined(_WIN32) || defined(_WIN64)
 void insert_before_ext(wchar_t *filename, size_t nSize, int insert_num);
+#endif //#if defined(_WIN32) || defined(_WIN64)
 
 void change_ext(char *filename, size_t nSize, const char *ext);
-void change_ext(wchar_t *filename, size_t nSize, const wchar_t *ext);
 
 #if defined(_WIN32) || defined(_WIN64)
+void change_ext(wchar_t *filename, size_t nSize, const wchar_t *ext);
 std::string PathGetRoot(const char *path);
 std::wstring PathGetRoot(const wchar_t *path);
 bool PathGetRoot(const char *path, char *root, size_t nSize);
@@ -124,13 +128,15 @@ bool PathRootExists(const wchar_t *path);
 
 bool GetPathRootFreeSpace(const char *path, uint64_t *freespace);
 bool GetPathRootFreeSpace(const wchar_t *path, uint64_t *freespace);
-#endif //#if defined(_WIN32) || defined(_WIN64)
 
 bool DirectoryExistsOrCreate(const char *dir);
 bool DirectoryExistsOrCreate(const wchar_t *dir);
+#endif //#if defined(_WIN32) || defined(_WIN64)
 
 bool FileExistsAndHasSize(const char *path);
+#if defined(_WIN32) || defined(_WIN64)
 bool FileExistsAndHasSize(const wchar_t *path);
+#endif //#if defined(_WIN32) || defined(_WIN64)
 
 void PathGetDirectory(char *dir, size_t nSize, const char *path);
 void PathGetDirectory(wchar_t *dir, size_t nSize, const wchar_t *path);

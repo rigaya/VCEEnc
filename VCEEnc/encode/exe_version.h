@@ -33,14 +33,14 @@
 int version_a_larger_than_b(const int a[4], const int b[4]);
 std::string ver_string(int ver[4]);
 
-int get_exe_version_info(const char *exe_path, int version[4]);
-int get_exe_version_from_cmd(const char *exe_path, const char *cmd_ver, int version[4]);
+int get_exe_version_info(const TCHAR *exe_path, int version[4]);
+int get_exe_version_from_cmd(const TCHAR *exe_path, const TCHAR *cmd_ver, int version[4]);
 
-int get_x264_rev(const char *x264fullpath);
-int get_x265_rev(const char *x265fullpath, int version[4]);
-int get_svtav1_rev(const char *svtav1fullpath, int version[4]);
+int get_x264_rev(const TCHAR *x264fullpath);
+int get_x265_rev(const TCHAR *x265fullpath, int version[4]);
+int get_svtav1_rev(const TCHAR *svtav1fullpath, int version[4]);
 
-int get_x265ver_from_txt(const char *txt, int v[4]);
+int get_x265ver_from_txt(const TCHAR *txt, int v[4]);
 
 enum QTDLL {
     QAAC_APPLEDLL_UNAVAILABLE = 0,
@@ -48,6 +48,6 @@ enum QTDLL {
     QAAC_APPLEDLL_IN_CURRENTDIR = 2
 };
 
-QTDLL check_if_apple_dll_required_for_qaac(const char *exe_dir, const char *current_fullpath);
+QTDLL check_if_apple_dll_required_for_qaac(const TCHAR *exe_dir, const TCHAR *current_fullpath);
 
 #endif //_EXE_VERSION_H_

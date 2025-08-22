@@ -127,6 +127,19 @@ jobs:
       run:
         shell: cmd
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86
+            platform: Win32
+            aviutlver: AviUtl
+            outext: auo
+          - arch: x64
+            platform: x64
+            aviutlver: AviUtl2
+            outext: auo2
+
     steps:
 
       - name: Checkout
@@ -147,22 +160,30 @@ jobs:
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v2
         with:
-          msbuild-architecture: Win32
+          msbuild-architecture: ${{ matrix.platform }}
 
       - name: MSBuild
         run: |
           set AVISYNTH_SDK=${{ github.workspace }}\..\AviSynthPlus\avs_core
           set VAPOURSYNTH_SDK=${{ github.workspace }}\..\vapoursynth
           set OPENCL_HEADERS=${{ github.workspace }}\..\openclheaders
-          msbuild VCEEnc.sln /t:build /p:configuration=Release /p:Platform=Win32 -maxcpucount
+          msbuild VCEEnc.sln /t:build /p:configuration=Release /p:Platform=${{ matrix.platform }} -maxcpucount
 
-      - name: Download auo_setup
-        id: download_auosetup
+      - name: Download auo_setup Win32
+        id: download_auosetup_win32
+        if: matrix.platform == 'Win32'
         run: |
           curl -o auo_setup.zip -L https://github.com/rigaya/auo_setup/releases/download/2.02/auo_setup_2.02.zip
 
+      - name: Download auo_setup x64
+        id: download_auosetup_x64
+        if: matrix.platform == 'x64'
+        run: |
+          curl -o auo_setup.zip -L https://github.com/rigaya/auo_setup/releases/download/2.04/auo_setup_2.04_x64.zip
+
       - name: Download VCEEncC Win32
         uses: actions/download-artifact@v4
+        if: matrix.platform == 'Win32'
         with:
           name: VCEEncC_release_${{ needs.get_version_name.outputs.version_name }}_Win32
           path: VCEEncC_${{ needs.get_version_name.outputs.version_name }}_Win32.7z
@@ -173,8 +194,9 @@ jobs:
           name: VCEEncC_release_${{ needs.get_version_name.outputs.version_name }}_x64
           path: VCEEncC_${{ needs.get_version_name.outputs.version_name }}_x64.7z
           
-      - name: Create package
-        id: archieve
+      - name: Create package Win32
+        id: archieve_win32
+        if: matrix.platform == 'Win32'
         run: |
           mkdir Aviutl_VCEEnc_release
           7z x -oAviutl_VCEEnc_release\ auo_setup.zip
@@ -193,54 +215,86 @@ jobs:
           dir /b /s Aviutl_VCEEnc_release\
           7z a -mx9 Aviutl_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.zip .\Aviutl_VCEEnc_release\*
 
-          mkdir Aviutl_VCEEnc_release2
-          mkdir Aviutl_VCEEnc_release2\Plugin
-          mkdir Aviutl_VCEEnc_release2\Plugin\exe_files
-          xcopy /e /y Aviutl_VCEEnc_release\exe_files Aviutl_VCEEnc_release2\Plugin\exe_files
-          xcopy /e /y Aviutl_VCEEnc_release\plugins   Aviutl_VCEEnc_release2\Plugin
-          del Aviutl_VCEEnc_release2\Plugin\auo_setup.auf
-          del Aviutl_VCEEnc_release2\Plugin\exe_files\auo_setup.exe
-          rmdir /s /q Aviutl_VCEEnc_release2\Plugin\exe_files\VCEEncC\x86
-          7z a -t7z -m0=lzma -mx=9 -mmt Aviutl2_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.7z .\Aviutl_VCEEnc_release2\*
+      - name: Create package x64
+        id: archieve_x64
+        if: matrix.platform == 'x64'
+        run: |
+          mkdir Aviutl_VCEEnc_release
+          7z x -oAviutl_VCEEnc_release\ auo_setup.zip
+          mkdir Aviutl_VCEEnc_release\Plugin\exe_files\VCEEncC
+          mkdir Aviutl_VCEEnc_release\Plugin\exe_files\VCEEncC\x64
+          7z x -oAviutl_VCEEnc_release\Plugin\exe_files\VCEEncC\x64\ VCEEncC_${{ needs.get_version_name.outputs.version_name }}_x64.7z
+          copy /y _build\x64\Release\VCEEnc.auo2 Aviutl_VCEEnc_release\Plugin\
+          copy /y VCEEnc\VCEEnc.ini Aviutl_VCEEnc_release\Plugin\
+          copy /y VCEEnc\VCEEnc.en.ini Aviutl_VCEEnc_release\Plugin\
+          copy /y VCEEnc\VCEEnc.zh.ini Aviutl_VCEEnc_release\Plugin\
+          copy /y VCEEnc\auo_setup.ini Aviutl_VCEEnc_release\Plugin\exe_files\
+          copy /y VCEEnc\VCEEnc_readme.txt Aviutl_VCEEnc_release\
+          echo D | xcopy /y /e VCEEnc\stg Aviutl_VCEEnc_release\Plugin\VCEEnc_stg
+          7z a -t7z -m0=lzma -mx=9 -mmt Aviutl2_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.7z .\Aviutl_VCEEnc_release\*
           copy /b VCEEnc\7zSD.noadmin.sfx + VCEEnc\7zInstallerConfig.txt + Aviutl2_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.7z Aviutl2_VCEEnc_${{ needs.get_version_name.outputs.version_name }}_install.exe
 
       - name: Check Version
         id: check_ver
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          powershell "$ver = (Get-ItemProperty .\Aviutl_VCEEnc_release\plugins\VCEEnc.auo).VersionInfo.FileVersion; if ($ver -eq '${{ needs.get_version_name.outputs.version_name }}') { exit 0; } exit 1;"
+          powershell "$ver = (Get-ItemProperty .\_build\${{ matrix.platform }}\Release\VCEEnc.${{ matrix.outext }}).VersionInfo.FileVersion; if ($ver -eq '${{ needs.get_version_name.outputs.version_name }}') { exit 0; } exit 1;"
 
-      - name: Check dll
-        id: check_dll
+      - name: Check dll Win32
+        id: check_dll_win32
+        if: matrix.platform == 'Win32'
         run: |
           "Aviutl_VCEEnc_release\exe_files\VCEEncC\x86\VCEEncC.exe" --check-avcodec-dll
           "Aviutl_VCEEnc_release\exe_files\VCEEncC\x64\VCEEncC64.exe" --check-avcodec-dll
 
-      - name: Calc hash
-        id: calc_hash
+      - name: Check dll x64
+        id: check_dll_x64
+        if: matrix.platform == 'x64'
+        run: |
+          "Aviutl_VCEEnc_release\Plugin\exe_files\VCEEncC\x64\VCEEncC64.exe" --check-avcodec-dll
+
+      - name: Calc hash Win32
+        id: calc_hash_win32
+        if: matrix.platform == 'Win32'
         run: |
           7z h -scrc* Aviutl_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.zip
+
+      - name: Calc hash x64
+        id: calc_hash_x64
+        if: matrix.platform == 'x64'
+        run: |
           7z h -scrc* Aviutl2_VCEEnc_${{ needs.get_version_name.outputs.version_name }}_install.exe
 
-      - name: Upload Release Asset
-        id: upload-release-asset 
+      - name: Upload Release Asset Win32
+        id: upload-release-asset-win32
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && matrix.platform == 'Win32'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: |
             Aviutl_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.zip
+
+      - name: Upload Release Asset x64
+        id: upload-release-asset-x64
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/') && matrix.platform == 'x64'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: |
             Aviutl2_VCEEnc_${{ needs.get_version_name.outputs.version_name }}_install.exe
 
-      - name: Upload artifact
+      - name: Upload artifact Win32
         uses: actions/upload-artifact@v4
+        if: matrix.platform == 'Win32'
         with:
           name: Aviutl_VCEEnc_${{ needs.get_version_name.outputs.version_name }}
           path: Aviutl_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.zip
 
-      - name: Upload artifact
+      - name: Upload artifact x64
         uses: actions/upload-artifact@v4
+        if: matrix.platform == 'x64'
         with:
-          name: Aviutl2_VCEEnc_${{ needs.get_version_name.outputs.version_name }}
+          name: Aviutl2_VCEEnc_${{ needs.get_version_name.outputs.version_name }}_install
           path: Aviutl2_VCEEnc_${{ needs.get_version_name.outputs.version_name }}_install.exe

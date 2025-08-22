@@ -25,16 +25,17 @@
 //
 // --------------------------------------------------------------------------------------------
 
-#ifndef _AUO_FAW2AAC_H_
-#define _AUO_FAW2AAC_H_
+#ifndef _AUO_OPTIONS_H_
+#define _AUO_OPTIONS_H_
 
-#include "auo.h"
-#include "auo_version.h"
-#include "auo_util.h"
-#include "auo_conf.h"
 #include "auo_settings.h"
-#include "auo_system.h"
 
-AUO_RESULT audio_faw2aac(CONF_GUIEX *conf, const OUTPUT_INFO *oip, PRM_ENC *pe, const SYSTEM_DATA *sys_dat);
+static const ENC_OPTION_STR AUDIO_DELAY_CUT_MODE[] = {
+    { NULL, AUO_CONF_AUDIO_DELAY_NONE,      L"補正なし"   },
+    { NULL, AUO_CONF_AUDIO_DELAY_CUT_AUDIO, L"音声カット" },
+    { NULL, AUO_CONF_AUDIO_DELAY_ADD_VIDEO, L"映像追加"   },
+    { NULL, AUO_CONF_AUDIO_DELAY_EDTS,      L"edts"       },
+    { NULL, AUO_MES_UNKNOWN,                NULL          },
+};
 
-#endif //_AUO_FAW2AAC_H_
+#endif //_AUO_OPTIONS_H_

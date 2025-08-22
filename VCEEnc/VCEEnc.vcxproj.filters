@@ -220,6 +220,9 @@
     <ClInclude Include="frm\auo_mes.h">
       <Filter>ヘッダー ファイル\frm</Filter>
     </ClInclude>
+    <ClInclude Include="output2.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="auo_version.rc">
