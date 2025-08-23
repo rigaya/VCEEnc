@@ -3426,7 +3426,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
     if (m_pEncoder) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskAMFEncode>(m_pEncoder, m_encCodec, m_params, m_dev->context(), 1, m_timecode.get(), m_encTimestamp.get(), m_outputTimebase, m_hdr10plus.get(), m_dovirpu.get(), m_pLog));
     } else {
-        m_pipelineTasks.push_back(std::make_unique<PipelineTaskOutputRaw>(m_dev->context(), 1, m_pLog));
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskOutputRaw>(m_dev->context(), m_pFileWriter.get(), 1, m_pLog));
     }
 
     if (m_pipelineTasks.size() == 0) {

@@ -2552,10 +2552,15 @@ public:
 };
 
 class PipelineTaskOutputRaw : public PipelineTask {
+    RGYOutput *m_writer;
 public:
-    PipelineTaskOutputRaw(amf::AMFContextPtr context, int outMaxQueueSize, std::shared_ptr<RGYLog> log) :
-        PipelineTask(PipelineTaskType::OUTPUTRAW, context, outMaxQueueSize, log) {};
-    virtual ~PipelineTaskOutputRaw() {};
+    PipelineTaskOutputRaw(amf::AMFContextPtr context, RGYOutput *writer, int outMaxQueueSize, std::shared_ptr<RGYLog> log) :
+        PipelineTask(PipelineTaskType::OUTPUTRAW, context, outMaxQueueSize, log), m_writer(writer) {};
+    virtual ~PipelineTaskOutputRaw() {
+        if (m_writer) {
+            m_writer->WriteNextFrame((RGYFrame *)nullptr);
+        }
+    };
 
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override { return std::nullopt; };
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override { return std::nullopt; };
