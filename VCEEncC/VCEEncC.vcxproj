@@ -185,7 +185,7 @@
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>avcodec-61.dll;avformat-61.dll;avutil-59.dll;swresample-5.dll;avfilter-10.dll;avdevice-61.dll;libass-9.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>avcodec-62.dll;avformat-62.dll;avutil-60.dll;swresample-6.dll;avfilter-11.dll;avdevice-62.dll;libass-9.dll</DelayLoadDLLs>
       <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PostBuildEvent>
@@ -231,7 +231,7 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutD
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>avcodec-61.dll;avformat-61.dll;avutil-59.dll;swresample-5.dll;avfilter-10.dll;avdevice-61.dll;libass-9.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>avcodec-62.dll;avformat-62.dll;avutil-60.dll;swresample-6.dll;avfilter-11.dll;avdevice-62.dll;libass-9.dll</DelayLoadDLLs>
       <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PostBuildEvent>
@@ -275,7 +275,7 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutD
       <GenerateDebugInformation>DebugFastLink</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>avcodec-61.dll;avformat-61.dll;avutil-59.dll;swresample-5.dll;avfilter-10.dll;avdevice-61.dll;libass-9.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>avcodec-62.dll;avformat-62.dll;avutil-60.dll;swresample-6.dll;avfilter-11.dll;avdevice-62.dll;libass-9.dll</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avcodec-*.dll"  "$(OutDir)" &gt; NUL
@@ -318,7 +318,7 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutD
       <GenerateDebugInformation>DebugFastLink</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>avcodec-61.dll;avformat-61.dll;avutil-59.dll;swresample-5.dll;avfilter-10.dll;avdevice-61.dll;libass-9.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>avcodec-62.dll;avformat-62.dll;avutil-60.dll;swresample-6.dll;avfilter-11.dll;avdevice-62.dll;libass-9.dll</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avcodec-*.dll"  "$(OutDir)" &gt; NUL
@@ -364,7 +364,7 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutD
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>avcodec-61.dll;avformat-61.dll;avutil-59.dll;swresample-5.dll;avfilter-10.dll;avdevice-61.dll;libass-9.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>avcodec-62.dll;avformat-62.dll;avutil-60.dll;swresample-6.dll;avfilter-11.dll;avdevice-62.dll;libass-9.dll</DelayLoadDLLs>
       <LargeAddressAware>true</LargeAddressAware>
     </Link>
     <PostBuildEvent>
@@ -416,7 +416,7 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutD
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>avcodec-61.dll;avformat-61.dll;avutil-59.dll;swresample-5.dll;avfilter-10.dll;avdevice-61.dll;libass-9.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>avcodec-62.dll;avformat-62.dll;avutil-60.dll;swresample-6.dll;avfilter-11.dll;avdevice-62.dll;libass-9.dll</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avcodec-*.dll"  "$(OutDir)" &gt; NUL
@@ -467,7 +467,7 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutD
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>avcodec-61.dll;avformat-61.dll;avutil-59.dll;swresample-5.dll;avfilter-10.dll;avdevice-61.dll;libass-9.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>avcodec-62.dll;avformat-62.dll;avutil-60.dll;swresample-6.dll;avfilter-11.dll;avdevice-62.dll;libass-9.dll</DelayLoadDLLs>
       <LargeAddressAware>true</LargeAddressAware>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
@@ -520,7 +520,7 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutD
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <AdditionalDependencies>DXGI.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>avcodec-61.dll;avformat-61.dll;avutil-59.dll;swresample-5.dll;avfilter-10.dll;avdevice-61.dll;libass-9.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>avcodec-62.dll;avformat-62.dll;avutil-60.dll;swresample-6.dll;avfilter-11.dll;avdevice-62.dll;libass-9.dll</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avcodec-*.dll"  "$(OutDir)" &gt; NUL
