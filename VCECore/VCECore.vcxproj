@@ -35,7 +35,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\NVEnc\NVEncCore\rgy_bitstream_aac.cpp" />
+    <ClCompile Include="rgy_bitstream_aac.cpp" />
     <ClCompile Include="api_hook.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -586,8 +586,8 @@
     <ClCompile Include="vce_param.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\NVEnc\NVEncCore\rgy_bitstream_aac.h" />
-    <ClInclude Include="..\..\NVEnc\NVEncCore\rgy_thread_pool.h" />
+    <ClInclude Include="rgy_bitstream_aac.h" />
+    <ClInclude Include="rgy_thread_pool.h" />
     <ClInclude Include="api_hook.h" />
     <ClInclude Include="convert_const.h" />
     <ClInclude Include="convert_csp.h" />
