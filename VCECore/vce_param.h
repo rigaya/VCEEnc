@@ -104,6 +104,7 @@ const CX_DESC list_codec_all[] = {
     { _T("hevc"), RGY_CODEC_HEVC },
     { _T("av1"),  RGY_CODEC_AV1  },
     { _T("raw"),  RGY_CODEC_RAW  },
+    { _T("avcodec"), RGY_CODEC_AVCODEC },
     { NULL, 0 }
 };
 

@@ -448,6 +448,7 @@ int VCECore::GetEncoderBitdepth(const VCEParam *inputParam) const {
     case RGY_CODEC_H264: return 8;
     case RGY_CODEC_HEVC:
     case RGY_CODEC_AV1:
+    case RGY_CODEC_AVCODEC:
     case RGY_CODEC_RAW: return inputParam->outputDepth;
     default:
         return 0;
@@ -807,7 +808,7 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
         PrintMes(RGY_LOG_ERROR, _T("failed to get output video info.\n"));
         return err;
     }
-    if (inputParams->codec == RGY_CODEC_RAW) {
+    if (inputParams->codec == RGY_CODEC_RAW || inputParams->codec == RGY_CODEC_AVCODEC) {
         inputParams->common.AVMuxTarget &= ~RGY_MUX_VIDEO;
     }
 
@@ -2241,7 +2242,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
 }
 
 RGY_ERR VCECore::initEncoder(VCEParam *prm) {
-    if (prm->codec == RGY_CODEC_RAW) {
+    if (prm->codec == RGY_CODEC_RAW || prm->codec == RGY_CODEC_AVCODEC) {
         return RGY_ERR_NONE;
     }
     AMF_RESULT res = AMF_OK;
@@ -2911,7 +2912,7 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
     //エンコーダの対応をチェック
     tstring message; //GPUチェックのメッセージ
     for (auto gpu = gpuList.begin(); gpu != gpuList.end(); ) {
-        if (prm->codec != RGY_CODEC_RAW) {
+        if (prm->codec != RGY_CODEC_RAW && prm->codec != RGY_CODEC_AVCODEC) {
             PrintMes(RGY_LOG_DEBUG, _T("Checking GPU #%d (%s) for codec %s.\n"),
                 (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
             //コーデックのチェック
