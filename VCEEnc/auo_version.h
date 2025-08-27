@@ -35,8 +35,13 @@
 #define AUO_VERSION_STR_W    VER_STR_FILEVERSION_TCHAR
 #define AUO_NAME_WITHOUT_EXT "VCEEnc"
 #define AUO_NAME_WITHOUT_EXT_W L"VCEEnc"
+#if _M_X64
+#define AUO_NAME             "VCEEnc.auo2"
+#define AUO_NAME_W          L"VCEEnc.auo2"
+#else
 #define AUO_NAME             "VCEEnc.auo"
 #define AUO_NAME_W          L"VCEEnc.auo"
+#endif
 #define AUO_NAME_R            VCEEnc
 #define AUO_FULL_NAME        "拡張 VCE 出力"
 #define AUO_FULL_NAME_W     L"拡張 VCE 出力"
