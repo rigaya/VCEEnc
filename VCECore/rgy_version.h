@@ -89,7 +89,6 @@ const char *get_encoder_version();
 
 #if defined(VCE_AUO)
 #define ENCODER_NAME  "VCEEnc"
-#define AUO_NAME      "VCEEnc.auo"
 #define FOR_AUO                   1
 #define ENABLE_RAW_READER         0
 #define ENABLE_AVI_READER         0
