@@ -89,10 +89,9 @@ int get_aviutl_color_format(int use_highbit, RGY_CSP csp) {
 }
 
 void get_csp_and_bitdepth(bool& use_highbit, RGY_CSP& csp, const CONF_GUIEX *conf) {
-    const bool isAviutl2 = is_aviutl2();
     VCEParam enc_prm;
     parse_cmd(&enc_prm, conf->enc.cmd);
-    use_highbit = !isAviutl2 && enc_prm.outputDepth > 8;
+    use_highbit = enc_prm.outputDepth > 8;
     if (use_highbit) {
         //csp = (enc_prm.yuv444) ? RGY_CSP_YUV444_16 : RGY_CSP_P010;
         csp = RGY_CSP_P010;
