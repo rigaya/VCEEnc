@@ -306,6 +306,8 @@ public:
 
     RGY_ERR OverwriteHEVCAlphaChannelInfoSEI(RGYBitstream *bitstream);
 
+    RGY_ERR InsertHeader(RGYBitstream *bitstream);
+
     template<typename T>
     std::pair<RGY_ERR, std::vector<uint8_t>> getMetadata(const RGYFrameDataType metadataType, const RGYTimestampMapVal& bs_framedata, const RGYFrameDataMetadataConvertParam *convPrm);
 
@@ -383,6 +385,9 @@ protected:
     std::unique_ptr<uint8_t, aligned_malloc_deleter> m_UVBuffer;
     std::unique_ptr<RGYOutputBSF> m_bsf;
     decltype(parse_nal_unit_hevc_c) *m_parse_nal_hevc; // HEVC用のnal unit分解関数へのポインタ
+    bool m_insertHeader; // VCEEncでヘッダー挿入を行うかどうか
+    std::vector<uint8_t> m_storedHeaders; // 保存されたヘッダー情報 (VPS)/SPS/PPS
+    decltype(parse_nal_unit_h264_c) *m_parse_nal_h264; // H.264用のnal unit分解関数へのポインタ
 };
 
 struct RGYOutputRawPEExtHeader;
@@ -406,6 +411,7 @@ struct RGYOutputRawPrm {
     bool doviRpuMetadataCopy;     //doviのmetadataのコピー
     RGYDOVIRpuConvertParam doviRpuConvertParam;
     RGYTimestamp *vidTimestamp;
+    bool insertHeader; // VCEEncでヘッダー挿入を行うかどうか
     RGYQueueMPMP<RGYOutputRawPEExtHeader*> *qFirstProcessData;
     RGYQueueMPMP<RGYOutputRawPEExtHeader*> *qFirstProcessDataFree;
     RGYQueueMPMP<RGYOutputRawPEExtHeader*> *qFirstProcessDataFreeLarge;
@@ -465,6 +471,7 @@ RGY_ERR initWriters(
     const bool benchmark,
     const bool HEVCAlphaChannel,
     const int HEVCAlphaChannelMode,
+    const bool insertHeader,
     RGYPoolAVPacket *poolPkt,
     RGYPoolAVFrame *poolFrame,
     shared_ptr<EncodeStatus> pStatus,

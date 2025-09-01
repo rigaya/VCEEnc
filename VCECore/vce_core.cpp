@@ -812,9 +812,14 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
         inputParams->common.AVMuxTarget &= ~RGY_MUX_VIDEO;
     }
 
+    auto require_repeat_headers = [this]() {
+        return m_hdr10plus || m_hdr10plusMetadataCopy || m_dovirpuMetadataCopy || (m_hdrseiOut && m_hdrseiOut->gen_nal().size() > 0);
+    };
+    const bool insertHeader = inputParams->repeatHeaders || require_repeat_headers();
+    
     err = initWriters(m_pFileWriter, m_pFileWriterListAudio, m_pFileReader, m_AudioReaders,
         &inputParams->common, &inputParams->input, &inputParams->ctrl, outputVideoInfo,
-        m_trimParam, m_outputTimebase, m_Chapters, m_hdrseiOut.get(), m_hdr10plus.get(), m_dovirpu.get(), m_encTimestamp.get(), false, false, false, 0,
+        m_trimParam, m_outputTimebase, m_Chapters, m_hdrseiOut.get(), m_hdr10plus.get(), m_dovirpu.get(), m_encTimestamp.get(), false, false, false, 0, insertHeader,
         m_poolPkt.get(), m_poolFrame.get(), m_pStatus, m_pPerfMonitor, m_pLog);
     if (err != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("failed to initialize file reader(s).\n"));
@@ -2730,7 +2735,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         m_params.SetParam(AMF_PARAM_LOWLATENCY_MODE(prm->codec), prm->ctrl.lowLatency);
         if (prm->bVBAQ.has_value()) m_params.SetParam(AMF_PARAM_ENABLE_VBAQ(prm->codec), prm->bVBAQ.value());
         //m_params.SetParam(AMF_PARAM_END_OF_SEQUENCE(prm->codec),                false);
-        m_params.SetParam(AMF_PARAM_INSERT_AUD(prm->codec), false);
+        m_params.SetParam(AMF_PARAM_INSERT_AUD(prm->codec), prm->aud);
     }
 
     if (prm->codec == RGY_CODEC_HEVC || prm->codec == RGY_CODEC_AV1) {
@@ -2773,8 +2778,8 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         m_params.SetParam(AMF_PARAM_MOTION_QUARTERPIXEL(prm->codec),            !!(prm->nMotionEst & VCE_MOTION_EST_QUATER));
 
         //m_params.SetParam(AMF_VIDEO_ENCODER_FORCE_PICTURE_TYPE,             (amf_int64)AMF_VIDEO_ENCODER_PICTURE_TYPE_NONE);
-        m_params.SetParam(AMF_VIDEO_ENCODER_INSERT_SPS, false);
-        m_params.SetParam(AMF_VIDEO_ENCODER_INSERT_PPS, false);
+        //m_params.SetParam(AMF_VIDEO_ENCODER_INSERT_SPS, prm->repeatHeaders); // ここで設定すると毎フレームSPS/PPSが入ってしまう
+        //m_params.SetParam(AMF_VIDEO_ENCODER_INSERT_PPS, prm->repeatHeaders);
         //m_params.SetParam(AMF_VIDEO_ENCODER_PICTURE_STRUCTURE,                (amf_int64)((m_picStruct & RGY_PICSTRUCT_INTERLACED) ? AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE);
         //m_params.SetParam(AMF_VIDEO_ENCODER_MARK_CURRENT_WITH_LTR_INDEX,    false);
         //m_params.SetParam(AMF_VIDEO_ENCODER_FORCE_LTR_REFERENCE_BITFIELD,   (amf_int64)0);
@@ -2789,6 +2794,9 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             m_params.SetParam(AMF_VIDEO_ENCODER_DE_BLOCKING_FILTER, prm->deblockFilter.value());
         }
     } else if (prm->codec == RGY_CODEC_HEVC) {
+        //auto require_repeat_headers = [this]() {
+        //    return m_hdr10plus || m_hdr10plusMetadataCopy || m_dovirpuMetadataCopy || (m_hdrseiOut && m_hdrseiOut->gen_nal().size() > 0);
+        //};
         //m_params.SetParam(AMF_PARAM_RATE_CONTROL_PREANALYSIS_ENABLE(prm->codec), prm->preAnalysis);
 
         m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_TIER,                            (amf_int64)prm->codecParam[prm->codec].nTier);
@@ -2814,7 +2822,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
             m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE,                   (amf_int64)AMF_VIDEO_ENCODER_HEVC_NOMINAL_RANGE_FULL);
         }
 
-        m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER,                   true);
+        //m_params.SetParam(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER,                   prm->repeatHeaders || require_repeat_headers()); // ここで設定すると毎フレームVPS/SPS/PPSが入ってしまう
     } else if (prm->codec == RGY_CODEC_AV1) {
         if (prm->tiles > 0) {
             m_params.SetParam(AMF_VIDEO_ENCODER_AV1_TILES_PER_FRAME, (amf_int64)prm->tiles);

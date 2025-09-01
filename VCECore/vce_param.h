@@ -694,6 +694,9 @@ struct VCEParam {
 
     bool        enableAV1HWDec;
 
+    bool        aud;
+    bool        repeatHeaders;
+
     void applyDOVIProfile(const RGYDOVIProfile inputProfile);
 
     VCEParam();

@@ -977,6 +977,22 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->bFiller = true;
         return 0;
     }
+    if (IS_OPTION("aud")) {
+        pParams->aud = true;
+        return 0;
+    }
+    if (IS_OPTION("no-aud")) {
+        pParams->aud = false;
+        return 0;
+    }
+    if (IS_OPTION("repeat-headers")) {
+        pParams->repeatHeaders = true;
+        return 0;
+    }
+    if (IS_OPTION("no-repeat-headers")) {
+        pParams->repeatHeaders = false;
+        return 0;
+    }
     if (IS_OPTION("deblock")) {
         pParams->deblockFilter = true;
         return 0;
@@ -1848,6 +1864,8 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm) {
     }
     OPT_BOOL(_T("--filler"), _T("--no-filler"), bFiller);
     OPT_BOOL(_T("--enforce-hrd"), _T("--no-enforce-hrd"), bEnforceHRD);
+    OPT_BOOL(_T("--aud"), _T("--no-aud"), aud);
+    OPT_BOOL(_T("--repeat-headers"), _T("--no-repeat-headers"), repeatHeaders);
 
     OPT_NUM(_T("--tiles"), tiles);
     OPT_NUM_OPTIONAL(_T("--temporal-layers"), temporalLayers);

@@ -77,6 +77,8 @@
   - [--skip-frame \[H.264/HEVC\]](#--skip-frame-h264hevc)
   - [--enforce-hrd](#--enforce-hrd)
   - [--filler](#--filler)
+  - [--aud](#--aud)
+  - [--repeat-headers](#--repeat-headers)
   - [--no-deblock \[H.264/HEVC\]](#--no-deblock-h264hevc)
   - [--motion-est \<string\> \[H.264/HEVC\]](#--motion-est-string-h264hevc)
   - [--tiles \<int\> \[AV1\]](#--tiles-int-av1)
@@ -596,6 +598,12 @@ Enforce hrd compatibility of bitstream.
 
 ### --filler
 Output filler data to adjust nominal bitrate.
+
+### --aud
+Insert access unit delimiters in the output stream.
+
+### --repeat-headers
+Repeat parameter sets (SPS/PPS for H.264, VPS/SPS/PPS for HEVC) in the output stream. This is automatically enabled when using HDR metadata options like --max-cll, --master-display, etc.
 
 ### --no-deblock [H.264/HEVC]
 Disable deblock filter.

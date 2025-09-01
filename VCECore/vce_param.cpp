@@ -242,7 +242,9 @@ VCEParam::VCEParam() :
     psnr(false),
     smartAccessVideo(false),
     multiInstance(false),
-    enableAV1HWDec(true) {
+    enableAV1HWDec(true),
+    aud(false),
+    repeatHeaders(false) {
     codecParam[RGY_CODEC_H264].nLevel   = 0;
 #if defined(_WIN32) || defined(_WIN64)
     codecParam[RGY_CODEC_H264].nProfile = list_avc_profile[2].value;

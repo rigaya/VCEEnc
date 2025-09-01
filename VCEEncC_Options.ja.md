@@ -75,6 +75,8 @@
   - [--skip-frame \[H.264/HEVC\]](#--skip-frame-h264hevc)
   - [--enforce-hrd](#--enforce-hrd)
   - [--filler](#--filler)
+  - [--aud](#--aud)
+  - [--repeat-headers](#--repeat-headers)
   - [--no-deblock \[H.264/HEVC\]](#--no-deblock-h264hevc)
   - [--motion-est \<string\> \[H.264/HEVC\]](#--motion-est-string-h264hevc)
   - [--tiles \<int\> \[AV1\]](#--tiles-int-av1)
@@ -530,6 +532,12 @@ HRD互換の出力を行う。
 
 ### --filler
 fillerデータを出力し、(名目上の)ビットレートを調整する。
+
+### --aud
+出力ストリームにアクセスユニットデリミタを挿入する。
+
+### --repeat-headers
+出力ストリームにパラメータセット（H.264の場合はSPS/PPS、HEVCの場合はVPS/SPS/PPS）を繰り返し出力する。--max-cll、--master-displayなどのHDRメタデータオプションを使用する際に自動的に有効になる。
 
 ### --no-deblock [H.264/HEVC]
 デブロックフィルタの無効化。

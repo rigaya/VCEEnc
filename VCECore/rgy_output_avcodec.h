@@ -432,6 +432,7 @@ struct AvcodecWriterPrm {
     int                          HEVCAlphaChannelMode;    //HEVCのalphaチェンネルのモード
     int                          threadCsp;               //色空間変換用のスレッド数
     RGY_SIMD                     simdCsp;                 //色空間変換用のSIMD
+    bool                         insertHeader;            //VCEEncでヘッダー挿入を行うかどうか
     RGYPoolAVPacket             *poolPkt;                 //読み込み側からわたってきたパケットの返却先
     RGYPoolAVFrame              *poolFrame;               //読み込み側からわたってきたパケットの返却先
 
@@ -483,6 +484,7 @@ struct AvcodecWriterPrm {
         HEVCAlphaChannelMode(0),
         threadCsp(0),
         simdCsp(RGY_SIMD::SIMD_ALL),
+        insertHeader(false),
         poolPkt(nullptr),
         poolFrame(nullptr) {
     }

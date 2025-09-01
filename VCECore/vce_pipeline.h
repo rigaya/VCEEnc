@@ -2036,6 +2036,14 @@ public:
             m_encParams.Apply(pSurface, AMF_PARAM_FRAME, m_log.get());
             // apply dynamic properties to the encoder
             //m_encParams.Apply(m_pEncoder, AMF_PARAM_DYNAMIC, m_pLog.get());
+            
+            // ヘッダ関連に関してはm_encParams.Apply後にここで上書きする
+            if (m_encCodec == RGY_CODEC_H264) {
+                m_encParams.SetParam(AMF_VIDEO_ENCODER_INSERT_PPS, m_inFrames==0);
+                m_encParams.SetParam(AMF_VIDEO_ENCODER_INSERT_SPS, m_inFrames==0);
+            } else if (m_encCodec == RGY_CODEC_HEVC) {  
+                m_encParams.SetParam(AMF_VIDEO_ENCODER_HEVC_INSERT_HEADER, m_inFrames==0);
+            }
 
             pSurface->SetProperty(RGY_PROP_TIMESTAMP, pts);
             pSurface->SetProperty(RGY_PROP_DURATION, duration);
