@@ -1519,9 +1519,9 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
         }
     }
     if (pParams->codec == RGY_CODEC_H264) {
-        if (pParams->qualityPreset == AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY) {
-            pParams->qualityPreset = AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY;
-        }
+        //if (pParams->qualityPreset == AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY) {
+        //    pParams->qualityPreset = AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY;
+        //}
     } else if (pParams->codec == RGY_CODEC_HEVC) {
         int h264RateControl = pParams->rateControl;
         switch (h264RateControl) {
@@ -1551,8 +1551,10 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
             pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_SPEED;
             break;
         case AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY:
-        case AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY:
             pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_QUALITY;
+            break;
+        case AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY:
+            pParams->qualityPreset = AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_HIGH_QUALITY;
             break;
         case AMF_VIDEO_ENCODER_QUALITY_PRESET_BALANCED:
         default:
