@@ -29,9 +29,9 @@
 #ifndef __RGY_VERSION_H__
 #define __RGY_VERSION_H__
 
-#define VER_FILEVERSION             0,8,38,0
-#define VER_STR_FILEVERSION          "8.38"
-#define VER_STR_FILEVERSION_TCHAR _T("8.38")
+#define VER_FILEVERSION             0,9,0,0
+#define VER_STR_FILEVERSION          "9.00"
+#define VER_STR_FILEVERSION_TCHAR _T("9.00")
 
 
 #ifdef _M_IX86

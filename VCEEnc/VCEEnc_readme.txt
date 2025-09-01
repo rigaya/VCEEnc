@@ -188,18 +188,19 @@ Radeon RX7900XT
 
 【どうでもいいメモ】
 
-2025.09.xx (9.00)
+2025.09.02 (9.00)
 - AviUtl2に正式対応。
   - 大半の処理についてUnicode対応を実施。
   - プロファイルのフォーマットを変更。
   - yuv444出力時にはYC48から変換するように。
+  - 音声を転送する際、可能ならfloat 32bitで転送するように。
 - AviUtl2向け簡易インストーラを更新。
   - 簡易インストーラも64bit化。
   - VC runtimeの64bit版をインストールするように。
   - ウィンドウの高dpi対応を実施。
   - インストール先を変更できるように。
-- --vpp-resize ngx-vsr, --vpp-ngx-truehdrについて、DX11 APIからCUDA APIに移行。
-  DirectX11の初期化に失敗しても利用可能に。
+- H.264/HEVCで-u slowerを指定しても-u slowになってしまう問題を修正。
+- --aud, --repeat-headersオプションを追加。
 - フィルタのみ使用し、swデコードをする機能を追加。
   - -c av_xxx 等で実行可能
     例: -c av_libsvtav1 --avcodec-prms "preset=6,crf=30,svtav1-params=enable-variance-boost=1:variance-boost-strength=2"
