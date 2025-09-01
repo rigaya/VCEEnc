@@ -809,7 +809,7 @@ static const char * AUO_MES_ID_NAME_STR[] = {
 "AuofrmTTfcgCXBitdepth",
 "AuofrmTTfcgCBDeblock",
 "AuofrmTTfcgCBSkipFrame",
-"AuofrmTTfcgCBVBAQ",
+"AuofrmTTfcgCXVBAQ",
 "AuofrmTTfcgCXVideoFormat",
 "AuofrmTTfcgCBFullrange",
 "AuofrmTTfcgCBPreEncode",

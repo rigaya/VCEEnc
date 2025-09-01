@@ -141,6 +141,13 @@ static const ENC_OPTION_STR audio_enc_timing_desc[] = {
     { NULL, AUO_MES_UNKNOWN, NULL }
 };
 
+static const ENC_OPTION_STR2 list_option_auto_off_on[] = {
+    { AUO_MES_UNKNOWN, L"auto",   -1 },
+    { AUO_MES_UNKNOWN, L"off",     0 },
+    { AUO_MES_UNKNOWN, L"on",      1 },
+    { AUO_MES_UNKNOWN, NULL, NULL }
+};
+
 static const ENC_OPTION_STR2 list_deinterlace_gui[] = {
     { AUO_CONFIG_CX_DEINTERLACE_NONE,   L"なし",                   0 },
 #if ENCODER_QSV

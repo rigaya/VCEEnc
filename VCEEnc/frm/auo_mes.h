@@ -901,7 +901,7 @@ enum AuoMes {
         AuofrmTTfcgCXBitdepth,
         AuofrmTTfcgCBDeblock,
         AuofrmTTfcgCBSkipFrame,
-        AuofrmTTfcgCBVBAQ,
+        AuofrmTTfcgCXVBAQ,
         AuofrmTTfcgCXVideoFormat,
         AuofrmTTfcgCBFullrange,
         AuofrmTTfcgCBPreEncode,

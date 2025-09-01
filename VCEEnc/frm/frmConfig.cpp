@@ -837,6 +837,7 @@ System::Void frmConfig::InitComboBox() {
     setComboBox(fcgCXBitdepth,      list_hevc_bitdepth);
     setComboBox(fcgCXAspectRatio, aspect_desc);
     setComboBox(fcgCXMotionEst,     list_mv_presicion);
+    setComboBox(fcgCXVBAQ,          list_option_auto_off_on);
     setComboBox(fcgCXColorMatrix,   list_colormatrix, _T("auto"));
     setComboBox(fcgCXColorPrim,     list_colorprim, _T("auto"));
     setComboBox(fcgCXTransfer,      list_transfer, _T("auto"));
@@ -991,6 +992,7 @@ System::Void frmConfig::fcgCXCodec_SelectedIndexChanged(System::Object^  sender,
 
     this->SuspendLayout();
 
+    fcgPNH264LevelProfile->Visible = enc_codec == RGY_CODEC_H264;
     fcgPNHEVCLevelProfile->Visible = enc_codec == RGY_CODEC_HEVC;
     fcgPNAV1LevelProfile->Visible = enc_codec == RGY_CODEC_AV1;
 
@@ -1421,12 +1423,12 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
     SetNUValue(fcgNUBRefDeltaQP,         enc.deltaQPBFrameRef.value_or(VCE_PARAM_DEFAULT_DELTA_QPB_REF));
 
     SetNUValue(fcgNUSlices,             enc.nSlices);
-    SetNUValue(fcgNURefFrames,          enc.refFrames.value_or(VCE_DEFAULT_REF_FRAMES));
+    SetNUValue(fcgNURefFrames,          enc.refFrames.value_or(0));
 
     fcgCBDeblock->Checked             = enc.deblockFilter.value_or(true);
     fcgCBSkipFrame->Checked           = enc.enableSkipFrame.value_or(false);
     fcgCBTimerPeriodTuning->Checked   = enc.bTimerPeriodTuning;
-    fcgCBVBAQ->Checked                = enc.bVBAQ.value_or(false);
+    SetCXIndex(fcgCXVBAQ,               enc.bVBAQ);
     fcgCBFullrange->Checked           = enc.common.out_vui.colorrange == RGY_COLORRANGE_FULL;
     SetCXIndex(fcgCXColorMatrix,        get_cx_index(list_colormatrix, enc.common.out_vui.matrix));
     SetCXIndex(fcgCXTransfer,           get_cx_index(list_transfer, enc.common.out_vui.transfer));
@@ -1679,16 +1681,28 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
 
     enc.bframes                                 = (int)fcgNUBframes->Value;
     enc.bPyramid                                = fcgCBBPyramid->Checked;
-    enc.deltaQPBFrame                           = (int)fcgNUBDeltaQP->Value;
-    enc.deltaQPBFrameRef                        = (int)fcgNUBRefDeltaQP->Value;
+    if (VCE_PARAM_DEFAULT_DELTA_QPB == (int)fcgNUBDeltaQP->Value) {
+        enc.deltaQPBFrame.reset();
+    } else {
+        enc.deltaQPBFrame                           = (int)fcgNUBDeltaQP->Value;
+    }
+    if (VCE_PARAM_DEFAULT_DELTA_QPB_REF == (int)fcgNUBRefDeltaQP->Value) {
+        enc.deltaQPBFrameRef.reset();
+    } else {
+        enc.deltaQPBFrameRef                        = (int)fcgNUBRefDeltaQP->Value;
+    }
 
     enc.input.picstruct                         = (RGY_PICSTRUCT)list_interlaced[fcgCXInterlaced->SelectedIndex].value;
     enc.nSlices                                 = (int)fcgNUSlices->Value;
-    enc.refFrames                               = (int)fcgNURefFrames->Value;
+    if (fcgNURefFrames->Value == 0) {
+        enc.refFrames.reset();
+    } else {
+        enc.refFrames                           = (int)fcgNURefFrames->Value;
+    }
 
     if (!fcgCBDeblock->Checked) enc.deblockFilter     = fcgCBDeblock->Checked;
     if (fcgCBSkipFrame->Checked) enc.enableSkipFrame = fcgCBSkipFrame->Checked;
-    enc.bVBAQ                                   = fcgCBVBAQ->Checked;
+    SetOptValueCX(enc.bVBAQ,                      fcgCXVBAQ);
     enc.common.out_vui.colorrange               = fcgCBFullrange->Checked ? RGY_COLORRANGE_FULL : RGY_COLORRANGE_UNSPECIFIED;
     enc.common.out_vui.matrix                   = (CspMatrix)list_colormatrix[fcgCXColorMatrix->SelectedIndex].value;
     enc.common.out_vui.transfer                 = (CspTransfer)list_transfer[fcgCXTransfer->SelectedIndex].value;
@@ -2115,7 +2129,7 @@ System::Void frmConfig::SetHelpToolTips() {
     SET_TOOL_TIP_EX(fcgCXBitdepth);
     SET_TOOL_TIP_EX(fcgCBDeblock);
     SET_TOOL_TIP_EX(fcgCBSkipFrame);
-    SET_TOOL_TIP_EX(fcgCBVBAQ);
+    SET_TOOL_TIP_EX(fcgCXVBAQ);
     SET_TOOL_TIP_EX(fcgCXVideoFormat);
     SET_TOOL_TIP_EX(fcgCBFullrange);
     SET_TOOL_TIP_EX(fcgCBPreEncode);
