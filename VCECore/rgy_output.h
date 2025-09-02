@@ -306,7 +306,7 @@ public:
 
     RGY_ERR OverwriteHEVCAlphaChannelInfoSEI(RGYBitstream *bitstream);
 
-    RGY_ERR InsertHeader(RGYBitstream *bitstream);
+    RGY_ERR InsertHeader(RGYBitstream *bitstream, bool isIDR);
 
     template<typename T>
     std::pair<RGY_ERR, std::vector<uint8_t>> getMetadata(const RGYFrameDataType metadataType, const RGYTimestampMapVal& bs_framedata, const RGYFrameDataMetadataConvertParam *convPrm);

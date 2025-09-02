@@ -400,7 +400,7 @@ RGY_ERR RGYOutput::OverwriteHEVCAlphaChannelInfoSEI(RGYBitstream *bitstream) {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYOutput::InsertHeader(RGYBitstream *bitstream) {
+RGY_ERR RGYOutput::InsertHeader(RGYBitstream *bitstream, bool isIDR) {
     if (!ENCODER_VCEENC || !m_insertHeader) {
         return RGY_ERR_NONE;
     }
@@ -411,7 +411,7 @@ RGY_ERR RGYOutput::InsertHeader(RGYBitstream *bitstream) {
     
     std::vector<nal_info> nal_list;
     bool foundHeaders = false;
-    bool isIDRFrame = false;
+    bool isIDRFrame = isIDR;
     
     if (m_VideoOutputInfo.codec == RGY_CODEC_H264) {
         nal_list = m_parse_nal_h264(bitstream->data(), bitstream->size());
@@ -420,7 +420,7 @@ RGY_ERR RGYOutput::InsertHeader(RGYBitstream *bitstream) {
             return info.type == NALU_H264_SPS || info.type == NALU_H264_PPS; 
         }) != nal_list.end();
         // H.264の場合、IDRフレームがあるかチェック
-        isIDRFrame = std::find_if(nal_list.begin(), nal_list.end(), [](const nal_info& info) { 
+        isIDRFrame |= std::find_if(nal_list.begin(), nal_list.end(), [](const nal_info& info) { 
             return info.type == NALU_H264_IDR; 
         }) != nal_list.end();
     } else if (m_VideoOutputInfo.codec == RGY_CODEC_HEVC) {
@@ -428,10 +428,6 @@ RGY_ERR RGYOutput::InsertHeader(RGYBitstream *bitstream) {
         // HEVCの場合、VPS/SPS/PPSがあるかチェック
         foundHeaders = std::find_if(nal_list.begin(), nal_list.end(), [](const nal_info& info) { 
             return info.type == NALU_HEVC_VPS || info.type == NALU_HEVC_SPS || info.type == NALU_HEVC_PPS; 
-        }) != nal_list.end();
-        // HEVCの場合、IDRフレーム（IRAP: NAL unit type 19 - 20）があるかチェック
-        isIDRFrame = std::find_if(nal_list.begin(), nal_list.end(), [](const nal_info& info) { 
-            return info.type == NALU_HEVC_SLICE_IDR_W_RADL || info.type == NALU_HEVC_SLICE_IDR_N_LP; 
         }) != nal_list.end();
     }
     
@@ -454,9 +450,10 @@ RGY_ERR RGYOutput::InsertHeader(RGYBitstream *bitstream) {
             }
         }
         
-        AddMessage(RGY_LOG_DEBUG, _T("Stored %s headers: %d bytes\n"), 
+        AddMessage(RGY_LOG_TRACE, _T("Stored %s headers: %d bytes\n"),
             (m_VideoOutputInfo.codec == RGY_CODEC_H264) ? _T("H.264") : _T("HEVC"), (int)m_storedHeaders.size());
-    } else if (!m_storedHeaders.empty() && isIDRFrame) {
+    }
+    if (isIDRFrame && !foundHeaders && !m_storedHeaders.empty()) {
         // ヘッダーがないが、既に保存されている場合、ヘッダーを挿入
         std::vector<nal_info>::iterator it_aud_pos = nal_list.end();
         if (m_VideoOutputInfo.codec == RGY_CODEC_H264) {
@@ -464,11 +461,11 @@ RGY_ERR RGYOutput::InsertHeader(RGYBitstream *bitstream) {
         } else if (m_VideoOutputInfo.codec == RGY_CODEC_HEVC) {
             it_aud_pos = std::find_if(nal_list.begin(), nal_list.end(), [](const nal_info& info) { return info.type == NALU_HEVC_AUD; });
         }
-        const size_t insert_offset = (it_aud_pos != nal_list.end()) ? it_aud_pos->size : 0;
+        const size_t insert_offset = (it_aud_pos != nal_list.end()) ? (it_aud_pos->ptr - nal_list.begin()->ptr) + it_aud_pos->size : 0;
         bitstream->resize(bitstream->size() + m_storedHeaders.size());
         memmove(bitstream->data() + insert_offset + m_storedHeaders.size(), bitstream->data() + insert_offset, bitstream->size() - insert_offset);
         memcpy(bitstream->data() + insert_offset, m_storedHeaders.data(), m_storedHeaders.size());
-        AddMessage(RGY_LOG_DEBUG, _T("Inserted stored %s headers in IDR frame: %d bytes\n"), 
+        AddMessage(RGY_LOG_TRACE, _T("Inserted stored %s headers in IDR frame: %d bytes\n"), 
             (m_VideoOutputInfo.codec == RGY_CODEC_H264) ? _T("H.264") : _T("HEVC"), (int)m_storedHeaders.size());
     }
     return RGY_ERR_NONE;
@@ -905,7 +902,8 @@ RGY_ERR RGYOutputRaw::WriteNextOneFrame(RGYBitstream *pBitstream) {
     }
 
     // VCEEncでのヘッダー挿入処理
-    err = InsertHeader(pBitstream);
+    const bool isIDR = (pBitstream->frametype() & (RGY_FRAMETYPE_IDR | RGY_FRAMETYPE_xIDR)) != 0; //IDRかどうかのフラグ
+    err = InsertHeader(pBitstream, isIDR);
     if (err != RGY_ERR_NONE) {
         return err;
     }

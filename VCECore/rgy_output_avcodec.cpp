@@ -3062,8 +3062,8 @@ RGY_ERR RGYOutputAvcodec::WriteNextFrameInternalOneFrame(RGYBitstream *bitstream
             return RGY_ERR_UNSUPPORTED;
         }
     }
-    if (isIDR && ENCODER_VCEENC) {
-        auto err = InsertHeader(bitstream);
+    if (ENCODER_VCEENC && isIDR) {
+        auto err = InsertHeader(bitstream, isIDR);
         if (err != RGY_ERR_NONE) {
             return err;
         }
