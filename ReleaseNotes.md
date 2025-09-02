@@ -9,6 +9,7 @@
     Example: [-c](./VCEEncC_Options.en.md#-c---codec-string) av_libsvtav1 [--avcodec-prms](./VCEEncC_Options.en.md#--avcodec-prms-string) "preset=6,crf=30,svtav1-params=enable-variance-boost=1:variance-boost-strength=2"
     Other usable options include av_libvvenc, av_libvpx-vp9, etc.
 - Add QSVEnc.auo2 with official support for AviUtl2.
+- Improve --vpp-subburn quality for moving subtitles. 
 - Update ffmpeg libraries. (Windows)
   - ffmpeg 7.1+ (20240822) -> 8.0
   - libpng 1.6.44 -> 1.6.50
