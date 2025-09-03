@@ -1089,11 +1089,12 @@ protected:
     int64_t m_tsPrev;         //(m_outputTimebase基準)
     uint32_t m_inputFramePosIdx;
     FramePosList *m_framePosList;
+    static const int64_t INVALID_PTS = AV_NOPTS_VALUE;
 public:
     PipelineTaskCheckPTS(amf::AMFContextPtr context, rgy_rational<int> srcTimebase, rgy_rational<int> streamTimebase, rgy_rational<int> outputTimebase, int64_t outFrameDuration, RGYAVSync avsync, bool timestampPassThrough, bool vpp_afs_rff_aware, FramePosList *framePosList, std::shared_ptr<RGYLog> log) :
         PipelineTask(PipelineTaskType::CHECKPTS, context, /*outMaxQueueSize = */ 0 /*常に0である必要がある*/, log),
         m_srcTimebase(srcTimebase), m_streamTimebase(streamTimebase), m_outputTimebase(outputTimebase), m_avsync(avsync), m_timestampPassThrough(timestampPassThrough), m_vpp_rff(false), m_vpp_afs_rff_aware(vpp_afs_rff_aware), m_outFrameDuration(outFrameDuration),
-        m_tsOutFirst(-1), m_tsOutEstimated(0), m_tsPrev(-1), m_inputFramePosIdx(std::numeric_limits<decltype(m_inputFramePosIdx)>::max()), m_framePosList(framePosList) {
+        m_tsOutFirst(AV_NOPTS_VALUE), m_tsOutEstimated(0), m_tsPrev(-1), m_inputFramePosIdx(std::numeric_limits<decltype(m_inputFramePosIdx)>::max()), m_framePosList(framePosList) {
     };
     virtual ~PipelineTaskCheckPTS() {};
 
@@ -1144,7 +1145,7 @@ public:
             }
         }
         PrintMes(RGY_LOG_TRACE, _T("check_pts(%d/%d): nOutEstimatedPts %lld, outPtsSource %lld, outDuration %d\n"), taskSurf->surf().frame()->inputFrameId(), m_inFrames, m_tsOutEstimated, outPtsSource, outDuration);
-        if (m_tsOutFirst < 0) {
+        if (m_tsOutFirst == INVALID_PTS) {
             m_tsOutFirst = outPtsSource; //最初のpts
             PrintMes(RGY_LOG_TRACE, _T("check_pts: m_tsOutFirst %lld\n"), outPtsSource);
         }
