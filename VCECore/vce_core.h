@@ -174,6 +174,7 @@ protected:
     rgy_rational<int>  m_sar;
     RGY_PICSTRUCT      m_picStruct;
     VideoVUIInfo       m_encVUI;
+    bool               m_repeatHeaders;
 
     std::vector<tstring> m_devNames;
     std::unique_ptr<VCEDevice> m_dev;
