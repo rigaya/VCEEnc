@@ -2,7 +2,7 @@
 
 ## 9.00
 
-- Fix -u slower not working and set to -u slow for H.264/HEVC encoding. ( #134 )
+- Fix ```-u slower``` not working and set to ```-u slow``` for H.264/HEVC encoding. ( #134 )
 - Add [--aud](./VCEEncC_Options.en.md#--aud), [--repeat-headers](./VCEEncC_Options.en.md#--repeat-headers). ( #133 )
 - Add feature to use filters with avcodec encoders.
   - Available with ```-c av_xxx```
