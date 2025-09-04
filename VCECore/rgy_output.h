@@ -60,6 +60,12 @@ enum OutputType {
     OUT_TYPE_SURFACE
 };
 
+enum : uint32_t {
+    INSERT_HEADER_NONE = 0x00,
+    INSERT_HEADER_SPS_PPS = 0x01,  // 従来のヘッダー挿入（SPS/PPS/VPS）
+    INSERT_HEADER_AUD = 0x02       // AUD挿入
+};
+
 struct RGYTimestampMapVal {
     int64_t timestamp, inputFrameId, encodeFrameId, duration;
     std::vector<std::shared_ptr<RGYFrameData>> dataList;
@@ -385,7 +391,7 @@ protected:
     std::unique_ptr<uint8_t, aligned_malloc_deleter> m_UVBuffer;
     std::unique_ptr<RGYOutputBSF> m_bsf;
     decltype(parse_nal_unit_hevc_c) *m_parse_nal_hevc; // HEVC用のnal unit分解関数へのポインタ
-    bool m_insertHeader; // VCEEncでヘッダー挿入を行うかどうか
+    uint32_t m_insertHeader; // ヘッダー挿入フラグ
     std::vector<uint8_t> m_storedHeaders; // 保存されたヘッダー情報 (VPS)/SPS/PPS
     decltype(parse_nal_unit_h264_c) *m_parse_nal_h264; // H.264用のnal unit分解関数へのポインタ
 };
@@ -411,7 +417,7 @@ struct RGYOutputRawPrm {
     bool doviRpuMetadataCopy;     //doviのmetadataのコピー
     RGYDOVIRpuConvertParam doviRpuConvertParam;
     RGYTimestamp *vidTimestamp;
-    bool insertHeader; // VCEEncでヘッダー挿入を行うかどうか
+    uint32_t insertHeader; // ヘッダー挿入フラグ
     RGYQueueMPMP<RGYOutputRawPEExtHeader*> *qFirstProcessData;
     RGYQueueMPMP<RGYOutputRawPEExtHeader*> *qFirstProcessDataFree;
     RGYQueueMPMP<RGYOutputRawPEExtHeader*> *qFirstProcessDataFreeLarge;
@@ -471,7 +477,7 @@ RGY_ERR initWriters(
     const bool benchmark,
     const bool HEVCAlphaChannel,
     const int HEVCAlphaChannelMode,
-    const bool insertHeader,
+    const uint32_t insertHeader,
     RGYPoolAVPacket *poolPkt,
     RGYPoolAVFrame *poolFrame,
     shared_ptr<EncodeStatus> pStatus,
