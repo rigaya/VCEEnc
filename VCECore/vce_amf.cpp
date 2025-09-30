@@ -126,7 +126,7 @@ RGY_ERR VCEAMF::initTracer(int log_level) {
 std::vector<std::unique_ptr<VCEDevice>> VCEAMF::createDeviceList(bool interopD3d9, bool interopD3d11, RGYParamInitVulkan interopVulkan, bool enableOpenCL, bool enableVppPerfMonitor, bool enableAV1HWDec, int openCLBuildThreads) {
     std::vector<std::unique_ptr<VCEDevice>> devs;
 #if ENABLE_D3D11
-    const int adapterCount = DeviceDX11::adapterCount();
+    const int adapterCount = DeviceDX11::adapterCount(m_pLog.get());
 #elif ENABLE_VULKAN
 #if !(defined(_WIN32) || defined(_WIN64))
     if (interopVulkan == RGYParamInitVulkan::TargetVendor) {
