@@ -366,6 +366,12 @@ RGY_ERR RGYFilterSsim::init_cl_resources() {
         return err_to_rgy(res);
     }
 
+    //AMF_VIDEO_DECODER_SURFACE_COPYを使用すると、pre-analysis使用時などに発生するSubmitInput時のAMF_DECODER_NO_FREE_SURFACESを回避できる
+    //しかし、メモリ確保エラーが発生することがある(AMF_DIRECTX_FAIL)
+    //そこで、AMF_VIDEO_DECODER_SURFACE_COPYは使用せず、QueryOutput後、明示的にsurface->Duplicateを行って同様の挙動を再現する
+    //AV1デコードでは、これを有効にしないとAMF_DECODER_NO_FREE_SURFACESで止まってしまうことがわかったので、再度有効にする
+    m_decoder->SetProperty(AMF_VIDEO_DECODER_SURFACE_COPY, true);
+
     amf::AMFBufferPtr buffer;
     m_context->AllocBuffer(amf::AMF_MEMORY_HOST, prm->input.codecExtraSize, &buffer);
 
