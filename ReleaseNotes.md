@@ -1,5 +1,9 @@
 # VCEEnc Release Notes
 
+## 9.01
+
+
+
 ## 9.00
 
 - Fix ```-u slower``` not working and set to ```-u slow``` for H.264/HEVC encoding. ( #134 )
