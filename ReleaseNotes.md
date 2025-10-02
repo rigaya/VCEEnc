@@ -2,7 +2,14 @@
 
 ## 9.01
 
-
+- Improve device initialization and add more debug logs. ( #132 )
+- Improve DX11 device initialization to not detect virtual/remote adaptors.
+- Improve progress indicator when using [--parallel](./VCEEncC_Options.en.md#--parallel-int-or-param1value1param2value2).
+- Add support for using [--parallel](./VCEEncC_Options.en.md#--parallel-int-or-param1value1param2value2) with multiple pipes.
+- Avoid unintended fps values when front of input file is corrupted.
+- Improve handling when input files have negative pts.
+- Improve quality of burned in subtitles in [--vpp-subburn](./QSVEncC_Options.en.md#--vpp-subburn-param1value1param2value2) processing by changing libass initialization method.
+- Update rpm build environment to fedora41.
 
 ## 9.00
 
