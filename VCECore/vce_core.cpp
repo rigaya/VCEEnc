@@ -2888,7 +2888,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm, int deviceId) {
+RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, VCEParam *prm, int deviceId) {
     const int encBitdepth = GetEncoderBitdepth(prm);
     const auto encCsp = GetEncoderCSP(prm);
     if (encCsp == RGY_CSP_NA) {
@@ -2913,6 +2913,7 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
     }
     const auto formatIn = csp_rgy_to_enc(encCsp);
     const auto formatOut = formatIn;
+    int highBitDepthSupportCount = 0;
     //エンコーダの対応をチェック
     tstring message; //GPUチェックのメッセージ
     for (auto gpu = gpuList.begin(); gpu != gpuList.end(); ) {
@@ -3047,10 +3048,11 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
             if (encBitdepth > 8) {
                 if (encBitdepth == 10) {
                     bool Support10bitDepth = false;
-                    if (encoderCaps->GetProperty(VCEDevice::CAP_10BITDEPTH, &Support10bitDepth) != AMF_OK) {
-                        Support10bitDepth = false;
-                    }
-                    if (!Support10bitDepth) {
+                    if (encoderCaps->GetProperty(VCEDevice::CAP_10BITDEPTH, &Support10bitDepth) == AMF_OK && Support10bitDepth) {
+                        highBitDepthSupportCount++;
+                    } else if (prm->ctrl.fallbackBitdepth) {
+                        // fallbackが有効のときはここではなにもしない
+                    } else {
                         message += strsprintf(_T("GPU #%d (%s) does not support 10bit depth %s encoding.\n"), (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
                         gpu = gpuList.erase(gpu);
                         continue;
@@ -3100,6 +3102,36 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
         PrintMes(RGY_LOG_DEBUG, _T("GPU #%d (%s) available for encode.\n"), (*gpu)->id(), (*gpu)->name().c_str());
         gpu++;
     }
+
+    // 10bit深度のフォールバックが有効なとき
+    if (encBitdepth > 8 && prm->ctrl.fallbackBitdepth) {
+        if (highBitDepthSupportCount > 0) {
+            // 10bit深度のサポートがあるGPUがあるときは、10bit深度をサポートしないGPUは外す
+            for (auto gpu = gpuList.begin(); gpu != gpuList.end(); ) {
+                amf::AMFCapsPtr encoderCaps = (*gpu)->getEncCaps(prm->codec);
+                if (encoderCaps == nullptr) {
+                    PrintMes(RGY_LOG_ERROR, _T("checkGPUListByEncoder: Unexpected error!.\n"));
+                    return RGY_ERR_UNKNOWN;
+                }
+                bool Support10bitDepth = false;
+                if (encoderCaps->GetProperty(VCEDevice::CAP_10BITDEPTH, &Support10bitDepth) != AMF_OK || !Support10bitDepth) {
+                    gpu = gpuList.erase(gpu);
+                    continue;
+                }
+                gpu++;
+            }
+        } else {
+            // 10bit深度のサポートがあるGPUがないときは、8bit深度に変更する
+            PrintMes(RGY_LOG_WARN, _T("GPU(s) does not support %d bit %s depth encoding, fallback to 8bit.\n"), prm->outputDepth, CodecToStr(prm->codec).c_str());
+            prm->outputDepth = 8;
+            if (prm->codec == RGY_CODEC_H264) {
+                prm->codecParam[prm->codec].nProfile = AMF_VIDEO_ENCODER_PROFILE_HIGH;
+            } else if (prm->codec == RGY_CODEC_HEVC) {
+                prm->codecParam[prm->codec].nProfile = AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN;
+            }
+        }
+    }
+
     PrintMes((gpuList.size() == 0) ? RGY_LOG_ERROR : RGY_LOG_DEBUG, _T("%s\n"), message.c_str());
     if (gpuList.size() == 0) {
         return RGY_ERR_UNSUPPORTED;

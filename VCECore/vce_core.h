@@ -103,7 +103,7 @@ public:
 protected:
     virtual RGY_ERR readChapterFile(tstring chapfile);
     std::pair<RGY_ERR, VideoInfo> GetOutputVideoInfo();
-    RGY_ERR checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm, int deviceId);
+    RGY_ERR checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, VCEParam *prm, int deviceId);
     RGY_ERR gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList, const VCEParam *prm, const RGYDeviceUsageLockManager *devUsageLock);
     virtual RGY_CSP GetEncoderCSP(const VCEParam *inputParam) const;
     virtual int GetEncoderBitdepth(const VCEParam *inputParam) const;
