@@ -187,6 +187,9 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2025.11.02 (9.02)
+- AMFを1.5.0に更新。
+  AMD Radeon Software Adrenalin Edition 25.10.2 以降が必要。
 
 2025.10.02 (9.01)
 [VCEEncC]

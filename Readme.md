@@ -25,17 +25,17 @@ VCEEnc.auo … Output plugin for [Aviutl](http://spring-fragrance.mints.ne.jp/av
 ## System Requirements
 
 ### Windows
-Windows 10/11 (x86 / x64)  
+Windows 10/11 (x86/x64)  
 Aviutl 1.00 or later (VCEEnc.auo)  
 Hardware which supports VCE  
   AMD GPU Radeon HD 7xxx or later  
   AMD APU Trinity (2nd Gen) or later  
-AMD driver 25.1.1 or later  
+AMD driver 25.10.2 or later  
 
 ### Linux
 Debian/Ubuntu (x64)  
   AMD GPU Radeon RX5xxx (RDNA1) or later  
-  AMD driver 25.1.1 or later  
+  AMD driver 25.20 or later  
   It may be possible to run on other distributions (not tested).
 
 ## Usage and options of VCEEncC
@@ -164,6 +164,7 @@ when there are multiple GPUs available which support VCE/VCN.
 | VCEEnc 8.24 or later | AMD driver 24.9.1 or later |
 | VCEEnc 8.24 or later | AMD driver 24.9.1 or later |
 | VCEEnc 8.33 or later | AMD driver 25.1.1 or later |
+| VCEEnc 9.02 or later | AMD driver 25.10.2 or later |
 
 ## VCEEnc source code
 - MIT license.

@@ -34,12 +34,12 @@ Aviutl 1.00 以降 (VCEEnc.auo)
 VCEが載ったハードウェア  
   AMD製 GPU Radeon HD 7xxx以降
   AMD製 APU Trinity世代(第2世代)以降  
-AMD ドライバ 25.1.1 以降
+AMD ドライバ 25.10.2 以降
   
 ### Linux
 Debian/Ubuntu系 (x64)  
   AMD製 GPU Radeon RX5xxx(RDNA1) 以降  
-  AMD ドライバ 25.1.1 以降  
+  AMD ドライバ 25.20 以降  
   そのほかのディストリビューションでも動作する可能性があります。
 
 ## VCEEncCの使用方法とオプション  
@@ -169,6 +169,7 @@ VCEEncCでは、VCE/VCNを実行可能なGPUが複数存在する場合、
 | VCEEnc 8.23以降 | AMD ドライバ 24.6.1 以降 |
 | VCEEnc 8.24以降 | AMD ドライバ 24.9.1 以降 |
 | VCEEnc 8.33以降 | AMD ドライバ 25.1.1 以降 |
+| VCEEnc 9.02以降 | AMD ドライバ 25.10.2 以降 |
 
 ## ソースコードについて
 - MITライセンスです。
