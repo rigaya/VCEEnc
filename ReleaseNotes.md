@@ -1,5 +1,13 @@
 # VCEEnc Release Notes
 
+## 9.02
+
+- Add [--fallback-bitdepth](./VCEEncC_Options.en.md#--fallback-bitdepth) to automatically fall back to 8-bit when 10-bit encoding is not supported by any available GPU.
+- Fix H.264 encoding errors when outputting to RTMP/FLV.
+- Fix AV1 level detection returning incorrect values.
+- Update AMF to 1.5.0. Requires AMD Radeon Software Adrenalin Edition 25.10.2 or later.
+- Fix a possible freeze in VCEEnc.auo when external audio encoders receive 32-bit float audio output.
+
 ## 9.01
 
 - Improve device initialization and add more debug logs. ( #132 )

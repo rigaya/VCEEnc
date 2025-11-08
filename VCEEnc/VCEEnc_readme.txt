@@ -16,7 +16,7 @@ Aviutl 1.00 以降
 VCEが載ったハードウェア
   AMD製 GPU Radeon HD 7xxx以降
   AMD製 APU Trinity世代(第2世代)以降
-AMD Radeon Software Adrenalin Edition 24.6.1 以降
+AMD Radeon Software Adrenalin Edition 25.10.2 以降
 
 
 【VCEEnc 使用にあたっての注意事項】
@@ -188,8 +188,15 @@ Radeon RX7900XT
 
 【どうでもいいメモ】
 2025.11.02 (9.02)
+[VCEEncC]
+- --fallback-bitdepthを追加し、10bit深度でエンコードできない環境では8bitに自動フォールバックするように。
+- RTMP/FLV出力時にH.264エンコードでエラーになっていた問題を修正。
+- AV1のlevel判定で誤った値を取得する場合があったのを修正。
 - AMFを1.5.0に更新。
   AMD Radeon Software Adrenalin Edition 25.10.2 以降が必要。
+
+[VCEEnc.auo]
+- 外部音声エンコーダ使用時に32bit float出力で処理がフリーズする場合があったのを修正。
 
 2025.10.02 (9.01)
 [VCEEncC]
