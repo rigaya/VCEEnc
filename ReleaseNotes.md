@@ -7,6 +7,7 @@
 - Fix AV1 level detection returning incorrect values.
 - Update AMF to 1.5.0. Requires AMD Radeon Software Adrenalin Edition 25.10.2 or later.
 - Fix a possible freeze in VCEEnc.auo when external audio encoders receive 32-bit float audio output.
+- Fix memory leak when using --ssim, --psnr. ( #135 )
 
 ## 9.01
 

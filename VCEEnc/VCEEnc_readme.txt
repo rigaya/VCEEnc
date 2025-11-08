@@ -189,11 +189,12 @@ Radeon RX7900XT
 【どうでもいいメモ】
 2025.11.02 (9.02)
 [VCEEncC]
+- AMFを1.5.0に更新。
+  AMD Radeon Software Adrenalin Edition 25.10.2 以降が必要。
 - --fallback-bitdepthを追加し、10bit深度でエンコードできない環境では8bitに自動フォールバックするように。
 - RTMP/FLV出力時にH.264エンコードでエラーになっていた問題を修正。
 - AV1のlevel判定で誤った値を取得する場合があったのを修正。
-- AMFを1.5.0に更新。
-  AMD Radeon Software Adrenalin Edition 25.10.2 以降が必要。
+- ssim, psnr実行時のメモリリークを修正。
 
 [VCEEnc.auo]
 - 外部音声エンコーダ使用時に32bit float出力で処理がフリーズする場合があったのを修正。
