@@ -17,7 +17,7 @@ jobs:
           - dockerimg: ubuntu2004
           - dockerimg: ubuntu2204
           - dockerimg: ubuntu2404
-          - dockerimg: fedora37
+          - dockerimg: fedora41
 
     env:
       DOCKER_FILE: docker/docker_${{ matrix.dockerimg }}

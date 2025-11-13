@@ -1,7 +1,6 @@
-FROM fedora:37
+FROM fedora:41
 
-ARG LOCAL_USER_ID=1000 \
-    LOCAL_GROUP_ID=1000
+ARG DEBIAN_FRONTEND=noninteractive
 
 RUN dnf update -y \
     && dnf install -y \
@@ -9,7 +8,7 @@ RUN dnf update -y \
     https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm \
     && dnf update -y \
     && dnf install -y \
-      which \ 
+      which \
       @development-tools gcc-c++ \
       wget curl python3 \
       ca-certificates \
@@ -35,4 +34,5 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     && /usr/local/cargo/bin/cargo cbuild --version
 
 WORKDIR /work
+
 
