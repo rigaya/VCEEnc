@@ -54,6 +54,6 @@ cd ..
 cp -p ${WORK_DIR}/${PACKAGE_NAME}.spec "${PACKAGE_SPEC_DIR}/"
 rm -rf ${WORK_DIR}
 
-rpmbuild -ba "${PACKAGE_SPEC_DIR}/${PACKAGE_NAME}.spec"
+rpmbuild --define "_topdir ${RPMBUILD_DIR}" -ba "${PACKAGE_SPEC_DIR}/${PACKAGE_NAME}.spec"
 
 cp ${RPMBUILD_DIR}/RPMS/${PACKAGE_ARCH}/${PACKAGE_NAME}*.rpm .
