@@ -1905,7 +1905,7 @@ Activate Auto Field Shift (AFS) deinterlacer.
   
   - drop=&lt;bool&gt;  
     drop frame which has shorter display time than "1 frame". Note that enabling this option will generate VFR (Variable Frame Rate) output.
-    When muxing is done by QSVEncC, the timecode will be applied automatically. However, when using raw output,
+    When muxing is done by VCEEncC, the timecode will be applied automatically. However, when using raw output,
     you will need output timecode file by adding "timecode=true" to vpp-afs option,
     and mux the timecode file later.
   
