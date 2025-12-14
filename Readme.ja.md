@@ -30,7 +30,8 @@ VCEEncを使用したことによる、いかなる損害・トラブルにつ�
 
 ### Windows
 Windows 10/11 (x86/x64)  
-Aviutl 1.00 以降 (VCEEnc.auo)  
+AviUtl 1.00/1.10  (VCEEnc.auo)  
+AviUtl 2.00 beta19 以降  (VCEEnc.auo2)  
 VCEが載ったハードウェア  
   AMD製 GPU Radeon HD 7xxx以降
   AMD製 APU Trinity世代(第2世代)以降  

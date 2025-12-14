@@ -26,7 +26,8 @@ VCEEnc.auo … Output plugin for [Aviutl](http://spring-fragrance.mints.ne.jp/av
 
 ### Windows
 Windows 10/11 (x86/x64)  
-Aviutl 1.00 or later (VCEEnc.auo)  
+AviUtl 1.00/1.10  (VCEEnc.auo)  
+AviUtl 2.00 beta19 or later  (VCEEnc.auo2)  
 Hardware which supports VCE  
   AMD GPU Radeon HD 7xxx or later  
   AMD APU Trinity (2nd Gen) or later  
