@@ -720,6 +720,7 @@ enum AuoMes {
         AuofcggroupBoxCmdEx,
         AuofcgCBTimerPeriodTuning,
         AuofcgCBAuoTcfileout,
+        AuofcgCBBenchmarkMode,
         AuofcgLBTempDir,
         AuofcgBTCustomTempDir,
         AuofcgTSExeFileshelp,

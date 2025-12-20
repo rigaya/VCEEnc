@@ -582,6 +582,7 @@ AuotabPageExOpt=その他
 AuofcggroupBoxCmdEx=追加コマンド
 AuofcgCBTimerPeriodTuning=高精度タイマー
 AuofcgCBAuoTcfileout=タイムコード出力
+AuofcgCBBenchmarkMode=ベンチマークモード
 AuofcgLBTempDir=一時フォルダ
 AuofcgBTCustomTempDir=...
 AuofcgTSExeFileshelp=helpを表示

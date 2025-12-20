@@ -637,6 +637,7 @@ static const char * AUO_MES_ID_NAME_STR[] = {
 "AuofcggroupBoxCmdEx",
 "AuofcgCBTimerPeriodTuning",
 "AuofcgCBAuoTcfileout",
+"AuofcgCBBenchmarkMode",
 "AuofcgLBTempDir",
 "AuofcgBTCustomTempDir",
 "AuofcgTSExeFileshelp",

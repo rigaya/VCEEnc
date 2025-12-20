@@ -584,6 +584,7 @@ AuotabPageExOpt=Others
 AuofcggroupBoxCmdEx=Extra command line options
 AuofcgCBTimerPeriodTuning=Timer Period Tuning
 AuofcgCBAuoTcfileout=Output timecode
+AuofcgCBBenchmarkMode=benchmark mode
 AuofcgLBTempDir=Temp Dir
 AuofcgBTCustomTempDir=...
 AuofcgTSExeFileshelp=show help
