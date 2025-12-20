@@ -1645,6 +1645,7 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
         fcgCBWaitForBatAfter->Checked      =(cnf->oth.dont_wait_bat_fin & RUN_BAT_AFTER_PROCESS) == 0;
         fcgTXBatBeforePath->Text           = String(cnf->oth.batfile.before_process).ToString();
         fcgTXBatAfterPath->Text            = String(cnf->oth.batfile.after_process).ToString();
+        fcgCBBenchmarkMode->Checked        = cnf->oth.benchmark_mode != 0;
 
         fcgTXCmdEx->Text = String(cnf->vid.cmdex).ToString();
 
@@ -1916,6 +1917,7 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     GetWCHARfromString(cnf->oth.batfile.after_process,  fcgTXBatAfterPath->Text);
     GetWCHARfromString(cnf->oth.batfile.before_audio,   fcgTXBatBeforeAudioPath->Text);
     GetWCHARfromString(cnf->oth.batfile.after_audio,    fcgTXBatAfterAudioPath->Text);
+    cnf->oth.benchmark_mode         = fcgCBBenchmarkMode->Checked;
 
     GetfcgTSLSettingsNotes(cnf->oth.notes, _countof(cnf->oth.notes));
 
