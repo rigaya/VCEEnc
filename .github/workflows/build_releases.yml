@@ -222,6 +222,7 @@ jobs:
           copy /y VCEEnc\VCEEnc.ini Aviutl_VCEEnc_release\plugins\
           copy /y VCEEnc\VCEEnc.en.ini Aviutl_VCEEnc_release\plugins\
           copy /y VCEEnc\VCEEnc.zh.ini Aviutl_VCEEnc_release\plugins\
+          copy /y VCEEnc\VCEEnc_uninstall.bat Aviutl_VCEEnc_release\plugins\
           copy /y VCEEnc\auo_setup.ini Aviutl_VCEEnc_release\exe_files\
           copy /y VCEEnc\VCEEnc_readme.txt Aviutl_VCEEnc_release\
           echo D | xcopy /y /e VCEEnc\stg Aviutl_VCEEnc_release\plugins\VCEEnc_stg
@@ -241,6 +242,7 @@ jobs:
           copy /y VCEEnc\VCEEnc.ini Aviutl_VCEEnc_release\Plugin\
           copy /y VCEEnc\VCEEnc.en.ini Aviutl_VCEEnc_release\Plugin\
           copy /y VCEEnc\VCEEnc.zh.ini Aviutl_VCEEnc_release\Plugin\
+          copy /y VCEEnc\VCEEnc_uninstall.bat Aviutl_VCEEnc_release\Plugin\
           copy /y VCEEnc\auo_setup.ini Aviutl_VCEEnc_release\Plugin\exe_files\
           copy /y VCEEnc\VCEEnc_readme.txt Aviutl_VCEEnc_release\
           echo D | xcopy /y /e VCEEnc\stg Aviutl_VCEEnc_release\Plugin\VCEEnc_stg
