@@ -321,6 +321,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="rgy_vapoursynth_wrapper.cpp" />
+    <ClCompile Include="rgy_vapoursynth_wrapper_v3.cpp" />
+    <ClCompile Include="rgy_vapoursynth_wrapper_v4.cpp" />
     <ClCompile Include="rgy_language.cpp" />
     <ClCompile Include="rgy_libdovi.cpp" />
     <ClCompile Include="rgy_libplacebo.cpp" />
@@ -643,6 +646,7 @@
     <ClInclude Include="rgy_input_raw.h" />
     <ClInclude Include="rgy_input_sm.h" />
     <ClInclude Include="rgy_input_vpy.h" />
+    <ClInclude Include="rgy_vapoursynth_wrapper.h" />
     <ClInclude Include="rgy_language.h" />
     <ClInclude Include="rgy_libdovi.h" />
     <ClInclude Include="rgy_libplacebo.h" />
