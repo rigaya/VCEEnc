@@ -1,5 +1,10 @@
 # VCEEnc Release Notes
 
+## 9.03
+
+- Add support for Vapoursynth API V4.
+- Add option to encode only when input audio codec differs from codec specified by [--audio-codec](./VCEEncC_Options.en.md#--audio-codec-intstringstringstringstringstringstring). ([--audio-encode-other-codec-only](./VCEEncC_Options.en.md#--audio-encode-other-codec-only))
+
 ## 9.02
 
 - Add [--fallback-bitdepth](./VCEEncC_Options.en.md#--fallback-bitdepth) to automatically fall back to 8-bit when 10-bit encoding is not supported by any available GPU.

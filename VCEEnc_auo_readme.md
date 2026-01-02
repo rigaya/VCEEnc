@@ -230,17 +230,13 @@ VCEEncCでは、VCE/VCNを実行可能なGPUが複数存在する場合、
   エンコードをほぼ同時に複数開始すると、複数のエンコードが同じGPUに割り当てられてしまうことが
   多いのでご注意ください。
 
-## VCEEnc の Aviutl からの削除
+## VCEEnc の AviUtl からの削除
 
-VCEEnc の Aviutl から削除するには、"plugins" フォルダ内の下記ファイルとフォルダを削除してください。
+VCEEnc を AviUtl/AviUtl2 から削除するには、プラグインフォルダの ```VCEEnc_uninstall.bat``` をダブルクリックして実行します。
 
-- [フォルダ] VCEEnc_stg
-- [ファイル] VCEEnc.auo
-- [ファイル] VCEEnc.conf (存在する場合のみ)
-- [ファイル] VCEEnc(.ini)
-- [ファイル] auo_setup.auf
+![削除](./data/VCEEnc_9_03_uninstall_20260103.webp)
 
-![削除](./data/VCEEnc_7_00_uninstall_01.png)
+上記画面が表示されたら、```y``` と入力し、削除を実行してください。
 
 ## 多言語対応
 
