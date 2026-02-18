@@ -61,6 +61,7 @@ VCEEnc.slnを開きます。
 ### 0. ビルドに必要なもの
 
 - C++17 Compiler
+- meson + ninja-build
 - Intel Driver
 - git
 - libraries
@@ -72,7 +73,7 @@ VCEEnc.slnを開きます。
 ### 1. コンパイラ等のインストール
 
 ```Shell
-sudo apt install build-essential libtool git
+sudo apt install build-essential libtool git meson ninja-build
 ```
 
 - rust + cargo-cのインストール (libdovi, libhdr10plusビルド用)
@@ -192,10 +193,10 @@ sudo gpasswd -a ${USER} render
 ```Shell
 git clone https://github.com/rigaya/VCEEnc --recursive
 cd VCEEnc
-./configure
-make -j8
+meson setup ./build --buildtype=release
+meson compile -C ./build
 ```
 動作するか確認します。
 ```Shell
-./vceencc --check-hw
+./build/vceencc --check-hw
 ```

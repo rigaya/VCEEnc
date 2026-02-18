@@ -88,10 +88,11 @@ jobs:
             -u "$(id -u):$(id -g)" \
             --workdir /work \
             --name build_pkg ${{ steps.prep.outputs.base_image }}
-          docker exec build_pkg bash -lc './configure --extra-cxxflags="-I./AviSynthPlus/avs_core/include -I./vapoursynth/include" --enable-lto'
-          docker exec build_pkg bash -lc 'make -j${{ steps.prep.outputs.nproc }}'
-          docker exec build_pkg bash -lc './vceencc --version'
-          docker exec build_pkg bash -lc './check_options.py'
+          docker exec build_pkg bash -lc "meson setup ./build . --buildtype=release -Db_lto=true -Dcpp_args=\"['-I./AviSynthPlus/avs_core/include','-I./vapoursynth/include']\""
+          docker exec build_pkg bash -lc "meson compile -C ./build -j${{ steps.prep.outputs.nproc }}"
+          docker exec build_pkg bash -lc "./build/vceencc --version"
+          docker exec build_pkg bash -lc "./check_options.py -exe ./build/vceencc"
+          docker exec build_pkg bash -lc "cp ./build/vceencc ./vceencc"
           docker exec build_pkg bash -lc './build_${{ env.PKG_TYPE }}.sh'
           docker exec build_pkg bash -lc 'cp -v ./*.${{ env.PKG_TYPE }} /output/'
           PKGFILE=`ls ${{ steps.prep.outputs.output_dir }}/*.${{ env.PKG_TYPE }}`

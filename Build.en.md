@@ -59,6 +59,7 @@ Finally, open VCEEnc.sln, and start build of VCEEnc by Visual Studio.
 ### 0. Requirements
 
 - C++17 Compiler
+- meson + ninja-build
 - Intel Driver
 - git
 - libraries
@@ -70,7 +71,7 @@ Finally, open VCEEnc.sln, and start build of VCEEnc by Visual Studio.
 ### 1. Install build tools
 
 ```Shell
-sudo apt install build-essential libtool pkg-config git
+sudo apt install build-essential libtool pkg-config git meson ninja-build
 ```
 
 - Install rust + cargo-c (for libdovi, libhdr10plus build)
@@ -190,10 +191,10 @@ sudo gpasswd -a ${USER} render
 ```Shell
 git clone https://github.com/rigaya/VCEEnc --recursive
 cd VCEEnc
-./configure
-make -j8
+meson setup ./build --buildtype=release
+meson compile -C ./build
 ```
 Check if it works properly.
 ```Shell
-./vceencc --check-hw
+./build/vceencc --check-hw
 ```

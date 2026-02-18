@@ -12,7 +12,7 @@ RUN dnf update -y \
       @development-tools gcc-c++ \
       wget curl python3 \
       ca-certificates \
-      pkgconfig \
+      pkgconfig meson ninja-build \
       ffmpeg ffmpeg-devel \
       libass libass-devel \
       opencl-headers \
