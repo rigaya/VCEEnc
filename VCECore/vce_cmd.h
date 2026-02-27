@@ -42,6 +42,6 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
 int parse_cmd(VCEParam *pParams, const char *cmda, bool ignore_parse_err = false);
 int parse_cmd(VCEParam *pParams, const wchar_t *cmdw, bool ignore_parse_err = false);
 
-tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm);
+tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm, RGYDisableGenCmdFlags disable_flags = RGYDisableGenCmdFlags::None);
 
 #endif //__NVENC_PARSE_CMD_H__

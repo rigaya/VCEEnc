@@ -42,6 +42,7 @@
 #include "rgy_output.h"
 #include "rgy_output_avcodec.h"
 #include "vce_core.h"
+#include "vce_cmd.h"
 #include "vce_param.h"
 #include "rgy_filter.h"
 #include "rgy_filter_colorspace.h"
@@ -817,12 +818,17 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
         return m_hdr10plus || m_hdr10plusMetadataCopy || m_dovirpuMetadataCopy || (m_hdrseiOut && m_hdrseiOut->gen_nal().size() > 0);
     };
     m_repeatHeaders = inputParams->repeatHeaders || require_repeat_headers();
-    
+
+    auto muxerCmdline = tstring();
+    if (inputParams->common.muxerAddCmd) {
+        muxerCmdline = trim(gen_cmd(inputParams, false, RGYDisableGenCmdFlags::FilePath | RGYDisableGenCmdFlags::CtrlPrms | RGYDisableGenCmdFlags::InputPrms));
+    }
+
     err = initWriters(m_pFileWriter, m_pFileWriterListAudio, m_pFileReader, m_AudioReaders,
         &inputParams->common, &inputParams->input, &inputParams->ctrl, outputVideoInfo,
         m_trimParam, m_outputTimebase, m_Chapters, m_hdrseiOut.get(), m_hdr10plus.get(), m_dovirpu.get(), m_encTimestamp.get(), false, false, false, 0,
         m_repeatHeaders ? INSERT_HEADER_SPS_PPS : 0,
-        m_poolPkt.get(), m_poolFrame.get(), m_pStatus, m_pPerfMonitor, m_pLog);
+        muxerCmdline, m_poolPkt.get(), m_poolFrame.get(), m_pStatus, m_pPerfMonitor, m_pLog);
     if (err != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("failed to initialize file reader(s).\n"));
         return err;
