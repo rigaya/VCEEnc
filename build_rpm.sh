@@ -4,7 +4,7 @@ PACKAGE_NAME=vceencc
 PACKAGE_BIN=vceencc
 PACKAGE_OS=
 PACKAGE_MAINTAINER=rigaya
-PACKAGE_DEPENDS="ffmpeg-libs,amf-amdgpu-pro"
+PACKAGE_DEPENDS="amf-amdgpu-pro,ocl-icd,libva,libva-drm,libva-x11"
 PACKAGE_DESCRIPTION=
 PACKAGE_ROOT=.rpmpkg
 PACKAGE_VERSION=`git describe --tags | cut -f 1 --delim="-"`
