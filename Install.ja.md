@@ -30,14 +30,21 @@
 cd ~/Downloads
 sudo apt-get install ./amdgpu-install-VERSION.deb
 sudo apt-get update
-sudo amdgpu-install -y --accept-eula --usecase=graphics,amf,opencl --opencl=rocr --vulkan=amdvlk --no-32
-sudo reboot
+
+sudo amdgpu-install -y --opencl=rocr
+
+curl -s https://api.github.com/repos/GPUOpen-LibrariesAndSDKs/AMF/releases/latest \
+| jq -r '.assets[].browser_download_url | select(test("amf_installer_.*\\.zip$"))' \
+| head -n1 \
+| xargs -I{} sh -c 'wget -q {}; f=$(basename {}); unzip -o "$f"; sudo "./${f%.zip}.sh" --accept-eula'
 ```
 
 ### 2. OpenCLの使用のため、ユーザーを下記グループに追加
 ```Shell
 # OpenCL
 sudo gpasswd -a ${USER} render
+sudo gpasswd -a ${USER} video
+sudo reboot
 ```
 
 ### 3. GPUの認識状況を確認
