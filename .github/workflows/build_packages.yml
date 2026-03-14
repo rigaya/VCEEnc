@@ -122,5 +122,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nvencc_${{ matrix.dockerimg }}_${{ matrix.pkgtype }}
+          name: vceencc_${{ matrix.dockerimg }}_${{ matrix.pkgtype }}
           path: ${{ steps.build_exec.outputs.pkgfile }}
