@@ -121,9 +121,27 @@ if enable_avisynth and not have_avisynth_headers
 endif
 libass_dep = dependency('libass', required: enable_libass)
 if enable_vulkan
-  vulkan_dep = dependency('vulkan', required: true)
+  vulkan_pkg_dep = dependency('vulkan', required: false)
+  vulkan_compile_dep = declare_dependency()
+  if vulkan_pkg_dep.found()
+    vulkan_compile_dep = vulkan_pkg_dep.partial_dependency(includes: true, compile_args: true)
+  endif
+  vulkan_headers_code = '''
+#include <vulkan/vulkan.h>
+int main(void) { return 0; }
+'''
+  have_vulkan_headers = cpp.compiles(
+    vulkan_headers_code,
+    dependencies: vulkan_compile_dep,
+    args: get_option('cpp_args'),
+  )
+  if not have_vulkan_headers
+    error('Vulkan headers not found (vulkan/vulkan.h)')
+  endif
 else
-  vulkan_dep = disabler()
+  vulkan_pkg_dep = disabler()
+  vulkan_compile_dep = declare_dependency()
+  have_vulkan_headers = false
 endif
 if enable_libplacebo
   libplacebo_dep = dependency('libplacebo', required: true)
@@ -297,7 +315,7 @@ conf_data.set10('ENABLE_CPP_REGEX', true)
 conf_data.set10('ENABLE_DTL', enable_dtl)
 conf_data.set10('ENABLE_LIBDOVI', libdovi_dep.found())
 conf_data.set10('ENABLE_LIBHDR10PLUS', libhdr10plus_dep.found())
-conf_data.set10('ENABLE_VULKAN', vulkan_dep.found())
+conf_data.set10('ENABLE_VULKAN', enable_vulkan and have_vulkan_headers)
 conf_data.set10('ENABLE_LIBPLACEBO', libplacebo_dep.found())
 
 if enable_avisynth and have_avisynth_headers
@@ -586,8 +604,8 @@ endif
 if libass_dep.found()
   all_deps += libass_dep
 endif
-if vulkan_dep.found()
-  all_deps += vulkan_dep
+if enable_vulkan and have_vulkan_headers
+  all_deps += vulkan_compile_dep
 endif
 if libplacebo_dep.found()
   all_deps += libplacebo_dep
@@ -620,7 +638,7 @@ summary({
   'AviSynth': enable_avisynth and have_avisynth_headers,
   'libass': libass_dep.found(),
   'libplacebo': libplacebo_dep.found(),
-  'Vulkan': vulkan_dep.found(),
+  'Vulkan': enable_vulkan and have_vulkan_headers,
   'dtl': enable_dtl,
   'libdovi': libdovi_dep.found(),
   'libhdr10plus': libhdr10plus_dep.found(),
