@@ -59,18 +59,38 @@ static void show_hw(int deviceid, const RGYParamLogLevel& loglevel) {
     if ((err = core->initLogLevel(loglevel)) == RGY_ERR_NONE
         && (err = core->initAMFFactory()) == RGY_ERR_NONE
         && (err = core->initTracer(loglevel.get(RGY_LOGT_AMF))) == RGY_ERR_NONE) {
-#if ENABLE_D3D11
-        const auto devList = core->createDeviceList(false, true, RGYParamInitVulkan::Disable, true, false, false, 0);
+#if defined(_WIN32) || defined(_WIN64)
+        constexpr bool enableOpenCLForCaps = true;
 #else
-        const auto devList = core->createDeviceList(false, true, ENABLE_VULKAN ? RGYParamInitVulkan::TargetVendor : RGYParamInitVulkan::Disable, true, false, false, 0);
+        // Linux capability probing is stable with a Vulkan-only AMF context.
+        constexpr bool enableOpenCLForCaps = false;
+#endif
+#if ENABLE_D3D11
+        const auto devList = core->createDeviceList(false, true, RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0);
+#else
+        const auto devList = core->createDeviceList(false, false, ENABLE_VULKAN ? RGYParamInitVulkan::TargetVendor : RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0);
 #endif
         if (devList.size() > 0) {
             _ftprintf(stdout, _T("VCE available\n"));
+            const auto codecs = std::vector<RGY_CODEC>{ RGY_CODEC_H264, RGY_CODEC_HEVC, RGY_CODEC_AV1 };
+            int selectedDeviceId = deviceid;
+            if (selectedDeviceId < 0) {
+                for (auto& dev : devList) {
+                    if (std::any_of(codecs.begin(), codecs.end(), [&dev](const RGY_CODEC codec) {
+                        return dev->getEncCaps(codec) != nullptr;
+                    })) {
+                        selectedDeviceId = dev->id();
+                        break;
+                    }
+                }
+                if (selectedDeviceId < 0) {
+                    selectedDeviceId = devList.front()->id();
+                }
+            }
             for (auto &dev : devList) {
-                if ((deviceid < 0 && dev->id() == 0) || dev->id() == deviceid) {
+                if (dev->id() == selectedDeviceId) {
                     _ftprintf(stdout, _T("device #%d: %s\n"), dev->id(), dev->name().c_str());
                     _ftprintf(stdout, _T("Supported Codecs:\n"));
-                    const auto codecs = std::vector<RGY_CODEC>{ RGY_CODEC_H264, RGY_CODEC_HEVC, RGY_CODEC_AV1 };
                     for (auto c : codecs) {
                         if (dev->getEncCaps(c) != nullptr) {
                             _ftprintf(stdout, _T("%s\n"), CodecToStr(c).c_str());
@@ -92,10 +112,15 @@ static void show_device(int deviceid, const RGYParamLogLevel& loglevel) {
     if ((err = core->initLogLevel(loglevel)) == RGY_ERR_NONE
         && (err = core->initAMFFactory()) == RGY_ERR_NONE
         && (err = core->initTracer(loglevel.get(RGY_LOGT_AMF))) == RGY_ERR_NONE) {
-#if ENABLE_D3D11
-        const auto devList = core->createDeviceList(false, true, RGYParamInitVulkan::Disable, true, false, false, 0);
+#if defined(_WIN32) || defined(_WIN64)
+        constexpr bool enableOpenCLForCaps = true;
 #else
-        const auto devList = core->createDeviceList(false, true, ENABLE_VULKAN ? RGYParamInitVulkan::TargetVendor : RGYParamInitVulkan::Disable, true, false, false, 0);
+        constexpr bool enableOpenCLForCaps = false;
+#endif
+#if ENABLE_D3D11
+        const auto devList = core->createDeviceList(false, true, RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0);
+#else
+        const auto devList = core->createDeviceList(false, false, ENABLE_VULKAN ? RGYParamInitVulkan::TargetVendor : RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0);
 #endif
         if (devList.size() > 0) {
             _ftprintf(stdout, _T("VCE available\n"));
@@ -188,7 +213,7 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1, const RGYPa
         return 1;
     }
     if (IS_OPTION("check-features")) {
-        int deviceid = 0;
+        int deviceid = -1;
         if (arg1 && arg1[0] != '-') {
             int value = 0;
             if (1 == _stscanf_s(arg1, _T("%d"), &value)) {

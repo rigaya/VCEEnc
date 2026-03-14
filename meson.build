@@ -27,6 +27,10 @@ enable_vulkan = get_option('enable_vulkan')
 enable_dtl_opt = get_option('enable_dtl')
 opencl_headers = get_option('opencl_headers')
 
+if not enable_vulkan
+  error('Vulkan support is required for VCEEnc on Linux')
+endif
+
 threads_dep = dependency('threads')
 dl_dep = cpp.find_library('dl', required: true)
 m_dep = cpp.find_library('m', required: true)
@@ -293,7 +297,7 @@ conf_data.set10('ENABLE_CPP_REGEX', true)
 conf_data.set10('ENABLE_DTL', enable_dtl)
 conf_data.set10('ENABLE_LIBDOVI', libdovi_dep.found())
 conf_data.set10('ENABLE_LIBHDR10PLUS', libhdr10plus_dep.found())
-conf_data.set10('ENABLE_VULKAN', vulkan_dep.found() and libplacebo_dep.found())
+conf_data.set10('ENABLE_VULKAN', vulkan_dep.found())
 conf_data.set10('ENABLE_LIBPLACEBO', libplacebo_dep.found())
 
 if enable_avisynth and have_avisynth_headers

@@ -212,6 +212,7 @@ public:
     virtual ~VCEFeatures() {};
 
     RGY_ERR init(int deviceId, const RGYParamLogLevel& loglevel);
+    int devId() const { return m_core->dev()->id(); }
     tstring devName() const { return m_core->dev()->getGPUInfo(); }
     tstring checkEncFeatures(RGY_CODEC codec);
     tstring checkDecFeatures(RGY_CODEC codec);

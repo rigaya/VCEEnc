@@ -29,6 +29,8 @@
 
 #if ENABLE_VULKAN
 
+#include <unordered_set>
+
 DeviceVulkan::DeviceVulkan() :
     m_name(_T("devVulkan")),
     m_vkInstance(nullptr),
@@ -36,9 +38,11 @@ DeviceVulkan::DeviceVulkan() :
     m_vkDevice(nullptr),
     m_displayDeviceName(),
     m_uuid(),
+    m_vendorID(0),
+    m_deviceID(0),
     m_vk(),
-    m_uQueueGraphicsFamilyIndex(std::numeric_limits<decltype(m_uQueueGraphicsFamilyIndex)>::max()),
-    m_uQueueComputeFamilyIndex(std::numeric_limits<decltype(m_uQueueComputeFamilyIndex)>::max()),
+    m_uQueueGraphicsFamilyIndex(-1),
+    m_uQueueComputeFamilyIndex(-1),
     m_hQueueGraphics(NULL),
     m_hQueueCompute(NULL),
     m_log() {
@@ -59,23 +63,38 @@ amf::AMFVulkanDevice* DeviceVulkan::GetAMFDevice() {
 #endif
 
 int DeviceVulkan::adapterCount() {
+    return (int)adapterList().size();
+}
+
+std::vector<RGYVulkanAdapterInfo> DeviceVulkan::adapterList() {
+    std::vector<RGYVulkanAdapterInfo> adapters;
     RGY_ERR res = RGY_ERR_NONE;
     if (m_vk.init() != 0) {
-        return 0;
+        return adapters;
     }
 
     if ((res = CreateInstance({})) != RGY_ERR_NONE) {
-        return 0;
+        return adapters;
     }
 
     uint32_t physicalDeviceCount = 0;
     if ((res = err_to_rgy(GetVulkan()->vkEnumeratePhysicalDevices(m_vkInstance, &physicalDeviceCount, nullptr))) != RGY_ERR_NONE) {
-        return 0;
+        return adapters;
     }
-    return (int)physicalDeviceCount;
+    std::vector<VkPhysicalDevice> physicalDevices{ physicalDeviceCount };
+    if ((res = err_to_rgy(GetVulkan()->vkEnumeratePhysicalDevices(m_vkInstance, &physicalDeviceCount, physicalDevices.data()))) != RGY_ERR_NONE) {
+        return adapters;
+    }
+
+    for (const auto& physicalDevice : physicalDevices) {
+        VkPhysicalDeviceProperties props = {};
+        GetVulkan()->vkGetPhysicalDeviceProperties(physicalDevice, &props);
+        adapters.push_back({ props.vendorID, props.deviceID, props.deviceName });
+    }
+    return adapters;
 }
 
-RGY_ERR DeviceVulkan::Init(int adapterID, const std::vector<const char*> &extInstance, const std::vector<const char*> &extDevice, std::shared_ptr<RGYLog> log, bool logTryMode) {
+RGY_ERR DeviceVulkan::Init(int adapterID, const std::vector<const char*> &extInstance, const std::vector<const char*> &extDevice, std::shared_ptr<RGYLog> log, bool logTryMode, amf::AMFContext *pContext) {
     RGY_ERR res = RGY_ERR_NONE;
     m_log = log;
     m_logTryMode = logTryMode;
@@ -105,7 +124,7 @@ RGY_ERR DeviceVulkan::Init(int adapterID, const std::vector<const char*> &extIns
     AddMessage(RGY_LOG_DEBUG, _T("LoadInstanceFunctionsTableExt() success.\n"));
 
     // load instance based functions
-    if (CreateDeviceAndFindQueues(adapterID, extDevice) != 0) {
+    if (CreateDeviceAndFindQueues(adapterID, extDevice, pContext) != 0) {
         AddMessage(RGY_LOG_ERROR, _T("CreateDeviceAndFindQueues() failed\n"));
         return RGY_ERR_NULL_PTR;
     }
@@ -123,13 +142,22 @@ RGY_ERR DeviceVulkan::Init(int adapterID, const std::vector<const char*> &extIns
 RGY_ERR DeviceVulkan::Terminate() {
     m_hQueueGraphics = NULL;
     m_hQueueCompute = NULL;
+    m_uQueueGraphicsFamilyIndex = -1;
+    m_uQueueComputeFamilyIndex = -1;
 
     if (m_vkDevice != VK_NULL_HANDLE) {
         GetVulkan()->vkDestroyDevice(m_vkDevice, nullptr);
+        m_vkDevice = VK_NULL_HANDLE;
     }
     if (m_vkInstance != VK_NULL_HANDLE) {
         GetVulkan()->vkDestroyInstance(m_vkInstance, nullptr);
+        m_vkInstance = VK_NULL_HANDLE;
     }
+    m_vkPhysicalDevice = VK_NULL_HANDLE;
+    m_displayDeviceName.clear();
+    memset(m_uuid, 0, sizeof(m_uuid));
+    m_vendorID = 0;
+    m_deviceID = 0;
     return RGY_ERR_NONE;
 }
 
@@ -188,11 +216,13 @@ RGY_ERR DeviceVulkan::CreateInstance(const std::vector<const char*> &extInstance
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 
     std::vector<const char*> instanceExtensions = extInstance;
-#if defined(_WIN32)
+    instanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
     instanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+    instanceExtensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
+    instanceExtensions.push_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
+#if defined(_WIN32)
     instanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif defined(__linux)
-    instanceExtensions.push_back("VK_KHR_surface");
     instanceExtensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #endif
 
@@ -222,7 +252,7 @@ RGY_ERR DeviceVulkan::CreateInstance(const std::vector<const char*> &extInstance
 
     VkApplicationInfo applicationInfo = {};
     applicationInfo.sType               = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    applicationInfo.apiVersion          = RGY_VK_API_VER;
+    applicationInfo.apiVersion          = VK_API_VERSION_1_3;
     applicationInfo.applicationVersion  = VK_MAKE_VERSION(1, 0, 0);
     applicationInfo.engineVersion       = VK_MAKE_VERSION(1, 0, 0);
     applicationInfo.pApplicationName    = ENCODER_NAME;
@@ -238,7 +268,7 @@ RGY_ERR DeviceVulkan::CreateInstance(const std::vector<const char*> &extInstance
     return RGY_ERR_NONE;
 }
 
-RGY_ERR DeviceVulkan::CreateDeviceAndFindQueues(int adapterID, const std::vector<const char*> &extDevice) {
+RGY_ERR DeviceVulkan::CreateDeviceAndFindQueues(int adapterID, const std::vector<const char*> &extDevice, amf::AMFContext *pContext) {
     RGY_ERR res = RGY_ERR_NONE;
     uint32_t physicalDeviceCount = 0;
     if ((res = err_to_rgy(GetVulkan()->vkEnumeratePhysicalDevices(m_vkInstance, &physicalDeviceCount, nullptr))) != RGY_ERR_NONE) {
@@ -266,17 +296,24 @@ RGY_ERR DeviceVulkan::CreateDeviceAndFindQueues(int adapterID, const std::vector
 
     uint32_t queueFamilyPropertyCount = 0;
     GetVulkan()->vkGetPhysicalDeviceQueueFamilyProperties(m_vkPhysicalDevice, &queueFamilyPropertyCount, nullptr);
+    if (queueFamilyPropertyCount == 0) {
+        AddMessage(RGY_LOG_ERROR, _T("CreateDeviceAndQueues() queueFamilyPropertyCount = 0\n"));
+        return RGY_ERR_UNKNOWN;
+    }
 
-    std::vector<VkQueueFamilyProperties> queueFamilyProperties{ queueFamilyPropertyCount };
+    std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyPropertyCount);
     GetVulkan()->vkGetPhysicalDeviceQueueFamilyProperties(m_vkPhysicalDevice, &queueFamilyPropertyCount, queueFamilyProperties.data());
 
-    m_uQueueGraphicsFamilyIndex  = std::numeric_limits<uint32_t>::max();
-    m_uQueueComputeFamilyIndex = std::numeric_limits<uint32_t>::max();
+    m_uQueueGraphicsFamilyIndex = -1;
+    m_uQueueComputeFamilyIndex = -1;
+    uint32_t uQueueDecodeFamilyIndex = std::numeric_limits<uint32_t>::max();
 
     uint32_t uQueueGraphicsIndex = std::numeric_limits<uint32_t>::max();
     uint32_t uQueueComputeIndex = std::numeric_limits<uint32_t>::max();
     for (uint32_t i = 0; i < queueFamilyPropertyCount; i++) {
         VkQueueFamilyProperties &queueFamilyProperty = queueFamilyProperties[i];
+        AddMessage(RGY_LOG_DEBUG, _T("Queue family #%d: flags=0x%08x, count=%d.\n"),
+            i, (uint32_t)queueFamilyProperty.queueFlags, (int)queueFamilyProperty.queueCount);
         if (queuePriorities.size() < queueFamilyProperty.queueCount) {
             queuePriorities.resize(queueFamilyProperty.queueCount, 1.0f);
         }
@@ -286,22 +323,38 @@ RGY_ERR DeviceVulkan::CreateDeviceAndFindQueues(int adapterID, const std::vector
         VkDeviceQueueCreateInfo queueCreateInfo = {};
         queueCreateInfo.pQueuePriorities = &queuePriorities[0];
         queueCreateInfo.queueFamilyIndex = i;
-        queueCreateInfo.queueCount = queueFamilyProperty.queueCount;
+        queueCreateInfo.queueCount = 1;
         queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 
-        if ((queueFamilyProperty.queueFlags & VK_QUEUE_COMPUTE_BIT) && (queueFamilyProperty.queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0 && m_uQueueComputeFamilyIndex == std::numeric_limits<decltype(m_uQueueComputeFamilyIndex)>::max()) {
+        if ((queueFamilyProperty.queueFlags & VK_QUEUE_COMPUTE_BIT)
+            && (queueFamilyProperty.queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0
+            && m_uQueueComputeFamilyIndex < 0) {
             m_uQueueComputeFamilyIndex = i;
             uQueueComputeIndex = 0;
+
+            amf_int64 queueComputeIndex = -1;
+            if (pContext != nullptr && pContext->GetProperty(AMF_CONTEXT_VULKAN_COMPUTE_QUEUE, &queueComputeIndex) == AMF_OK) {
+                if (queueComputeIndex < 0 || queueComputeIndex >= queueFamilyProperty.queueCount) {
+                    AddMessage(RGY_LOG_ERROR, _T("CreateDeviceAndFindQueues() invalid VulkanComputeQueue index %d not in range [%d,%d]\n"),
+                        (int)queueComputeIndex, 0, (int)queueFamilyProperty.queueCount - 1);
+                    return RGY_ERR_UNKNOWN;
+                }
+                uQueueComputeIndex = (uint32_t)queueComputeIndex;
+                queueCreateInfo.queueCount = uQueueComputeIndex + 1;
+            }
+            deviceQueueCreateInfoItems.push_back(queueCreateInfo);
         }
-        if ((queueFamilyProperty.queueFlags & VK_QUEUE_GRAPHICS_BIT) && m_uQueueGraphicsFamilyIndex == std::numeric_limits<decltype(m_uQueueGraphicsFamilyIndex)>::max()) {
+        if ((queueFamilyProperty.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            && m_uQueueGraphicsFamilyIndex < 0) {
             m_uQueueGraphicsFamilyIndex = i;
             uQueueGraphicsIndex = 0;
+            deviceQueueCreateInfoItems.push_back(queueCreateInfo);
         }
-        if (queueFamilyProperty.queueCount > 1) {
-            queueCreateInfo.queueCount = 1;
+        if ((queueFamilyProperty.queueFlags & VK_QUEUE_VIDEO_DECODE_BIT_KHR)
+            && uQueueDecodeFamilyIndex == std::numeric_limits<uint32_t>::max()) {
+            uQueueDecodeFamilyIndex = i;
+            deviceQueueCreateInfoItems.push_back(queueCreateInfo);
         }
-
-        deviceQueueCreateInfoItems.push_back(queueCreateInfo);
     }
     VkDeviceCreateInfo deviceCreateInfo = {};
 
@@ -312,6 +365,27 @@ RGY_ERR DeviceVulkan::CreateDeviceAndFindQueues(int adapterID, const std::vector
     VkPhysicalDeviceFeatures features = {};
     GetVulkan()->vkGetPhysicalDeviceFeatures(m_vkPhysicalDevice, &features);
     deviceCreateInfo.pEnabledFeatures = &features;
+
+    VkPhysicalDeviceSynchronization2Features syncFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES };
+    syncFeatures.synchronization2 = VK_TRUE;
+    deviceCreateInfo.pNext = &syncFeatures;
+
+    VkPhysicalDeviceCoherentMemoryFeaturesAMD coherentMemoryFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COHERENT_MEMORY_FEATURES_AMD };
+    coherentMemoryFeatures.deviceCoherentMemory = VK_TRUE;
+    syncFeatures.pNext = &coherentMemoryFeatures;
+
+    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES };
+    coherentMemoryFeatures.pNext = &indexingFeatures;
+    indexingFeatures.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
+    indexingFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+    indexingFeatures.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
+    indexingFeatures.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
+    indexingFeatures.descriptorBindingUniformTexelBufferUpdateAfterBind = VK_TRUE;
+    indexingFeatures.descriptorBindingStorageTexelBufferUpdateAfterBind = VK_TRUE;
+
+    VkPhysicalDeviceShaderAtomicInt64FeaturesKHR atomicInt64Features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES_KHR };
+    atomicInt64Features.shaderBufferInt64Atomics = VK_TRUE;
+    indexingFeatures.pNext = &atomicInt64Features;
 
     std::vector<const char*> deviceLayers;
 
@@ -327,9 +401,33 @@ RGY_ERR DeviceVulkan::CreateDeviceAndFindQueues(int adapterID, const std::vector
     deviceCreateInfo.enabledLayerCount = (decltype(deviceCreateInfo.enabledLayerCount))(deviceLayers.size());
 
     std::vector<const char*> deviceExt = extDevice;
+    deviceExt.insert(deviceExt.begin(), "VK_KHR_shader_atomic_int64");
     deviceExt.insert(deviceExt.begin(), "VK_KHR_swapchain");
-    deviceCreateInfo.ppEnabledExtensionNames = deviceExt.data();
-    deviceCreateInfo.enabledExtensionCount = (decltype(deviceCreateInfo.enabledExtensionCount))(deviceExt.size());
+
+    uint32_t extensionCount = 0;
+    if ((res = err_to_rgy(GetVulkan()->vkEnumerateDeviceExtensionProperties(m_vkPhysicalDevice, nullptr, &extensionCount, nullptr))) != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("vkEnumerateDeviceExtensionProperties() failed, err = %s\n"), get_err_mes(res));
+        return res;
+    }
+    std::vector<VkExtensionProperties> deviceExtensionProperties(extensionCount);
+    if ((res = err_to_rgy(GetVulkan()->vkEnumerateDeviceExtensionProperties(m_vkPhysicalDevice, nullptr, &extensionCount, deviceExtensionProperties.data()))) != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("vkEnumerateDeviceExtensionProperties() failed, err = %s\n"), get_err_mes(res));
+        return res;
+    }
+    std::unordered_set<std::string> deviceExtensionLookup;
+    for (const auto& ext : deviceExtensionProperties) {
+        deviceExtensionLookup.insert(ext.extensionName);
+    }
+    std::vector<const char*> supportedDeviceExtensions;
+    for (const auto& ext : deviceExt) {
+        if (deviceExtensionLookup.count(ext) > 0) {
+            supportedDeviceExtensions.push_back(ext);
+        } else {
+            AddMessage(RGY_LOG_WARN, _T("Extension %s is not available. Some Vulkan features may not work correctly.\n"), char_to_tstring(ext).c_str());
+        }
+    }
+    deviceCreateInfo.ppEnabledExtensionNames = supportedDeviceExtensions.data();
+    deviceCreateInfo.enabledExtensionCount = (decltype(deviceCreateInfo.enabledExtensionCount))(supportedDeviceExtensions.size());
 
     if ((res = err_to_rgy(GetVulkan()->vkCreateDevice(m_vkPhysicalDevice, &deviceCreateInfo, nullptr, &m_vkDevice)))!= RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("CreateDeviceAndQueues() vkCreateDevice() failed, Error=%s\n"), get_err_mes(res));
@@ -343,10 +441,17 @@ RGY_ERR DeviceVulkan::CreateDeviceAndFindQueues(int adapterID, const std::vector
     
     GetVulkan()->vkGetDeviceQueue(m_vkDevice, m_uQueueGraphicsFamilyIndex, uQueueGraphicsIndex, &m_hQueueGraphics);
     GetVulkan()->vkGetDeviceQueue(m_vkDevice, m_uQueueComputeFamilyIndex, uQueueComputeIndex, &m_hQueueCompute);
+    AddMessage(RGY_LOG_DEBUG, _T("Selected Vulkan queues: graphicsFamily=%d graphicsQueue=%p computeFamily=%d computeQueue=%p.\n"),
+        m_uQueueGraphicsFamilyIndex,
+        m_hQueueGraphics,
+        m_uQueueComputeFamilyIndex,
+        m_hQueueCompute);
 
     VkPhysicalDeviceProperties physicalDeviceProperties = {};
     GetVulkan()->vkGetPhysicalDeviceProperties(m_vkPhysicalDevice, &physicalDeviceProperties);
     m_displayDeviceName = physicalDeviceProperties.deviceName;
+    m_vendorID = physicalDeviceProperties.vendorID;
+    m_deviceID = physicalDeviceProperties.deviceID;
 
     VkPhysicalDeviceIDProperties physicalDeviceIDProperties = {};
     physicalDeviceIDProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES;

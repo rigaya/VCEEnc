@@ -29,8 +29,77 @@
 #include "vce_util.h"
 #include "VideoDecoderUVD.h"
 #include "rgy_avutil.h"
+#include <array>
+#include <cstring>
 
 const wchar_t *VCEDevice::CAP_10BITDEPTH = L"CAP_10BITDEPTH";
+
+namespace {
+
+bool clUUIDValid(const std::array<uint8_t, CL_UUID_SIZE_KHR>& uuid) {
+    return std::find_if(uuid.begin(), uuid.end(), [](const uint8_t v) { return v != 0; }) != uuid.end();
+}
+
+bool getOpenCLDeviceIdentity(std::shared_ptr<RGYLog> log, const int deviceId, std::array<uint8_t, CL_UUID_SIZE_KHR>& uuid, int& devicePciId, tstring& deviceName) {
+    RGYOpenCL cl(log);
+    auto platforms = cl.getPlatforms("AMD");
+    int totalDevices = 0;
+    for (auto& platform : platforms) {
+        if (platform->createDeviceList(CL_DEVICE_TYPE_GPU) != RGY_ERR_NONE) {
+            continue;
+        }
+        const auto& devices = platform->devs();
+        if (deviceId < totalDevices + (int)devices.size()) {
+            const auto info = RGYOpenCLDevice(devices[deviceId - totalDevices]).info();
+            std::memcpy(uuid.data(), info.uuid, uuid.size());
+            devicePciId = info.pcie_id_amd;
+            deviceName = char_to_tstring((info.board_name_amd.length() > 0) ? info.board_name_amd : info.name);
+            return true;
+        }
+        totalDevices += (int)devices.size();
+    }
+    return false;
+}
+
+int getVulkanDeviceIdForOpenCLDevice(std::shared_ptr<RGYLog> log, const std::vector<const char*>& deviceExtensions, const int openCLDeviceId) {
+#if ENABLE_VULKAN
+    std::array<uint8_t, CL_UUID_SIZE_KHR> openclUUID = {};
+    int openclDevicePciId = 0;
+    tstring openclDeviceName;
+    if (!getOpenCLDeviceIdentity(log, openCLDeviceId, openclUUID, openclDevicePciId, openclDeviceName)) {
+        return openCLDeviceId;
+    }
+
+    DeviceVulkan probeRoot;
+    const int adapterCount = probeRoot.adapterCount();
+    for (int adapterId = 0; adapterId < adapterCount; adapterId++) {
+        DeviceVulkan probe;
+        if (probe.Init(adapterId, {}, deviceExtensions, log, true) != RGY_ERR_NONE) {
+            continue;
+        }
+        if (clUUIDValid(openclUUID) && std::memcmp(probe.GetUUID(), openclUUID.data(), std::min<size_t>(VK_UUID_SIZE, openclUUID.size())) == 0) {
+            return adapterId;
+        }
+        if (openclDevicePciId != 0 && probe.GetDeviceID() == (uint32_t)openclDevicePciId) {
+            return adapterId;
+        }
+    }
+#endif
+    return openCLDeviceId;
+}
+
+bool useInteropDeviceForOpenCLSelection(const bool interopD3d9, const bool interopD3d11) {
+    bool useInteropDevice = false;
+#if ENABLE_D3D9
+    useInteropDevice |= interopD3d9;
+#endif
+#if ENABLE_D3D11
+    useInteropDevice |= interopD3d11;
+#endif
+    return useInteropDevice;
+}
+
+} // namespace
 
 VCEDevice::VCEDevice(shared_ptr<RGYLog> &log, amf::AMFFactory *factory, amf::AMFTrace *trace) :
     m_log(log),
@@ -60,22 +129,6 @@ VCEDevice::VCEDevice(shared_ptr<RGYLog> &log, amf::AMFFactory *factory, amf::AMF
 }
 
 VCEDevice::~VCEDevice() {
-    m_context.Release();
-    m_factory = nullptr;
-    m_trace = nullptr;
-
-    m_cl.reset();
-#if ENABLE_VULKAN
-    m_vk.Terminate();
-#endif
-#if ENABLE_D3D11
-    m_dx11.Terminate();
-#endif //#if ENABLE_D3D11
-#if ENABLE_D3D9
-    m_dx9.Terminate();
-#endif //#if ENABLE_D3D9
-    m_devName.clear();
-    m_log.reset();
 }
 
 RGY_ERR VCEDevice::CreateContext() {
@@ -101,9 +154,6 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
     m_d3d11interlop = interopD3d11;
     m_vulkaninterlop = interopVulkan;
 #if ENABLE_VULKAN
-    if (interopVulkan == RGYParamInitVulkan::TargetVendor) {
-        setenv("VK_LOADER_DRIVERS_SELECT", "*amd*", 1);
-    }
     if (interopVulkan != RGYParamInitVulkan::Disable) {
         auto amferr = AMF_OK;
         if (VULKAN_DEFAULT_DEVICE_ONLY) {
@@ -117,11 +167,21 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
                 deviceExtensions.resize(nCount);
                 pContext1->GetVulkanDeviceExtensions(&nCount, deviceExtensions.data());
             }
-            //現状これをやるとなぜか異常終了してしまう
-            auto err = m_vk.Init(deviceId, {}, deviceExtensions, m_log, false);
+            const auto vulkanDeviceId = (enableOpenCL) ? getVulkanDeviceIdForOpenCLDevice(m_log, deviceExtensions, deviceId) : deviceId;
+            PrintMes(RGY_LOG_DEBUG, _T("Initializing Vulkan context for adapter #%d (requested device #%d).\n"), vulkanDeviceId, deviceId);
+            auto err = m_vk.Init(vulkanDeviceId, {}, deviceExtensions, m_log, false, m_context);
             if (err != RGY_ERR_NONE) {
                 PrintMes(RGY_LOG_ERROR, _T("Failed to get vulkan device.\n"));
                 return RGY_ERR_DEVICE_LOST;
+            }
+            PrintMes(RGY_LOG_DEBUG, _T("Initialized Vulkan device #%d: %s [vendor=0x%04x, device=0x%04x].\n"),
+                vulkanDeviceId,
+                char_to_tstring(m_vk.GetDisplayDeviceName()).c_str(),
+                m_vk.GetVendorID(),
+                m_vk.GetDeviceID());
+            if (interopVulkan == RGYParamInitVulkan::TargetVendor && m_vk.GetVendorID() != 0x1002) {
+                PrintMes(RGY_LOG_DEBUG, _T("Skipping non-AMD Vulkan adapter #%d.\n"), vulkanDeviceId);
+                return RGY_ERR_DEVICE_NOT_FOUND;
             }
             amferr = amf::AMFContext1Ptr(m_context)->InitVulkan(m_vk.GetAMFDevice());
         }
@@ -229,7 +289,7 @@ RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const 
                     return RGY_ERR_DEVICE_LOST;
                 }
             }
-            selectCLDevice = (interopD3d9 || interopD3d11) ? 0 : deviceId - totalDevices;
+            selectCLDevice = useInteropDeviceForOpenCLSelection(interopD3d9, interopD3d11) ? 0 : deviceId - totalDevices;
             auto devices = platform->devs();
             totalDevices += (int)devices.size();
             if (selectCLDevice < (int)devices.size()) {
@@ -293,12 +353,30 @@ amf::AMFCapsPtr VCEDevice::getEncCapsImpl(AMF_RESULT& initRes, RGY_CODEC codec, 
     useInit |= for10bit; //10bitが可能かをチェックするには、P010で初期化してみる必要がある
     PrintMes(RGY_LOG_DEBUG, _T("Getting caps for %s%s encoding.\n"), codec_rgy_to_enc(codec), (for10bit) ? _T(" 10bit") : _T(""));
     amf::AMFComponentPtr p_encoder;
-    auto ret = m_factory->CreateComponent(m_context, codec_rgy_to_enc(codec), &p_encoder);
+    amf::AMFContextPtr activeContext = m_context;
+    auto ret = m_factory->CreateComponent(activeContext, codec_rgy_to_enc(codec), &p_encoder);
+#if ENABLE_VULKAN
+    amf::AMFContextPtr fallbackContext;
+    if (ret != AMF_OK && m_vulkaninterlop != RGYParamInitVulkan::Disable) {
+        if (m_factory->CreateContext(&fallbackContext) == AMF_OK) {
+            auto fallbackInit = amf::AMFContext1Ptr(fallbackContext)->InitVulkan(m_vk.GetAMFDevice());
+            if (fallbackInit == AMF_OK) {
+                ret = m_factory->CreateComponent(fallbackContext, codec_rgy_to_enc(codec), &p_encoder);
+                if (ret == AMF_OK) {
+                    activeContext = fallbackContext;
+                    PrintMes(RGY_LOG_DEBUG, _T("Created component for %s%s encoding using Vulkan-only fallback context.\n"), codec_rgy_to_enc(codec), (for10bit) ? _T(" 10bit") : _T(""));
+                }
+            }
+        }
+    }
+#endif
     if (ret != AMF_OK) {
         PrintMes(RGY_LOG_DEBUG, _T("Failed to create component for %s%s encoding.\n"), codec_rgy_to_enc(codec), (for10bit) ? _T(" 10bit") : _T(""));
         return nullptr;
     }
-    PrintMes(RGY_LOG_DEBUG, _T("Created component for %s%s encoding.\n"), codec_rgy_to_enc(codec), (for10bit) ? _T(" 10bit") : _T(""));
+    if (activeContext == m_context) {
+        PrintMes(RGY_LOG_DEBUG, _T("Created component for %s%s encoding.\n"), codec_rgy_to_enc(codec), (for10bit) ? _T(" 10bit") : _T(""));
+    }
     amf::AMFCapsPtr encoderCaps;
     try {
         if (useInit) {
@@ -671,6 +749,16 @@ tstring VCEDevice::getGPUInfo() const {
         return wstring_to_tstring(str);
     }
 #endif //#if ENABLE_D3D11
+#if ENABLE_VULKAN
+    if (m_vk.GetPhysicalDevice() != VK_NULL_HANDLE && !m_vk.GetDisplayDeviceName().empty()) {
+        auto str = char_to_tstring(m_vk.GetDisplayDeviceName());
+        str = str_replace(str, _T("(TM)"), _T(""));
+        str = str_replace(str, _T("(R)"), _T(""));
+        str = str_replace(str, _T(" Series"), _T(""));
+        str = str_replace(str, _T(" Graphics"), _T(""));
+        return str;
+    }
+#endif
     if (m_cl) {
         return RGYOpenCLDevice(m_cl->platform()->dev(0)).infostr();
     }

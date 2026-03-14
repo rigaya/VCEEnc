@@ -2,6 +2,6 @@ option('enable_vapoursynth', type: 'boolean', value: true, description: 'Enable 
 option('enable_avisynth', type: 'boolean', value: true, description: 'Enable AviSynth support')
 option('enable_libass', type: 'boolean', value: true, description: 'Enable libass subtitle burn support')
 option('enable_libplacebo', type: 'boolean', value: false, description: 'Enable libplacebo support')
-option('enable_vulkan', type: 'boolean', value: false, description: 'Enable Vulkan support (required for libplacebo)')
+option('enable_vulkan', type: 'boolean', value: true, description: 'Enable Vulkan support (required on Linux)')
 option('enable_dtl', type: 'boolean', value: true, description: 'Enable dtl support')
 option('opencl_headers', type: 'string', value: '', description: 'Additional include path for OpenCL headers')

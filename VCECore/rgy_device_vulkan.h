@@ -45,14 +45,21 @@ class DeviceVulkan;
 
 #if ENCODER_VCEENC
 #include "core/VulkanAMF.h"
+#include "Context.h"
 #endif // #if ENCODER_VCEENC
+
+struct RGYVulkanAdapterInfo {
+    uint32_t vendorID;
+    uint32_t deviceID;
+    std::string name;
+};
 
 class DeviceVulkan {
 public:
     DeviceVulkan();
     virtual ~DeviceVulkan();
 
-    RGY_ERR Init(int adapterID, const std::vector<const char*> &extInstance, const std::vector<const char*> &extDevice, std::shared_ptr<RGYLog> log, bool logTryMode);
+    RGY_ERR Init(int adapterID, const std::vector<const char*> &extInstance, const std::vector<const char*> &extDevice, std::shared_ptr<RGYLog> log, bool logTryMode, amf::AMFContext *pContext = nullptr);
     RGY_ERR Terminate();
 
     RGYVulkanFuncs *GetVulkan();
@@ -61,18 +68,21 @@ public:
 #endif
     const std::string& GetDisplayDeviceName() const { return m_displayDeviceName; }
     const uint8_t *GetUUID() const { return m_uuid; }
+    uint32_t GetVendorID() const { return m_vendorID; }
+    uint32_t GetDeviceID() const { return m_deviceID; }
 
-    int GetQueueGraphicFamilyIndex() { return m_uQueueGraphicsFamilyIndex; }
-    VkQueue GetQueueGraphicQueue() { return m_hQueueGraphics; }
+    int GetQueueGraphicFamilyIndex() const { return m_uQueueGraphicsFamilyIndex; }
+    VkQueue GetQueueGraphicQueue() const { return m_hQueueGraphics; }
 
-    int GetQueueComputeFamilyIndex() { return m_uQueueComputeFamilyIndex; }
-    VkQueue GetQueueComputeQueue() { return m_hQueueCompute; }
+    int GetQueueComputeFamilyIndex() const { return m_uQueueComputeFamilyIndex; }
+    VkQueue GetQueueComputeQueue() const { return m_hQueueCompute; }
 
     int adapterCount();
+    std::vector<RGYVulkanAdapterInfo> adapterList();
 
-    VkDevice GetDevice() { return m_vkDevice; }
-    VkPhysicalDevice GetPhysicalDevice() { return m_vkPhysicalDevice; }
-    VkInstance GetInstance() { return m_vkInstance; }
+    VkDevice GetDevice() const { return m_vkDevice; }
+    VkPhysicalDevice GetPhysicalDevice() const { return m_vkPhysicalDevice; }
+    VkInstance GetInstance() const { return m_vkInstance; }
 
 #if defined(_WIN32) || defined(_WIN64)
     HANDLE getMemHandle(VkDeviceMemory memory);
@@ -87,7 +97,7 @@ protected:
     void AddMessage(RGYLogLevel log_level, const TCHAR *format, ...);
 private:
     RGY_ERR CreateInstance(const std::vector<const char*> &extInstance);
-    RGY_ERR CreateDeviceAndFindQueues(int adapterID, const std::vector<const char*> &extDevice);
+    RGY_ERR CreateDeviceAndFindQueues(int adapterID, const std::vector<const char*> &extDevice, amf::AMFContext *pContext);
 
     std::vector<const char*> GetDebugInstanceExtensionNames();
     std::vector<const char*> GetDebugInstanceLayerNames();
@@ -102,6 +112,8 @@ private:
 #endif
     std::string m_displayDeviceName;
     uint8_t m_uuid[VK_UUID_SIZE];
+    uint32_t m_vendorID;
+    uint32_t m_deviceID;
     RGYVulkanFuncs m_vk;
 
     int m_uQueueGraphicsFamilyIndex;

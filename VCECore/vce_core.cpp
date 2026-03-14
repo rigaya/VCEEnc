@@ -4634,10 +4634,38 @@ RGY_ERR VCEFeatures::init(int deviceId, const RGYParamLogLevel& loglevel) {
         return err;
     }
 
-#if ENABLE_D3D11
-    auto devList = m_core->createDeviceList(false, true, RGYParamInitVulkan::Disable, true, false, false, 0);
+#if defined(_WIN32) || defined(_WIN64)
+    constexpr bool enableOpenCLForCaps = true;
 #else
-    auto devList = m_core->createDeviceList(false, false, RGYParamInitVulkan::TargetVendor, true, false, false, 0);
+    // Keep capability probing aligned with AMF's Vulkan sample on native Linux.
+    constexpr bool enableOpenCLForCaps = false;
+#endif
+#if ENABLE_D3D11
+    auto devList = m_core->createDeviceList(false, true, RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0);
+#else
+    auto devList = m_core->createDeviceList(false, false, RGYParamInitVulkan::TargetVendor, enableOpenCLForCaps, false, false, 0);
+#endif
+    int selectedDeviceId = deviceId;
+    if (selectedDeviceId < 0) {
+        const auto codecs = std::vector<RGY_CODEC>{ RGY_CODEC_H264, RGY_CODEC_HEVC, RGY_CODEC_AV1 };
+        for (const auto& dev : devList) {
+            if (std::any_of(codecs.begin(), codecs.end(), [&dev](const RGY_CODEC codec) {
+                return dev->getEncCaps(codec) != nullptr;
+            })) {
+                selectedDeviceId = dev->id();
+                break;
+            }
+        }
+        if (selectedDeviceId < 0 && devList.size() > 0) {
+            selectedDeviceId = devList.front()->id();
+        }
+    }
+#if !defined(_WIN32) && !defined(_WIN64)
+#if !ENABLE_D3D11
+    if (selectedDeviceId >= 0 && devList.size() > 1) {
+        devList = m_core->createDeviceList(false, false, RGYParamInitVulkan::TargetVendor, enableOpenCLForCaps, false, false, 0, selectedDeviceId);
+    }
+#endif
 #endif
     std::unique_ptr<RGYDeviceUsage> devUsage;
     std::unique_ptr<RGYDeviceUsageLockManager> devUsageLock;
@@ -4645,7 +4673,7 @@ RGY_ERR VCEFeatures::init(int deviceId, const RGYParamLogLevel& loglevel) {
         devUsage = std::make_unique<RGYDeviceUsage>();
         devUsageLock = devUsage->lock(); // ロックは親プロセス側でとる
     }
-    if ((err = m_core->initDevice(devList, deviceId, devUsageLock.get())) != RGY_ERR_NONE) {
+    if ((err = m_core->initDevice(devList, selectedDeviceId, devUsageLock.get())) != RGY_ERR_NONE) {
         return err;
     }
     return RGY_ERR_NONE;
@@ -4688,7 +4716,7 @@ tstring check_vce_enc_features(const std::vector<RGY_CODEC> &codecs, int deviceI
     if (vce.init(deviceId, loglevel) != RGY_ERR_NONE) {
         return _T("VCE not available.\n");
     }
-    tstring str = strsprintf(_T("device #%d: "), deviceId) + vce.devName() + _T("\n");
+    tstring str = strsprintf(_T("device #%d: "), vce.devId()) + vce.devName() + _T("\n");
     for (const auto codec : codecs) {
         auto ret = vce.checkEncFeatures(codec);
         if (ret.length() > 0) {
@@ -4704,7 +4732,7 @@ tstring check_vce_dec_features(int deviceId, const RGYParamLogLevel& loglevel) {
     if (vce.init(deviceId, loglevel) != RGY_ERR_NONE) {
         return _T("VCE not available.\n");
     }
-    tstring str = strsprintf(_T("device #%d: "), deviceId) + vce.devName() + _T("\n");
+    tstring str = strsprintf(_T("device #%d: "), vce.devId()) + vce.devName() + _T("\n");
     for (size_t i = 0; i < _countof(HW_DECODE_LIST); i++) {
         const auto codec = HW_DECODE_LIST[i].rgy_codec;
         auto ret = vce.checkDecFeatures(codec);
@@ -4721,7 +4749,7 @@ tstring check_vce_filter_features(int deviceId, const RGYParamLogLevel& loglevel
     if (vce.init(deviceId, loglevel) != RGY_ERR_NONE) {
         return _T("VCE not available.\n");
     }
-    tstring str = strsprintf(_T("device #%d: "), deviceId) + vce.devName() + _T("\n");
+    tstring str = strsprintf(_T("device #%d: "), vce.devId()) + vce.devName() + _T("\n");
     for (auto& filter : { AMFVideoConverter, AMFPreProcessing, AMFHQScaler, AMFVQEnhancer, AMFPreAnalysis }) {
         auto ret = vce.checkFilterFeatures(filter);
         if (ret.length() > 0) {
