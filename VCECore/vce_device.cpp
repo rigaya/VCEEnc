@@ -61,33 +61,6 @@ bool getOpenCLDeviceIdentity(std::shared_ptr<RGYLog> log, const int deviceId, st
     return false;
 }
 
-int getVulkanDeviceIdForOpenCLDevice(std::shared_ptr<RGYLog> log, const std::vector<const char*>& deviceExtensions, const int openCLDeviceId) {
-#if ENABLE_VULKAN
-    std::array<uint8_t, CL_UUID_SIZE_KHR> openclUUID = {};
-    int openclDevicePciId = 0;
-    tstring openclDeviceName;
-    if (!getOpenCLDeviceIdentity(log, openCLDeviceId, openclUUID, openclDevicePciId, openclDeviceName)) {
-        return openCLDeviceId;
-    }
-
-    DeviceVulkan probeRoot;
-    const int adapterCount = probeRoot.adapterCount();
-    for (int adapterId = 0; adapterId < adapterCount; adapterId++) {
-        DeviceVulkan probe;
-        if (probe.Init(adapterId, {}, deviceExtensions, log, true) != RGY_ERR_NONE) {
-            continue;
-        }
-        if (clUUIDValid(openclUUID) && std::memcmp(probe.GetUUID(), openclUUID.data(), std::min<size_t>(VK_UUID_SIZE, openclUUID.size())) == 0) {
-            return adapterId;
-        }
-        if (openclDevicePciId != 0 && probe.GetDeviceID() == (uint32_t)openclDevicePciId) {
-            return adapterId;
-        }
-    }
-#endif
-    return openCLDeviceId;
-}
-
 bool useInteropDeviceForOpenCLSelection(const bool interopD3d9, const bool interopD3d11) {
     bool useInteropDevice = false;
 #if ENABLE_D3D9
@@ -167,7 +140,7 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
                 deviceExtensions.resize(nCount);
                 pContext1->GetVulkanDeviceExtensions(&nCount, deviceExtensions.data());
             }
-            const auto vulkanDeviceId = (enableOpenCL) ? getVulkanDeviceIdForOpenCLDevice(m_log, deviceExtensions, deviceId) : deviceId;
+            const auto vulkanDeviceId = deviceId;
             PrintMes(RGY_LOG_DEBUG, _T("Initializing Vulkan context for adapter #%d (requested device #%d).\n"), vulkanDeviceId, deviceId);
             auto err = m_vk.Init(vulkanDeviceId, {}, deviceExtensions, m_log, false, m_context);
             if (err != RGY_ERR_NONE) {
@@ -260,6 +233,15 @@ RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const 
     int totalDevices = 0;
     int selectCLDevice = 0;
     std::shared_ptr<RGYOpenCLPlatform> selectedPlatform;
+#if ENABLE_VULKAN
+    const bool matchOpenCLToVulkan = !useInteropDeviceForOpenCLSelection(interopD3d9, interopD3d11)
+        && m_vulkaninterlop != RGYParamInitVulkan::Disable
+        && m_vk.GetDevice() != VK_NULL_HANDLE;
+    std::array<uint8_t, CL_UUID_SIZE_KHR> vulkanUUID = {};
+    if (matchOpenCLToVulkan) {
+        std::memcpy(vulkanUUID.data(), m_vk.GetUUID(), std::min<size_t>(vulkanUUID.size(), VK_UUID_SIZE));
+    }
+#endif
     for (auto& platform : platforms) {
         PrintMes(RGY_LOG_DEBUG, _T("Checking platform %s...\n"), char_to_tstring(platform->info().name).c_str());
 #if ENABLE_D3D9
@@ -289,8 +271,24 @@ RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const 
                     return RGY_ERR_DEVICE_LOST;
                 }
             }
-            selectCLDevice = useInteropDeviceForOpenCLSelection(interopD3d9, interopD3d11) ? 0 : deviceId - totalDevices;
             auto devices = platform->devs();
+#if ENABLE_VULKAN
+            if (matchOpenCLToVulkan) {
+                for (int idev = 0; idev < (int)devices.size(); idev++) {
+                    const auto info = RGYOpenCLDevice(devices[idev]).info();
+                    if ((clUUIDValid(vulkanUUID) && std::memcmp(info.uuid, vulkanUUID.data(), vulkanUUID.size()) == 0)
+                        || (m_vk.GetDeviceID() != 0 && info.pcie_id_amd == (int)m_vk.GetDeviceID())) {
+                        selectCLDevice = idev;
+                        selectedPlatform = platform;
+                        break;
+                    }
+                }
+                if (selectedPlatform) {
+                    break;
+                }
+            }
+#endif
+            selectCLDevice = useInteropDeviceForOpenCLSelection(interopD3d9, interopD3d11) ? 0 : deviceId - totalDevices;
             totalDevices += (int)devices.size();
             if (selectCLDevice < (int)devices.size()) {
                 selectedPlatform = platform;
