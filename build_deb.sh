@@ -23,7 +23,7 @@ if [ -e /etc/lsb-release ]; then
         PACKAGE_DEPENDS="${PACKAGE_DEPENDS},amf-amdgpu-pro,ocl-icd-libopencl1"
         PACKAGE_DEPENDS="${PACKAGE_DEPENDS},libva-drm2,libva-x11-2"
     elif [ "${PACKAGE_OS_CODENAME}" = "noble" ]; then
-        PACKAGE_DEPENDS="libc6(>=2.22)" 
+        PACKAGE_DEPENDS="libc6(>=2.22)"
         PACKAGE_DEPENDS="${PACKAGE_DEPENDS},amf-amdgpu-pro,ocl-icd-libopencl1"
         PACKAGE_DEPENDS="${PACKAGE_DEPENDS},libva-drm2,libva-x11-2"
     else
