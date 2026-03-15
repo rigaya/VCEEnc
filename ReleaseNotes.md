@@ -1,5 +1,21 @@
 # VCEEnc Release Notes
 
+## 9.04
+
+- Fix DTS-X not being copyable.
+- Show AMF initialization failure in [--check-hw](./VCEEncC_Options.en.md#--check-hw-int).
+- Fix error during E-AC3 encode finish.
+- Add [--muxer-add-cmd](./VCEEncC_Options.en.md#--muxer-add-cmd) to write encoder options to encoding_tool in muxer metadata.
+- Extend [--audio-bitrate](./VCEEncC_Options.en.md#--audio-bitrate-intstringint) to allow specifying bitrate per channel layout (e.g. stereo:256,5.1:640).
+- Improve log output for audio bitrate.
+- Linux: Fix GPU selection and OpenCL handling in normal encode.
+- Linux: Fix AMF/Vulkan initialization and feature detection.
+- Linux: Fix VapourSynth input reading.
+- Linux: Fix possible SIGPIPE (141) exit in multi-GPU environment.
+- Linux: Migrate build to meson.
+- Linux: Revisit event handling.
+- Update Chinese translation. ( #137 )
+
 ## 9.03
 
 - Add support for Vapoursynth API V4.
