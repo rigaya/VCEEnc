@@ -369,6 +369,7 @@ amf::AMFCapsPtr VCEDevice::getEncCapsImpl(AMF_RESULT& initRes, RGY_CODEC codec, 
     }
 #endif
     if (ret != AMF_OK) {
+        initRes = ret;
         PrintMes(RGY_LOG_DEBUG, _T("Failed to create component for %s%s encoding.\n"), codec_rgy_to_enc(codec), (for10bit) ? _T(" 10bit") : _T(""));
         return nullptr;
     }
@@ -408,10 +409,12 @@ amf::AMFCapsPtr VCEDevice::getEncCapsImpl(AMF_RESULT& initRes, RGY_CODEC codec, 
         }
         ret = p_encoder->GetCaps(&encoderCaps);
         if (ret != AMF_OK) {
+            initRes = ret;
             PrintMes(RGY_LOG_DEBUG, _T("Failed to get caps for %s%s encoding.\n"), codec_rgy_to_enc(codec), (for10bit) ? _T(" 10bit") : _T(""));
         }
         PrintMes(RGY_LOG_DEBUG, _T("Got caps for %s%sencoding.\n"), codec_rgy_to_enc(codec), (for10bit) ? _T(" 10bit") : _T(""));
     } catch (...) {
+        initRes = AMF_FAIL;
         PrintMes(RGY_LOG_WARN, _T("Crushed while getting caps for %s%s encoding (init=%s).\n"), codec_rgy_to_enc(codec), (for10bit) ? _T(" 10bit") : _T(""), (useInit) ? _T("true") : _T("false"));
     }
     return encoderCaps;

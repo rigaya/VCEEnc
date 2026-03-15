@@ -91,9 +91,31 @@ static void show_hw(int deviceid, const RGYParamLogLevel& loglevel) {
                 if (dev->id() == selectedDeviceId) {
                     _ftprintf(stdout, _T("device #%d: %s\n"), dev->id(), dev->name().c_str());
                     _ftprintf(stdout, _T("Supported Codecs:\n"));
+                    bool codecFound = false;
+                    AMF_RESULT probeErr = AMF_OK;
                     for (auto c : codecs) {
                         if (dev->getEncCaps(c) != nullptr) {
                             _ftprintf(stdout, _T("%s\n"), CodecToStr(c).c_str());
+                            codecFound = true;
+                        }
+                    }
+                    if (!codecFound) {
+                        for (auto c : codecs) {
+                            AMF_RESULT initRes = AMF_OK;
+                            if (dev->getEncCapsWithInit(initRes, c, false) != nullptr) {
+                                _ftprintf(stdout, _T("%s\n"), CodecToStr(c).c_str());
+                                codecFound = true;
+                            } else if (probeErr == AMF_OK && initRes != AMF_OK) {
+                                probeErr = initRes;
+                            }
+                        }
+                    }
+                    if (!codecFound) {
+                        _ftprintf(stdout, _T("(none)\n"));
+                        if (probeErr != AMF_OK) {
+                            _ftprintf(stderr, _T("AMF encoder init failed while probing this device (%s).\n"), get_err_mes(err_to_rgy(probeErr)));
+                        } else {
+                            _ftprintf(stderr, _T("AMF did not report any supported codecs for this device.\n"));
                         }
                     }
                 }
