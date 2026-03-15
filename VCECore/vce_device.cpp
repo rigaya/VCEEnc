@@ -29,6 +29,7 @@
 #include "vce_util.h"
 #include "VideoDecoderUVD.h"
 #include "rgy_avutil.h"
+#include <algorithm>
 #include <array>
 #include <cstring>
 

@@ -125,8 +125,9 @@ RGY_ERR VCEAMF::initTracer(int log_level) {
 
 std::vector<std::unique_ptr<VCEDevice>> VCEAMF::createDeviceList(bool interopD3d9, bool interopD3d11, RGYParamInitVulkan interopVulkan, bool enableOpenCL, bool enableVppPerfMonitor, bool enableAV1HWDec, int openCLBuildThreads, int targetDeviceId) {
     std::vector<std::unique_ptr<VCEDevice>> devs;
+    int adapterCount = 0;
 #if ENABLE_D3D11
-    const int adapterCount = DeviceDX11::adapterCount(m_pLog.get());
+    adapterCount = DeviceDX11::adapterCount(m_pLog.get());
 #elif ENABLE_VULKAN
     std::vector<int> adapterIndices;
     if (VULKAN_DEFAULT_DEVICE_ONLY == 0) {
@@ -154,17 +155,17 @@ std::vector<std::unique_ptr<VCEDevice>> VCEAMF::createDeviceList(bool interopD3d
             }),
             adapterIndices.end());
     }
+    adapterCount = (int)adapterIndices.size();
 #else
     RGYOpenCL cl(m_pLog);
     auto platforms = cl.getPlatforms("AMD");
-    const int adapterCount = std::accumulate(platforms.begin(), platforms.end(), 0, [](int acc, std::shared_ptr<RGYOpenCLPlatform>& p) {
+    adapterCount = std::accumulate(platforms.begin(), platforms.end(), 0, [](int acc, std::shared_ptr<RGYOpenCLPlatform>& p) {
         if (p->createDeviceList(CL_DEVICE_TYPE_GPU) == RGY_ERR_NONE) {
             acc += (int)p->devs().size();
         }
         return acc;
     });
 #endif
-    const int adapterCount = (int)adapterIndices.size();
     PrintMes(RGY_LOG_DEBUG, _T("adapterCount %d.\n"), adapterCount);
 
     for (int i = 0; i < adapterCount; i++) {
