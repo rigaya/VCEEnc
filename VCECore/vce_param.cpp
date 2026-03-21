@@ -283,12 +283,14 @@ void VCEParam::applyDOVIProfile(const RGYDOVIProfile inputProfile) {
     }
 
     common.out_vui.setIfUnset(profile->vui);
+    repeatHeaders = true;
     if (profile->aud) {
-        //bOutputAud = true;
+        aud = true;
     }
     if (profile->HRDSEI) {
-        //bufPeriodSEI = true;
-        //bOutputPicStruct = true;
+        // AMF has no direct equivalent for explicit buffering period / pic timing
+        // switches, so enforce HRD to get closer to the intended output.
+        bEnforceHRD = true;
     }
     if (profile->profile == 50) {
         //crQPIndexOffset = 3;
