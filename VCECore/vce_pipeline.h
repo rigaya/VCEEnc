@@ -812,18 +812,19 @@ public:
 #if THREAD_DEC_USE_FUTURE
         if (m_thDecoder.valid()) {
             while (m_thDecoder.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
-#else
-        if (m_thDecoder.joinable()) {
-            while (RGYThreadStillActive(m_thDecoder.native_handle())) {
-#endif
                 std::this_thread::sleep_for(std::chrono::milliseconds(5));
             }
-#if !THREAD_DEC_USE_FUTURE
-            // linuxでは、これがRGYThreadStillActiveのwhile文を抜けるときに行われるため、
-            // これを呼ぶとエラーになってしまう
-            m_thDecoder.join();
-#endif
         }
+#else
+        if (m_thDecoder.joinable()) {
+#if defined(_WIN32) || defined(_WIN64)
+            while (RGYThreadStillActive(m_thDecoder.native_handle())) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            }
+#endif
+            m_thDecoder.join();
+        }
+#endif
     }
     RGY_ERR startThread() {
         m_state = RGY_STATE_RUNNING;
@@ -2586,4 +2587,3 @@ public:
 };
 
 #endif //__VCE_PIPELINE_H__
-

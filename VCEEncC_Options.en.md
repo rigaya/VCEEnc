@@ -2795,7 +2795,7 @@ overall performance will decrease as the application waits each filter to finish
 ## Other Options
 
 ### --parallel [&lt;int&gt;] or [&lt;string&gt;]
-Enables parallel encoding by file splitting. Divides the input file into multiple chunks and encodes them in parallel using separate threads to accelerate processing. Available on Windows system only.
+Enables parallel encoding by file splitting. Divides the input file into multiple chunks and encodes them in parallel using separate threads to accelerate processing.
 
 - **Restrictions**
   Parallel encoding will be automatically disabled in the following cases:
