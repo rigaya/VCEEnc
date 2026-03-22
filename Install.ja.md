@@ -18,9 +18,6 @@
   
 ## Linux (Ubuntu 24.04)
 
-  > [!NOTE]
-  > Linux環境では[使用するGPUを選択することはできません](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/194)。
-
   > [!WARNING]
   > Ubuntu 24.04 + RADV環境では、AMFの最新userspaceを入れると `Pal::IPlatform::EnumerateDevices()` や `luid not found in devices returned by Pal::IPlatform::EnumerateDevices()` といったエラーでエンコーダ初期化に失敗することがあります。  
   > 関連情報: [AMF issue #575](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/575), [workaround comment](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/575#issuecomment-4042920061)  
