@@ -1,5 +1,12 @@
 # VCEEnc Release Notes
 
+## 9.05
+
+- Improve multi-channel audio layout detection.
+- Enable [--repeat-headers](./VCEEncC_Options.en.md#--repeat-headers), [--aud](./VCEEncC_Options.en.md#--aud), and [--enforce-hrd](./VCEEncC_Options.en.md#--enforce-hrd) when the selected [--dolby-vision-profile](./VCEEncC_Options.en.md#--dolby-vision-profile-string-hevc-av1) requires them.
+- Enable [--parallel](./VCEEncC_Options.en.md#--parallel-int-or-string) file-split parallel encoding on Linux systems.
+- Document Ubuntu 24.04 AMF workaround in [Install](./Install.en.md).
+
 ## 9.04
 
 - Fix DTS-X not being copyable.
