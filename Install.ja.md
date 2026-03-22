@@ -21,10 +21,18 @@
   > [!NOTE]
   > Linux環境では[使用するGPUを選択することはできません](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/194)。
 
+  > [!WARNING]
+  > Ubuntu 24.04 + RADV環境では、AMFの最新userspaceを入れると `Pal::IPlatform::EnumerateDevices()` や `luid not found in devices returned by Pal::IPlatform::EnumerateDevices()` といったエラーでエンコーダ初期化に失敗することがあります。  
+  > 関連情報: [AMF issue #575](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/575), [workaround comment](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/575#issuecomment-4042920061)  
+  > Ubuntu 24.04 / RADV / Ryzen 9 9950X iGPU + RX 7900 XT 環境では、All-Openスタックはそのまま使い、AMF userspace (`amf-amdgpu-pro`, `libamdenc-amdgpu-pro`) だけを 6.4.4 / 25.10 系に差し替えることで、iGPUで H.264/HEVC の利用を確認しています。
+
 ### 1. AMD ドライバのインストール  
 [AMDのWebページ](https://www.amd.com/ja/support)からUbuntu 24.04向けのドライバをダウンロードします。
 
-その後、パッケージを展開し、amdgpu-installを下記のように実行してドライバをインストールし、再起動します。
+その後、パッケージを展開し、All-Openスタックをインストールします。
+
+<!--
+本来の最新AMF userspaceの導入方法 (AMF Wikiの現行案内):
 
 ```Shell
 cd ~/Downloads
@@ -38,8 +46,39 @@ curl -s https://api.github.com/repos/GPUOpen-LibrariesAndSDKs/AMF/releases/lates
 | head -n1 \
 | xargs -I{} sh -c 'wget -q {}; f=$(basename {}); unzip -o "$f"; sudo "./${f%.zip}.sh" --accept-eula'
 ```
+-->
 
-### 2. OpenCLの使用のため、ユーザーを下記グループに追加
+```Shell
+cd ~/Downloads
+sudo apt-get install ./amdgpu-install-VERSION.deb
+sudo apt-get update
+
+sudo amdgpu-install -y --opencl=rocr
+```
+
+### 2. [回避策] AMF userspaceを6.4.4 / 25.10系に差し替える
+
+最新AMF userspaceの代わりに、6.4.4 / 25.10系の `amdgpu-pro-core`, `libamdenc-amdgpu-pro`, `amf-amdgpu-pro` をインストールします。
+
+```Shell
+mkdir -p ~/amf-6.4.4
+cd ~/amf-6.4.4
+
+wget https://repo.radeon.com/amdgpu/6.4.4/ubuntu/pool/proprietary/a/amdgpu-pro-core/amdgpu-pro-core_25.10-2203192.24.04_all.deb
+wget https://repo.radeon.com/amdgpu/6.4.4/ubuntu/pool/proprietary/liba/libamdenc-amdgpu-pro/libamdenc-amdgpu-pro_25.10-2203192.24.04_amd64.deb
+wget https://repo.radeon.com/amdgpu/6.4.4/ubuntu/pool/proprietary/a/amf-amdgpu-pro/amf-amdgpu-pro_1.4.37-2203192.24.04_amd64.deb
+
+sudo apt remove --purge -y amf-amdgpu-pro libamdenc-amdgpu-pro
+
+sudo apt install -y --allow-downgrades \
+  ./amdgpu-pro-core_25.10-2203192.24.04_all.deb \
+  ./libamdenc-amdgpu-pro_25.10-2203192.24.04_amd64.deb \
+  ./amf-amdgpu-pro_1.4.37-2203192.24.04_amd64.deb
+
+sudo apt-mark hold amdgpu-pro-core libamdenc-amdgpu-pro amf-amdgpu-pro
+```
+
+### 3. OpenCLの使用のため、ユーザーを下記グループに追加
 ```Shell
 # OpenCL
 sudo gpasswd -a ${USER} render
@@ -47,7 +86,7 @@ sudo gpasswd -a ${USER} video
 sudo reboot
 ```
 
-### 3. GPUの認識状況を確認
+### 4. GPUの認識状況を確認
 
 GPUの認識状況を確認します。
 
@@ -65,7 +104,7 @@ clinfo
 vulkaninfo --summary
 ```
 
-### 4. VCEEncCのインストール
+### 5. VCEEncCのインストール
 VCEEncCのdebファイルを[こちら](https://github.com/rigaya/VCEEnc/releases)からダウンロードします。
 
 その後、下記のようにインストールします。"x.xx"はインストールするバージョンに置き換えてください。
@@ -74,7 +113,18 @@ VCEEncCのdebファイルを[こちら](https://github.com/rigaya/VCEEnc/release
 sudo apt install ./VCEEncC_x.xx_Ubuntu24.04_amd64.deb
 ```
 
-### 5. 追加オプション
+### 6. VCEEncCでの認識状況を確認
+
+VCEEncCで実際にエンコーダが使えるか確認します。`Supported Codecs` に H.264/HEVC が表示されれば、AMF初期化は成功しています。
+
+```Shell
+vceencc --check-hw 0 --log-level debug
+vceencc --check-hw 1 --log-level debug
+```
+
+`Pal::IPlatform::EnumerateDevices()` や `luid not found in devices returned by Pal::IPlatform::EnumerateDevices()` が出る場合は、最新AMF userspaceが残っていないか確認してください。
+
+### 7. 追加オプション
 下記機能を使用するには、追加でインストールが必要です。
 
 - avs読み込み  
@@ -83,7 +133,7 @@ sudo apt install ./VCEEncC_x.xx_Ubuntu24.04_amd64.deb
 - vpy読み込み  
   [VapourSynth](https://www.vapoursynth.com/)のインストールが必要です。
 
-### 6. その他
+### 8. その他
 
 - VCEEncc実行時に、"Failed to load OpenCL." というエラーが出る場合  
   /lib/x86_64-linux-gnu/libOpenCL.so が存在することを確認してください。 libOpenCL.so.1 しかない場合は、下記のようにシンボリックリンクを作成してください。

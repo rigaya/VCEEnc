@@ -21,11 +21,19 @@ VCEEncC could be run directly from the extracted directory.
   > [!NOTE]
   > Device selection on Linux [is not available](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/194).
 
+  > [!WARNING]
+  > On some Ubuntu 24.04 + RADV environments, installing the latest AMF userspace causes encoder initialization failures such as `Pal::IPlatform::EnumerateDevices()` or `luid not found in devices returned by Pal::IPlatform::EnumerateDevices()`.  
+  > Related information: [AMF issue #575](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/575), [workaround comment](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/575#issuecomment-4042920061)  
+  > On Ubuntu 24.04 / RADV / Ryzen 9 9950X iGPU + RX 7900 XT, keeping the All-Open stack and replacing only the AMF userspace packages (`amf-amdgpu-pro`, `libamdenc-amdgpu-pro`) with the 6.4.4 / 25.10 generation restored H.264/HEVC support on the iGPU.
+
 ### 1. Install AMD Graphics driver  
 
 Download AMD Graphics driver packages for Ubuntu 24.04 from [the webpage of AMD](https://support.amd.com/en-us/download).
 
-Extract and run amdgpu-install to install the driver.
+Extract and run `amdgpu-install` to install the All-Open stack.
+
+<!--
+Original/latest AMF userspace installation flow from the AMF Wiki:
 
 ```Shell
 cd ~/Downloads
@@ -38,8 +46,38 @@ curl -s https://api.github.com/repos/GPUOpen-LibrariesAndSDKs/AMF/releases/lates
 | head -n1 \
 | xargs -I{} sh -c 'wget -q {}; f=$(basename {}); unzip -o "$f"; sudo "./${f%.zip}.sh" --accept-eula'
 ```
+-->
 
-### 2. Add user to proper group to use OpenCL
+```Shell
+cd ~/Downloads
+sudo apt-get install ./amdgpu-install-VERSION.deb
+sudo apt-get update
+sudo amdgpu-install -y --opencl=rocr
+```
+
+### 2. [Workaround] Replace AMF userspace with the 6.4.4 / 25.10 generation
+
+Instead of the latest AMF userspace, install `amdgpu-pro-core`, `libamdenc-amdgpu-pro`, and `amf-amdgpu-pro` from the 6.4.4 / 25.10 generation.
+
+```Shell
+mkdir -p ~/amf-6.4.4
+cd ~/amf-6.4.4
+
+wget https://repo.radeon.com/amdgpu/6.4.4/ubuntu/pool/proprietary/a/amdgpu-pro-core/amdgpu-pro-core_25.10-2203192.24.04_all.deb
+wget https://repo.radeon.com/amdgpu/6.4.4/ubuntu/pool/proprietary/liba/libamdenc-amdgpu-pro/libamdenc-amdgpu-pro_25.10-2203192.24.04_amd64.deb
+wget https://repo.radeon.com/amdgpu/6.4.4/ubuntu/pool/proprietary/a/amf-amdgpu-pro/amf-amdgpu-pro_1.4.37-2203192.24.04_amd64.deb
+
+sudo apt remove --purge -y amf-amdgpu-pro libamdenc-amdgpu-pro
+
+sudo apt install -y --allow-downgrades \
+  ./amdgpu-pro-core_25.10-2203192.24.04_all.deb \
+  ./libamdenc-amdgpu-pro_25.10-2203192.24.04_amd64.deb \
+  ./amf-amdgpu-pro_1.4.37-2203192.24.04_amd64.deb
+
+sudo apt-mark hold amdgpu-pro-core libamdenc-amdgpu-pro amf-amdgpu-pro
+```
+
+### 3. Add user to proper group to use OpenCL
 ```Shell
 # OpenCL
 sudo gpasswd -a ${USER} render
@@ -47,7 +85,7 @@ sudo gpasswd -a ${USER} video
 sudo reboot
 ```
 
-### 3. Check GPU Recognition Status
+### 4. Check GPU Recognition Status
 
 Check if your GPU is properly recognized.
 
@@ -65,14 +103,25 @@ clinfo
 vulkaninfo --summary
 ```
 
-### 4. Install VCEEncC
+### 5. Install VCEEncC
 Download deb package from [this link](https://github.com/rigaya/VCEEnc/releases), and install running the following command line. Please note "x.xx" should be replaced to the target version name.
 
 ```Shell
 sudo apt install ./VCEEncC_x.xx_Ubuntu24.04_amd64.deb
 ```
 
-### 5. Addtional Tools
+### 6. Check VCEEncC hardware support
+
+Verify that the encoder is actually usable from VCEEncC. If `Supported Codecs` lists H.264/HEVC, AMF initialization succeeded.
+
+```Shell
+vceencc --check-hw 0 --log-level debug
+vceencc --check-hw 1 --log-level debug
+```
+
+If `Pal::IPlatform::EnumerateDevices()` or `luid not found in devices returned by Pal::IPlatform::EnumerateDevices()` still appears, make sure the latest AMF userspace packages are not still installed.
+
+### 7. Addtional Tools
 
 There are some features which require additional installations.  
 
@@ -81,7 +130,7 @@ There are some features which require additional installations.
 | avs reader       | [AvisynthPlus](https://github.com/AviSynth/AviSynthPlus) |
 | vpy reader       | [VapourSynth](https://www.vapoursynth.com/)              |
 
-### 6. Others
+### 8. Others
 
 - Error: "Failed to load OpenCL." when running VCEEncC  
   Please check if /lib/x86_64-linux-gnu/libOpenCL.so exists. There are some cases that only libOpenCL.so.1 exists. In that case, please create a link using following command line.
@@ -89,4 +138,3 @@ There are some features which require additional installations.
   ```Shell
   sudo ln -s /lib/x86_64-linux-gnu/libOpenCL.so.1 /lib/x86_64-linux-gnu/libOpenCL.so
   ```
-
