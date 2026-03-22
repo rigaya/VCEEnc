@@ -60,10 +60,10 @@ Finally, open VCEEnc.sln, and start build of VCEEnc by Visual Studio.
 
 - C++17 Compiler
 - meson + ninja-build
-- Intel Driver
+- AMD Graphics driver
 - git
 - libraries
-  - libva, libdrm, libmfx 
+  - OpenCL headers / Vulkan headers / X11 headers
   - ffmpeg libs  (libavcodec*, libavformat*, libavfilter*, libavutil*, libswresample*, libavdevice*)
   - libass9
   - [Optional] VapourSynth
@@ -87,17 +87,42 @@ sudo apt install build-essential libtool pkg-config git meson ninja-build
 
 Download AMD Graphics driver packages for Ubuntu 24.04 from [the webpage of AMD](https://support.amd.com/en-us/download).
 
-Extract and run amdgpu-install to install the driver.
+Extract and run `amdgpu-install` to install the All-Open stack.
+
+  > [!WARNING]
+  > On some Ubuntu 24.04 + RADV environments, installing the latest AMF userspace causes encoder initialization failures such as `Pal::IPlatform::EnumerateDevices()` or `luid not found in devices returned by Pal::IPlatform::EnumerateDevices()`.
+  > Keeping the All-Open stack and replacing only the AMF userspace packages with the 6.4.4 / 25.10 generation appears to work around this issue.
 
 ```Shell
 cd ~/Downloads
 sudo apt-get install ./amdgpu-install-VERSION.deb
 sudo apt-get update
-sudo amdgpu-install -y --accept-eula --usecase=graphics,amf,opencl --opencl=rocr --vulkan=amdvlk --no-32
-sudo reboot
+sudo amdgpu-install -y --opencl=rocr
 ```
 
-### 3. Install required libraries
+### 3. [Workaround] Replace AMF userspace with the 6.4.4 / 25.10 generation
+
+Instead of the latest AMF userspace, install `amdgpu-pro-core`, `libamdenc-amdgpu-pro`, and `amf-amdgpu-pro` from the 6.4.4 / 25.10 generation.
+
+```Shell
+mkdir -p ~/amf-6.4.4
+cd ~/amf-6.4.4
+
+wget https://repo.radeon.com/amdgpu/6.4.4/ubuntu/pool/proprietary/a/amdgpu-pro-core/amdgpu-pro-core_25.10-2203192.24.04_all.deb
+wget https://repo.radeon.com/amdgpu/6.4.4/ubuntu/pool/proprietary/liba/libamdenc-amdgpu-pro/libamdenc-amdgpu-pro_25.10-2203192.24.04_amd64.deb
+wget https://repo.radeon.com/amdgpu/6.4.4/ubuntu/pool/proprietary/a/amf-amdgpu-pro/amf-amdgpu-pro_1.4.37-2203192.24.04_amd64.deb
+
+sudo apt remove --purge -y amf-amdgpu-pro libamdenc-amdgpu-pro
+
+sudo apt install -y --allow-downgrades \
+  ./amdgpu-pro-core_25.10-2203192.24.04_all.deb \
+  ./libamdenc-amdgpu-pro_25.10-2203192.24.04_amd64.deb \
+  ./amf-amdgpu-pro_1.4.37-2203192.24.04_amd64.deb
+
+sudo apt-mark hold amdgpu-pro-core libamdenc-amdgpu-pro amf-amdgpu-pro
+```
+
+### 4. Install required libraries
 
 ```Shell
 sudo apt install \
@@ -110,19 +135,44 @@ sudo apt install ffmpeg \
   libass9 libass-dev
 ```
 
-### 4. [Optional] Install VapourSynth
+### 5. Add user to proper groups and reboot
+
+```Shell
+# OpenCL
+sudo gpasswd -a ${USER} render
+sudo gpasswd -a ${USER} video
+sudo reboot
+```
+
+### 6. Check GPU Recognition Status
+
+Check if your GPU is properly recognized before building VCEEncC.
+
+```Shell
+sudo apt install vulkan-utils clinfo
+
+# Check GPU recognition status with OpenCL
+clinfo
+
+# Check GPU recognition status with Vulkan
+vulkaninfo --summary
+```
+
+Especially with `vulkaninfo`, confirm that your target AMD GPU is recognized as `GPU0`.
+
+### 7. [Optional] Install VapourSynth
 VapourSynth is required only if you need VapourSynth(vpy) reader support.  
 
-Please go on to [5. Build VCEEncC] if you don't need vpy reader.
+Please go on to [8. Build VCEEncC] if you don't need vpy reader.
 
 <details><summary>How to build VapourSynth</summary>
 
-#### 4.1 Install build tools for VapourSynth
+#### 7.1 Install build tools for VapourSynth
 ```Shell
 sudo apt install python3-pip autoconf automake libtool meson
 ```
 
-#### 4.2 Install zimg
+#### 7.2 Install zimg
 ```Shell
 git clone https://github.com/sekrit-twc/zimg.git
 cd zimg
@@ -132,12 +182,12 @@ sudo make install -j16
 cd ..
 ```
 
-#### 4.3 Install cython
+#### 7.3 Install cython
 ```Shell
 sudo pip3 install Cython
 ```
 
-#### 4.4 Install VapourSynth
+#### 7.4 Install VapourSynth
 ```Shell
 git clone https://github.com/vapoursynth/vapoursynth.git
 cd vapoursynth
@@ -152,13 +202,13 @@ sudo ln -s /usr/local/lib/python3.x/site-packages/vapoursynth.so /usr/lib/python
 sudo ldconfig
 ```
 
-#### 4.5 Check if VapourSynth has been installed properly
+#### 7.5 Check if VapourSynth has been installed properly
 Make sure you get version number without errors.
 ```Shell
 vspipe --version
 ```
 
-#### 4.6 [Option] Build vslsmashsource
+#### 7.6 [Option] Build vslsmashsource
 ```Shell
 # Install lsmash
 git clone https://github.com/l-smash/l-smash.git
@@ -181,13 +231,7 @@ cd ../../../
 
 </details>
 
-### 5. Add user to proper group
-```Shell
-# OpenCL
-sudo gpasswd -a ${USER} render
-```
-
-### 6. Build VCEEncC
+### 8. Build VCEEncC
 ```Shell
 git clone https://github.com/rigaya/VCEEnc --recursive
 cd VCEEnc

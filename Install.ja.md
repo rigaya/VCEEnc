@@ -118,11 +118,8 @@ sudo apt install ./VCEEncC_x.xx_Ubuntu24.04_amd64.deb
 VCEEncCで実際にエンコーダが使えるか確認します。`Supported Codecs` に H.264/HEVC が表示されれば、AMF初期化は成功しています。
 
 ```Shell
-vceencc --check-hw 0 --log-level debug
-vceencc --check-hw 1 --log-level debug
+vceencc --check-hw
 ```
-
-`Pal::IPlatform::EnumerateDevices()` や `luid not found in devices returned by Pal::IPlatform::EnumerateDevices()` が出る場合は、最新AMF userspaceが残っていないか確認してください。
 
 ### 7. 追加オプション
 下記機能を使用するには、追加でインストールが必要です。

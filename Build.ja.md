@@ -62,10 +62,10 @@ VCEEnc.slnを開きます。
 
 - C++17 Compiler
 - meson + ninja-build
-- Intel Driver
+- AMD Radeonグラフィックスドライバ
 - git
 - libraries
-  - libva, libdrm, libmfx 
+  - OpenCL / Vulkan / X11 headers
   - ffmpeg libs (libavcodec*, libavformat*, libavfilter*, libavutil*, libswresample*, libavdevice*)
   - libass9
   - [Optional] VapourSynth
@@ -89,17 +89,42 @@ sudo apt install build-essential libtool git meson ninja-build
 
 [AMDのWebページ](https://www.amd.com/ja/support)からUbuntu 24.04向けのドライバをダウンロードします。
 
-その後、パッケージを展開し、amdgpu-installを下記のように実行してドライバをインストールし、再起動します。
+その後、パッケージを展開し、All-Openスタックをインストールします。
+
+  > [!WARNING]
+  > Ubuntu 24.04 + RADV環境では、AMFの最新userspaceを入れると `Pal::IPlatform::EnumerateDevices()` や `luid not found in devices returned by Pal::IPlatform::EnumerateDevices()` といったエラーでエンコーダ初期化に失敗することがあります。
+  > All-Openスタックはそのまま使い、AMF userspaceだけを 6.4.4 / 25.10 系に差し替えると回避できる場合があります。
 
 ```Shell
 cd ~/Downloads
 sudo apt-get install ./amdgpu-install-VERSION.deb
 sudo apt-get update
-sudo amdgpu-install -y --accept-eula --usecase=graphics,amf,opencl --opencl=rocr --vulkan=amdvlk --no-32
-sudo reboot
+sudo amdgpu-install -y --opencl=rocr
 ```
 
-### 3. ビルドに必要なライブラリのインストール
+### 3. [回避策] AMF userspaceを6.4.4 / 25.10系に差し替える
+
+最新AMF userspaceの代わりに、6.4.4 / 25.10系の `amdgpu-pro-core`, `libamdenc-amdgpu-pro`, `amf-amdgpu-pro` をインストールします。
+
+```Shell
+mkdir -p ~/amf-6.4.4
+cd ~/amf-6.4.4
+
+wget https://repo.radeon.com/amdgpu/6.4.4/ubuntu/pool/proprietary/a/amdgpu-pro-core/amdgpu-pro-core_25.10-2203192.24.04_all.deb
+wget https://repo.radeon.com/amdgpu/6.4.4/ubuntu/pool/proprietary/liba/libamdenc-amdgpu-pro/libamdenc-amdgpu-pro_25.10-2203192.24.04_amd64.deb
+wget https://repo.radeon.com/amdgpu/6.4.4/ubuntu/pool/proprietary/a/amf-amdgpu-pro/amf-amdgpu-pro_1.4.37-2203192.24.04_amd64.deb
+
+sudo apt remove --purge -y amf-amdgpu-pro libamdenc-amdgpu-pro
+
+sudo apt install -y --allow-downgrades \
+  ./amdgpu-pro-core_25.10-2203192.24.04_all.deb \
+  ./libamdenc-amdgpu-pro_25.10-2203192.24.04_amd64.deb \
+  ./amf-amdgpu-pro_1.4.37-2203192.24.04_amd64.deb
+
+sudo apt-mark hold amdgpu-pro-core libamdenc-amdgpu-pro amf-amdgpu-pro
+```
+
+### 4. ビルドに必要なライブラリのインストール
 
 ```Shell
 sudo apt install \
@@ -112,19 +137,43 @@ sudo apt install ffmpeg \
   libass9 libass-dev
 ```
 
-### 4. [オプション] VapourSynthのビルド
+### 5. OpenCLの使用のため、ユーザーを下記グループに追加して再起動
+```Shell
+# OpenCL
+sudo gpasswd -a ${USER} render
+sudo gpasswd -a ${USER} video
+sudo reboot
+```
+
+### 6. GPUの認識状況を確認
+
+VCEEncCをビルドする前に、GPUが正しく認識されているか確認します。
+
+```Shell
+sudo apt install vulkan-utils clinfo
+
+# OpenCLでのGPUの認識状況
+clinfo
+
+# VulkanでのGPUの認識状況
+vulkaninfo --summary
+```
+
+特に `vulkaninfo` では、対象のAMD GPUが `GPU0` として認識されていることを確認してください。
+
+### 7. [オプション] VapourSynthのビルド
 VapourSynthのインストールは必須ではありませんが、インストールしておくとvpyを読み込めるようになります。
 
-必要のない場合は 5. VCEEncCのビルド に進んでください。
+必要のない場合は 8. VCEEncCのビルド に進んでください。
 
 <details><summary>VapourSynthのビルドの詳細はこちら</summary>
 
-#### 4.1 ビルドに必要なツールのインストール
+#### 7.1 ビルドに必要なツールのインストール
 ```Shell
 sudo apt install python3-pip autoconf automake libtool meson
 ```
 
-#### 4.2 zimgのインストール
+#### 7.2 zimgのインストール
 ```Shell
 git clone https://github.com/sekrit-twc/zimg.git
 cd zimg
@@ -134,12 +183,12 @@ sudo make install -j16
 cd ..
 ```
 
-#### 4.3 cythonのインストール
+#### 7.3 cythonのインストール
 ```Shell
 sudo pip3 install Cython
 ```
 
-#### 4.4 VapourSynthのビルド
+#### 7.4 VapourSynthのビルド
 ```Shell
 git clone https://github.com/vapoursynth/vapoursynth.git
 cd vapoursynth
@@ -154,13 +203,13 @@ sudo ln -s /usr/local/lib/python3.x/site-packages/vapoursynth.so /usr/lib/python
 sudo ldconfig
 ```
 
-#### 4.5 VapourSynthの動作確認
+#### 7.5 VapourSynthの動作確認
 エラーが出ずにバージョンが表示されればOK。
 ```Shell
 vspipe --version
 ```
 
-#### 4.6 [おまけ] vslsmashsourceのビルド
+#### 7.6 [おまけ] vslsmashsourceのビルド
 ```Shell
 # lsmashのビルド
 git clone https://github.com/l-smash/l-smash.git
@@ -183,13 +232,7 @@ cd ../../../
 
 </details>
 
-### 5. OpenCLの使用のため、ユーザーを下記グループに追加
-```Shell
-# OpenCL
-sudo gpasswd -a ${USER} render
-```
-
-### 5. VCEEncCのビルド
+### 8. VCEEncCのビルド
 ```Shell
 git clone https://github.com/rigaya/VCEEnc --recursive
 cd VCEEnc

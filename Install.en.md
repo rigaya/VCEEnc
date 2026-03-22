@@ -112,11 +112,8 @@ sudo apt install ./VCEEncC_x.xx_Ubuntu24.04_amd64.deb
 Verify that the encoder is actually usable from VCEEncC. If `Supported Codecs` lists H.264/HEVC, AMF initialization succeeded.
 
 ```Shell
-vceencc --check-hw 0 --log-level debug
-vceencc --check-hw 1 --log-level debug
+vceencc --check-hw
 ```
-
-If `Pal::IPlatform::EnumerateDevices()` or `luid not found in devices returned by Pal::IPlatform::EnumerateDevices()` still appears, make sure the latest AMF userspace packages are not still installed.
 
 ### 7. Addtional Tools
 
