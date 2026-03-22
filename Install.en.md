@@ -18,13 +18,10 @@ VCEEncC could be run directly from the extracted directory.
   
 ## Linux (Ubuntu 24.04)
 
-  > [!NOTE]
-  > Device selection on Linux [is not available](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/194).
-
   > [!WARNING]
   > On some Ubuntu 24.04 + RADV environments, installing the latest AMF userspace causes encoder initialization failures such as `Pal::IPlatform::EnumerateDevices()` or `luid not found in devices returned by Pal::IPlatform::EnumerateDevices()`.  
   > Related information: [AMF issue #575](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/575), [workaround comment](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/575#issuecomment-4042920061)  
-  > On Ubuntu 24.04 / RADV / Ryzen 9 9950X iGPU + RX 7900 XT, keeping the All-Open stack and replacing only the AMF userspace packages (`amf-amdgpu-pro`, `libamdenc-amdgpu-pro`) with the 6.4.4 / 25.10 generation restored H.264/HEVC support on the iGPU.
+  > By replacing only the AMF userspace packages (`amf-amdgpu-pro`, `libamdenc-amdgpu-pro`) with the 6.4.4 / 25.10 generation seems to workaround this issue.
 
 ### 1. Install AMD Graphics driver  
 

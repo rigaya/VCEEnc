@@ -24,7 +24,7 @@
   > [!WARNING]
   > Ubuntu 24.04 + RADV環境では、AMFの最新userspaceを入れると `Pal::IPlatform::EnumerateDevices()` や `luid not found in devices returned by Pal::IPlatform::EnumerateDevices()` といったエラーでエンコーダ初期化に失敗することがあります。  
   > 関連情報: [AMF issue #575](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/575), [workaround comment](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/575#issuecomment-4042920061)  
-  > Ubuntu 24.04 / RADV / Ryzen 9 9950X iGPU + RX 7900 XT 環境では、All-Openスタックはそのまま使い、AMF userspace (`amf-amdgpu-pro`, `libamdenc-amdgpu-pro`) だけを 6.4.4 / 25.10 系に差し替えることで、iGPUで H.264/HEVC の利用を確認しています。
+  > All-Openスタックはそのまま使い、AMF userspace (`amf-amdgpu-pro`, `libamdenc-amdgpu-pro`) だけを 6.4.4 / 25.10 系に差し替えることで、問題を回避できることを確認しています。
 
 ### 1. AMD ドライバのインストール  
 [AMDのWebページ](https://www.amd.com/ja/support)からUbuntu 24.04向けのドライバをダウンロードします。
