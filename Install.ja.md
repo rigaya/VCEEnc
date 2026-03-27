@@ -32,7 +32,6 @@
 本来の最新AMF userspaceの導入方法 (AMF Wikiの現行案内):
 
 ```Shell
-cd ~/Downloads
 sudo apt-get install ./amdgpu-install-VERSION.deb
 sudo apt-get update
 
@@ -46,8 +45,8 @@ curl -s https://api.github.com/repos/GPUOpen-LibrariesAndSDKs/AMF/releases/lates
 -->
 
 ```Shell
-cd ~/Downloads
-sudo apt-get install ./amdgpu-install-VERSION.deb
+wget https://repo.radeon.com/amdgpu-install/25.35.1/ubuntu/noble/amdgpu-install_7.2.1.70201-1_all.deb
+sudo apt-get install ./amdgpu-install_7.2.1.70201-1_all.deb
 sudo apt-get update
 
 sudo amdgpu-install -y --opencl=rocr
