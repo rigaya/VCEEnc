@@ -61,9 +61,11 @@
 #include "rgy_filter_decimate.h"
 #include "rgy_filter_mpdecimate.h"
 #include "rgy_filter_smooth.h"
+#include "rgy_filter_msmooth.h"
 #include "rgy_filter_subburn.h"
 #include "rgy_filter_unsharp.h"
 #include "rgy_filter_edgelevel.h"
+#include "rgy_filter_msharpen.h"
 #include "rgy_filter_warpsharp.h"
 #include "rgy_filter_curves.h"
 #include "rgy_filter_tweak.h"
@@ -1322,6 +1324,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.smooth.enable)        filterPipeline.push_back(VppType::CL_DENOISE_SMOOTH);
     if (inputParam->vpp.dct.enable)           filterPipeline.push_back(VppType::CL_DENOISE_DCT);
     if (inputParam->vpp.fft3d.enable)         filterPipeline.push_back(VppType::CL_DENOISE_FFT3D);
+    if (inputParam->vpp.msmooth.enable)      filterPipeline.push_back(VppType::CL_MSMOOTH);
     if (inputParam->vpp.knn.enable)           filterPipeline.push_back(VppType::CL_DENOISE_KNN);
     if (inputParam->vpp.nlmeans.enable)       filterPipeline.push_back(VppType::CL_DENOISE_NLMEANS);
     if (inputParam->vpp.pmd.enable)           filterPipeline.push_back(VppType::CL_DENOISE_PMD);
@@ -1336,6 +1339,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     else if (resizeRequired != RGY_VPP_RESIZE_TYPE_NONE)   filterPipeline.push_back(VppType::AMF_RESIZE);
     if (inputParam->vpp.unsharp.enable)    filterPipeline.push_back(VppType::CL_UNSHARP);
     if (inputParam->vpp.edgelevel.enable)  filterPipeline.push_back(VppType::CL_EDGELEVEL);
+    if (inputParam->vpp.msharpen.enable)   filterPipeline.push_back(VppType::CL_MSHARPEN);
     if (inputParam->vpp.warpsharp.enable)  filterPipeline.push_back(VppType::CL_WARPSHARP);
     if (inputParam->vppamf.enhancer.enable)  filterPipeline.push_back(VppType::AMF_VQENHANCE);
     if (inputParam->vpp.transform.enable)  filterPipeline.push_back(VppType::CL_TRANSFORM);
@@ -1855,6 +1859,29 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         m_encFps = param->baseFps;
         return RGY_ERR_NONE;
     }
+    //msmooth
+    if (vppType == VppType::CL_MSMOOTH) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterMsmooth(m_dev->cl()));
+        shared_ptr<RGYFilterParamMsmooth> param(new RGYFilterParamMsmooth());
+        param->msmooth = inputParam->vpp.msmooth;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
     //knn
     if (vppType == VppType::CL_DENOISE_KNN) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
@@ -2094,6 +2121,29 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         unique_ptr<RGYFilter> filter(new RGYFilterEdgelevel(m_dev->cl()));
         shared_ptr<RGYFilterParamEdgelevel> param(new RGYFilterParamEdgelevel());
         param->edgelevel = inputParam->vpp.edgelevel;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //msharpen
+    if (vppType == VppType::CL_MSHARPEN) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterMsharpen(m_dev->cl()));
+        shared_ptr<RGYFilterParamMsharpen> param(new RGYFilterParamMsharpen());
+        param->msharpen = inputParam->vpp.msharpen;
         param->frameIn = inputFrame;
         param->frameOut = inputFrame;
         param->baseFps = m_encFps;

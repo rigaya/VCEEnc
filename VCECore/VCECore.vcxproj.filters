@@ -207,6 +207,12 @@
     <ClCompile Include="rgy_filter_edgelevel.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="rgy_filter_msharpen.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="rgy_filter_msmooth.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClCompile Include="rgy_filter_tweak.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -548,6 +554,12 @@
     <ClInclude Include="rgy_filter_edgelevel.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="rgy_filter_msharpen.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="rgy_filter_msmooth.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="rgy_filter_tweak.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -740,6 +752,12 @@
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="rgy_filter_edgelevel.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="rgy_filter_msharpen.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="rgy_filter_msmooth.cl">
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="rgy_filter_tweak.cl">

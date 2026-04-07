@@ -531,6 +531,8 @@ vcecore_sources = files(
   'VCECore/rgy_filter_denoise_nlmeans.cpp',
   'VCECore/rgy_filter_denoise_pmd.cpp',
   'VCECore/rgy_filter_edgelevel.cpp',
+  'VCECore/rgy_filter_msharpen.cpp',
+  'VCECore/rgy_filter_msmooth.cpp',
   'VCECore/rgy_filter_libplacebo.cpp',
   'VCECore/rgy_filter_mpdecimate.cpp',
   'VCECore/rgy_filter_nnedi.cpp',

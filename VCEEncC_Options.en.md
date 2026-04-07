@@ -190,6 +190,7 @@
   - [--vpp-smooth \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-smooth-param1value1param2value2)
   - [--vpp-denoise-dct \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-denoise-dct-param1value1param2value2)
   - [--vpp-fft3d \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-fft3d-param1value1param2value2)
+  - [--vpp-msmooth \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-msmooth-param1value1param2value2)
   - [--vpp-knn \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-knn-param1value1param2value2)
   - [--vpp-nlmeans \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-nlmeans-param1value1param2value2)
   - [--vpp-pmd \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-pmd-param1value1param2value2)
@@ -200,6 +201,7 @@
   - [--vpp-scaler-sharpness \<float\>](#--vpp-scaler-sharpness-float)
   - [--vpp-unsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-unsharp-param1value1param2value2)
   - [--vpp-edgelevel \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-edgelevel-param1value1param2value2)
+  - [--vpp-msharpen \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-msharpen-param1value1param2value2)
   - [--vpp-warpsharp \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-warpsharp-param1value1param2value2)
   - [--vpp-enhance \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\]\[...\]](#--vpp-enhance-param1value1param2value2)
   - [--vpp-curves \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-curves-param1value1param2value2)
@@ -1569,6 +1571,7 @@ Vpp filters will be applied in fixed order, regardless of the order in the comma
   - [--vpp-convolution3d](#--vpp-convolution3d-param1value1param2value2)
   - [--vpp-smooth](#--vpp-smooth-param1value1param2value2)
   - [--vpp-denoise-dct](#--vpp-denoise-dct-param1value1param2value2)
+  - [--vpp-msmooth](#--vpp-msmooth-param1value1param2value2)
   - [--vpp-knn](#--vpp-knn-param1value1param2value2)
   - [--vpp-nlmeans](#--vpp-nlmeans-param1value1param2value2)
   - [--vpp-pmd](#--vpp-pmd-param1value1param2value2)
@@ -1577,6 +1580,7 @@ Vpp filters will be applied in fixed order, regardless of the order in the comma
   - [--vpp-resize](#--vpp-resize-string)
   - [--vpp-unsharp](#--vpp-unsharp-param1value1param2value2)
   - [--vpp-edgelevel](#--vpp-edgelevel-param1value1param2value2)
+  - [--vpp-msharpen](#--vpp-msharpen-param1value1param2value2)
   - [--vpp-warpsharp](#--vpp-warpsharp-param1value1param2value2)
   - [--vpp-curves](#--vpp-overlay-param1value1param2value2)
   - [--vpp-tweak](#--vpp-tweak-param1value1param2value2)
@@ -2262,6 +2266,32 @@ Rotate video. 90, 180, 270 degrees is allowed.
     - auto ... use fp16 if possible (faster)
     - fp32 ... always use fp32
 
+### --vpp-msmooth [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
+Detail-preserving smoothing filter based on Donald A. Graft's MSmooth.
+Detects edges to create a mask, then applies iterative smoothing to non-edge areas.
+
+- **Parameters**
+  - strength=&lt;int&gt; (default=3, 0 - 20)  
+    Number of smoothing iterations. Higher values produce stronger smoothing.
+  
+  - threshold=&lt;float&gt;  (default=15.0, 0.0 - 255.0)  
+    Edge detection threshold.
+  
+  - highq=&lt;bool&gt;  (default=true)  
+    When true, uses 4-direction edge detection (diagonal + horizontal/vertical). When false, uses only 2 diagonal directions.
+  
+  - mask=&lt;bool&gt;  (default=false)  
+    When true, outputs edge mask instead of smoothed result (for debugging).
+
+- examples
+  ```
+  Example: Default settings
+  --vpp-msmooth
+  
+  Example: Stronger smoothing
+  --vpp-msmooth strength=6,threshold=10.0
+  ```
+
 ### --vpp-knn [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 Strong noise reduction filter.
 
@@ -2533,6 +2563,31 @@ Edge level adjustment filter, for edge sharpening.
   
   Example: Strengthening the black part of the outline
   --vpp-edgelevel strength=5.0,threshold=24.0,black=6.0
+  ```
+
+### --vpp-msharpen [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
+Edge-selective sharpening filter based on Donald A. Graft's MSharpen.
+
+- **Parameters**
+  - strength=&lt;float&gt; (default=1.0, 0.0 - 1.0)  
+    Sharpening strength.
+  
+  - threshold=&lt;float&gt;  (default=15.0, 0.0 - 255.0)  
+    Edge detection threshold.
+  
+  - highq=&lt;bool&gt;  (default=true)  
+    When true, uses 4-direction edge detection (diagonal + horizontal/vertical). When false, uses only 2 diagonal directions.
+  
+  - mask=&lt;bool&gt;  (default=false)  
+    When true, outputs edge mask instead of sharpened result (for debugging).
+
+- examples
+  ```
+  Example: Default settings
+  --vpp-msharpen
+  
+  Example: Somewhat weaker
+  --vpp-msharpen strength=0.5,threshold=20.0
   ```
 
 ### --vpp-warpsharp [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
