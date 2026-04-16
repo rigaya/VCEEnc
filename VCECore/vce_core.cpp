@@ -3963,6 +3963,7 @@ RGY_ERR VCECore::run2() {
         PipelineTaskData(size_t t, std::unique_ptr<PipelineTaskOutput>& d) : task(t), data(std::move(d)) {};
     };
     std::deque<PipelineTaskData> dataqueue;
+    std::vector<char> firstSendFrame(m_pipelineTasks.size(), false);
     {
         auto checkContinue = [&checkAbort](RGY_ERR& err) {
             if (checkAbort() || stdInAbort()) { err = RGY_ERR_ABORTED; return false; }
@@ -3979,6 +3980,10 @@ RGY_ERR VCECore::run2() {
                 if (d.task < m_pipelineTasks.size()) {
                     err = RGY_ERR_NONE;
                     auto& task = m_pipelineTasks[d.task];
+                    if (!firstSendFrame[d.task]) {
+                        PrintMes(RGY_LOG_DEBUG, _T("First send frame to task %s.\n"), task->print().c_str());
+                        firstSendFrame[d.task] = true;
+                    }
                     err = task->sendFrame(d.data);
                     if (!checkContinue(err)) {
                         PrintMes(setloglevel(err), _T("Break in task %s: %s.\n"), task->print().c_str(), get_err_mes(err));
@@ -4073,6 +4078,7 @@ RGY_ERR VCECore::run2() {
                         //checkptsの処理上、でてきたフレームはすぐに後続処理に渡したいのでbreak
                         break;
                     } else if (itask == flushedTaskGet && flushedTaskGet < flushedTaskSend) {
+                        PrintMes(RGY_LOG_DEBUG, _T("Flush task %s.\n"), task->print().c_str());
                         flushedTaskGet++;
                     }
                 }
