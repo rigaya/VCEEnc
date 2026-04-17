@@ -3673,12 +3673,20 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         PrintMes(RGY_LOG_DEBUG, _T("HW dec codec csp support read from cache file.\n"));
     }
     std::vector<std::unique_ptr<VCEDevice>> devList;
-    auto getDevIdName = [&devList]() {
-        std::map<int, std::string> devIdName;
+    auto getDevInfo = [&devList]() {
+        auto luid_to_string = [](const LUID& luid) {
+            return strsprintf("%08x-%08x", (uint32_t)luid.HighPart, (uint32_t)luid.LowPart);
+        };
+        std::map<int, RGYDeviceInfoCacheKey> devInfo;
         for (const auto& dev : devList) {
-            devIdName[(int)dev->id()] = tchar_to_string(dev->name());
+            devInfo[(int)dev->id()] = RGYDeviceInfoCacheKey {
+                tchar_to_string(dev->name()),
+                luid_to_string(dev->luid()),
+                std::string(),
+                tchar_to_string(dev->getDriverVersion())
+            };
         }
-        return devIdName;
+        return devInfo;
     };
     if (deviceInfoCache
         && (deviceInfoCache->getDeviceIds().size() == 0
@@ -3689,7 +3697,9 @@ RGY_ERR VCECore::init(VCEParam *prm) {
             return ret;
         }
         HWDecCodecCsp = getHWDecCodecCsp(prm->ctrl.skipHWDecodeCheck, devList);
-        deviceInfoCache->setDecCodecCsp(getDevIdName(), HWDecCodecCsp);
+        const auto devInfo = getDevInfo();
+        deviceInfoCache->setDeviceInfos(devInfo);
+        deviceInfoCache->setDecCodecCsp(devInfo, HWDecCodecCsp);
         deviceInfoCache->saveCacheFile();
         PrintMes(RGY_LOG_DEBUG, _T("HW dec codec csp support saved to cache file.\n"));
     }
