@@ -3440,7 +3440,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
     if (m_parallelEnc && m_parallelEnc->id() < 0) {
         // 親プロセスの子プロセスのデータ回収用
         std::unique_ptr<PipelineTaskAudio> taskAudio;
-        if (m_pFileWriterListAudio.size() > 0) {
+        if (m_pFileWriterListAudio.size() > 0 || hasFilterForStreams(m_vpFilters)) {
             taskAudio = std::make_unique<PipelineTaskAudio>(m_dev->context(), m_pFileReader.get(), m_AudioReaders, m_pFileWriterListAudio, m_vpFilters, 0, m_pLog);
         }
         const auto encOutputTimebase = (ENCODER_QSV) ? to_rgy(HW_NATIVE_TIMEBASE) : m_outputTimebase;
@@ -3455,7 +3455,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
     } else {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskInput>(m_dev->context(), parallelEncEndPts, 0, m_pFileReader.get(), m_dev->cl(), m_pLog));
     }
-    if (m_pFileWriterListAudio.size() > 0) {
+    if (m_pFileWriterListAudio.size() > 0 || hasFilterForStreams(m_vpFilters)) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskAudio>(m_dev->context(), m_pFileReader.get(), m_AudioReaders, m_pFileWriterListAudio, m_vpFilters, 0, m_pLog));
     }
     { // checkpts
