@@ -48,8 +48,10 @@
 #include "rgy_filter_colorspace.h"
 #include "rgy_filter_afs.h"
 #include "rgy_filter_nnedi.h"
+#include "rgy_filter_bwdif.h"
 #include "rgy_filter_yadif.h"
 #include "rgy_filter_decomb.h"
+#include "rgy_filter_ivtc.h"
 #include "rgy_filter_convolution3d.h"
 #include "rgy_filter_rff.h"
 #include "rgy_filter_delogo.h"
@@ -502,10 +504,9 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, DeviceCodecCsp& HWDecCodecCsp) 
         inputParam->input.type = RGY_INPUT_FMT_AVSW;
     }
 
-    const bool vpp_rff = inputParam->vpp.rff.enable;
     auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, &inputParam->inprm, inputCspOfRawReader,
         m_pStatus, &inputParam->common, &inputParam->ctrl, HWDecCodecCsp, subburnTrackId,
-        inputParam->vpp.afs.enable, vpp_rff, inputParam->vpp.libplacebo_tonemapping.enable,
+        inputParam->vpp.afs.enable, inputParam->vpp.rff.enable, inputParam->vpp.libplacebo_tonemapping.enable, inputParam->vpp.ivtc.expand != 0,
         m_poolPkt.get(), m_poolFrame.get(), nullptr, m_pPerfMonitor.get(), m_pLog);
     if (err != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("failed to initialize file reader(s).\n"));
@@ -553,14 +554,24 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, DeviceCodecCsp& HWDecCodecCsp) 
 #if ENABLE_AVSW_READER
     auto pAVCodecReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
     const bool vpp_afs = inputParam->vpp.afs.enable;
-    if ((m_nAVSyncMode & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR)) || vpp_rff) {
+    if ((m_nAVSyncMode & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR)) || inputParam->vpp.rff.enable) {
         tstring err_target;
         if (m_nAVSyncMode & RGY_AVSYNC_VFR)       err_target += _T("avsync vfr, ");
         if (m_nAVSyncMode & RGY_AVSYNC_FORCE_CFR) err_target += _T("avsync forcecfr, ");
-        if (vpp_rff) {
+#if ENABLE_VPP_FILTER_RFF
+        if (inputParam->vpp.rff.enable) {
             err_target += _T("vpp-rff, ");
+            // --vpp-ivtc が後段にある場合は RFF 展開 → IVTC デシメートで CFR (24fps など) に
+            // 戻るため、avsync を VFR に切り替えない (出力 timebase も CFR-friendly なまま保つ)。
+#if ENABLE_VPP_FILTER_IVTC
+            if (!inputParam->vpp.ivtc.enable) {
+                m_nAVSyncMode = RGY_AVSYNC_VFR;
+            }
+#else
             m_nAVSyncMode = RGY_AVSYNC_VFR;
+#endif
         }
+#endif
         err_target = err_target.substr(0, err_target.length()-2);
 
         if (pAVCodecReader) {
@@ -590,7 +601,7 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, DeviceCodecCsp& HWDecCodecCsp) 
         m_nAVSyncMode |= RGY_AVSYNC_VFR;
         const auto timebaseStreamIn = to_rgy(pAVCodecReader->GetInputVideoStream()->time_base);
         if ((timebaseStreamIn.inv() * m_inputFps.inv()).d() == 1 || timebaseStreamIn.n() > 1000) { //fpsを割り切れるtimebaseなら
-            if (!vpp_afs && !vpp_rff) {
+            if (!vpp_afs && !inputParam->vpp.rff.enable) {
                 m_outputTimebase = m_inputFps.inv() * rgy_rational<int>(1, 8);
             }
         }
@@ -1125,7 +1136,9 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     if (inputParam->vpp.afs.enable) deinterlacer++;
     if (inputParam->vpp.nnedi.enable) deinterlacer++;
     if (inputParam->vpp.yadif.enable) deinterlacer++;
+    if (inputParam->vpp.bwdif.enable) deinterlacer++;
     if (inputParam->vpp.decomb.enable) deinterlacer++;
+    if (inputParam->vpp.ivtc.enable) deinterlacer++;
     if (deinterlacer >= 2) {
         PrintMes(RGY_LOG_ERROR, _T("Activating 2 or more deinterlacer is not supported.\n"));
         return RGY_ERR_UNSUPPORTED;
@@ -1316,15 +1329,17 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.delogo.enable)        filterPipeline.push_back(VppType::CL_DELOGO);
     if (inputParam->vpp.afs.enable)           filterPipeline.push_back(VppType::CL_AFS);
     if (inputParam->vpp.nnedi.enable)         filterPipeline.push_back(VppType::CL_NNEDI);
+    if (inputParam->vpp.bwdif.enable)         filterPipeline.push_back(VppType::CL_BWDIF);
     if (inputParam->vpp.yadif.enable)         filterPipeline.push_back(VppType::CL_YADIF);
     if (inputParam->vpp.decomb.enable)        filterPipeline.push_back(VppType::CL_DECOMB);
+    if (inputParam->vpp.ivtc.enable)          filterPipeline.push_back(VppType::CL_IVTC);
     if (inputParam->vpp.decimate.enable)      filterPipeline.push_back(VppType::CL_DECIMATE);
     if (inputParam->vpp.mpdecimate.enable)    filterPipeline.push_back(VppType::CL_MPDECIMATE);
     if (inputParam->vpp.convolution3d.enable) filterPipeline.push_back(VppType::CL_CONVOLUTION3D);
     if (inputParam->vpp.smooth.enable)        filterPipeline.push_back(VppType::CL_DENOISE_SMOOTH);
     if (inputParam->vpp.dct.enable)           filterPipeline.push_back(VppType::CL_DENOISE_DCT);
     if (inputParam->vpp.fft3d.enable)         filterPipeline.push_back(VppType::CL_DENOISE_FFT3D);
-    if (inputParam->vpp.msmooth.enable)      filterPipeline.push_back(VppType::CL_MSMOOTH);
+    if (inputParam->vpp.msmooth.enable)       filterPipeline.push_back(VppType::CL_MSMOOTH);
     if (inputParam->vpp.knn.enable)           filterPipeline.push_back(VppType::CL_DENOISE_KNN);
     if (inputParam->vpp.nlmeans.enable)       filterPipeline.push_back(VppType::CL_DENOISE_NLMEANS);
     if (inputParam->vpp.pmd.enable)           filterPipeline.push_back(VppType::CL_DENOISE_PMD);
@@ -1669,6 +1684,26 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         m_encFps = param->baseFps;
         return RGY_ERR_NONE;
     }
+    //bwdif
+    if (vppType == VppType::CL_BWDIF) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterBwdif(m_dev->cl()));
+        shared_ptr<RGYFilterParamBwdif> param(new RGYFilterParamBwdif());
+        param->bwdif = inputParam->vpp.bwdif;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->timebase = m_outputTimebase;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
+        return RGY_ERR_NONE;
+    }
     //decomb
     if (vppType == VppType::CL_DECOMB) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
@@ -1691,6 +1726,28 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         //入力フレーム情報を更新
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //ivtc
+    if (vppType == VppType::CL_IVTC) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterIvtc(m_dev->cl()));
+        shared_ptr<RGYFilterParamIvtc> param(new RGYFilterParamIvtc());
+        param->ivtc = inputParam->vpp.ivtc;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->frameOut.picstruct = RGY_PICSTRUCT_FRAME;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        //登録
+        clfilters.push_back(std::move(filter));
         return RGY_ERR_NONE;
     }
     //decimate

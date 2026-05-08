@@ -96,6 +96,12 @@
       <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='RelStatic|x64'">AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
       <EnableEnhancedInstructionSet Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AdvancedVectorExtensions512</EnableEnhancedInstructionSet>
     </ClCompile>
+    <ClCompile Include="rgy_filter_bwdif.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="rgy_filter_cl.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -127,6 +133,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="rgy_filter_denoise_nlmeans.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="rgy_filter_ivtc.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -602,6 +614,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="rgy_bitstream_aac.h" />
+    <ClInclude Include="rgy_filter_bwdif.h" />
+    <ClInclude Include="rgy_filter_ivtc.h" />
     <ClInclude Include="rgy_thread_pool.h" />
     <ClInclude Include="api_hook.h" />
     <ClInclude Include="convert_const.h" />
@@ -726,6 +740,7 @@
     <None Include="rgy_filter_afs_filter.cl" />
     <None Include="rgy_filter_afs_merge.cl" />
     <None Include="rgy_filter_afs_synthesize.cl" />
+    <None Include="rgy_filter_bwdif.cl" />
     <None Include="rgy_filter_convolution3d.cl" />
     <None Include="rgy_filter_curves.cl" />
     <None Include="rgy_filter_deband.cl" />
@@ -739,6 +754,7 @@
     <None Include="rgy_filter_denoise_nlmeans.cl" />
     <None Include="rgy_filter_denoise_pmd.cl" />
     <None Include="rgy_filter_edgelevel.cl" />
+    <None Include="rgy_filter_ivtc.cl" />
     <None Include="rgy_filter_msharpen.cl" />
     <None Include="rgy_filter_msmooth.cl" />
     <None Include="rgy_filter_mpdecimate.cl" />

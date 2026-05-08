@@ -378,7 +378,13 @@
     <ClCompile Include="rgy_parallel_enc.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\NVEnc\NVEncCore\rgy_bitstream_aac.cpp">
+    <ClCompile Include="rgy_bitstream_aac.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="rgy_filter_bwdif.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="rgy_filter_ivtc.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
@@ -716,10 +722,16 @@
     <ClInclude Include="rgy_parallel_enc.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\NVEnc\NVEncCore\rgy_thread_pool.h">
+    <ClInclude Include="rgy_bitstream_aac.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\NVEnc\NVEncCore\rgy_bitstream_aac.h">
+    <ClInclude Include="rgy_thread_pool.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="rgy_filter_bwdif.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="rgy_filter_ivtc.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
@@ -827,6 +839,12 @@
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="rgy_filter_denoise_fft3d.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="rgy_filter_bwdif.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="rgy_filter_ivtc.cl">
       <Filter>ソース ファイル</Filter>
     </None>
   </ItemGroup>
