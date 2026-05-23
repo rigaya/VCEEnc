@@ -30,8 +30,11 @@
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+#include <cmath>
+#include <cstdlib>
 #include "rgy_util.h"
 #include "rgy_avutil.h"
+#include "rgy_filter_rtgmc_repair_profile.h"
 #include "rgy_prm.h"
 #include "rgy_cmd.h"
 #include "rgy_language.h"
@@ -98,6 +101,14 @@ std::vector<tstring> splitCommandLine(const TCHAR *cmd) {
     }
 #endif
     return result;
+}
+
+static bool is_valid_rtgmc_rep_thin(const int value) {
+    return rgy_rtgmc_repair_thin_level_is_valid(value);
+}
+
+static bool is_valid_rtgmc_rep_pad(const int value) {
+    return rgy_rtgmc_repair_pad_level_is_valid(value);
 }
 
 #if FOR_AUO
@@ -469,6 +480,17 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                 return 1;
             }
             vpp->filterOrder.push_back(vpptype);
+        }
+        return 0;
+    }
+    if (IS_OPTION("vpp-deint-csp")) {
+        i++;
+        int value = 0;
+        if (get_list_value(list_vpp_deint_csp, strInput[i], &value)) {
+            vpp->deintCsp = (VppDeintCsp)value;
+        } else {
+            print_cmd_error_invalid_value(option_name, strInput[i], list_vpp_deint_csp);
+            return 1;
         }
         return 0;
     }
@@ -1866,27 +1888,44 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
 
     if (IS_OPTION("vpp-nnedi") && ENABLE_VPP_FILTER_NNEDI) {
         vpp->nnedi.enable = true;
-        if (i+1 >= nArgNum || strInput[i+1][0] == _T('-')) {
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
             return 0;
         }
         i++;
 
-        const auto paramList = std::vector<std::string>{ "field", "nns", "nsize", "quality", "prescreen", "errortype", "prec", "weightfile" };
+        const auto paramList = std::vector<std::string>{ "enable", "field", "nsize", "nns", "quality", "prescreen", "errortype", "prec", "clamp", "double_height", "weightfile" };
+        const auto parse_nnedi_int = [&](int *dst, const tstring& param_arg, const tstring& param_val) {
+            try {
+                size_t idx = 0;
+                *dst = std::stoi(param_val, &idx);
+                if (idx != param_val.length()) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+            } catch (...) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                return 1;
+            }
+            return 0;
+        };
+        const auto parse_nnedi_bool = [&](bool *dst, const tstring& param_arg, const tstring& param_val) {
+            bool b = false;
+            if (!cmd_string_to_bool(&b, param_val)) {
+                *dst = b;
+            } else {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                return 1;
+            }
+            return 0;
+        };
 
         for (const auto& param : split(strInput[i], _T(","))) {
             auto pos = param.find_first_of(_T("="));
             if (pos != std::string::npos) {
-                auto param_arg = param.substr(0, pos);
-                auto param_val = param.substr(pos+1);
-                param_arg = tolowercase(param_arg);
+                auto param_arg = tolowercase(param.substr(0, pos));
+                auto param_val = param.substr(pos + 1);
                 if (param_arg == _T("enable")) {
-                    bool b = false;
-                    if (!cmd_string_to_bool(&b, param_val)) {
-                        vpp->nnedi.enable = b;
-                    } else {
-                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
-                        return 1;
-                    }
+                    if (parse_nnedi_bool(&vpp->nnedi.enable, param_arg, param_val)) return 1;
                     continue;
                 }
                 if (param_arg == _T("field")) {
@@ -1899,22 +1938,22 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                     }
                     continue;
                 }
-                if (param_arg == _T("nns")) {
-                    int value = 0;
-                    if (get_list_value(list_vpp_nnedi_nns, param_val.c_str(), &value)) {
-                        vpp->nnedi.nns = value;
-                    } else {
-                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_nnedi_nns);
-                        return 1;
-                    }
-                    continue;
-                }
                 if (param_arg == _T("nsize")) {
                     int value = 0;
                     if (get_list_value(list_vpp_nnedi_nsize, param_val.c_str(), &value)) {
                         vpp->nnedi.nsize = (VppNnediNSize)value;
                     } else {
                         print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_nnedi_nsize);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("nns")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_nnedi_nns, param_val.c_str(), &value)) {
+                        vpp->nnedi.nns = value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_nnedi_nns);
                         return 1;
                     }
                     continue;
@@ -1930,11 +1969,9 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                     continue;
                 }
                 if (param_arg == _T("prescreen")) {
-                    int value = 0;
-                    if (get_list_value(list_vpp_nnedi_pre_screen, param_val.c_str(), &value)) {
-                        vpp->nnedi.pre_screen = (VppNnediPreScreen)value;
-                    } else {
-                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_nnedi_pre_screen);
+                    if (parse_nnedi_int(&vpp->nnedi.prescreen, param_arg, param_val)) return 1;
+                    if (vpp->nnedi.prescreen < 2 || vpp->nnedi.prescreen > 4) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("prescreen should be 2, 3, or 4."));
                         return 1;
                     }
                     continue;
@@ -1950,13 +1987,18 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                     continue;
                 }
                 if (param_arg == _T("prec")) {
-                    int value = 0;
-                    if (get_list_value(list_vpp_fp_prec, param_val.c_str(), &value)) {
-                        vpp->nnedi.precision = (VppFpPrecision)value;
-                    } else {
-                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_fp_prec);
+                    continue;
+                }
+                if (param_arg == _T("clamp")) {
+                    if (parse_nnedi_int(&vpp->nnedi.clamp, param_arg, param_val)) return 1;
+                    if (vpp->nnedi.clamp < 0 || vpp->nnedi.clamp > 4) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("clamp should be 0 - 4."));
                         return 1;
                     }
+                    continue;
+                }
+                if (param_arg == _T("double_height")) {
+                    if (parse_nnedi_bool(&vpp->nnedi.doubleHeight, param_arg, param_val)) return 1;
                     continue;
                 }
                 if (param_arg == _T("weightfile")) {
@@ -2405,6 +2447,1960 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
         }
         return 0;
     }
+
+    if (IS_OPTION("vpp-maa") && ENABLE_VPP_FILTER_MAA) {
+        vpp->maa.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+        const auto paramList = std::vector<std::string>{ "enable", "ss", "aa", "aac", "mask", "mthresh", "chroma", "show" };
+
+        // Track whether the user explicitly set aac so we can default it to
+        // max(0, aa - 8) per analysis/maa2_investigation/05_parameter_design.md § 2
+        // when only aa is specified.
+        bool aacUserSet = false;
+        bool aaUserSet  = false;
+
+        for (const auto &param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = param.substr(0, pos);
+                auto param_val = param.substr(pos + 1);
+                param_arg = tolowercase(param_arg);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->maa.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("ss")) {
+                    try {
+                        vpp->maa.ss = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("aa")) {
+                    try {
+                        vpp->maa.aa = std::stoi(param_val);
+                        aaUserSet = true;
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("aac")) {
+                    try {
+                        vpp->maa.aac = std::stoi(param_val);
+                        aacUserSet = true;
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("mask")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->maa.mask = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("Supported values: on, off, true, false."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("mthresh")) {
+                    try {
+                        vpp->maa.mthresh = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("chroma")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->maa.chroma = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("Supported values: on, off, true, false."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("show")) {
+                    try {
+                        vpp->maa.show = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+
+        // Default aac = max(0, aa - 8) when the user set aa but not aac.
+        // Matches the reference MAA2 script's `aac = aa - 8` default behaviour.
+        if (aaUserSet && !aacUserSet) {
+            vpp->maa.aac = std::max(0, vpp->maa.aa - 8);
+        }
+        return 0;
+    }
+
+
+    if (IS_OPTION("vpp-rtgmc") && ENABLE_VPP_FILTER_RTGMC) {
+        VppRtgmc parsedRtgmc;
+        parsedRtgmc.enable = true;
+
+        const auto paramList = std::vector<std::string>{
+            "enable", "preset", "tuning", "border", "lossless", "input_type", "prog_sad_mask", "prog_sad_mask_gamma", "source_match", "match_tr1", "match_tr2",
+            "match_preset", "match_preset2", "match_edi", "match_enhance",
+            "order", "tr0", "rep0-thin", "rep0-pad", "search_refine", "edi",
+            "nnsize", "nneurons", "ediqual", "chroma_edi",
+            "mv_spatial_refine",
+            "tv_range", "chroma_motion",
+            "noise_process", "ezdenoise", "ezkeepgrain", "denoiser", "sigma", "chroma_noise",
+            "noise_deint", "denoise_mc", "noise_tr", "grain_restore", "noise_restore",
+            "sharpness", "limit", "smode", "slmode", "slrad", "sovs", "svthin", "sbb", "precise",
+            "rep1-thin", "rep1-pad",
+            "rep2-thin", "rep2-pad", "rep_chroma",
+            "blksize", "search", "thsad", "thsad1", "thsad2", "thscd1", "thscd2", "pel", "levels", "overlap", "delta",
+            "subpelinterp", "searchparam", "pelsearch",
+            "truemotion", "lambda", "lsad", "pnew", "plevel", "globalmotion", "dct", "useflag",
+            "delta_analyze", "delta_tr1", "delta_tr2"
+        };
+        bool userSetTr2 = false;
+        bool userSetSharpness = false;
+        bool userSetSlmode = false;
+        bool userSetNoiseProcess = false;
+        bool userSetNoiseSigma = false;
+        bool userSetMatchEdi = false;
+        int rtgmcPresetNum = (int)parsedRtgmc.preset;
+        int rtgmcMatchPresetNum = -1;
+        struct RtgmcPresetOverride {
+            bool tr0 = false;
+            bool rep0Thin = false;
+            bool rep0Pad = false;
+            bool searchRefine = false;
+            bool chromaMotion = false;
+            bool edi = false;
+            bool nnsize = false;
+            bool nneurons = false;
+            bool ediqual = false;
+            bool matchEdi = false;
+            bool analyzeDelta = false;
+            bool tr1Delta = false;
+            bool tr2Delta = false;
+            bool rep1Thin = false;
+            bool rep1Pad = false;
+            bool rep2Thin = false;
+            bool rep2Pad = false;
+            bool smode = false;
+            bool slmode = false;
+            bool slrad = false;
+            bool sbb = false;
+            bool precise = false;
+            bool blksize = false;
+            bool overlap = false;
+            bool search = false;
+            bool pel = false;
+            bool searchParam = false;
+            bool pelSearch = false;
+            bool lambda = false;
+            bool noiseProcess = false;
+            bool denoiser = false;
+            bool noiseDeint = false;
+            bool denoiseMC = false;
+            bool noiseTR = false;
+            bool grainRestore = false;
+            bool noiseRestore = false;
+            bool progSADMask = false;
+        } presetOverride;
+        const auto parse_int = [&](int *dst, const tstring& param_arg, const tstring& param_val) {
+            try {
+                size_t idx = 0;
+                *dst = std::stoi(param_val, &idx);
+                if (idx != param_val.length()) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+            } catch (...) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                return 1;
+            }
+            return 0;
+        };
+        const auto parse_float = [&](float *dst, const tstring& param_arg, const tstring& param_val) {
+            try {
+                size_t idx = 0;
+                *dst = std::stof(param_val, &idx);
+                if (idx != param_val.length() || !std::isfinite(*dst)) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+            } catch (...) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                return 1;
+            }
+            return 0;
+        };
+        const auto check_fixed_int = [&](const tstring& param_arg, const tstring& param_val, const int fixedValue) {
+            int value = 0;
+            if (parse_int(&value, param_arg, param_val)) return 1;
+            if (value != fixedValue) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val,
+                    strsprintf(_T("%s is fixed to %d in --vpp-rtgmc; use --vpp-degrain for standalone debug."), param_arg.c_str(), fixedValue).c_str());
+                return 1;
+            }
+            return 0;
+        };
+        const auto check_fixed_bool = [&](const tstring& param_arg, const tstring& param_val, const bool fixedValue) {
+            bool value = false;
+            if (cmd_string_to_bool(&value, param_val)) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                return 1;
+            }
+            if (value != fixedValue) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val,
+                    strsprintf(_T("%s is fixed to %s in --vpp-rtgmc; use --vpp-degrain for standalone debug."),
+                        param_arg.c_str(), fixedValue ? _T("true") : _T("false")).c_str());
+                return 1;
+            }
+            return 0;
+        };
+        const auto apply_rtgmc_motion_common = [&]() {
+            parsedRtgmc.analyze.tr0 = parsedRtgmc.searchPrefilter.tr0;
+            parsedRtgmc.tr1.tr0 = parsedRtgmc.searchPrefilter.tr0;
+            parsedRtgmc.tr2.tr0 = parsedRtgmc.searchPrefilter.tr0;
+            parsedRtgmc.analyze.rep0 = parsedRtgmc.searchPrefilter.rep0Thin;
+            parsedRtgmc.tr1.rep0 = parsedRtgmc.searchPrefilter.rep0Thin;
+            parsedRtgmc.tr2.rep0 = parsedRtgmc.searchPrefilter.rep0Thin;
+            parsedRtgmc.analyze.searchRefine = parsedRtgmc.searchPrefilter.searchRefine;
+            parsedRtgmc.tr1.searchRefine = parsedRtgmc.searchPrefilter.searchRefine;
+            parsedRtgmc.tr2.searchRefine = parsedRtgmc.searchPrefilter.searchRefine;
+            parsedRtgmc.analyze.mvSpatialRefine = parsedRtgmc.mvSpatialRefine;
+            parsedRtgmc.tr1.mvSpatialRefine = parsedRtgmc.mvSpatialRefine;
+            parsedRtgmc.tr2.mvSpatialRefine = parsedRtgmc.mvSpatialRefine;
+        };
+        const auto apply_rtgmc_preset = [&](const VppRtgmcPreset preset, const VppRtgmcTuning tuning, const RtgmcPresetOverride& override) {
+            static const int tr0[]         = { 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 0 };
+            static const int tr1[]         = { 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1 };
+            static const int tr2[]         = { 3, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0 };
+            static const int rep0Thin[]    = { 4, 4, 4, 4, 3, 3, 0, 0, 0, 0, 0 };
+            static const int rep1Thin[]    = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            static const int rep2Thin[]    = { 4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 0 };
+            static const VppRtgmcEdiMode edi[] = {
+                VppRtgmcEdiMode::NNEDI3, VppRtgmcEdiMode::NNEDI3, VppRtgmcEdiMode::NNEDI3,
+                VppRtgmcEdiMode::NNEDI3, VppRtgmcEdiMode::NNEDI3, VppRtgmcEdiMode::NNEDI3,
+                VppRtgmcEdiMode::NNEDI3, VppRtgmcEdiMode::NNEDI3, VppRtgmcEdiMode::NNEDI3,
+                VppRtgmcEdiMode::RepYadif, VppRtgmcEdiMode::Bob
+            };
+            static const int nnsize[]      = { 1, 1, 1, 1, 5, 5, 4, 4, 4, 4, 4 };
+            static const int nneurons[]    = { 2, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0 };
+            static const int ediqual[]     = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+            static const int smode[]       = { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0 };
+            static const int slmode[]      = { 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0 };
+            static const int slrad[]       = { 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+            static const int sbb[]         = { 3, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 };
+            static const int searchRefine[]  = { 3, 3, 3, 3, 3, 2, 2, 2, 1, 1, 0 };
+            static const int subpel[]      = { 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1 };
+            static const int search[]      = { 5, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0 };
+            static const int searchparam[] = { 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1 };
+            static const int pelsearch[]   = { 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1 };
+            static const bool chroma[]     = { true, true, true, false, false, false, false, false, false, false, false };
+            static const bool precise[]    = { true, true, false, false, false, false, false, false, false, false, false };
+            static const float progSADMask[] = { 10.0f, 10.0f, 10.0f, 10.0f, 10.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+
+            const int p = (int)preset;
+            const int bs = tuning == VppRtgmcTuning::DVHD ? 32 : 16;
+            const int bs2 = 32;
+            const int blocksize = (p <= (int)VppRtgmcPreset::Fast) ? bs : bs2;
+            const int overlap = (p <= (int)VppRtgmcPreset::Faster) ? blocksize / 2 : blocksize / 4;
+            const auto defaultLambda = [](const VppDegrain& prm) {
+                return ((prm.trueMotion ? 1000 : 100) * prm.blksize * prm.blksize) / (8 * 8);
+            };
+            parsedRtgmc.preset = preset;
+            parsedRtgmc.tuning = tuning;
+            if (!override.progSADMask) {
+                parsedRtgmc.progSADMask = progSADMask[p];
+            }
+            if (!override.tr0) {
+                parsedRtgmc.searchPrefilter.tr0 = tr0[p];
+            }
+            if (!override.rep0Thin) {
+                parsedRtgmc.searchPrefilter.rep0Thin = rep0Thin[p];
+            }
+            if (!override.rep0Pad) {
+                parsedRtgmc.searchPrefilter.rep0Pad = 0;
+            }
+            if (!override.searchRefine) {
+                parsedRtgmc.searchPrefilter.searchRefine = searchRefine[p];
+            }
+            if (!override.chromaMotion) {
+                parsedRtgmc.searchPrefilter.chromaMotion = chroma[p];
+            }
+            if (override.tr0 && !override.rep0Thin && parsedRtgmc.searchPrefilter.tr0 < 1) {
+                parsedRtgmc.searchPrefilter.rep0Thin = 0;
+                if (!override.rep0Pad) {
+                    parsedRtgmc.searchPrefilter.rep0Pad = 0;
+                }
+            }
+            apply_rtgmc_motion_common();
+            if (!override.edi) {
+                parsedRtgmc.edi.mode = edi[p];
+            }
+            if (!override.nnsize) {
+                parsedRtgmc.edi.nnsize = nnsize[p];
+            }
+            if (!override.nneurons) {
+                parsedRtgmc.edi.nneurons = nneurons[p];
+            }
+            if (!override.ediqual) {
+                parsedRtgmc.edi.ediqual = ediqual[p];
+            }
+            if (!override.matchEdi) {
+                parsedRtgmc.matchEdi.mode = parsedRtgmc.edi.mode;
+            }
+            parsedRtgmc.matchEdi.nnsize = parsedRtgmc.edi.nnsize;
+            parsedRtgmc.matchEdi.nneurons = parsedRtgmc.edi.nneurons;
+            parsedRtgmc.matchEdi.ediqual = parsedRtgmc.edi.ediqual;
+            if (!override.analyzeDelta) {
+                parsedRtgmc.analyze.delta = tr0[p];
+            }
+            if (!override.tr1Delta) {
+                parsedRtgmc.tr1.delta = tr1[p];
+            }
+            if (!override.tr2Delta) {
+                parsedRtgmc.tr2.delta = tr2[p];
+            }
+            if (!override.rep1Thin) {
+                parsedRtgmc.rep1.repThin = rep1Thin[p];
+            }
+            if (!override.rep1Pad) {
+                parsedRtgmc.rep1.repPad = 0;
+            }
+            if (!override.rep2Thin) {
+                parsedRtgmc.rep2.repThin = rep2Thin[p];
+            }
+            if (!override.rep2Pad) {
+                parsedRtgmc.rep2.repPad = 0;
+            }
+            if (!override.smode) {
+                parsedRtgmc.retouch.smode = smode[p];
+            }
+            if (!override.slmode) {
+                parsedRtgmc.retouch.slmode = slmode[p];
+            }
+            if (!override.slrad) {
+                parsedRtgmc.retouch.slrad = slrad[p];
+            }
+            if (!override.sbb) {
+                parsedRtgmc.retouch.sbb = sbb[p];
+            }
+            if (!override.precise) {
+                parsedRtgmc.retouch.precise = precise[p];
+            }
+            for (auto *stagePrm : { &parsedRtgmc.analyze, &parsedRtgmc.tr1, &parsedRtgmc.tr2 }) {
+                if (!override.blksize) {
+                    stagePrm->blksize = blocksize;
+                }
+                if (!override.overlap) {
+                    stagePrm->overlap = overlap;
+                }
+                if (!override.search) {
+                    stagePrm->search = search[p];
+                }
+                if (!override.pel) {
+                    stagePrm->pel = subpel[p];
+                }
+                if (!override.searchParam) {
+                    stagePrm->searchParam = searchparam[p];
+                }
+                if (!override.pelSearch) {
+                    stagePrm->pelSearch = pelsearch[p];
+                }
+                if (!override.lambda) {
+                    stagePrm->lambda = defaultLambda(*stagePrm);
+                }
+            }
+            if (!override.denoiser) {
+                parsedRtgmc.noise.denoiser = VppRtgmcNoiseDenoiser::FFT3D;
+            }
+            if (!override.denoiseMC) {
+                parsedRtgmc.noise.denoiseMC = false;
+            }
+            if (!override.noiseTR) {
+                parsedRtgmc.noise.noiseTR = 1;
+            }
+            if (!override.noiseDeint) {
+                parsedRtgmc.noise.noiseDeint = VppRtgmcNoiseDeint::None;
+            }
+            if (!override.noiseProcess) {
+                parsedRtgmc.noise.noiseProcess = (preset == VppRtgmcPreset::Placebo || preset == VppRtgmcPreset::VerySlow) ? 2 : 0;
+            }
+            if (!override.grainRestore) {
+                parsedRtgmc.noise.grainRestore = parsedRtgmc.noise.noiseProcess == 2 ? 0.3f : 0.0f;
+            }
+            if (!override.noiseRestore) {
+                parsedRtgmc.noise.noiseRestore = parsedRtgmc.noise.noiseProcess == 2 ? 0.1f : 0.0f;
+            }
+        };
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            vpp->rtgmc = parsedRtgmc;
+            return 0;
+        }
+        i++;
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = tolowercase(param.substr(0, pos));
+                auto param_val = param.substr(pos + 1);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedRtgmc.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("preset")) {
+                    int value = 0;
+                    const auto preset = tolowercase(trim(param_val, _T("\"")));
+                    if (get_list_value(list_vpp_rtgmc_preset, preset.c_str(), &value)) {
+                        rtgmcPresetNum = value;
+                        parsedRtgmc.preset = (VppRtgmcPreset)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_preset);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("tuning")) {
+                    int value = 0;
+                    const auto tuning = tolowercase(trim(param_val, _T("\"")));
+                    if (get_list_value(list_vpp_rtgmc_tuning, tuning.c_str(), &value)) {
+                        parsedRtgmc.tuning = (VppRtgmcTuning)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_tuning);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("border")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedRtgmc.border = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("lossless")) {
+                    if (parse_int(&parsedRtgmc.lossless, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.lossless < 0 || parsedRtgmc.lossless > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("lossless should be 0 - 2."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("input_type")) {
+                    if (parse_int(&parsedRtgmc.inputType, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.inputType < 0 || parsedRtgmc.inputType > 3) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("input_type should be 0 - 3."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("prog_sad_mask")) {
+                    if (parse_float(&parsedRtgmc.progSADMask, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.progSADMask < 0.0f) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("prog_sad_mask should be 0.0 or larger."));
+                        return 1;
+                    }
+                    presetOverride.progSADMask = true;
+                    continue;
+                }
+                if (param_arg == _T("prog_sad_mask_gamma")) {
+                    if (parse_float(&parsedRtgmc.progSADMaskGamma, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.progSADMaskGamma <= 0.0f) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("prog_sad_mask_gamma should be larger than 0.0."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("source_match")) {
+                    if (parse_int(&parsedRtgmc.sourceMatch, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.sourceMatch < 0 || parsedRtgmc.sourceMatch > 3) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("source_match should be 0 - 3."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("match_tr1")) {
+                    if (parse_int(&parsedRtgmc.matchTR1, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.matchTR1 < 0 || parsedRtgmc.matchTR1 > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("match_tr1 should be 0 - 2."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("match_tr2")) {
+                    if (parse_int(&parsedRtgmc.matchTR2, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.matchTR2 < 0 || parsedRtgmc.matchTR2 > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("match_tr2 should be 0 - 2."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("match_preset") || param_arg == _T("match_preset2")) {
+                    int value = 0;
+                    const auto preset = tolowercase(trim(param_val, _T("\"")));
+                    if (!get_list_value(list_vpp_rtgmc_preset, preset.c_str(), &value)) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_preset);
+                        return 1;
+                    }
+                    if ((VppRtgmcPreset)value == VppRtgmcPreset::Draft) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val,
+                            _T("Draft MatchPreset is unsupported in the current source refinement path."));
+                        return 1;
+                    }
+                    rtgmcMatchPresetNum = (rtgmcMatchPresetNum < 0) ? value : std::min(rtgmcMatchPresetNum, value);
+                    if (value < rtgmcPresetNum) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val,
+                            _T("MatchPreset cannot use a slower setting than Preset."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("match_edi")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_rtgmc_edi_mode, param_val.c_str(), &value)) {
+                        parsedRtgmc.matchEdi.mode = (VppRtgmcEdiMode)value;
+                        userSetMatchEdi = true;
+                        presetOverride.matchEdi = true;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_edi_mode);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("match_enhance")) {
+                    try {
+                        parsedRtgmc.matchEnhance = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    if (parsedRtgmc.matchEnhance < 0.0f || parsedRtgmc.matchEnhance > 1.0f) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("match_enhance should be 0.0 - 1.0."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("order")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_rtgmc_bob_order, param_val.c_str(), &value)) {
+                        parsedRtgmc.bob.order = (VppRtgmcBobOrder)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_bob_order);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("tr0")) {
+                    if (parse_int(&parsedRtgmc.searchPrefilter.tr0, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.searchPrefilter.tr0 < -1 || parsedRtgmc.searchPrefilter.tr0 > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("tr0 should be -1, 0, 1, or 2."));
+                        return 1;
+                    }
+                    const int analyzeTr0 = std::max(parsedRtgmc.searchPrefilter.tr0, 0);
+                    parsedRtgmc.analyze.tr0 = analyzeTr0;
+                    parsedRtgmc.tr1.tr0 = analyzeTr0;
+                    parsedRtgmc.tr2.tr0 = analyzeTr0;
+                    presetOverride.tr0 = true;
+                    continue;
+                }
+                if (param_arg == _T("rep0-thin")) {
+                    if (parse_int(&parsedRtgmc.searchPrefilter.rep0Thin, param_arg, param_val)) return 1;
+                    if (!is_valid_rtgmc_rep_thin(parsedRtgmc.searchPrefilter.rep0Thin)) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("rep0-thin should be 0 - 7."));
+                        return 1;
+                    }
+                    parsedRtgmc.analyze.rep0 = parsedRtgmc.searchPrefilter.rep0Thin;
+                    parsedRtgmc.tr1.rep0 = parsedRtgmc.searchPrefilter.rep0Thin;
+                    parsedRtgmc.tr2.rep0 = parsedRtgmc.searchPrefilter.rep0Thin;
+                    presetOverride.rep0Thin = true;
+                    continue;
+                }
+                if (param_arg == _T("rep0-pad")) {
+                    if (parse_int(&parsedRtgmc.searchPrefilter.rep0Pad, param_arg, param_val)) return 1;
+                    if (!is_valid_rtgmc_rep_pad(parsedRtgmc.searchPrefilter.rep0Pad)) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("rep0-pad should be 0 - 3."));
+                        return 1;
+                    }
+                    presetOverride.rep0Pad = true;
+                    continue;
+                }
+                if (param_arg == _T("search_refine")) {
+                    if (parse_int(&parsedRtgmc.searchPrefilter.searchRefine, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.searchPrefilter.searchRefine < 0 || parsedRtgmc.searchPrefilter.searchRefine > 3) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("search_refine should be 0 - 3."));
+                        return 1;
+                    }
+                    parsedRtgmc.analyze.searchRefine = parsedRtgmc.searchPrefilter.searchRefine;
+                    parsedRtgmc.tr1.searchRefine = parsedRtgmc.searchPrefilter.searchRefine;
+                    parsedRtgmc.tr2.searchRefine = parsedRtgmc.searchPrefilter.searchRefine;
+                    presetOverride.searchRefine = true;
+                    continue;
+                }
+                if (param_arg == _T("mv_spatial_refine")) {
+                    if (tolowercase(param_val) == _T("auto")) {
+                        parsedRtgmc.mvSpatialRefine = FILTER_DEFAULT_RTGMC_MV_SPATIAL_REFINE;
+                    } else if (parse_int(&parsedRtgmc.mvSpatialRefine, param_arg, param_val)) {
+                        return 1;
+                    }
+                    if (parsedRtgmc.mvSpatialRefine < -1) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("mv_spatial_refine should be auto, -1, or greater."));
+                        return 1;
+                    }
+                    parsedRtgmc.analyze.mvSpatialRefine = parsedRtgmc.mvSpatialRefine;
+                    parsedRtgmc.tr1.mvSpatialRefine = parsedRtgmc.mvSpatialRefine;
+                    parsedRtgmc.tr2.mvSpatialRefine = parsedRtgmc.mvSpatialRefine;
+                    continue;
+                }
+                if (param_arg == _T("tv_range")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedRtgmc.searchPrefilter.tvRange = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("chroma_motion")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedRtgmc.searchPrefilter.chromaMotion = b;
+                        presetOverride.chromaMotion = true;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("noise_process")) {
+                    if (parse_int(&parsedRtgmc.noise.noiseProcess, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.noise.noiseProcess < 0 || parsedRtgmc.noise.noiseProcess > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("noise_process should be 0 - 2."));
+                        return 1;
+                    }
+                    userSetNoiseProcess = true;
+                    presetOverride.noiseProcess = true;
+                    continue;
+                }
+                if (param_arg == _T("ezdenoise")) {
+                    if (parse_float(&parsedRtgmc.noise.ezDenoise, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.noise.ezDenoise < 0.0f) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("ezdenoise should be 0.0 or larger."));
+                        return 1;
+                    }
+                    if (!userSetNoiseProcess) {
+                        parsedRtgmc.noise.noiseProcess = 1;
+                    }
+                    presetOverride.noiseProcess = true;
+                    if (!userSetNoiseSigma) {
+                        parsedRtgmc.noise.sigma = parsedRtgmc.noise.ezDenoise;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("ezkeepgrain")) {
+                    if (parse_float(&parsedRtgmc.noise.ezKeepGrain, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.noise.ezKeepGrain < 0.0f) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("ezkeepgrain should be 0.0 or larger."));
+                        return 1;
+                    }
+                    if (!userSetNoiseProcess) {
+                        parsedRtgmc.noise.noiseProcess = 2;
+                    }
+                    presetOverride.noiseProcess = true;
+                    continue;
+                }
+                if (param_arg == _T("denoiser")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_rtgmc_noise_denoiser, param_val.c_str(), &value)) {
+                        parsedRtgmc.noise.denoiser = (VppRtgmcNoiseDenoiser)value;
+                        presetOverride.denoiser = true;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_noise_denoiser);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("noise_deint")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_rtgmc_noise_deint, param_val.c_str(), &value)) {
+                        parsedRtgmc.noise.noiseDeint = (VppRtgmcNoiseDeint)value;
+                        presetOverride.noiseDeint = true;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_noise_deint);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("sigma")) {
+                    if (parse_float(&parsedRtgmc.noise.sigma, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.noise.sigma < 0.0f) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("sigma should be 0.0 or larger."));
+                        return 1;
+                    }
+                    userSetNoiseSigma = true;
+                    continue;
+                }
+                if (param_arg == _T("chroma_noise")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedRtgmc.noise.chromaNoise = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("denoise_mc")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedRtgmc.noise.denoiseMC = b;
+                        presetOverride.denoiseMC = true;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("noise_tr")) {
+                    if (parse_int(&parsedRtgmc.noise.noiseTR, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.noise.noiseTR < 0) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("noise_tr should be 0 or larger."));
+                        return 1;
+                    }
+                    presetOverride.noiseTR = true;
+                    continue;
+                }
+                if (param_arg == _T("grain_restore")) {
+                    if (parse_float(&parsedRtgmc.noise.grainRestore, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.noise.grainRestore < 0.0f || parsedRtgmc.noise.grainRestore > 1.0f) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("grain_restore should be 0.0 - 1.0."));
+                        return 1;
+                    }
+                    presetOverride.grainRestore = true;
+                    continue;
+                }
+                if (param_arg == _T("noise_restore")) {
+                    if (parse_float(&parsedRtgmc.noise.noiseRestore, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.noise.noiseRestore < 0.0f || parsedRtgmc.noise.noiseRestore > 1.0f) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("noise_restore should be 0.0 - 1.0."));
+                        return 1;
+                    }
+                    presetOverride.noiseRestore = true;
+                    continue;
+                }
+                if (param_arg == _T("edi")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_rtgmc_edi_mode, param_val.c_str(), &value)) {
+                        parsedRtgmc.edi.mode = (VppRtgmcEdiMode)value;
+                        presetOverride.edi = true;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_edi_mode);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("nnsize")) {
+                    if (parse_int(&parsedRtgmc.edi.nnsize, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.edi.nnsize < 0 || parsedRtgmc.edi.nnsize > 6) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("nnsize should be 0 - 6."));
+                        return 1;
+                    }
+                    presetOverride.nnsize = true;
+                    continue;
+                }
+                if (param_arg == _T("nneurons")) {
+                    if (parse_int(&parsedRtgmc.edi.nneurons, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.edi.nneurons < 0 || parsedRtgmc.edi.nneurons > 4) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("nneurons should be 0 - 4."));
+                        return 1;
+                    }
+                    presetOverride.nneurons = true;
+                    continue;
+                }
+                if (param_arg == _T("ediqual")) {
+                    if (parse_int(&parsedRtgmc.edi.ediqual, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.edi.ediqual < 1 || parsedRtgmc.edi.ediqual > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("ediqual should be 1 - 2."));
+                        return 1;
+                    }
+                    presetOverride.ediqual = true;
+                    continue;
+                }
+                if (param_arg == _T("chroma_edi")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_rtgmc_chroma_edi_mode, param_val.c_str(), &value)) {
+                        parsedRtgmc.edi.chromaEdi = (VppRtgmcChromaEdiMode)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_chroma_edi_mode);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("sharpness")) {
+                    userSetSharpness = true;
+                    try {
+                        parsedRtgmc.retouch.sharpness = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    if (parsedRtgmc.retouch.sharpness < 0.0f || parsedRtgmc.retouch.sharpness > 1.0f) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("sharpness should be 0.0 - 1.0."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("limit")) {
+                    try {
+                        parsedRtgmc.retouch.limit = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    if (parsedRtgmc.retouch.limit < 0.0f || parsedRtgmc.retouch.limit > 1.0f) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("limit should be 0.0 - 1.0."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("smode")) {
+                    if (parse_int(&parsedRtgmc.retouch.smode, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.retouch.smode < 0 || parsedRtgmc.retouch.smode > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("smode should be 0 - 2."));
+                        return 1;
+                    }
+                    presetOverride.smode = true;
+                    continue;
+                }
+                if (param_arg == _T("slmode")) {
+                    userSetSlmode = true;
+                    if (parse_int(&parsedRtgmc.retouch.slmode, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.retouch.slmode < 0 || parsedRtgmc.retouch.slmode > 4) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("slmode should be 0 - 4."));
+                        return 1;
+                    }
+                    presetOverride.slmode = true;
+                    continue;
+                }
+                if (param_arg == _T("slrad")) {
+                    if (parse_int(&parsedRtgmc.retouch.slrad, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.retouch.slrad < 0 || parsedRtgmc.retouch.slrad > 3) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("slrad should be 0 - 3."));
+                        return 1;
+                    }
+                    presetOverride.slrad = true;
+                    continue;
+                }
+                if (param_arg == _T("sovs")) {
+                    if (parse_int(&parsedRtgmc.retouch.sovs, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.retouch.sovs < 0) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("sovs should be 0 or greater."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("svthin")) {
+                    try {
+                        parsedRtgmc.retouch.svthin = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    if (parsedRtgmc.retouch.svthin < 0.0f || parsedRtgmc.retouch.svthin > 1.0f) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("svthin should be 0.0 - 1.0."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("sbb")) {
+                    if (parse_int(&parsedRtgmc.retouch.sbb, param_arg, param_val)) return 1;
+                    if (parsedRtgmc.retouch.sbb < 0 || parsedRtgmc.retouch.sbb > 3) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("sbb should be 0 - 3."));
+                        return 1;
+                    }
+                    presetOverride.sbb = true;
+                    continue;
+                }
+                if (param_arg == _T("precise")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedRtgmc.retouch.precise = b;
+                        presetOverride.precise = true;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("rep1-thin")) {
+                    if (parse_int(&parsedRtgmc.rep1.repThin, param_arg, param_val)) return 1;
+                    if (!is_valid_rtgmc_rep_thin(parsedRtgmc.rep1.repThin)) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("rep1-thin should be 0 - 7."));
+                        return 1;
+                    }
+                    presetOverride.rep1Thin = true;
+                    continue;
+                }
+                if (param_arg == _T("rep1-pad")) {
+                    if (parse_int(&parsedRtgmc.rep1.repPad, param_arg, param_val)) return 1;
+                    if (!is_valid_rtgmc_rep_pad(parsedRtgmc.rep1.repPad)) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("rep1-pad should be 0 - 3."));
+                        return 1;
+                    }
+                    presetOverride.rep1Pad = true;
+                    continue;
+                }
+                if (param_arg == _T("rep2-thin")) {
+                    if (parse_int(&parsedRtgmc.rep2.repThin, param_arg, param_val)) return 1;
+                    if (!is_valid_rtgmc_rep_thin(parsedRtgmc.rep2.repThin)) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("rep2-thin should be 0 - 7."));
+                        return 1;
+                    }
+                    presetOverride.rep2Thin = true;
+                    continue;
+                }
+                if (param_arg == _T("rep2-pad")) {
+                    if (parse_int(&parsedRtgmc.rep2.repPad, param_arg, param_val)) return 1;
+                    if (!is_valid_rtgmc_rep_pad(parsedRtgmc.rep2.repPad)) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("rep2-pad should be 0 - 3."));
+                        return 1;
+                    }
+                    presetOverride.rep2Pad = true;
+                    continue;
+                }
+                if (param_arg == _T("rep_chroma")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedRtgmc.rep1.repChroma = b;
+                        parsedRtgmc.rep2.repChroma = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thsad1") || param_arg == _T("thsad2")) {
+                    int value = 0;
+                    if (parse_int(&value, param_arg, param_val)) return 1;
+                    if (param_arg == _T("thsad1")) {
+                        parsedRtgmc.tr1.thsad = value;
+                    } else {
+                        parsedRtgmc.tr2.thsad = value;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("searchparam")) {
+                    int value = 0;
+                    if (parse_int(&value, param_arg, param_val)) return 1;
+                    if (value < 1 || value > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("searchparam should be 1 or 2 in --vpp-rtgmc."));
+                        return 1;
+                    }
+                    parsedRtgmc.analyze.searchParam = value;
+                    parsedRtgmc.tr1.searchParam = value;
+                    parsedRtgmc.tr2.searchParam = value;
+                    presetOverride.searchParam = true;
+                    continue;
+                }
+                if (param_arg == _T("pelsearch")) {
+                    int value = 0;
+                    if (parse_int(&value, param_arg, param_val)) return 1;
+                    if (value < 1 || value > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("pelsearch should be 1 or 2 in --vpp-rtgmc."));
+                        return 1;
+                    }
+                    parsedRtgmc.analyze.pelSearch = value;
+                    parsedRtgmc.tr1.pelSearch = value;
+                    parsedRtgmc.tr2.pelSearch = value;
+                    presetOverride.pelSearch = true;
+                    continue;
+                }
+                if (param_arg == _T("subpelinterp")) {
+                    if (check_fixed_int(param_arg, param_val, 2)) return 1;
+                    continue;
+                }
+                if (param_arg == _T("dct")) {
+                    if (check_fixed_int(param_arg, param_val, 0)) return 1;
+                    continue;
+                }
+                if (param_arg == _T("truemotion")) {
+                    if (check_fixed_bool(param_arg, param_val, false)) return 1;
+                    continue;
+                }
+                if (param_arg == _T("blksize") || param_arg == _T("search") || param_arg == _T("thsad")
+                    || param_arg == _T("thscd1") || param_arg == _T("thscd2") || param_arg == _T("pel")
+                    || param_arg == _T("levels") || param_arg == _T("overlap") || param_arg == _T("delta")
+                    || param_arg == _T("lambda") || param_arg == _T("lsad")
+                    || param_arg == _T("pnew") || param_arg == _T("plevel")) {
+                    int value = 0;
+                    if (parse_int(&value, param_arg, param_val)) return 1;
+                    auto set_degrain_value = [&](VppDegrain& target) {
+                        if (param_arg == _T("blksize")) target.blksize = value;
+                        if (param_arg == _T("search")) target.search = value;
+                        if (param_arg == _T("thsad")) target.thsad = value;
+                        if (param_arg == _T("thscd1")) target.thscd1 = value;
+                        if (param_arg == _T("thscd2")) target.thscd2 = value;
+                        if (param_arg == _T("pel")) target.pel = value;
+                        if (param_arg == _T("levels")) target.levels = value;
+                        if (param_arg == _T("overlap")) target.overlap = value;
+                        if (param_arg == _T("delta")) target.delta = value;
+                        if (param_arg == _T("lambda")) target.lambda = value;
+                        if (param_arg == _T("lsad")) target.lsad = value;
+                        if (param_arg == _T("pnew")) target.pnew = value;
+                        if (param_arg == _T("plevel")) target.plevel = value;
+                    };
+                    set_degrain_value(parsedRtgmc.analyze);
+                    set_degrain_value(parsedRtgmc.tr1);
+                    set_degrain_value(parsedRtgmc.tr2);
+                    if (param_arg == _T("blksize")) presetOverride.blksize = true;
+                    if (param_arg == _T("search")) presetOverride.search = true;
+                    if (param_arg == _T("pel")) presetOverride.pel = true;
+                    if (param_arg == _T("overlap")) presetOverride.overlap = true;
+                    if (param_arg == _T("lambda")) presetOverride.lambda = true;
+                    if (param_arg == _T("delta")) {
+                        presetOverride.analyzeDelta = true;
+                        presetOverride.tr1Delta = true;
+                        presetOverride.tr2Delta = true;
+                        userSetTr2 = true;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("useflag")) {
+                    int value = 0;
+                    if (parse_int(&value, param_arg, param_val)) return 1;
+                    if (value < 0 || value > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("useFlag should be 0 - 2."));
+                        return 1;
+                    }
+                    parsedRtgmc.tr1.useFlag = value;
+                    parsedRtgmc.tr2.useFlag = value;
+                    continue;
+                }
+                if (param_arg == _T("globalmotion")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        auto set_degrain_flag = [&](VppDegrain& target) {
+                            target.globalMotion = b;
+                        };
+                        set_degrain_flag(parsedRtgmc.analyze);
+                        set_degrain_flag(parsedRtgmc.tr1);
+                        set_degrain_flag(parsedRtgmc.tr2);
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("delta_analyze")
+                    || param_arg == _T("delta_tr1")
+                    || param_arg == _T("delta_tr2")) {
+                    int value = 0;
+                    if (parse_int(&value, param_arg, param_val)) return 1;
+                    if (param_arg == _T("delta_analyze")) {
+                        parsedRtgmc.analyze.delta = value;
+                        presetOverride.analyzeDelta = true;
+                    } else if (param_arg == _T("delta_tr1")) {
+                        parsedRtgmc.tr1.delta = value;
+                        presetOverride.tr1Delta = true;
+                    } else {
+                        parsedRtgmc.tr2.delta = value;
+                        userSetTr2 = true;
+                        presetOverride.tr2Delta = true;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        apply_rtgmc_preset(parsedRtgmc.preset, parsedRtgmc.tuning, presetOverride);
+        if (rtgmcMatchPresetNum >= 0 && rtgmcMatchPresetNum < rtgmcPresetNum) {
+            print_cmd_error_invalid_value(tstring(option_name) + _T(" match_preset="),
+                get_cx_desc(list_vpp_rtgmc_preset, rtgmcMatchPresetNum),
+                _T("MatchPreset cannot use a slower setting than Preset."));
+            return 1;
+        }
+        if (parsedRtgmc.sourceMatch > 0) {
+            if (!userSetMatchEdi) {
+                parsedRtgmc.matchEdi.mode = parsedRtgmc.edi.mode;
+            }
+            if (!userSetTr2) {
+                parsedRtgmc.tr2.delta = std::max(parsedRtgmc.tr2.delta, 1);
+            }
+            if (!userSetSharpness) {
+                parsedRtgmc.retouch.sharpness = 0.2f;
+            }
+            if (!userSetSlmode) {
+                parsedRtgmc.retouch.slmode = 0;
+            }
+            parsedRtgmc.analyze.delta = std::max(parsedRtgmc.analyze.delta, std::max(parsedRtgmc.matchTR1, parsedRtgmc.matchTR2));
+        }
+        parsedRtgmc.matchEdi.nnsize = parsedRtgmc.edi.nnsize;
+        parsedRtgmc.matchEdi.nneurons = parsedRtgmc.edi.nneurons;
+        parsedRtgmc.matchEdi.ediqual = parsedRtgmc.edi.ediqual;
+        parsedRtgmc.retouch.tr1 = parsedRtgmc.tr1.delta;
+        parsedRtgmc.retouch.tr2 = parsedRtgmc.tr2.delta;
+        if ((parsedRtgmc.retouch.smode == 0 || parsedRtgmc.retouch.sharpness == 0.0f || parsedRtgmc.retouch.slrad <= 0)
+            && parsedRtgmc.retouch.slmode < 3) {
+            parsedRtgmc.retouch.slmode = 0;
+        }
+        if (!userSetNoiseProcess) {
+            if (parsedRtgmc.noise.ezKeepGrain > 0.0f) {
+                parsedRtgmc.noise.noiseProcess = 2;
+            } else if (parsedRtgmc.noise.noiseProcess != 2
+                && (parsedRtgmc.noise.ezDenoise > 0.0f
+                || parsedRtgmc.noise.grainRestore > 0.0f || parsedRtgmc.noise.noiseRestore > 0.0f)) {
+                parsedRtgmc.noise.noiseProcess = 1;
+            }
+        }
+        if (!userSetNoiseSigma && parsedRtgmc.noise.ezDenoise > 0.0f) {
+            parsedRtgmc.noise.sigma = parsedRtgmc.noise.ezDenoise;
+        }
+        if (parsedRtgmc.noise.noiseProcess == 0) {
+            if (!presetOverride.noiseTR) {
+                parsedRtgmc.noise.noiseTR = 0;
+            }
+            if (!presetOverride.grainRestore) {
+                parsedRtgmc.noise.grainRestore = 0.0f;
+            }
+            if (!presetOverride.noiseRestore) {
+                parsedRtgmc.noise.noiseRestore = 0.0f;
+            }
+        }
+        for (auto *stagePrm : { &parsedRtgmc.analyze, &parsedRtgmc.tr1, &parsedRtgmc.tr2 }) {
+            stagePrm->chroma = parsedRtgmc.searchPrefilter.chromaMotion;
+        }
+        vpp->rtgmc = parsedRtgmc;
+        return 0;
+    }
+
+    if (IS_OPTION("vpp-kfm") && ENABLE_VPP_FILTER_KFM) {
+        vpp->kfm.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{
+            "enable", "mode", "preset", "timing", "past_cycles",
+            "thswitch", "ucf", "nr", "is120", "debug", "debug_stage", "timecode"
+        };
+
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != tstring::npos) {
+                auto param_arg = tolowercase(param.substr(0, pos));
+                auto param_val = param.substr(pos + 1);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->kfm.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("mode")) {
+                    const auto value = get_value_from_chr(list_vpp_kfm_mode, param_val.c_str());
+                    if (value == PARSE_ERROR_FLAG) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    vpp->kfm.mode = (VppKfmMode)value;
+                    continue;
+                }
+                if (param_arg == _T("preset")) {
+                    const auto value = get_value_from_chr(list_vpp_rtgmc_preset, param_val.c_str());
+                    if (value == PARSE_ERROR_FLAG) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_preset);
+                        return 1;
+                    }
+                    vpp->kfm.preset = (VppRtgmcPreset)value;
+                    continue;
+                }
+                if (param_arg == _T("timing")) {
+                    const auto value = get_value_from_chr(list_vpp_kfm_timing, param_val.c_str());
+                    if (value == PARSE_ERROR_FLAG) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    vpp->kfm.timing = (VppKfmTiming)value;
+                    continue;
+                }
+                if (param_arg == _T("past_cycles")) {
+                    try {
+                        vpp->kfm.pastCycles = std::stoi(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    if (vpp->kfm.pastCycles < 0) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thswitch")) {
+                    try {
+                        vpp->kfm.thswitch = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("ucf")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->kfm.ucf = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("nr")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->kfm.nr = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("is120")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->kfm.is120 = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("debug")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->kfm.debug = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("debug_stage")) {
+                    const auto value = get_value_from_chr(list_vpp_kfm_debug_stage, param_val.c_str());
+                    if (value == PARSE_ERROR_FLAG) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    vpp->kfm.debugStage = (VppKfmDebugStage)value;
+                    continue;
+                }
+                if (param_arg == _T("timecode")) {
+                    vpp->kfm.timecode = param_val;
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    if (IS_OPTION("vpp-rtgmc-bob") && ENABLE_VPP_FILTER_RTGMC_BOB) {
+        vpp->rtgmc_bob.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{ "enable", "order" };
+
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = tolowercase(param.substr(0, pos));
+                auto param_val = param.substr(pos + 1);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->rtgmc_bob.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("order")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_rtgmc_bob_order, param_val.c_str(), &value)) {
+                        vpp->rtgmc_bob.order = (VppRtgmcBobOrder)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_bob_order);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    if (IS_OPTION("vpp-rtgmc-search-prefilter") && ENABLE_VPP_FILTER_RTGMC_SEARCH_PREFILTER) {
+        vpp->rtgmc_search_prefilter.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{
+            "enable", "tr0", "rep0-thin", "rep0-pad",
+            "search_refine", "tv_range", "chroma_motion",
+            "dump_y4m", "dump_stage", "dump_max_frames"
+        };
+        const auto parse_int = [&](int *dst, const tstring& param_arg, const tstring& param_val) {
+            try {
+                size_t idx = 0;
+                *dst = std::stoi(param_val, &idx);
+                if (idx != param_val.length()) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+            } catch (...) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                return 1;
+            }
+            return 0;
+        };
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = tolowercase(param.substr(0, pos));
+                auto param_val = param.substr(pos + 1);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->rtgmc_search_prefilter.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("tr0")) {
+                    if (parse_int(&vpp->rtgmc_search_prefilter.tr0, param_arg, param_val)) {
+                        return 1;
+                    }
+                    if (vpp->rtgmc_search_prefilter.tr0 < -1 || vpp->rtgmc_search_prefilter.tr0 > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("tr0 should be -1, 0, 1, or 2."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("rep0-thin")) {
+                    if (parse_int(&vpp->rtgmc_search_prefilter.rep0Thin, param_arg, param_val)) {
+                        return 1;
+                    }
+                    if (!is_valid_rtgmc_rep_thin(vpp->rtgmc_search_prefilter.rep0Thin)) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("rep0-thin should be 0 - 7."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("rep0-pad")) {
+                    if (parse_int(&vpp->rtgmc_search_prefilter.rep0Pad, param_arg, param_val)) {
+                        return 1;
+                    }
+                    if (!is_valid_rtgmc_rep_pad(vpp->rtgmc_search_prefilter.rep0Pad)) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("rep0-pad should be 0 - 3."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("search_refine")) {
+                    if (parse_int(&vpp->rtgmc_search_prefilter.searchRefine, param_arg, param_val)) {
+                        return 1;
+                    }
+                    if (vpp->rtgmc_search_prefilter.searchRefine < 0 || vpp->rtgmc_search_prefilter.searchRefine > 3) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("search_refine should be 0 - 3."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("tv_range")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->rtgmc_search_prefilter.tvRange = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("chroma_motion")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->rtgmc_search_prefilter.chromaMotion = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("dump_y4m")) {
+                    vpp->rtgmc_search_prefilter.dumpY4m = param_val;
+                    continue;
+                }
+                if (param_arg == _T("dump_stage")) {
+                    auto stage = tolowercase(param_val);
+                    if (stage != _T("final") && stage != _T("search_refine") && stage != _T("finalyuv")
+                        && stage != _T("temporal_candidate") && stage != _T("deshimmered_search")
+                        && stage != _T("search_correction_delta")
+                        && stage != _T("positive_correction_gate") && stage != _T("negative_correction_gate")
+                        && stage != _T("corrected_search_base")
+                        && stage != _T("half_search_base") && stage != _T("half_search_smoothed")
+                        && stage != _T("search_smoothed3x3") && stage != _T("edge_softened_search")
+                        && stage != _T("softened_search_blend") && stage != _T("pre_stabilized_search")
+                        && stage != _T("stabilized_search")) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val,
+                            _T("dump_stage should be final, search_refine, finalyuv, temporal_candidate, deshimmered_search, search_correction_delta, positive_correction_gate, negative_correction_gate, corrected_search_base, half_search_base, half_search_smoothed, search_smoothed3x3, edge_softened_search, softened_search_blend, pre_stabilized_search, or stabilized_search."));
+                        return 1;
+                    }
+                    vpp->rtgmc_search_prefilter.dumpStage = stage;
+                    continue;
+                }
+                if (param_arg == _T("dump_max_frames")) {
+                    if (parse_int(&vpp->rtgmc_search_prefilter.dumpMaxFrames, param_arg, param_val)) {
+                        return 1;
+                    }
+                    if (vpp->rtgmc_search_prefilter.dumpMaxFrames < 0) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("dump_max_frames should be >= 0."));
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    if (IS_OPTION("vpp-rtgmc-edi") && ENABLE_VPP_FILTER_RTGMC_EDI) {
+        vpp->rtgmc_edi.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{ "enable", "mode", "nnsize", "nneurons", "ediqual", "chroma_edi" };
+        const auto parse_int = [&](int *dst, const tstring& param_arg, const tstring& param_val) {
+            try {
+                size_t idx = 0;
+                *dst = std::stoi(param_val, &idx);
+                if (idx != param_val.length()) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+            } catch (...) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                return 1;
+            }
+            return 0;
+        };
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = tolowercase(param.substr(0, pos));
+                auto param_val = param.substr(pos + 1);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->rtgmc_edi.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("mode")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_rtgmc_edi_mode, param_val.c_str(), &value)) {
+                        vpp->rtgmc_edi.mode = (VppRtgmcEdiMode)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_edi_mode);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("nnsize")) {
+                    if (parse_int(&vpp->rtgmc_edi.nnsize, param_arg, param_val)) return 1;
+                    if (vpp->rtgmc_edi.nnsize < 0 || vpp->rtgmc_edi.nnsize > 6) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("nnsize should be 0 - 6."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("nneurons")) {
+                    if (parse_int(&vpp->rtgmc_edi.nneurons, param_arg, param_val)) return 1;
+                    if (vpp->rtgmc_edi.nneurons < 0 || vpp->rtgmc_edi.nneurons > 4) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("nneurons should be 0 - 4."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("ediqual")) {
+                    if (parse_int(&vpp->rtgmc_edi.ediqual, param_arg, param_val)) return 1;
+                    if (vpp->rtgmc_edi.ediqual < 1 || vpp->rtgmc_edi.ediqual > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("ediqual should be 1 - 2."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("chroma_edi")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_rtgmc_chroma_edi_mode, param_val.c_str(), &value)) {
+                        vpp->rtgmc_edi.chromaEdi = (VppRtgmcChromaEdiMode)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_chroma_edi_mode);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    if (IS_OPTION("vpp-rtgmc-retouch") && ENABLE_VPP_FILTER_RTGMC_RETOUCH) {
+        vpp->rtgmc_retouch.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{ "enable", "sharpness", "limit", "smode", "slmode", "slrad", "sovs", "svthin", "sbb", "precise", "tr1", "tr2" };
+        const auto parse_int = [&](int *dst, const tstring& param_arg, const tstring& param_val) {
+            try {
+                size_t idx = 0;
+                *dst = std::stoi(param_val, &idx);
+                if (idx != param_val.length()) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+            } catch (...) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                return 1;
+            }
+            return 0;
+        };
+
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = tolowercase(param.substr(0, pos));
+                auto param_val = param.substr(pos + 1);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->rtgmc_retouch.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("sharpness")) {
+                    try {
+                        vpp->rtgmc_retouch.sharpness = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    if (vpp->rtgmc_retouch.sharpness < 0.0f || vpp->rtgmc_retouch.sharpness > 1.0f) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("sharpness should be 0.0 - 1.0."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("limit")) {
+                    try {
+                        vpp->rtgmc_retouch.limit = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    if (vpp->rtgmc_retouch.limit < 0.0f || vpp->rtgmc_retouch.limit > 1.0f) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("limit should be 0.0 - 1.0."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("smode")) {
+                    if (parse_int(&vpp->rtgmc_retouch.smode, param_arg, param_val)) return 1;
+                    if (vpp->rtgmc_retouch.smode < 0 || vpp->rtgmc_retouch.smode > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("smode should be 0 - 2."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("slmode")) {
+                    if (parse_int(&vpp->rtgmc_retouch.slmode, param_arg, param_val)) return 1;
+                    if (vpp->rtgmc_retouch.slmode < 0 || vpp->rtgmc_retouch.slmode > 4) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("slmode should be 0 - 4."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("slrad")) {
+                    if (parse_int(&vpp->rtgmc_retouch.slrad, param_arg, param_val)) return 1;
+                    if (vpp->rtgmc_retouch.slrad < 0 || vpp->rtgmc_retouch.slrad > 3) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("slrad should be 0 - 3."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("sovs")) {
+                    if (parse_int(&vpp->rtgmc_retouch.sovs, param_arg, param_val)) return 1;
+                    if (vpp->rtgmc_retouch.sovs < 0) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("sovs should be 0 or greater."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("svthin")) {
+                    try {
+                        vpp->rtgmc_retouch.svthin = std::stof(param_val);
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    if (vpp->rtgmc_retouch.svthin < 0.0f || vpp->rtgmc_retouch.svthin > 1.0f) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("svthin should be 0.0 - 1.0."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("sbb")) {
+                    if (parse_int(&vpp->rtgmc_retouch.sbb, param_arg, param_val)) return 1;
+                    if (vpp->rtgmc_retouch.sbb < 0 || vpp->rtgmc_retouch.sbb > 3) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("sbb should be 0 - 3."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("precise")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        vpp->rtgmc_retouch.precise = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("tr1")) {
+                    if (parse_int(&vpp->rtgmc_retouch.tr1, param_arg, param_val)) return 1;
+                    if (vpp->rtgmc_retouch.tr1 < 0 || vpp->rtgmc_retouch.tr1 > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("tr1 should be 0 - 2."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("tr2")) {
+                    if (parse_int(&vpp->rtgmc_retouch.tr2, param_arg, param_val)) return 1;
+                    if (vpp->rtgmc_retouch.tr2 < 0 || vpp->rtgmc_retouch.tr2 > 5) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("tr2 should be 0 - 5."));
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    if (IS_OPTION("vpp-rtgmc-shimmer-repair") && ENABLE_VPP_FILTER_RTGMC_SHIMMER_REPAIR) {
+        VppRtgmcShimmerRepair parsedShimmerRepair;
+        parsedShimmerRepair.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            vpp->rtgmc_shimmer_repair = parsedShimmerRepair;
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{
+            "enable", "stage", "mode", "rep-thin", "rep-pad", "rep_chroma"
+        };
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = tolowercase(param.substr(0, pos));
+                auto param_val = param.substr(pos + 1);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedShimmerRepair.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("stage")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_rtgmc_shimmer_repair_stage, param_val.c_str(), &value)) {
+                        parsedShimmerRepair.stage = (VppRtgmcShimmerRepairStage)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_shimmer_repair_stage);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("mode")) {
+                    if (tolowercase(param_val) != _T("passthrough")) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("mode should be passthrough in Step2."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("rep-thin")) {
+                    try {
+                        size_t idx = 0;
+                        parsedShimmerRepair.repThin = std::stoi(param_val, &idx);
+                        if (idx != param_val.length()) {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    if (!is_valid_rtgmc_rep_thin(parsedShimmerRepair.repThin)) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("rep-thin should be 0 - 7."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("rep-pad")) {
+                    try {
+                        size_t idx = 0;
+                        parsedShimmerRepair.repPad = std::stoi(param_val, &idx);
+                        if (idx != param_val.length()) {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                            return 1;
+                        }
+                    } catch (...) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    if (!is_valid_rtgmc_rep_pad(parsedShimmerRepair.repPad)) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("rep-pad should be 0 - 3."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("rep_chroma")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedShimmerRepair.repChroma = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        if (parsedShimmerRepair.stage == VppRtgmcShimmerRepairStage::Rep1) {
+            vpp->rtgmc_shimmer_repairRep1 = parsedShimmerRepair;
+        } else {
+            vpp->rtgmc_shimmer_repairRep2 = parsedShimmerRepair;
+        }
+        return 0;
+    }
+
+    if (IS_OPTION("vpp-rtgmc-primitive") && ENABLE_VPP_FILTER_RTGMC_PRIMITIVE) {
+        VppRtgmcPrimitive parsedPrimitive;
+        parsedPrimitive.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            vpp->rtgmc_primitive = parsedPrimitive;
+            return 0;
+        }
+        i++;
+
+        const auto paramList = std::vector<std::string>{ "enable", "op", "ref", "mode", "weight", "chroma" };
+        const auto parse_int = [&](int *dst, const tstring& param_arg, const tstring& param_val) {
+            try {
+                size_t idx = 0;
+                *dst = std::stoi(param_val, &idx);
+                if (idx != param_val.length()) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+            } catch (...) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                return 1;
+            }
+            return 0;
+        };
+        const auto parse_float = [&](float *dst, const tstring& param_arg, const tstring& param_val) {
+            try {
+                size_t idx = 0;
+                *dst = std::stof(param_val, &idx);
+                if (idx != param_val.length() || !std::isfinite(*dst)) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+            } catch (...) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                return 1;
+            }
+            return 0;
+        };
+
+        for (const auto& param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = tolowercase(param.substr(0, pos));
+                auto param_val = param.substr(pos + 1);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedPrimitive.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("op")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_rtgmc_primitive_op, param_val.c_str(), &value)) {
+                        parsedPrimitive.op = (VppRtgmcPrimitiveOp)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_primitive_op);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("ref")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_rtgmc_primitive_ref, param_val.c_str(), &value)) {
+                        parsedPrimitive.ref = (VppRtgmcPrimitiveRef)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_rtgmc_primitive_ref);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("mode")) {
+                    if (parse_int(&parsedPrimitive.mode, param_arg, param_val)) return 1;
+                    continue;
+                }
+                if (param_arg == _T("weight")) {
+                    if (parse_float(&parsedPrimitive.weight, param_arg, param_val)) return 1;
+                    continue;
+                }
+                if (param_arg == _T("chroma")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedPrimitive.chroma = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        if (parsedPrimitive.op == VppRtgmcPrimitiveOp::Merge
+            && (parsedPrimitive.weight < 0.0f || parsedPrimitive.weight > 1.0f)) {
+            print_cmd_error_invalid_value(tstring(option_name) + _T(" weight="), strsprintf(_T("%.3f"), parsedPrimitive.weight),
+                _T("merge weight should be 0.0 - 1.0."));
+            return 1;
+        }
+        if (parsedPrimitive.op == VppRtgmcPrimitiveOp::AddWeightedDiff
+            && (parsedPrimitive.weight < -1.0f || parsedPrimitive.weight > 1.0f)) {
+            print_cmd_error_invalid_value(tstring(option_name) + _T(" weight="), strsprintf(_T("%.3f"), parsedPrimitive.weight),
+                _T("addweighteddiff weight should be -1.0 - 1.0."));
+            return 1;
+        }
+        vpp->rtgmc_primitive = parsedPrimitive;
+        return 0;
+    }
+
 
     if (IS_OPTION("vpp-decomb") && ENABLE_VPP_FILTER_DECOMB) {
         vpp->decomb.enable = true;
@@ -3482,6 +5478,415 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                 return 1;
             }
         }
+        return 0;
+    }
+    if (IS_OPTION("vpp-degrain") && ENABLE_VPP_FILTER_DEGRAIN) {
+        VppDegrain parsedDegrain;
+        parsedDegrain.enable = true;
+        const auto apply_auto_preset = [](VppDegrain& target) {
+            target.preset = VppDegrainPreset::Auto;
+            target.mode = VppDegrainMode::Degrain;
+            target.stage = VppDegrainStage::TR2;
+            target.delta = 2;
+            target.search = 4;
+            target.thsad = 300;
+            target.thsadc = 150;
+            target.thscd1 = 1600;
+            target.thscd2 = 130;
+            target.pel = 1;
+            target.blksize = 16;
+            target.overlap = 8;
+            target.levels = 2;
+            target.chroma = true;
+            target.binomial = 0;
+            target.tvRange = true;
+        };
+        const auto apply_tr = [&](VppDegrain& target, const int tr, const tstring& param_arg, const tstring& param_val) {
+            if (tr != 1 && tr != 2) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("tr should be 1 or 2."));
+                return 1;
+            }
+            target.mode = VppDegrainMode::Degrain;
+            target.stage = (tr == 1) ? VppDegrainStage::TR1 : VppDegrainStage::TR2;
+            target.delta = tr;
+            return 0;
+        };
+        const auto set_degrain = [&](const VppDegrain& value) {
+            if (value.mode == VppDegrainMode::Analyze) {
+                auto parsed = value;
+                if (parsed.stage == VppDegrainStage::Auto) {
+                    parsed.stage = VppDegrainStage::TR1;
+                }
+                vpp->degrainAnalyze = parsed;
+            } else if (value.mode == VppDegrainMode::Degrain && value.stage == VppDegrainStage::TR1) {
+                vpp->degrainTR1 = value;
+            } else if (value.mode == VppDegrainMode::Degrain && value.stage == VppDegrainStage::TR2) {
+                vpp->degrainTR2 = value;
+            } else {
+                vpp->degrain = value;
+            }
+        };
+        int parsedTr = 0;
+        bool parsedOverlap = false;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            set_degrain(parsedDegrain);
+            return 0;
+        }
+        i++;
+        const auto paramList = std::vector<std::string>{
+            "enable", "preset", "mode", "stage", "tr", "blksize", "search", "thsad", "thsadc", "thscd1", "thscd2", "pel", "levels", "overlap", "delta", "tr0", "rep0", "search_refine",
+            "subpelinterp", "searchparam", "pelsearch",
+            "truemotion", "lambda", "lsad", "pnew", "plevel", "globalmotion", "dct", "useflag",
+            "mv_spatial_refine", "chroma", "binomial", "tv_range"
+        };
+        const auto parse_int = [&](int *dst, const tstring& param_arg, const tstring& param_val) {
+            try {
+                size_t idx = 0;
+                *dst = std::stoi(param_val, &idx);
+                if (idx != param_val.length()) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+            } catch (...) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                return 1;
+            }
+            return 0;
+        };
+        for (const auto &param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos != std::string::npos) {
+                auto param_arg = tolowercase(param.substr(0, pos));
+                auto param_val = param.substr(pos + 1);
+                if (param_arg == _T("enable")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedDegrain.enable = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("preset")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_degrain_preset, param_val.c_str(), &value)) {
+                        parsedDegrain.preset = (VppDegrainPreset)value;
+                        if (parsedDegrain.preset == VppDegrainPreset::Auto) {
+                            apply_auto_preset(parsedDegrain);
+                        }
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_degrain_preset);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("mode")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_degrain_mode, param_val.c_str(), &value)) {
+                        parsedDegrain.mode = (VppDegrainMode)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_degrain_mode);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("stage")) {
+                    int value = 0;
+                    if (get_list_value(list_vpp_degrain_stage, param_val.c_str(), &value)) {
+                        parsedDegrain.stage = (VppDegrainStage)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_degrain_stage);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("tr")) {
+                    int value = 0;
+                    if (parse_int(&value, param_arg, param_val)) {
+                        return 1;
+                    }
+                    if (apply_tr(parsedDegrain, value, param_arg, param_val)) {
+                        return 1;
+                    }
+                    parsedTr = value;
+                    continue;
+                }
+                if (param_arg == _T("blksize")) {
+                    if (parse_int(&parsedDegrain.blksize, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("search")) {
+                    if (parse_int(&parsedDegrain.search, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thsad")) {
+                    if (parse_int(&parsedDegrain.thsad, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thsadc")) {
+                    if (parse_int(&parsedDegrain.thsadc, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thscd1")) {
+                    if (parse_int(&parsedDegrain.thscd1, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("thscd2")) {
+                    if (parse_int(&parsedDegrain.thscd2, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("pel")) {
+                    if (parse_int(&parsedDegrain.pel, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("levels")) {
+                    if (parse_int(&parsedDegrain.levels, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("overlap")) {
+                    if (parse_int(&parsedDegrain.overlap, param_arg, param_val)) {
+                        return 1;
+                    }
+                    parsedOverlap = true;
+                    continue;
+                }
+                if (param_arg == _T("delta")) {
+                    if (parse_int(&parsedDegrain.delta, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("tr0")) {
+                    if (parse_int(&parsedDegrain.tr0, param_arg, param_val)) {
+                        return 1;
+                    }
+                    if (parsedDegrain.tr0 < 0 || parsedDegrain.tr0 > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("tr0 should be 0, 1, or 2."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("rep0")) {
+                    if (parse_int(&parsedDegrain.rep0, param_arg, param_val)) {
+                        return 1;
+                    }
+                    if (parsedDegrain.rep0 < 0 || parsedDegrain.rep0 > 7) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("rep0 should be 0 - 7."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("search_refine")) {
+                    if (parse_int(&parsedDegrain.searchRefine, param_arg, param_val)) {
+                        return 1;
+                    }
+                    if (parsedDegrain.searchRefine < 0 || parsedDegrain.searchRefine > 3) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("search_refine should be 0 - 3."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("subpelinterp")) {
+                    if (parse_int(&parsedDegrain.subpelInterp, param_arg, param_val)) {
+                        return 1;
+                    }
+                    if (parsedDegrain.subpelInterp < 0 || parsedDegrain.subpelInterp > 2) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("subpelinterp should be 0, 1, or 2."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("searchparam")) {
+                    if (parse_int(&parsedDegrain.searchParam, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("pelsearch")) {
+                    if (parse_int(&parsedDegrain.pelSearch, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("truemotion")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedDegrain.trueMotion = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("lambda")) {
+                    if (parse_int(&parsedDegrain.lambda, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("lsad")) {
+                    if (parse_int(&parsedDegrain.lsad, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("pnew")) {
+                    if (parse_int(&parsedDegrain.pnew, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("plevel")) {
+                    if (parse_int(&parsedDegrain.plevel, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("globalmotion")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedDegrain.globalMotion = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("chroma")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedDegrain.chroma = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("binomial")) {
+                    if (tolowercase(param_val) == _T("auto")) {
+                        parsedDegrain.binomial = -1;
+                    } else {
+                        bool b = false;
+                        if (!cmd_string_to_bool(&b, param_val)) {
+                            parsedDegrain.binomial = b ? 1 : 0;
+                        } else {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("binomial should be true, false, or auto."));
+                            return 1;
+                        }
+                    }
+                    continue;
+                }
+                if (param_arg == _T("mv_spatial_refine")) {
+                    if (tolowercase(param_val) == _T("auto")) {
+                        parsedDegrain.mvSpatialRefine = -1;
+                    } else if (parse_int(&parsedDegrain.mvSpatialRefine, param_arg, param_val)) {
+                        return 1;
+                    }
+                    if (parsedDegrain.mvSpatialRefine < -1) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("mv_spatial_refine should be auto, -1, or greater."));
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("tv_range")) {
+                    bool b = false;
+                    if (!cmd_string_to_bool(&b, param_val)) {
+                        parsedDegrain.tvRange = b;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("dct")) {
+                    if (parse_int(&parsedDegrain.dct, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                if (param_arg == _T("useflag")) {
+                    if (parse_int(&parsedDegrain.useFlag, param_arg, param_val)) {
+                        return 1;
+                    }
+                    continue;
+                }
+                print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+                return 1;
+            } else {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+        }
+        if (parsedTr > 0) {
+            const auto expectedStage = (parsedTr == 1) ? VppDegrainStage::TR1 : VppDegrainStage::TR2;
+            if (parsedDegrain.mode != VppDegrainMode::Degrain
+                || parsedDegrain.stage != expectedStage
+                || parsedDegrain.delta != parsedTr) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" tr="), strsprintf(_T("%d"), parsedTr),
+                    _T("tr requires matching mode=degrain, stage, and delta."));
+                return 1;
+            }
+        }
+        if (parsedDegrain.preset == VppDegrainPreset::Auto) {
+            if (!parsedOverlap) {
+                parsedDegrain.overlap = parsedDegrain.blksize / 2;
+            }
+            const auto print_auto_error = [&](const TCHAR *message) {
+                print_cmd_error_invalid_value(tstring(option_name) + _T(" preset=auto"), _T(""), message);
+            };
+            if (parsedDegrain.mode != VppDegrainMode::Degrain
+                || (parsedDegrain.stage != VppDegrainStage::TR1 && parsedDegrain.stage != VppDegrainStage::TR2)
+                || (parsedDegrain.delta != 1 && parsedDegrain.delta != 2)) {
+                print_auto_error(_T("Auto preset supports only tr=1/2 degrain output."));
+                return 1;
+            }
+            if ((parsedDegrain.stage == VppDegrainStage::TR1) != (parsedDegrain.delta == 1)) {
+                print_auto_error(_T("Auto preset requires stage and delta to match tr=1/2."));
+                return 1;
+            }
+            if (parsedDegrain.search != 4) {
+                print_auto_error(_T("Auto preset requires search=4."));
+                return 1;
+            }
+            if (parsedDegrain.levels != 2) {
+                print_auto_error(_T("Auto preset requires levels=2."));
+                return 1;
+            }
+            if (parsedDegrain.blksize != 8 && parsedDegrain.blksize != 16 && parsedDegrain.blksize != 32) {
+                print_auto_error(_T("Auto preset supports blksize=8, 16, or 32."));
+                return 1;
+            }
+            if (parsedDegrain.overlap != parsedDegrain.blksize / 2) {
+                print_auto_error(_T("Auto preset requires overlap=blksize/2."));
+                return 1;
+            }
+            if (parsedDegrain.pel != 1 && parsedDegrain.pel != 2) {
+                print_auto_error(_T("Auto preset supports pel=1 or 2."));
+                return 1;
+            }
+            if (!parsedDegrain.tvRange) {
+                print_auto_error(_T("Auto preset requires tv_range=true for the search reference."));
+                return 1;
+            }
+        }
+        set_degrain(parsedDegrain);
         return 0;
     }
     if (IS_OPTION("vpp-msmooth") && ENABLE_VPP_FILTER_MSMOOTH) {
@@ -7703,6 +10108,11 @@ int parse_one_ctrl_option(const TCHAR *option_name, const TCHAR *strInput[], int
         ctrl->perfMonitorInterval = std::max(50, v);
         return 0;
     }
+    if (IS_OPTION("python")) {
+        i++;
+        ctrl->pythonPath = strInput[i];
+        return 0;
+    }
     if (IS_OPTION("parent-pid")) {
         i++;
         try {
@@ -7828,6 +10238,16 @@ int parse_one_ctrl_option(const TCHAR *option_name, const TCHAR *strInput[], int
             return 1;
         }
         ctrl->openclBuildThreads = value;
+        return 0;
+    }
+    if (IS_OPTION("cl-perf-dump")) {
+        i++;
+        ctrl->clPerfDumpDir = strInput[i];
+        return 0;
+    }
+    if (IS_OPTION("ocloc-path")) {
+        i++;
+        ctrl->clPerfOclocPath = strInput[i];
         return 0;
     }
     if (IS_OPTION("parallel") && ENABLE_PARALLEL_ENC) {
@@ -8025,6 +10445,9 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
     }
     if (!tmp.str().empty()) {
         cmd << _T(" --vpp-order ") << tmp.str().substr(1);
+    }
+    if (param->deintCsp == VppDeintCsp::Output) {
+        cmd << _T(" --vpp-deint-csp output");
     }
 
     if (!isNvvfxResizeFiter(param->resize_algo) && !isNgxResizeFiter(param->resize_algo) && !isQSVMFXResizeFiter(param->resize_algo)) {
@@ -8245,12 +10668,13 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
         }
         if (param->nnedi.enable || save_disabled_prm) {
             ADD_LST(_T("field"), nnedi.field, list_vpp_nnedi_field);
-            ADD_LST(_T("nns"), nnedi.nns, list_vpp_nnedi_nns);
             ADD_LST(_T("nsize"), nnedi.nsize, list_vpp_nnedi_nsize);
+            ADD_LST(_T("nns"), nnedi.nns, list_vpp_nnedi_nns);
             ADD_LST(_T("quality"), nnedi.quality, list_vpp_nnedi_quality);
-            ADD_LST(_T("prec"), nnedi.precision, list_vpp_fp_prec);
-            ADD_LST(_T("prescreen"), nnedi.pre_screen, list_vpp_nnedi_pre_screen);
+            ADD_NUM(_T("prescreen"), nnedi.prescreen);
             ADD_LST(_T("errortype"), nnedi.errortype, list_vpp_nnedi_error_type);
+            ADD_NUM(_T("clamp"), nnedi.clamp);
+            ADD_BOOL(_T("double_height"), nnedi.doubleHeight);
             ADD_PATH(_T("weightfile"), nnedi.weightfile.c_str());
         }
         if (!tmp.str().empty()) {
@@ -8296,6 +10720,187 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
             cmd << _T(" --vpp-bwdif ") << tmp.str().substr(1);
         } else if (param->bwdif.enable) {
             cmd << _T(" --vpp-bwdif");
+        }
+    }
+    if (param->rtgmc != defaultPrm->rtgmc) {
+        tmp.str(tstring());
+        if (!param->rtgmc.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (param->rtgmc.enable || save_disabled_prm) {
+            ADD_LST(_T("preset"), rtgmc.preset, list_vpp_rtgmc_preset);
+            ADD_LST(_T("tuning"), rtgmc.tuning, list_vpp_rtgmc_tuning);
+            ADD_BOOL(_T("border"), rtgmc.border);
+            ADD_NUM(_T("lossless"), rtgmc.lossless);
+            ADD_NUM(_T("input_type"), rtgmc.inputType);
+            ADD_FLOAT(_T("prog_sad_mask"), rtgmc.progSADMask, 3);
+            ADD_FLOAT(_T("prog_sad_mask_gamma"), rtgmc.progSADMaskGamma, 3);
+            ADD_NUM(_T("source_match"), rtgmc.sourceMatch);
+            ADD_NUM(_T("match_tr1"), rtgmc.matchTR1);
+            ADD_NUM(_T("match_tr2"), rtgmc.matchTR2);
+            ADD_LST(_T("match_edi"), rtgmc.matchEdi.mode, list_vpp_rtgmc_edi_mode);
+            ADD_FLOAT(_T("match_enhance"), rtgmc.matchEnhance, 3);
+            ADD_LST(_T("order"), rtgmc.bob.order, list_vpp_rtgmc_bob_order);
+            ADD_NUM(_T("tr0"), rtgmc.searchPrefilter.tr0);
+            ADD_NUM(_T("rep0-thin"), rtgmc.searchPrefilter.rep0Thin);
+            ADD_NUM(_T("rep0-pad"), rtgmc.searchPrefilter.rep0Pad);
+            ADD_NUM(_T("search_refine"), rtgmc.searchPrefilter.searchRefine);
+            ADD_BOOL(_T("tv_range"), rtgmc.searchPrefilter.tvRange);
+            ADD_BOOL(_T("chroma_motion"), rtgmc.searchPrefilter.chromaMotion);
+            ADD_NUM(_T("mv_spatial_refine"), rtgmc.mvSpatialRefine);
+            ADD_NUM(_T("noise_process"), rtgmc.noise.noiseProcess);
+            ADD_FLOAT(_T("ezdenoise"), rtgmc.noise.ezDenoise, 3);
+            ADD_FLOAT(_T("ezkeepgrain"), rtgmc.noise.ezKeepGrain, 3);
+            ADD_LST(_T("denoiser"), rtgmc.noise.denoiser, list_vpp_rtgmc_noise_denoiser);
+            ADD_LST(_T("noise_deint"), rtgmc.noise.noiseDeint, list_vpp_rtgmc_noise_deint);
+            ADD_FLOAT(_T("sigma"), rtgmc.noise.sigma, 3);
+            ADD_BOOL(_T("chroma_noise"), rtgmc.noise.chromaNoise);
+            ADD_BOOL(_T("denoise_mc"), rtgmc.noise.denoiseMC);
+            ADD_NUM(_T("noise_tr"), rtgmc.noise.noiseTR);
+            ADD_FLOAT(_T("grain_restore"), rtgmc.noise.grainRestore, 3);
+            ADD_FLOAT(_T("noise_restore"), rtgmc.noise.noiseRestore, 3);
+            ADD_LST(_T("edi"), rtgmc.edi.mode, list_vpp_rtgmc_edi_mode);
+            ADD_NUM(_T("nnsize"), rtgmc.edi.nnsize);
+            ADD_NUM(_T("nneurons"), rtgmc.edi.nneurons);
+            ADD_NUM(_T("ediqual"), rtgmc.edi.ediqual);
+            ADD_LST(_T("chroma_edi"), rtgmc.edi.chromaEdi, list_vpp_rtgmc_chroma_edi_mode);
+            ADD_NUM(_T("blksize"), rtgmc.tr1.blksize);
+            ADD_NUM(_T("search"), rtgmc.tr1.search);
+            ADD_NUM(_T("thsad1"), rtgmc.tr1.thsad);
+            ADD_NUM(_T("thsad2"), rtgmc.tr2.thsad);
+            ADD_NUM(_T("thscd1"), rtgmc.tr1.thscd1);
+            ADD_NUM(_T("thscd2"), rtgmc.tr1.thscd2);
+            ADD_NUM(_T("pel"), rtgmc.tr1.pel);
+            ADD_NUM(_T("levels"), rtgmc.tr1.levels);
+            ADD_NUM(_T("overlap"), rtgmc.tr1.overlap);
+            ADD_NUM(_T("lambda"), rtgmc.analyze.lambda);
+            ADD_NUM(_T("lsad"), rtgmc.analyze.lsad);
+            ADD_NUM(_T("pnew"), rtgmc.analyze.pnew);
+            ADD_NUM(_T("plevel"), rtgmc.analyze.plevel);
+            ADD_BOOL(_T("globalmotion"), rtgmc.analyze.globalMotion);
+            ADD_NUM(_T("searchparam"), rtgmc.analyze.searchParam);
+            ADD_NUM(_T("pelsearch"), rtgmc.analyze.pelSearch);
+            ADD_NUM(_T("delta_analyze"), rtgmc.analyze.delta);
+            ADD_NUM(_T("delta_tr1"), rtgmc.tr1.delta);
+            ADD_NUM(_T("delta_tr2"), rtgmc.tr2.delta);
+            ADD_NUM(_T("useflag"), rtgmc.tr2.useFlag);
+            ADD_NUM(_T("rep1-thin"), rtgmc.rep1.repThin);
+            ADD_NUM(_T("rep1-pad"), rtgmc.rep1.repPad);
+            ADD_FLOAT(_T("sharpness"), rtgmc.retouch.sharpness, 3);
+            ADD_FLOAT(_T("limit"), rtgmc.retouch.limit, 3);
+            ADD_NUM(_T("smode"), rtgmc.retouch.smode);
+            ADD_NUM(_T("slmode"), rtgmc.retouch.slmode);
+            ADD_NUM(_T("slrad"), rtgmc.retouch.slrad);
+            ADD_NUM(_T("sovs"), rtgmc.retouch.sovs);
+            ADD_FLOAT(_T("svthin"), rtgmc.retouch.svthin, 3);
+            ADD_NUM(_T("sbb"), rtgmc.retouch.sbb);
+            ADD_BOOL(_T("precise"), rtgmc.retouch.precise);
+            ADD_NUM(_T("rep2-thin"), rtgmc.rep2.repThin);
+            ADD_NUM(_T("rep2-pad"), rtgmc.rep2.repPad);
+            ADD_BOOL(_T("rep_chroma"), rtgmc.rep1.repChroma);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-rtgmc ") << tmp.str().substr(1);
+        } else if (param->rtgmc.enable) {
+            cmd << _T(" --vpp-rtgmc");
+        }
+    }
+    if (param->kfm != defaultPrm->kfm) {
+        tmp.str(tstring());
+        if (!param->kfm.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (param->kfm.enable || save_disabled_prm) {
+            ADD_LST(_T("mode"), kfm.mode, list_vpp_kfm_mode);
+            ADD_LST(_T("preset"), kfm.preset, list_vpp_rtgmc_preset);
+            ADD_LST(_T("timing"), kfm.timing, list_vpp_kfm_timing);
+            ADD_NUM(_T("past_cycles"), kfm.pastCycles);
+            ADD_FLOAT(_T("thswitch"), kfm.thswitch, 3);
+            ADD_BOOL(_T("ucf"), kfm.ucf);
+            ADD_BOOL(_T("nr"), kfm.nr);
+            ADD_BOOL(_T("is120"), kfm.is120);
+            ADD_BOOL(_T("debug"), kfm.debug);
+            ADD_LST(_T("debug_stage"), kfm.debugStage, list_vpp_kfm_debug_stage);
+            ADD_PATH(_T("timecode"), kfm.timecode.c_str());
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-kfm ") << tmp.str().substr(1);
+        } else if (param->kfm.enable) {
+            cmd << _T(" --vpp-kfm");
+        }
+    }
+    if (param->rtgmc_bob != defaultPrm->rtgmc_bob) {
+        tmp.str(tstring());
+        if (!param->rtgmc_bob.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (param->rtgmc_bob.enable || save_disabled_prm) {
+            ADD_LST(_T("order"), rtgmc_bob.order, list_vpp_rtgmc_bob_order);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-rtgmc-bob ") << tmp.str().substr(1);
+        } else if (param->rtgmc_bob.enable) {
+            cmd << _T(" --vpp-rtgmc-bob");
+        }
+    }
+    if (param->rtgmc_search_prefilter != defaultPrm->rtgmc_search_prefilter) {
+        tmp.str(tstring());
+        if (!param->rtgmc_search_prefilter.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (param->rtgmc_search_prefilter.enable || save_disabled_prm) {
+            ADD_NUM(_T("tr0"), rtgmc_search_prefilter.tr0);
+            ADD_NUM(_T("rep0-thin"), rtgmc_search_prefilter.rep0Thin);
+            ADD_NUM(_T("rep0-pad"), rtgmc_search_prefilter.rep0Pad);
+            ADD_NUM(_T("search_refine"), rtgmc_search_prefilter.searchRefine);
+            ADD_BOOL(_T("tv_range"), rtgmc_search_prefilter.tvRange);
+            ADD_BOOL(_T("chroma_motion"), rtgmc_search_prefilter.chromaMotion);
+            ADD_STR(_T("dump_y4m"), rtgmc_search_prefilter.dumpY4m);
+            ADD_STR(_T("dump_stage"), rtgmc_search_prefilter.dumpStage);
+            ADD_NUM(_T("dump_max_frames"), rtgmc_search_prefilter.dumpMaxFrames);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-rtgmc-search-prefilter ") << tmp.str().substr(1);
+        } else if (param->rtgmc_search_prefilter.enable) {
+            cmd << _T(" --vpp-rtgmc-search-prefilter");
+        }
+    }
+    if (param->rtgmc_edi != defaultPrm->rtgmc_edi) {
+        tmp.str(tstring());
+        if (!param->rtgmc_edi.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (param->rtgmc_edi.enable || save_disabled_prm) {
+            ADD_LST(_T("mode"), rtgmc_edi.mode, list_vpp_rtgmc_edi_mode);
+            ADD_NUM(_T("nnsize"), rtgmc_edi.nnsize);
+            ADD_NUM(_T("nneurons"), rtgmc_edi.nneurons);
+            ADD_NUM(_T("ediqual"), rtgmc_edi.ediqual);
+            ADD_LST(_T("chroma_edi"), rtgmc_edi.chromaEdi, list_vpp_rtgmc_chroma_edi_mode);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-rtgmc-edi ") << tmp.str().substr(1);
+        } else if (param->rtgmc_edi.enable) {
+            cmd << _T(" --vpp-rtgmc-edi");
+        }
+    }
+    if (param->maa != defaultPrm->maa) {
+        tmp.str(tstring());
+        if (!param->maa.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (param->maa.enable || save_disabled_prm) {
+            ADD_FLOAT(_T("ss"), maa.ss, 2);
+            ADD_NUM(_T("aa"), maa.aa);
+            ADD_NUM(_T("aac"), maa.aac);
+            ADD_BOOL(_T("mask"), maa.mask);
+            ADD_NUM(_T("mthresh"), maa.mthresh);
+            ADD_BOOL(_T("chroma"), maa.chroma);
+            ADD_NUM(_T("show"), maa.show);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-maa ") << tmp.str().substr(1);
+        } else if (param->maa.enable) {
+            cmd << _T(" --vpp-maa");
         }
     }
     if (param->decomb != defaultPrm->decomb) {
@@ -8567,6 +11172,123 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
             cmd << _T(" --vpp-fft3d ") << tmp.str().substr(1);
         } else if (param->fft3d.enable) {
             cmd << _T(" --vpp-fft3d");
+        }
+    }
+    const auto add_degrain_cmd = [&](const VppDegrain& degrain, const VppDegrain& defaultDegrain) {
+        tmp.str(tstring());
+        if (!degrain.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (degrain.enable || save_disabled_prm) {
+            if (degrain.preset != defaultDegrain.preset) tmp << _T(",preset=") << get_chr_from_value(list_vpp_degrain_preset, (int)degrain.preset);
+            if (degrain.mode != defaultDegrain.mode) tmp << _T(",mode=") << get_chr_from_value(list_vpp_degrain_mode, (int)degrain.mode);
+            if (degrain.stage != defaultDegrain.stage) tmp << _T(",stage=") << get_chr_from_value(list_vpp_degrain_stage, (int)degrain.stage);
+            if (degrain.blksize != defaultDegrain.blksize) tmp << _T(",blksize=") << degrain.blksize;
+            if (degrain.search != defaultDegrain.search) tmp << _T(",search=") << degrain.search;
+            if (degrain.thsad != defaultDegrain.thsad) tmp << _T(",thsad=") << degrain.thsad;
+            if (degrain.thsadc != defaultDegrain.thsadc) tmp << _T(",thsadc=") << degrain.thsadc;
+            if (degrain.thscd1 != defaultDegrain.thscd1) tmp << _T(",thscd1=") << degrain.thscd1;
+            if (degrain.thscd2 != defaultDegrain.thscd2) tmp << _T(",thscd2=") << degrain.thscd2;
+            if (degrain.pel != defaultDegrain.pel) tmp << _T(",pel=") << degrain.pel;
+            if (degrain.subpelInterp != defaultDegrain.subpelInterp) tmp << _T(",subpelinterp=") << degrain.subpelInterp;
+            if (degrain.levels != defaultDegrain.levels) tmp << _T(",levels=") << degrain.levels;
+            if (degrain.overlap != defaultDegrain.overlap) tmp << _T(",overlap=") << degrain.overlap;
+            if (degrain.delta != defaultDegrain.delta) tmp << _T(",delta=") << degrain.delta;
+            if (degrain.tr0 != defaultDegrain.tr0) tmp << _T(",tr0=") << degrain.tr0;
+            if (degrain.rep0 != defaultDegrain.rep0) tmp << _T(",rep0=") << degrain.rep0;
+            if (degrain.searchRefine != defaultDegrain.searchRefine) tmp << _T(",search_refine=") << degrain.searchRefine;
+            if (degrain.searchParam != defaultDegrain.searchParam) tmp << _T(",searchparam=") << degrain.searchParam;
+            if (degrain.pelSearch != defaultDegrain.pelSearch) tmp << _T(",pelsearch=") << degrain.pelSearch;
+            if (degrain.trueMotion != defaultDegrain.trueMotion) tmp << _T(",truemotion=") << (degrain.trueMotion ? _T("true") : _T("false"));
+            if (degrain.lambda != defaultDegrain.lambda) tmp << _T(",lambda=") << degrain.lambda;
+            if (degrain.lsad != defaultDegrain.lsad) tmp << _T(",lsad=") << degrain.lsad;
+            if (degrain.pnew != defaultDegrain.pnew) tmp << _T(",pnew=") << degrain.pnew;
+            if (degrain.plevel != defaultDegrain.plevel) tmp << _T(",plevel=") << degrain.plevel;
+            if (degrain.globalMotion != defaultDegrain.globalMotion) tmp << _T(",globalmotion=") << (degrain.globalMotion ? _T("true") : _T("false"));
+            if (degrain.dct != defaultDegrain.dct) tmp << _T(",dct=") << degrain.dct;
+            if (degrain.useFlag != defaultDegrain.useFlag) tmp << _T(",useflag=") << degrain.useFlag;
+            if (degrain.mvSpatialRefine != defaultDegrain.mvSpatialRefine) tmp << _T(",mv_spatial_refine=") << degrain.mvSpatialRefine;
+            if (degrain.chroma != defaultDegrain.chroma) tmp << _T(",chroma=") << (degrain.chroma ? _T("true") : _T("false"));
+            if (degrain.binomial != defaultDegrain.binomial) {
+                tmp << _T(",binomial=") << (degrain.binomial < 0 ? _T("auto") : (degrain.binomial ? _T("true") : _T("false")));
+            }
+            if (degrain.tvRange != defaultDegrain.tvRange) tmp << _T(",tv_range=") << (degrain.tvRange ? _T("true") : _T("false"));
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-degrain ") << tmp.str().substr(1);
+        } else if (degrain.enable) {
+            cmd << _T(" --vpp-degrain");
+        }
+    };
+    if (param->degrain != defaultPrm->degrain) {
+        add_degrain_cmd(param->degrain, defaultPrm->degrain);
+    }
+    if (param->degrainAnalyze != defaultPrm->degrainAnalyze) {
+        add_degrain_cmd(param->degrainAnalyze, defaultPrm->degrainAnalyze);
+    }
+    if (param->degrainTR1 != defaultPrm->degrainTR1) {
+        add_degrain_cmd(param->degrainTR1, defaultPrm->degrainTR1);
+    }
+    if (param->degrainTR2 != defaultPrm->degrainTR2) {
+        add_degrain_cmd(param->degrainTR2, defaultPrm->degrainTR2);
+    }
+    if (param->rtgmc_retouch != defaultPrm->rtgmc_retouch) {
+        tmp.str(tstring());
+        if (!param->rtgmc_retouch.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (param->rtgmc_retouch.enable || save_disabled_prm) {
+            ADD_FLOAT(_T("sharpness"), rtgmc_retouch.sharpness, 3);
+            ADD_FLOAT(_T("limit"), rtgmc_retouch.limit, 3);
+            ADD_NUM(_T("smode"), rtgmc_retouch.smode);
+            ADD_NUM(_T("slmode"), rtgmc_retouch.slmode);
+            ADD_NUM(_T("slrad"), rtgmc_retouch.slrad);
+            ADD_NUM(_T("sovs"), rtgmc_retouch.sovs);
+            ADD_FLOAT(_T("svthin"), rtgmc_retouch.svthin, 3);
+            ADD_NUM(_T("sbb"), rtgmc_retouch.sbb);
+            ADD_BOOL(_T("precise"), rtgmc_retouch.precise);
+            ADD_NUM(_T("tr1"), rtgmc_retouch.tr1);
+            ADD_NUM(_T("tr2"), rtgmc_retouch.tr2);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-rtgmc-retouch ") << tmp.str().substr(1);
+        } else if (param->rtgmc_retouch.enable) {
+            cmd << _T(" --vpp-rtgmc-retouch");
+        }
+    }
+    if (param->rtgmc_shimmer_repair != defaultPrm->rtgmc_shimmer_repair) {
+        tmp.str(tstring());
+        if (!param->rtgmc_shimmer_repair.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (param->rtgmc_shimmer_repair.enable || save_disabled_prm) {
+            ADD_LST(_T("stage"), rtgmc_shimmer_repair.stage, list_vpp_rtgmc_shimmer_repair_stage);
+            ADD_NUM(_T("rep-thin"), rtgmc_shimmer_repair.repThin);
+            ADD_NUM(_T("rep-pad"), rtgmc_shimmer_repair.repPad);
+            ADD_BOOL(_T("rep_chroma"), rtgmc_shimmer_repair.repChroma);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-rtgmc-shimmer-repair ") << tmp.str().substr(1);
+        } else if (param->rtgmc_shimmer_repair.enable) {
+            cmd << _T(" --vpp-rtgmc-shimmer-repair");
+        }
+    }
+    if (param->rtgmc_primitive != defaultPrm->rtgmc_primitive) {
+        tmp.str(tstring());
+        if (!param->rtgmc_primitive.enable && save_disabled_prm) {
+            tmp << _T(",enable=false");
+        }
+        if (param->rtgmc_primitive.enable || save_disabled_prm) {
+            ADD_LST(_T("op"), rtgmc_primitive.op, list_vpp_rtgmc_primitive_op);
+            ADD_LST(_T("ref"), rtgmc_primitive.ref, list_vpp_rtgmc_primitive_ref);
+            ADD_NUM(_T("mode"), rtgmc_primitive.mode);
+            ADD_FLOAT(_T("weight"), rtgmc_primitive.weight, 3);
+            ADD_BOOL(_T("chroma"), rtgmc_primitive.chroma);
+        }
+        if (!tmp.str().empty()) {
+            cmd << _T(" --vpp-rtgmc-primitive ") << tmp.str().substr(1);
+        } else if (param->rtgmc_primitive.enable) {
+            cmd << _T(" --vpp-rtgmc-primitive");
         }
     }
     if (param->msmooth != defaultPrm->msmooth) {
@@ -9463,6 +12185,7 @@ tstring gen_cmd(const RGYParamControl *param, const RGYParamControl *defaultPrm,
         }
     }
     OPT_NUM(_T("--perf-monitor-interval"), perfMonitorInterval);
+    OPT_STR_PATH(_T("--python"), pythonPath);
     if (param->parentProcessID != defaultPrm->parentProcessID) {
         cmd << strsprintf(_T(" --parent-pid %x"), param->parentProcessID);
     }
@@ -9490,6 +12213,8 @@ tstring gen_cmd(const RGYParamControl *param, const RGYParamControl *defaultPrm,
         }
     }
     OPT_NUM(_T("--opencl-build-threads"), openclBuildThreads);
+    OPT_TSTR(_T("--cl-perf-dump"), clPerfDumpDir);
+    OPT_TSTR(_T("--ocloc-path"), clPerfOclocPath);
     OPT_BOOL(_T("--process-monitor-dev-usage"), _T(""), processMonitorDevUsage);
     OPT_BOOL(_T("--process-monitor-dev-usage-reset"), _T(""), processMonitorDevUsageReset);
 
@@ -9868,6 +12593,10 @@ tstring gen_cmd_help_vpp() {
 #if ENABLE_VPP_ORDER
     str += print_list_options(_T("--vpp-order <string>"), get_list_vpp_filter().data(), 0);
 #endif
+    str += strsprintf(_T("\n")
+        _T("   --vpp-deint-csp <string>\n")
+        _T("     select CSP used for deinterlace filters (default: input)\n")
+        _T("     input, output\n"));
 #if ENABLE_VPP_FILTER_COLORSPACE
     str += strsprintf(_T("\n")
         _T("   --vpp-colorspace [<param1>=<value>][,<param2>=<value>][...]\n")
@@ -10079,30 +12808,18 @@ tstring gen_cmd_help_vpp() {
         _T("   --vpp-nnedi [<param1>=<value>][,<param2>=<value>][...]\n")
         _T("     enable nnedi deinterlacer\n")
         _T("    params\n")
-        _T("      field=<string>\n")
-        _T("          auto (default)    Generate latter field from first field.\n")
-        _T("          top               Generate bottom field using top field.\n")
-        _T("          bottom            Generate top field using bottom field.\n")
-        _T("      nns=<int>             Neurons of neural net (default: 32)\n")
-        _T("                              16, 32, 64, 128, 256\n")
-        _T("      nszie=<int>x<int>     Area size neural net uses to generate a pixel.\n")
-        _T("                              8x6, 16x6, 32x6, 48x6, 8x4, 16x4, 32x4(default)\n")
-        _T("      quality=<string>      quality settings\n")
-        _T("                              fast (default), slow\n")
-        _T("      prescreen=<string>    (default: new_block)\n")
-        _T("          none              No pre-screening is done and all pixels will be\n")
-        _T("                            generated by neural net.\n")
-        _T("          original          Runs prescreener to determine which pixel to apply\n")
-        _T("          new               neural net, other pixels will be generated from\n")
-        _T("                            simple interpolation.\n")
-        _T("          original_block    GPU optimized ver of original/new.\n")
-        _T("          new_block\n")
-        _T("      errortype=<string>    Select weight parameter for neural net.\n")
-        _T("                              abs (default), square\n")
-        _T("      prec=<string>         Select calculation precision.\n")
-        _T("                              auto (default), fp16, fp32\n")
-        _T("      weightfile=<string>   Set path of weight file. By default (not specified),\n")
-        _T("                              internal weight params will be used.\n"));
+        _T("      field=<string>         Select target field.\n")
+        _T("                              bob, auto (default), top, bottom, bob_tff, bob_bff\n")
+        _T("      nsize=<string>         8x6, 16x6, 32x6, 48x6, 8x4, 16x4, 32x4 (default)\n")
+        _T("      nns=<int>              16, 32 (default), 64, 128, 256\n")
+        _T("      quality=<string>       fast (default), slow\n")
+        _T("      prescreen=<int>        2, 3, or 4 (default=2; 0/1 unsupported)\n")
+        _T("      errortype=<string>     abs (default), square\n")
+        _T("      prec=<string>          Accepted and ignored.\n")
+        _T("      clamp=<int>            Clamp mode 0-4 (default=1)\n")
+        _T("      double_height=<bool>   Double output height. Supported with field=auto/top/bottom only (default=false)\n")
+        _T("      weightfile=<string>    Set path of nnedi3_weights.bin. By default,\n")
+        _T("                              Windows searches nnedi3_weights.bin, Linux uses embedded weights.\n"));
 #endif
 #if ENABLE_VPP_FILTER_YADIF
     str += strsprintf(_T("\n")
@@ -10194,18 +12911,257 @@ tstring gen_cmd_help_vpp() {
 #endif
 #if ENABLE_VPP_FILTER_BWDIF
     str += strsprintf(_T("\n")
-        _T("   --vpp-bwdif [<param1>=<value>][,<param2>=<value>][...]\n")
-        _T("     motion-adaptive deinterlacer (w3fdif + cubic interpolation).\n")
+        _T("   --vpp-bwdif [<param1>=<value>]\n")
+        _T("     enable bwdif deinterlacer\n")
         _T("    params\n")
-        _T("      mode=<frame|bob>      output mode. default frame (1 output per input).\n")
-        _T("                              frame = same-rate, preserves first-displayed field\n")
-        _T("                              bob   = double-rate, emits both fields (alternating)\n")
-        _T("      order=<auto|tff|bff>  field order. default auto (derived from input picstruct)\n")
-        _T("      deint=<all|interlaced> which frames to deinterlace. default all.\n")
-        _T("                              interlaced = pass through frames not flagged as interlaced\n")
-        _T("      thr=<float>           skip-interpolation threshold, 0.0..100.0 (%% of value range).\n")
-        _T("                              motion below this returns pure temporal average. default 0.0\n")
-        _T("      log=<path|bool>       write per-frame TSV decision log to <path>\n"));
+        _T("      mode=<string>\n")
+        _T("          frame (default)   Same-rate output, one frame per input.\n")
+        _T("          bob               Double-rate output, two frames per input.\n")
+        _T("      order=<string>\n")
+        _T("          auto (default)    Detect field order from each input frame.\n")
+        _T("          tff               Assume top field first.\n")
+        _T("          bff               Assume bottom field first.\n")
+        _T("      thr=<float>           Motion threshold (default=%.1f, 0.0 - 100.0).\n"),
+        FILTER_DEFAULT_BWDIF_THR);
+#endif
+#if ENABLE_VPP_FILTER_MAA
+    str += strsprintf(_T("\n")
+        _T("   --vpp-maa [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     masked anti-aliasing for animated content (anime, cel-shaded).\n")
+        _T("     combines directional 9-cost AA with edge masking to anti-alias diagonal\n")
+        _T("     lines without damaging non-edge content.\n")
+        _T("    params\n")
+        _T("      ss=<float>            supersample factor (default 2.0; range 1.0..4.0).\n")
+        _T("      aa=<int>              luma AA strength (default 48; range 0..255).\n")
+        _T("      aac=<int>             chroma AA strength (default aa-8; range 0..255).\n")
+        _T("                              only used when chroma=on.\n")
+        _T("      mask=<bool>           enable edge mask (default on).\n")
+        _T("      mthresh=<int>         edge threshold (default 7; range 1..255).\n")
+        _T("                              higher = fewer pixels treated as edges.\n")
+        _T("      chroma=<bool>         process chroma planes (default off; ~50-100%% slower).\n")
+        _T("      show=<int>            debug overlay (0=normal, 1=mask only, 2=mask+AA).\n")
+        _T("                              default 0.\n"));
+#endif
+#if ENABLE_VPP_FILTER_RTGMC
+    str += strsprintf(_T("\n")
+        _T("   --vpp-rtgmc [<param1>=<value>]\n")
+        _T("     high quality deinterlacer (but slow).\n")
+        _T("    params\n")
+        _T("      preset=<string>        slower, slow, medium, fast,\n")
+        _T("                             faster(default), veryfast, superfast, ultrafast, draft\n")
+        _T("      tuning=<string>        None(default), DV-SD, DV-HD (affects preset block size)\n")
+        _T("      border=<bool>          edge-clamp 4 border rows before processing and crop them at output (default=false)\n")
+        _T("      lossless=<int>         restore source fields after TR2 (1) or before retouch (2), default=0\n")
+        _T("      input_type=<int>       input frame type (default=0, 0 - 3; ProgSADMask runs only for 2/3)\n")
+        _T("      prog_sad_mask=<float>  progressive SAD mask strength (preset default, active only with input_type=2/3)\n")
+        _T("      prog_sad_mask_gamma=<float> progressive SAD mask gamma (default=1.0, >0.0)\n")
+        _T("      source_match=<int>     source refinement stage count (default=0, 0 - 3)\n")
+        _T("      match_tr1=<int>        first refinement temporal radius (default=1, 0 - 2)\n")
+        _T("      match_tr2=<int>        later refinement temporal radius (default=1, 0 - 2)\n")
+        _T("      match_edi=<string>     refinement interpolation: bob, yadif, cyadif, repyadif, repcyadif, nnedi3\n")
+        _T("      match_enhance=<float>  refinement detail boost strength (default=0.50, 0.0 - 1.0)\n")
+        _T("      order=<string>         auto (default), tff, bff\n")
+        _T("      tr0=<int>              search prefilter temporal radius (default=%d, -1 - 2)\n")
+        _T("                               -1 matches EdiExt fallback when an external reference is available\n")
+        _T("      rep0-thin=<int>        search prefilter thin repair level (default=%d, 0 - 7)\n")
+        _T("      rep0-pad=<int>         search prefilter padding restore level (default=0, 0 - 3)\n")
+        _T("      search_refine=<int>    search prefilter mode (default=%d, 0 - 3)\n")
+        _T("      mv_spatial_refine=<int|auto> motion vector spatial refinement count (default=auto)\n")
+        _T("                               auto/-1: inner level only, 0:off, 1+:always that many passes\n")
+        _T("      tv_range=<bool>        expand search reference from TV to PC range (default=true)\n")
+        _T("      chroma_motion=<bool>   process chroma search prefilter planes (default=false)\n")
+        _T("      noise_process=<int>    noise process (default=0, 0 - 2; only 1 is supported)\n")
+        _T("      ezdenoise=<float>      enable noise_process=1 and default sigma (default=0.0)\n")
+        _T("      ezkeepgrain=<float>    not yet supported (default=0.0)\n")
+        _T("      denoiser=<string>      nlmeans, fft3d\n")
+        _T("      noise_deint=<string>   none, bob (generate unsupported)\n")
+        _T("      sigma=<float>         nlmeans sigma (default=2.0)\n")
+        _T("      chroma_noise=<bool>    denoise chroma planes too (default=true)\n")
+        _T("      denoise_mc=<bool>      not yet supported (default=false)\n")
+        _T("      noise_tr=<int>         not yet supported, falls back to 0 (default=0)\n")
+        _T("      grain_restore=<float>  restore grain before TR2 with noise_process=1, 0.0-1.0 (default=0.0)\n")
+        _T("      noise_restore=<float>  restore noise after lossless with noise_process=1, 0.0-1.0 (default=0.0)\n")
+        _T("      edi=<string>           bob (default), yadif, cyadif, repyadif, repcyadif, nnedi3, passthrough\n")
+        _T("      nnsize=<int>           nnedi nsize index 0 - 6 (preset default)\n")
+        _T("      nneurons=<int>         nnedi nns index 0 - 4 (preset default)\n")
+        _T("      ediqual=<int>          nnedi qual 1 - 2 (preset default: 1)\n")
+        _T("      chroma_edi=<string>    chroma EDI: none (default), nnedi3\n")
+        _T("      rep1-thin=<int>        first shimmer thin repair level (default=0, 0 - 7)\n")
+        _T("      rep1-pad=<int>         first shimmer padding restore level (default=0, 0 - 3)\n")
+        _T("      rep2-thin=<int>        second shimmer thin repair level (preset default, 0 - 7)\n")
+        _T("      rep2-pad=<int>         second shimmer padding restore level (default=0, 0 - 3)\n")
+        _T("      delta_analyze=<int>    analyze temporal delta override\n")
+        _T("      delta_tr1=<int>        TR1 temporal delta override\n")
+        _T("      delta_tr2=<int>        TR2 temporal delta override\n")
+        _T("      thsad1=<int>           TR1 degrain SAD threshold (default=%d)\n")
+        _T("      thsad2=<int>           TR2 degrain SAD threshold (default=%d)\n")
+        _T("      useflag=<int>          reference direction limit (0=both, 1=backward only, 2=forward only, default=%d)\n")
+        _T("      pel=<int>              motion subpixel precision (1, 2, or 4)\n")
+        _T("      levels=<int>           motion analysis levels (default=2, 1 - 2)\n")
+        _T("      lambda=<int>           motion penalty strength\n")
+        _T("      lsad=<int>             large SAD threshold (default=400)\n")
+        _T("      pnew=<int>             new vector penalty (default=25)\n")
+        _T("      plevel=<int>           predictor level (default=0)\n")
+        _T("      globalmotion=<bool>    enable global motion tuning (default=true)\n")
+        _T("      searchparam/pelsearch=<int> preset-expanded motion search params (1 - 2)\n")
+        _T("      sharpness=<float>      retouch sharpness (default=%.2f, 0.0 - 1.0)\n")
+        _T("      limit=<float>          legacy retouch limit (default=%.2f, 0.0 - 1.0)\n")
+        _T("      smode=<int>            resharpen mode (default=%d, 0 - 2)\n")
+        _T("      slmode=<int>           sharpness limit mode (default=%d, 0 - 4; 1/2 before TR2)\n")
+        _T("      slrad=<int>            sharpness limit radius (default=%d, 0 - 3)\n")
+        _T("      sovs=<int>             sharpness limit overshoot (default=%d)\n")
+        _T("      svthin=<float>         vertical thin strength (default=%.2f, 0.0 - 1.0)\n")
+        _T("      sbb=<int>              back blend mode (default=%d, 0 - 3)\n")
+        _T("      precise=<bool>         use Precise retouch path (default=false)\n"),
+        FILTER_DEFAULT_DEGRAIN_TR0, FILTER_DEFAULT_DEGRAIN_REP0, FILTER_DEFAULT_DEGRAIN_SEARCH_REFINE,
+        10 * 8 * 8, 4 * 8 * 8, FILTER_DEFAULT_DEGRAIN_USEFLAG,
+        FILTER_DEFAULT_RTGMC_RETOUCH_SHARPNESS, FILTER_DEFAULT_RTGMC_RETOUCH_LIMIT,
+        FILTER_DEFAULT_RTGMC_RETOUCH_SMODE, FILTER_DEFAULT_RTGMC_RETOUCH_SLMODE,
+        FILTER_DEFAULT_RTGMC_RETOUCH_SLRAD, FILTER_DEFAULT_RTGMC_RETOUCH_SOVS,
+        FILTER_DEFAULT_RTGMC_RETOUCH_SVTHIN, FILTER_DEFAULT_RTGMC_RETOUCH_SBB);
+#endif
+#if ENABLE_VPP_FILTER_KFM
+    str += strsprintf(_T("\n")
+        _T("   --vpp-kfm [<param1>=<value>]\n")
+        _T("     Adaptive inverse telesine filter.\n")
+        _T("    params\n")
+        _T("      mode=<string>          vfr(default), 60, 24\n")
+        _T("      preset=<string>        speed preset (default=faster)\n")
+        _T("      timing=<string>        realtime, realtime+(default), strict\n")
+        _T("      past_cycles=<int>      commit delay cycles for realtime+ (default=30)\n")
+        _T("      thswitch=<float>       60p switch threshold (default=0.5)\n")
+        _T("      ucf=<bool>             use placeholder UCF copy stage (default=false)\n")
+        _T("      nr=<bool>              reserve NR path parameter (default=false)\n")
+        _T("      is120=<bool>           reserve 120fps duration correction flag (default=true)\n")
+        _T("      debug=<bool>           reserve stage dump flag (default=false)\n")
+        _T("      debug_stage=<string>   none(default), switch-flag(-min), contains-combe, combe-mask(-min) for 24p debug output\n")
+        _T("      timecode=<path>        reserve timecode v2 dump path\n"));
+#endif
+#if ENABLE_VPP_FILTER_RTGMC_BOB
+    str += strsprintf(_T("\n")
+        _T("   --vpp-rtgmc-bob [<param1>=<value>]\n")
+        _T("     enable rtgmc bob deinterlacer (always double-rate output)\n")
+        _T("    params\n")
+        _T("      order=<string>\n")
+        _T("          auto (default)    Detect field order from each input frame.\n")
+        _T("          tff               Assume top field first.\n")
+        _T("          bff               Assume bottom field first.\n"));
+#endif
+#if ENABLE_VPP_FILTER_RTGMC_SEARCH_PREFILTER
+    str += strsprintf(_T("\n")
+        _T("   --vpp-rtgmc-search-prefilter [<param1>=<value>]\n")
+        _T("     enable search reference prefilter scaffold.\n")
+        _T("    params\n")
+        _T("      tr0=<int>             temporal radius (default=%d, -1 - 2)\n")
+        _T("                              -1 matches EdiExt fallback when an external reference is available\n")
+        _T("      rep0-thin=<int>       search prefilter thin repair level (default=%d, 0 - 7)\n")
+        _T("      rep0-pad=<int>        search prefilter padding restore level (default=0, 0 - 3)\n")
+        _T("      search_refine=<int>   search prefilter mode (default=%d, 0 - 3)\n")
+        _T("      tv_range=<bool>       expand search reference from TV to PC range (default=true)\n")
+        _T("      chroma_motion=<bool>  process chroma planes (default=false)\n"),
+        FILTER_DEFAULT_DEGRAIN_TR0, FILTER_DEFAULT_DEGRAIN_REP0, FILTER_DEFAULT_DEGRAIN_SEARCH_REFINE);
+#endif
+#if ENABLE_VPP_FILTER_RTGMC_EDI
+    str += strsprintf(_T("\n")
+        _T("   --vpp-rtgmc-edi [<param1>=<value>]\n")
+        _T("     enable edi scaffold.\n")
+        _T("    params\n")
+        _T("      mode=<string>\n")
+        _T("          bob (default), yadif, cyadif, repyadif, repcyadif, nnedi3\n")
+        _T("          passthrough\n")
+        _T("      nnsize=<int>          nsize index 0 - 6 (default=1)\n")
+        _T("      nneurons=<int>        nns index 0 - 4 (default=1)\n")
+        _T("      ediqual=<int>         qual 1 - 2 (default=1)\n")
+        _T("      chroma_edi=<string>   chroma EDI: none (default), nnedi3\n"));
+#endif
+#if ENABLE_VPP_FILTER_RTGMC_RETOUCH
+    str += strsprintf(_T("\n")
+        _T("   --vpp-rtgmc-retouch [<param1>=<value>]\n")
+        _T("     enable render retouch resharpen.\n")
+        _T("    params\n")
+        _T("      sharpness=<float>     vertical resharpen strength (default=%.2f, 0.0 - 1.0)\n")
+        _T("      limit=<float>         legacy sharpness limit strength (default=%.2f, 0.0 - 1.0)\n")
+        _T("      smode=<int>           resharpen mode (default=%d, 0 - 2)\n")
+        _T("      slmode=<int>          sharpness limit mode (default=%d, 0 - 4; 1/2 before TR2)\n")
+        _T("      slrad=<int>           sharpness limit radius (default=%d, 0 - 3)\n")
+        _T("      sovs=<int>            sharpness limit overshoot (default=%d)\n")
+        _T("      svthin=<float>        vertical thin strength (default=%.2f, 0.0 - 1.0)\n")
+        _T("      sbb=<int>             back blend mode (default=%d, 0 - 3)\n")
+        _T("      precise=<bool>        use precise retouch path (default=false)\n")
+        _T("      tr1=<int>             effective detail gain TR1 value for standalone retouch (default=%d)\n")
+        _T("      tr2=<int>             effective detail gain TR2 value for standalone retouch (default=%d)\n"),
+        FILTER_DEFAULT_RTGMC_RETOUCH_SHARPNESS, FILTER_DEFAULT_RTGMC_RETOUCH_LIMIT,
+        FILTER_DEFAULT_RTGMC_RETOUCH_SMODE, FILTER_DEFAULT_RTGMC_RETOUCH_SLMODE,
+        FILTER_DEFAULT_RTGMC_RETOUCH_SLRAD, FILTER_DEFAULT_RTGMC_RETOUCH_SOVS,
+        FILTER_DEFAULT_RTGMC_RETOUCH_SVTHIN, FILTER_DEFAULT_RTGMC_RETOUCH_SBB,
+        FILTER_DEFAULT_DEGRAIN_DELTA, FILTER_DEFAULT_DEGRAIN_DELTA);
+#endif
+#if ENABLE_VPP_FILTER_RTGMC_SHIMMER_REPAIR
+    str += strsprintf(_T("\n")
+        _T("   --vpp-rtgmc-shimmer-repair [<param1>=<value>]\n")
+        _T("     enable shimmer repair passthrough scaffold.\n")
+        _T("    params\n")
+        _T("      stage=<string>        rep1 or rep2 (default=rep1)\n")
+        _T("      mode=<string>         passthrough (Step2 only)\n")
+        _T("      rep-thin=<int>        thin repair level (default=0, 0 - 7)\n")
+        _T("      rep-pad=<int>         padding restore level (default=0, 0 - 3)\n")
+        _T("      rep_chroma=<bool>     accept chroma repair flag (default=true)\n"));
+#endif
+#if ENABLE_VPP_FILTER_RTGMC_PRIMITIVE
+    str += strsprintf(_T("\n")
+        _T("   --vpp-rtgmc-primitive [<param1>=<value>]\n")
+        _T("     enable standalone primitive/debug filter.\n")
+        _T("    params\n")
+        _T("      op=<string>           copy (default), makediff, adddiff, addweighteddiff, removegrain, repair, merge, gaussresize, verticalmin5, verticalmax5, logicmin, logicmax\n")
+        _T("      ref=<string>          none (default), removegrain20 for two-input primitive debug cases\n")
+        _T("      mode=<int>            op-specific mode / parameter (default=%d)\n")
+        _T("      p=<int>               alias of mode for gaussresize\n")
+        _T("      weight=<float>        merge/addweighteddiff weight (default=%.3f, merge 0.0-1.0, addweighteddiff -1.0-1.0)\n")
+        _T("      chroma=<bool>         process chroma planes too (default=%s)\n"),
+        FILTER_DEFAULT_RTGMC_PRIMITIVE_MODE,
+        FILTER_DEFAULT_RTGMC_PRIMITIVE_WEIGHT,
+        FILTER_DEFAULT_RTGMC_PRIMITIVE_CHROMA ? _T("true") : _T("false"));
+#endif
+#if ENABLE_VPP_FILTER_DECOMB
+    str += strsprintf(_T("\n")
+        _T("   --vpp-decomb [<param1>=<value>]\n")
+        _T("     enable decomb deinterlacer\n")
+        _T("    params\n")
+        _T("      full=<bool>           deinterlace all frames\n")
+        _T("      threshold=<int>       default %d (0 - 255)\n")
+        _T("      dthreshold=<int>      default %d (0 - 255)\n")
+        _T("      blend=<bool>          blend rather than interpolate\n"),
+        FILTER_DEFAULT_DECOMB_THRESHOLD, FILTER_DEFAULT_DECOMB_DTHRESHOLD);
+#endif
+#if ENABLE_VPP_FILTER_IVTC
+    str += strsprintf(_T("\n")
+        _T("   --vpp-ivtc [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     inverse telecine (Telecide + Decimate style).\n")
+        _T("    params\n")
+        _T("      guide=<int>           matching mode. (default=%d)\n")
+        _T("                              0 = argmin across C/P/N (note: fully progressive C is\n")
+        _T("                                  always kept to avoid introducing combing)\n")
+        _T("                              1 = prefer C if clean, otherwise choose from P/N\n")
+        _T("      post=<int>            post-process for residual combing. (default=%d)\n")
+        _T("                              0 = off\n")
+        _T("                              2 = adaptive per-pixel bob-deinterlace on combed rows\n")
+        _T("      cycle=<auto|int>      decimation cycle length.\n")
+        _T("                              auto (default) = enable cycle=5 for ~30fps input only,\n")
+        _T("                                skip for all other frame rates\n")
+        _T("                              0 = decimation disabled\n")
+        _T("                              5 = 3:2 pulldown (30fps -> 24fps)\n")
+        _T("                              2..16 = custom cycle length\n")
+        _T("      drop=<int>            frames to drop per cycle. (default=%d, only value supported)\n")
+        _T("      combthresh=<float>    per-pixel combing threshold. (default=%.2f, 0.0 - 1.0)\n")
+        _T("      cleanfrac=<float>     block-level clean threshold for guide=1 / post=2.\n")
+        _T("                              fraction of pixels in a block allowed to be combed\n")
+        _T("                              before the block is considered dirty. (default=%.2f)\n")
+        _T("      tff=<auto|on|off>     top-field-first. default auto (derived from input picstruct)\n")
+        _T("      log=<path|bool>       write per-frame match log to <path>.\n")
+        _T("                              log=true uses output filename base + .ivtc.log.txt\n"),
+        FILTER_DEFAULT_IVTC_GUIDE, FILTER_DEFAULT_IVTC_POST,
+        FILTER_DEFAULT_IVTC_DROP,
+        FILTER_DEFAULT_IVTC_COMB_THRESH, FILTER_DEFAULT_IVTC_CLEAN_FRAC);
 #endif
 #if ENABLE_VPP_FILTER_RFF
     str += strsprintf(_T("\n")
@@ -10279,6 +13235,7 @@ tstring gen_cmd_help_vpp() {
             str += list_vpp_resize[ia].desc;
         }
         str += _T("\n        default: auto\n");
+        str += _T("        gauss uses OpenCL Gaussian filter (p=2.0).\n");
 #if ENABLE_NVVFX
             str += strsprintf(_T("\n")
                 _T("      superres-mode=<int>\n")
@@ -10425,6 +13382,72 @@ tstring gen_cmd_help_vpp() {
         _T("                              auto (default), fp16, fp32\n"),
         FILTER_DEFAULT_DENOISE_FFT3D_SIGMA, FILTER_DEFAULT_DENOISE_FFT3D_AMOUNT, FILTER_DEFAULT_DENOISE_FFT3D_BLOCK_SIZE,
         FILTER_DEFAULT_DENOISE_FFT3D_OVERLAP, /* FILTER_DEFAULT_DENOISE_FFT3D_OVERLAP2,*/ FILTER_DEFAULT_DENOISE_FFT3D_TEMPORAL);
+#endif
+#if ENABLE_VPP_FILTER_DEGRAIN
+    str += strsprintf(_T("\n")
+        _T("   --vpp-degrain [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     motion compensated degrain debug filter for Step1.\n")
+        _T("    params\n")
+        _T("      preset=<string>        surface preset: custom, auto (default=custom)\n")
+        _T("      mode=<string>          output mode (default=%s)\n")
+        _T("                               source, analyze, compb, compf, compb2, compf2, degrain, mv, sad\n")
+        _T("      stage=<string>         Step2 stage marker: auto, tr1, tr2 (default=auto)\n")
+        _T("      tr=<int>               Auto preset temporal radius: 1 or 2 (sets mode=degrain, stage, delta)\n")
+        _T("      blksize=<int>          block size (default=%d)\n")
+        _T("      search=<int>           search radius (default=%d)\n")
+        _T("      thsad=<int>            degrain SAD threshold (default=%d)\n")
+        _T("      thsadc=<int>           chroma degrain SAD threshold (default=%d)\n")
+        _T("      thscd1=<int>           scene change SAD threshold (default=%d)\n")
+        _T("      thscd2=<int>           scene change ratio threshold in AviSynth semantics (0-255, default=%d)\n")
+        _T("      pel=<int>              subpixel precision (1, 2, or 4; default=%d)\n")
+        _T("      subpelinterp=<int>     subpixel interpolation mode (default=%d)\n")
+        _T("      levels=<int>           analysis levels (default=%d)\n")
+        _T("      overlap=<int>          overlap in pixels (default=%d)\n")
+        _T("      delta=<int>            temporal radius (1 - 5, default=%d)\n")
+        _T("      tr0=<int>              search reference temporal prefilter radius (0, 1, or 2, default=%d)\n")
+        _T("      rep0=<int>             search reference repair mode (0 - 7, default=%d)\n")
+        _T("      search_refine=<int>    search reference pre/post processing mode (0 - 3, default=%d)\n")
+        _T("      mv_spatial_refine=<int|auto> motion vector spatial refinement count (default=auto)\n")
+        _T("      searchparam=<int>      motion search parameter (default=%d)\n")
+        _T("      pelsearch=<int>        subpixel search parameter (default=%d)\n")
+        _T("      truemotion=<bool>      use true-motion tuning (default=%s)\n")
+        _T("      lambda=<int>           motion penalty strength (default=%d)\n")
+        _T("      lsad=<int>             large SAD threshold (default=%d)\n")
+        _T("      pnew=<int>             new vector penalty (default=%d)\n")
+        _T("      plevel=<int>           predictor level (default=%d)\n")
+        _T("      globalmotion=<bool>    enable global motion tuning (default=%s)\n")
+        _T("      dct=<int>              DCT search mode (default=%d)\n")
+        _T("      useflag=<int>          reference direction limit (0=both, 1=backward only, 2=forward only, default=%d)\n")
+        _T("      chroma=<bool>          include chroma in motion/SAD analysis (default=%s)\n")
+        _T("      binomial=<bool|auto>   use binomial prefilter path (default=auto)\n")
+        _T("      tv_range=<bool>        expand motion/SAD analysis from TV to PC range (default=%s)\n"),
+        get_cx_desc(list_vpp_degrain_mode, (int)FILTER_DEFAULT_DEGRAIN_MODE),
+        FILTER_DEFAULT_DEGRAIN_BLKSIZE,
+        FILTER_DEFAULT_DEGRAIN_SEARCH,
+        FILTER_DEFAULT_DEGRAIN_THSAD,
+        FILTER_DEFAULT_DEGRAIN_THSADC,
+        FILTER_DEFAULT_DEGRAIN_THSCD1,
+        FILTER_DEFAULT_DEGRAIN_THSCD2,
+        FILTER_DEFAULT_DEGRAIN_PEL,
+        FILTER_DEFAULT_DEGRAIN_SUBPEL_INTERP,
+        FILTER_DEFAULT_DEGRAIN_LEVELS,
+        FILTER_DEFAULT_DEGRAIN_OVERLAP,
+        FILTER_DEFAULT_DEGRAIN_DELTA,
+        FILTER_DEFAULT_DEGRAIN_TR0,
+        FILTER_DEFAULT_DEGRAIN_REP0,
+        FILTER_DEFAULT_DEGRAIN_SEARCH_REFINE,
+        FILTER_DEFAULT_DEGRAIN_SEARCHPARAM,
+        FILTER_DEFAULT_DEGRAIN_PELSEARCH,
+        FILTER_DEFAULT_DEGRAIN_TRUEMOTION ? _T("true") : _T("false"),
+        FILTER_DEFAULT_DEGRAIN_LAMBDA,
+        FILTER_DEFAULT_DEGRAIN_LSAD,
+        FILTER_DEFAULT_DEGRAIN_PNEW,
+        FILTER_DEFAULT_DEGRAIN_PLEVEL,
+        FILTER_DEFAULT_DEGRAIN_GLOBALMOTION ? _T("true") : _T("false"),
+        FILTER_DEFAULT_DEGRAIN_DCT,
+        FILTER_DEFAULT_DEGRAIN_USEFLAG,
+        FILTER_DEFAULT_DEGRAIN_CHROMA ? _T("true") : _T("false"),
+        FILTER_DEFAULT_DEGRAIN_TV_RANGE ? _T("true") : _T("false"));
 #endif
 #if ENABLE_VPP_FILTER_MSMOOTH
     str += strsprintf(_T("\n")
@@ -10825,6 +13848,18 @@ tstring gen_cmd_help_ctrl() {
     str += strsprintf(_T("\n")
         _T("   --disable-opencl             disable opencl features.\n"));
 #endif
+#if ENABLE_OPENCL
+    str += strsprintf(_T("\n")
+        _T("   --cl-perf-dump <dir>         dump OpenCL kernel performance data to <dir>.\n")
+        _T("                                 enables CL_QUEUE_PROFILING_ENABLE automatically.\n")
+        _T("                                 output: programs.jsonl, launches.jsonl, meta.json,\n")
+        _T("                                         binaries/<name>__<hash>.bin,\n")
+        _T("                                         build_logs/<name>__<hash>.log\n")
+        _T("   --ocloc-path <path>          set ocloc executable path for --cl-perf-dump report generation.\n"));
+#endif
+    str += strsprintf(_T("\n")
+        _T("   --python <string>            set python path for --perf-monitor-plot\n")
+        _T("                                 and --cl-perf-dump report generation.\n"));
     str += strsprintf(_T("\n")
         _T("   --disable-vulkan             disable vulkan features.\n"));
     str += strsprintf(_T("\n")

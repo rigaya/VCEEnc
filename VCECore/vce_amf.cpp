@@ -123,7 +123,7 @@ RGY_ERR VCEAMF::initTracer(int log_level) {
     return RGY_ERR_NONE;
 }
 
-std::vector<std::unique_ptr<VCEDevice>> VCEAMF::createDeviceList(bool interopD3d9, bool interopD3d11, RGYParamInitVulkan interopVulkan, bool enableOpenCL, bool enableVppPerfMonitor, bool enableAV1HWDec, int openCLBuildThreads, int targetDeviceId) {
+std::vector<std::unique_ptr<VCEDevice>> VCEAMF::createDeviceList(bool interopD3d9, bool interopD3d11, RGYParamInitVulkan interopVulkan, bool enableOpenCL, bool enableVppPerfMonitor, bool enableAV1HWDec, int openCLBuildThreads, int targetDeviceId, const tstring& clPerfDumpDir) {
     std::vector<std::unique_ptr<VCEDevice>> devs;
     int adapterCount = 0;
 #if ENABLE_D3D11
@@ -177,7 +177,7 @@ std::vector<std::unique_ptr<VCEDevice>> VCEAMF::createDeviceList(bool interopD3d
             i;
 #endif
         PrintMes(RGY_LOG_DEBUG, _T("Init adaptor #%d.\n"), adapterIndex);
-        if (dev->init(adapterIndex, interopD3d9, interopD3d11, interopVulkan, enableOpenCL, enableVppPerfMonitor, enableAV1HWDec, openCLBuildThreads) == RGY_ERR_NONE) {
+        if (dev->init(adapterIndex, interopD3d9, interopD3d11, interopVulkan, enableOpenCL, enableVppPerfMonitor, enableAV1HWDec, openCLBuildThreads, clPerfDumpDir) == RGY_ERR_NONE) {
             devs.push_back(std::move(dev));
         }
     }

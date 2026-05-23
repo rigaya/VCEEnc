@@ -49,6 +49,12 @@
 #include "rgy_filter_afs.h"
 #include "rgy_filter_nnedi.h"
 #include "rgy_filter_bwdif.h"
+#include "rgy_filter_maa.h"
+#include "rgy_filter_rtgmc.h"
+#include "rgy_filter_rtgmc_bob.h"
+#include "rgy_filter_rtgmc_search_prefilter.h"
+#include "rgy_filter_rtgmc_edi.h"
+#include "rgy_filter_kfm.h"
 #include "rgy_filter_yadif.h"
 #include "rgy_filter_decomb.h"
 #include "rgy_filter_ivtc.h"
@@ -60,6 +66,18 @@
 #include "rgy_filter_denoise_knn.h"
 #include "rgy_filter_denoise_nlmeans.h"
 #include "rgy_filter_denoise_pmd.h"
+#include "rgy_filter_degrain.h"
+#include "rgy_filter_rtgmc_retouch.h"
+#include "rgy_filter_rtgmc_shimmer_repair.h"
+#if defined(__has_include)
+#if __has_include("rgy_filter_rtgmc_primitive.h")
+#include "rgy_filter_rtgmc_primitive.h"
+#define RGY_HAS_RTGMC_PRIMITIVE_FILTER 1
+#endif
+#endif
+#ifndef RGY_HAS_RTGMC_PRIMITIVE_FILTER
+#define RGY_HAS_RTGMC_PRIMITIVE_FILTER 0
+#endif
 #include "rgy_filter_decimate.h"
 #include "rgy_filter_mpdecimate.h"
 #include "rgy_filter_smooth.h"
@@ -1329,6 +1347,18 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.delogo.enable)        filterPipeline.push_back(VppType::CL_DELOGO);
     if (inputParam->vpp.afs.enable)           filterPipeline.push_back(VppType::CL_AFS);
     if (inputParam->vpp.nnedi.enable)         filterPipeline.push_back(VppType::CL_NNEDI);
+    if (inputParam->vpp.rtgmc.enable)         filterPipeline.push_back(VppType::CL_RTGMC);
+    if (inputParam->vpp.kfm.enable)           filterPipeline.push_back(VppType::CL_KFM);
+    const bool degrainLegacy = inputParam->vpp.degrain.enable;
+    const bool degrainAnalyze = inputParam->vpp.degrainAnalyze.enable;
+    const bool degrainTR1 = inputParam->vpp.degrainTR1.enable;
+    const bool degrainTR2 = inputParam->vpp.degrainTR2.enable;
+    const bool shimmerRepairRep1 = inputParam->vpp.rtgmc_shimmer_repairRep1.enable;
+    const bool shimmerRepairRep2 = inputParam->vpp.rtgmc_shimmer_repairRep2.enable;
+    if (inputParam->vpp.rtgmc_bob.enable)     filterPipeline.push_back(VppType::CL_RTGMC_BOB);
+    if (inputParam->vpp.rtgmc_search_prefilter.enable) filterPipeline.push_back(VppType::CL_RTGMC_SEARCH_PREFILTER);
+    if (degrainAnalyze)                       filterPipeline.push_back(VppType::CL_DEGRAIN_ANALYZE);
+    if (inputParam->vpp.rtgmc_edi.enable && !degrainLegacy) filterPipeline.push_back(VppType::CL_RTGMC_EDI);
     if (inputParam->vpp.bwdif.enable)         filterPipeline.push_back(VppType::CL_BWDIF);
     if (inputParam->vpp.yadif.enable)         filterPipeline.push_back(VppType::CL_YADIF);
     if (inputParam->vpp.decomb.enable)        filterPipeline.push_back(VppType::CL_DECOMB);
@@ -1343,6 +1373,15 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.knn.enable)           filterPipeline.push_back(VppType::CL_DENOISE_KNN);
     if (inputParam->vpp.nlmeans.enable)       filterPipeline.push_back(VppType::CL_DENOISE_NLMEANS);
     if (inputParam->vpp.pmd.enable)           filterPipeline.push_back(VppType::CL_DENOISE_PMD);
+    if (degrainLegacy)                        filterPipeline.push_back(VppType::CL_DEGRAIN);
+    if (inputParam->vpp.rtgmc_edi.enable && degrainLegacy) filterPipeline.push_back(VppType::CL_RTGMC_EDI);
+    if (degrainTR1)                           filterPipeline.push_back(VppType::CL_DEGRAIN_APPLY_TR1);
+    if (shimmerRepairRep1)                    filterPipeline.push_back(VppType::CL_RTGMC_SHIMMER_REPAIR_REP1);
+    if (inputParam->vpp.rtgmc_retouch.enable) filterPipeline.push_back(VppType::CL_RTGMC_RETOUCH);
+    if (degrainTR2)                           filterPipeline.push_back(VppType::CL_DEGRAIN_APPLY_TR2);
+    if (shimmerRepairRep2)                    filterPipeline.push_back(VppType::CL_RTGMC_SHIMMER_REPAIR_REP2);
+    if (inputParam->vpp.rtgmc_shimmer_repair.enable) filterPipeline.push_back(VppType::CL_RTGMC_SHIMMER_REPAIR);
+    if (inputParam->vpp.rtgmc_primitive.enable) filterPipeline.push_back(VppType::CL_RTGMC_PRIMITIVE);
     if (inputParam->vppamf.pp.enable)         filterPipeline.push_back(VppType::AMF_PREPROCESS);
     if (inputParam->vpp.subburn.size()>0)     filterPipeline.push_back(VppType::CL_SUBBURN);
     if (inputParam->vpp.libplacebo_shader.size() > 0)  filterPipeline.push_back(VppType::CL_LIBPLACEBO_SHADER);
@@ -1356,6 +1395,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.edgelevel.enable)  filterPipeline.push_back(VppType::CL_EDGELEVEL);
     if (inputParam->vpp.msharpen.enable)   filterPipeline.push_back(VppType::CL_MSHARPEN);
     if (inputParam->vpp.warpsharp.enable)  filterPipeline.push_back(VppType::CL_WARPSHARP);
+    if (inputParam->vpp.maa.enable)        filterPipeline.push_back(VppType::CL_MAA);
     if (inputParam->vppamf.enhancer.enable)  filterPipeline.push_back(VppType::AMF_VQENHANCE);
     if (inputParam->vpp.transform.enable)  filterPipeline.push_back(VppType::CL_TRANSFORM);
     if (inputParam->vpp.curves.enable)     filterPipeline.push_back(VppType::CL_CURVES);
@@ -1641,7 +1681,16 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
         unique_ptr<RGYFilter> filter(new RGYFilterNnedi(m_dev->cl()));
         shared_ptr<RGYFilterParamNnedi> param(new RGYFilterParamNnedi());
-        param->nnedi = inputParam->vpp.nnedi;
+        param->nnedi.enable = inputParam->vpp.nnedi.enable;
+        param->nnedi.field = inputParam->vpp.nnedi.field;
+        param->nnedi.nsize = inputParam->vpp.nnedi.nsize;
+        param->nnedi.nns = inputParam->vpp.nnedi.nns;
+        param->nnedi.quality = inputParam->vpp.nnedi.quality;
+        param->nnedi.prescreen = inputParam->vpp.nnedi.prescreen;
+        param->nnedi.errortype = inputParam->vpp.nnedi.errortype;
+        param->nnedi.clamp = inputParam->vpp.nnedi.clamp;
+        param->nnedi.doubleHeight = inputParam->vpp.nnedi.doubleHeight;
+        param->nnedi.weightfile = inputParam->vpp.nnedi.weightfile;
         param->frameIn = inputFrame;
         param->frameOut = inputFrame;
         param->baseFps = m_encFps;
@@ -1658,6 +1707,122 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         //入力フレーム情報を更新
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //rtgmc
+    if (vppType == VppType::CL_RTGMC) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterRtgmc(m_dev->cl()));
+        shared_ptr<RGYFilterParamRtgmc> param(new RGYFilterParamRtgmc());
+        param->rtgmc = inputParam->vpp.rtgmc;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->timebase = m_outputTimebase;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
+        return RGY_ERR_NONE;
+    }
+    //kfm
+    if (vppType == VppType::CL_KFM) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterKfm(m_dev->cl()));
+        shared_ptr<RGYFilterParamKfm> param(new RGYFilterParamKfm());
+        param->kfm = inputParam->vpp.kfm;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->timebase = m_outputTimebase;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
+        return RGY_ERR_NONE;
+    }
+    //rtgmc bob
+    if (vppType == VppType::CL_RTGMC_BOB) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterRtgmcBob(m_dev->cl()));
+        shared_ptr<RGYFilterParamRtgmcBob> param(new RGYFilterParamRtgmcBob());
+        param->order = (inputParam->vpp.rtgmc_bob.order == VppRtgmcBobOrder::TFF) ? RGYRtgmcBobFieldOrder::TFF
+            : (inputParam->vpp.rtgmc_bob.order == VppRtgmcBobOrder::BFF) ? RGYRtgmcBobFieldOrder::BFF
+            : RGYRtgmcBobFieldOrder::Auto;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->timebase = m_outputTimebase;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
+        return RGY_ERR_NONE;
+    }
+    //rtgmc search prefilter
+    if (vppType == VppType::CL_RTGMC_SEARCH_PREFILTER) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterRtgmcSearchPrefilter(m_dev->cl()));
+        shared_ptr<RGYFilterParamRtgmcSearchPrefilter> param(new RGYFilterParamRtgmcSearchPrefilter());
+        param->tr0 = inputParam->vpp.rtgmc_search_prefilter.tr0;
+        param->rep0Thin = inputParam->vpp.rtgmc_search_prefilter.rep0Thin;
+        param->rep0Pad = inputParam->vpp.rtgmc_search_prefilter.rep0Pad;
+        param->searchRefine = inputParam->vpp.rtgmc_search_prefilter.searchRefine;
+        param->tvRange = inputParam->vpp.rtgmc_search_prefilter.tvRange;
+        param->chromaMotion = inputParam->vpp.rtgmc_search_prefilter.chromaMotion;
+        param->dumpY4m = inputParam->vpp.rtgmc_search_prefilter.dumpY4m;
+        param->dumpStage = inputParam->vpp.rtgmc_search_prefilter.dumpStage;
+        param->dumpMaxFrames = inputParam->vpp.rtgmc_search_prefilter.dumpMaxFrames;
+        param->attachSearchLuma = inputParam->vpp.rtgmc_edi.enable || inputParam->vpp.degrain.enable
+            || inputParam->vpp.degrainAnalyze.enable || inputParam->vpp.degrainTR1.enable || inputParam->vpp.degrainTR2.enable
+            || inputParam->vpp.rtgmc_retouch.enable || inputParam->vpp.rtgmc_shimmer_repair.enable
+            || inputParam->vpp.rtgmc_shimmer_repairRep1.enable || inputParam->vpp.rtgmc_shimmer_repairRep2.enable;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
+        return RGY_ERR_NONE;
+    }
+    //rtgmc edi
+    if (vppType == VppType::CL_RTGMC_EDI) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterRtgmcEdi(m_dev->cl()));
+        shared_ptr<RGYFilterParamRtgmcEdi> param(new RGYFilterParamRtgmcEdi());
+        param->mode = inputParam->vpp.rtgmc_edi.mode;
+        param->chromaEdi = inputParam->vpp.rtgmc_edi.chromaEdi;
+        param->nnsize = inputParam->vpp.rtgmc_edi.nnsize;
+        param->nneurons = inputParam->vpp.rtgmc_edi.nneurons;
+        param->ediqual = inputParam->vpp.rtgmc_edi.ediqual;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
         return RGY_ERR_NONE;
     }
     //yadif
@@ -1694,6 +1859,24 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         param->frameOut = inputFrame;
         param->baseFps = m_encFps;
         param->timebase = m_outputTimebase;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
+        return RGY_ERR_NONE;
+    }
+    if (vppType == VppType::CL_MAA) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterMaa(m_dev->cl()));
+        shared_ptr<RGYFilterParamMaa> param(new RGYFilterParamMaa());
+        param->maa = inputParam->vpp.maa;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
         param->bOutOverwrite = false;
         auto sts = filter->init(param, m_pLog);
         if (sts != RGY_ERR_NONE) {
@@ -2007,6 +2190,142 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
         return RGY_ERR_NONE;
+    }
+    //degrain
+    if (vppType == VppType::CL_DEGRAIN
+        || vppType == VppType::CL_DEGRAIN_ANALYZE
+        || vppType == VppType::CL_DEGRAIN_APPLY_TR1
+        || vppType == VppType::CL_DEGRAIN_APPLY_TR2) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterDegrain(m_dev->cl()));
+        shared_ptr<RGYFilterParamDegrain> param(new RGYFilterParamDegrain());
+        switch (vppType) {
+        case VppType::CL_DEGRAIN_ANALYZE:
+            param->degrain = inputParam->vpp.degrainAnalyze;
+            param->degrain.mode = VppDegrainMode::Analyze;
+            param->degrain.stage = VppDegrainStage::TR1;
+            break;
+        case VppType::CL_DEGRAIN_APPLY_TR1:
+            param->degrain = inputParam->vpp.degrainTR1;
+            param->degrain.mode = VppDegrainMode::Degrain;
+            param->degrain.stage = VppDegrainStage::TR1;
+            break;
+        case VppType::CL_DEGRAIN_APPLY_TR2:
+            param->degrain = inputParam->vpp.degrainTR2;
+            param->degrain.mode = VppDegrainMode::Degrain;
+            param->degrain.stage = VppDegrainStage::TR2;
+            break;
+        default:
+            param->degrain = inputParam->vpp.degrain;
+            break;
+        }
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
+        return RGY_ERR_NONE;
+    }
+    //rtgmc retouch
+    if (vppType == VppType::CL_RTGMC_RETOUCH) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterRtgmcRetouch(m_dev->cl()));
+        shared_ptr<RGYFilterParamRtgmcRetouch> param(new RGYFilterParamRtgmcRetouch());
+        param->rtgmc_retouch = inputParam->vpp.rtgmc_retouch;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
+        return RGY_ERR_NONE;
+    }
+    //rtgmc shimmer repair
+    if (vppType == VppType::CL_RTGMC_SHIMMER_REPAIR
+        || vppType == VppType::CL_RTGMC_SHIMMER_REPAIR_REP1
+        || vppType == VppType::CL_RTGMC_SHIMMER_REPAIR_REP2) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterRtgmcShimmerRepair(m_dev->cl()));
+        shared_ptr<RGYFilterParamRtgmcShimmerRepair> param(new RGYFilterParamRtgmcShimmerRepair());
+        const auto& shimmerRepair = (vppType == VppType::CL_RTGMC_SHIMMER_REPAIR_REP1)
+            ? inputParam->vpp.rtgmc_shimmer_repairRep1
+            : (vppType == VppType::CL_RTGMC_SHIMMER_REPAIR_REP2)
+                ? inputParam->vpp.rtgmc_shimmer_repairRep2
+                : inputParam->vpp.rtgmc_shimmer_repair;
+        param->stage = (shimmerRepair.stage == VppRtgmcShimmerRepairStage::Rep1)
+            ? RGYRtgmcShimmerRepairStage::PreRetouch
+            : RGYRtgmcShimmerRepairStage::PostTR2;
+        param->repairThin = shimmerRepair.repThin;
+        param->repairPad = shimmerRepair.repPad;
+        param->processChroma = shimmerRepair.repChroma;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
+        return RGY_ERR_NONE;
+    }
+    //rtgmc primitive
+    if (vppType == VppType::CL_RTGMC_PRIMITIVE) {
+#if RGY_HAS_RTGMC_PRIMITIVE_FILTER
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterRtgmcPrimitive(m_dev->cl()));
+        shared_ptr<RGYFilterParamRtgmcPrimitive> param(new RGYFilterParamRtgmcPrimitive());
+        switch (inputParam->vpp.rtgmc_primitive.op) {
+        case VppRtgmcPrimitiveOp::Copy:        param->op = RGYRtgmcPrimitiveOp::Copy; break;
+        case VppRtgmcPrimitiveOp::MakeDiff:    param->op = RGYRtgmcPrimitiveOp::MakeDiff; break;
+        case VppRtgmcPrimitiveOp::AddDiff:     param->op = RGYRtgmcPrimitiveOp::AddDiff; break;
+        case VppRtgmcPrimitiveOp::AddWeightedDiff: param->op = RGYRtgmcPrimitiveOp::AddWeightedDiff; break;
+        case VppRtgmcPrimitiveOp::RemoveGrain: param->op = RGYRtgmcPrimitiveOp::RemoveGrain; break;
+        case VppRtgmcPrimitiveOp::Repair:      param->op = RGYRtgmcPrimitiveOp::Repair; break;
+        case VppRtgmcPrimitiveOp::Merge:       param->op = RGYRtgmcPrimitiveOp::Merge; break;
+        case VppRtgmcPrimitiveOp::GaussResize: param->op = RGYRtgmcPrimitiveOp::GaussResize; break;
+        case VppRtgmcPrimitiveOp::VerticalMin5: param->op = RGYRtgmcPrimitiveOp::VerticalMin5; break;
+        case VppRtgmcPrimitiveOp::VerticalMax5: param->op = RGYRtgmcPrimitiveOp::VerticalMax5; break;
+        case VppRtgmcPrimitiveOp::LogicMin:    param->op = RGYRtgmcPrimitiveOp::LogicMin; break;
+        case VppRtgmcPrimitiveOp::LogicMax:    param->op = RGYRtgmcPrimitiveOp::LogicMax; break;
+        default:                               param->op = RGYRtgmcPrimitiveOp::Copy; break;
+        }
+        param->mode = inputParam->vpp.rtgmc_primitive.mode;
+        param->weight = inputParam->vpp.rtgmc_primitive.weight;
+        switch (inputParam->vpp.rtgmc_primitive.ref) {
+        case VppRtgmcPrimitiveRef::RemoveGrain20: param->refMode = RGYRtgmcPrimitiveRefMode::RemoveGrain20; break;
+        default:                                  param->refMode = RGYRtgmcPrimitiveRefMode::Disabled; break;
+        }
+        param->processChroma = inputParam->vpp.rtgmc_primitive.chroma;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
+        return RGY_ERR_NONE;
+#else
+        PrintMes(RGY_LOG_ERROR, _T("rtgmc-primitive filter is not available in this build.\n"));
+        return RGY_ERR_UNSUPPORTED;
+#endif
     }
     //字幕焼きこみ
     if (vppType == VppType::CL_SUBBURN) {
@@ -3657,7 +3976,7 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
             t0RequestNumFrame += 4; // 内部でフレームが増える場合に備えて
         }
         if (allocateOpenCLFrame) {
-            const int requestNumFrames = std::max(1, t0RequestNumFrame + t1RequestNumFrame + asyncdepth + 1);
+            const int requestNumFrames = std::max(1, t0RequestNumFrame + t1RequestNumFrame + t0->additionalOutputSurfaces() + asyncdepth + 1);
             PrintMes(RGY_LOG_DEBUG, _T("AllocFrames: %s-%s, type: CL, %s %dx%d, request %d frames\n"),
                 t0->print().c_str(), t1->print().c_str(), RGY_CSP_NAMES[allocateFrameInfo.csp],
                 allocateFrameInfo.width, allocateFrameInfo.height, requestNumFrames);
@@ -3748,7 +4067,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     if (deviceInfoCache
         && (deviceInfoCache->getDeviceIds().size() == 0
             || (prm->deviceID >= 0 && deviceInfoCache->getDeviceIds().size() <= prm->deviceID))) {
-        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads);
+        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, -1, prm->ctrl.clPerfDumpDir);
         if (devList.size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
             return ret;
@@ -3770,7 +4089,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     });
 
     if (devList.size() == 0) {
-        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads);
+        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, -1, prm->ctrl.clPerfDumpDir);
         if (devList.size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
             return ret;
