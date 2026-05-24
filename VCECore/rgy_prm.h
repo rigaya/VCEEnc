@@ -3426,7 +3426,9 @@ struct RGYParamControl {
     RGYParamInitVulkan enableVulkan;
     int openclBuildThreads;
     tstring clPerfDumpDir;          // --cl-perf-dump <dir>: OpenCL kernel perf dump 先ディレクトリ (空=無効)
+    tstring clPerfDisasmTool;       // --cl-perf-disasm-tool <auto|ocloc|rga|none>
     tstring clPerfOclocPath;        // --ocloc-path <path>: cl_perf aggregate に渡す ocloc 実行ファイルパス
+    tstring clPerfRgaPath;          // --rga-path <path>: cl_perf aggregate に渡す RGA 実行ファイルパス
     RGYParamAvoidIdleClock avoidIdleClock;
     bool processMonitorDevUsage;
     bool processMonitorDevUsageReset;

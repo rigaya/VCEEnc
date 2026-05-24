@@ -210,7 +210,7 @@ static int cl_perf_run_python_script(const std::filesystem::path& scriptPath, co
     return -1;
 }
 
-static void cl_perf_generate_report(const tstring& dumpDir, const tstring& oclocPath, const tstring& pythonPath) {
+static void cl_perf_generate_report(const tstring& dumpDir, const tstring& disasmTool, const tstring& oclocPath, const tstring& rgaPath, const tstring& pythonPath) {
     if (dumpDir.empty()) {
         return;
     }
@@ -229,9 +229,17 @@ static void cl_perf_generate_report(const tstring& dumpDir, const tstring& ocloc
 
     const auto dumpDirT = path_to_tstring(dumpDirPath);
     std::vector<tstring> aggregateArgs = { _T("--dump-dir"), dumpDirT };
+    if (!disasmTool.empty()) {
+        aggregateArgs.push_back(_T("--disasm-tool"));
+        aggregateArgs.push_back(disasmTool);
+    }
     if (!oclocPath.empty()) {
         aggregateArgs.push_back(_T("--ocloc"));
         aggregateArgs.push_back(oclocPath);
+    }
+    if (!rgaPath.empty()) {
+        aggregateArgs.push_back(_T("--rga"));
+        aggregateArgs.push_back(rgaPath);
     }
 
     const auto aggregateExitCode = cl_perf_run_python_script(toolsDir / _T("cl_perf_aggregate.py"), aggregateArgs, pythonPath);
@@ -656,7 +664,9 @@ static int run_on_os_codepage() {
 
 int vce_run(VCEParam *pParams) {
     const auto clPerfDumpDir = pParams->ctrl.clPerfDumpDir;
+    const auto clPerfDisasmTool = pParams->ctrl.clPerfDisasmTool;
     const auto clPerfOclocPath = pParams->ctrl.clPerfOclocPath;
+    const auto clPerfRgaPath = pParams->ctrl.clPerfRgaPath;
     const auto pythonPath = pParams->ctrl.pythonPath;
     const bool clPerfGenerateReport = !pParams->ctrl.parallelEnc.isChild();
     unique_ptr<VCECore> vce(new VCECore());
@@ -671,7 +681,7 @@ int vce_run(VCEParam *pParams) {
         if (vce->run2() != RGY_ERR_NONE) {
             vce.reset();
             if (clPerfGenerateReport) {
-                cl_perf_generate_report(clPerfDumpDir, clPerfOclocPath, pythonPath);
+                cl_perf_generate_report(clPerfDumpDir, clPerfDisasmTool, clPerfOclocPath, clPerfRgaPath, pythonPath);
             }
             return 1;
         }
@@ -679,13 +689,13 @@ int vce_run(VCEParam *pParams) {
         _ftprintf(stderr, _T("fatal error in encoding pipeline.\n"));
         vce.reset();
         if (clPerfGenerateReport) {
-            cl_perf_generate_report(clPerfDumpDir, clPerfOclocPath, pythonPath);
+            cl_perf_generate_report(clPerfDumpDir, clPerfDisasmTool, clPerfOclocPath, clPerfRgaPath, pythonPath);
         }
         return 1;
     }
     vce.reset();
     if (clPerfGenerateReport) {
-        cl_perf_generate_report(clPerfDumpDir, clPerfOclocPath, pythonPath);
+        cl_perf_generate_report(clPerfDumpDir, clPerfDisasmTool, clPerfOclocPath, clPerfRgaPath, pythonPath);
     }
     return 0;
 }

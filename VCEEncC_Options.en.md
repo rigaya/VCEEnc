@@ -247,7 +247,9 @@
   - [--process-codepage \<string\> \[Windows OS only\]](#--process-codepage-string-windows-os-only)
   - [--task-perf-monitor](#--task-perf-monitor)
   - [--cl-perf-dump \<dir\>](#--cl-perf-dump-dir)
+  - [--cl-perf-disasm-tool \<string\>](#--cl-perf-disasm-tool-string)
   - [--ocloc-path \<path\>](#--ocloc-path-path)
+  - [--rga-path \<path\>](#--rga-path-path)
   - [--python \<string\>](#--python-string)
   - [--perf-monitor \[\<string\>\[,\<string\>\]...\]](#--perf-monitor-stringstring)
   - [--perf-monitor-interval \<int\>](#--perf-monitor-interval-int)
@@ -3452,11 +3454,21 @@ Write OpenCL kernel performance dumps to the specified directory and automatical
 
 Report generation requires `python`. By default, Windows uses `py.exe`, with `python.exe` as fallback when needed, and Linux uses `python3`. python path can be set using [--python](#--python-string).
 
-`ocloc` allows to show disassembly (but not essential for report generation). `ocloc` can be installed with Intel oneAPI into  `C:\Program Files (x86)\Intel\oneAPI\<version>\bin\ocloc.exe`. Additionally, executable path can be specified with [--ocloc-path](#--ocloc-path-path).
+Disassembly is optional. Intel GPU dumps use `ocloc`, and AMD GPU dumps use Radeon GPU Analyzer (RGA). VCEEnc automatically selects the tool by default. `ocloc` can be installed with Intel oneAPI into `C:\Program Files (x86)\Intel\oneAPI\<version>\bin\ocloc.exe`. RGA can be installed with AMD Radeon GPU Analyzer into `C:\Program Files\GPUOpen\Radeon GPU Analyzer\rga.exe`.
 
+### --cl-perf-disasm-tool &lt;string&gt;
+Use with [--cl-perf-dump](#--cl-perf-dump-dir) to select the disassembler passed to cl_perf aggregate.
+
+- `auto` ... automatically select `rga` for AMD/VCEEnc dumps and `ocloc` for Intel dumps.
+- `ocloc` ... use Intel oneAPI `ocloc`.
+- `rga` ... use AMD Radeon GPU Analyzer.
+- `none` ... skip disassembly and generate the report with timing data only.
 
 ### --ocloc-path &lt;path&gt;
 Use with [--cl-perf-dump](#--cl-perf-dump-dir) to specify the ocloc executable path passed to cl_perf aggregate.
+
+### --rga-path &lt;path&gt;
+Use with [--cl-perf-dump](#--cl-perf-dump-dir) to specify the Radeon GPU Analyzer executable path passed to cl_perf aggregate.
 
 ### --python &lt;string&gt;
 Specify the Python executable path used for [--perf-monitor](#--perf-monitor-stringstring) plot display and [--cl-perf-dump](#--cl-perf-dump-dir) report generation.
