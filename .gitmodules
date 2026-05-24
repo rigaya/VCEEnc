@@ -15,4 +15,4 @@
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git
 [submodule "cl_perf"]
 	path = cl_perf
-	url = https://github.com/rigaya/cl_perf
+	url = https://github.com/rigaya/cl_perf.git
