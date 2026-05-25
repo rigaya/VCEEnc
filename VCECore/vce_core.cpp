@@ -538,12 +538,7 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, DeviceCodecCsp& HWDecCodecCsp) 
     }
 
     // インタレ解除が指定され、かつインタレの指定がない場合は、自動的にインタレの情報取得を行う
-    int deinterlacer = 0;
-    if (inputParam->vpp.afs.enable) deinterlacer++;
-    if (inputParam->vpp.nnedi.enable) deinterlacer++;
-    if (inputParam->vpp.yadif.enable) deinterlacer++;
-    if (inputParam->vpp.decomb.enable) deinterlacer++;
-    if (deinterlacer > 0 && ((inputParam->input.picstruct & RGY_PICSTRUCT_INTERLACED) == 0)) {
+    if (hasVppDeinterlacer(inputParam, false) && ((inputParam->input.picstruct & RGY_PICSTRUCT_INTERLACED) == 0)) {
         inputParam->input.picstruct = RGY_PICSTRUCT_AUTO;
     }
 
@@ -3505,10 +3500,7 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
                 //インタレ保持のチェック
                 const bool interlacedEncoding =
                     (prm->input.picstruct & RGY_PICSTRUCT_INTERLACED)
-                    && !prm->vpp.afs.enable
-                    && !prm->vpp.nnedi.enable
-                    && !prm->vpp.yadif.enable
-                    && !prm->vpp.decomb.enable;
+                    && !hasVppDeinterlacer(prm, false);
                 if (interlacedEncoding
                     && !outputCaps->IsInterlacedSupported()) {
                     message += strsprintf(_T("GPU #%d (%s) does not support %s interlaced encoding.\n"),
