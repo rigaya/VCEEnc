@@ -247,6 +247,7 @@
   - [--process-codepage \<string\> \[Windows OS only\]](#--process-codepage-string-windows-os-only)
   - [--task-perf-monitor](#--task-perf-monitor)
   - [--cl-perf-dump \<dir\>](#--cl-perf-dump-dir)
+  - [--cl-perf-timeline \[\<float\>\]](#--cl-perf-timeline-float)
   - [--cl-perf-disasm-tool \<string\>](#--cl-perf-disasm-tool-string)
   - [--ocloc-path \<path\>](#--ocloc-path-path)
   - [--rga-path \<path\>](#--rga-path-path)
@@ -3455,6 +3456,24 @@ Write OpenCL kernel performance dumps to the specified directory and automatical
 Report generation requires `python`. By default, Windows uses `py.exe`, with `python.exe` as fallback when needed, and Linux uses `python3`. python path can be set using [--python](#--python-string).
 
 Disassembly is optional. Intel GPU dumps use `ocloc`, and AMD GPU dumps use Radeon GPU Analyzer (RGA). VCEEnc automatically selects the tool by default. `ocloc` can be installed with Intel oneAPI into `C:\Program Files (x86)\Intel\oneAPI\<version>\bin\ocloc.exe`. RGA can be installed with AMD Radeon GPU Analyzer into `C:\Program Files\GPUOpen\Radeon GPU Analyzer\rga.exe`.
+
+
+### --cl-perf-timeline [&lt;float&gt;]
+Use with [--cl-perf-dump](#--cl-perf-dump-dir) to collect per-event timeline data and generate `timeline.html`.
+
+Records the host-side enqueue timing and device-side execution timing of individual kernel launches and memory transfer commands for the specified number of seconds from the start of encoding. Host-device clock correlation is corrected using two-point calibration via `clGetDeviceAndHostTimer` (OpenCL 2.1).
+
+Default is 10 seconds when the value is omitted. Specifying a negative value collects all events without a time limit (may consume a large amount of memory).
+
+```
+Example: Collect timeline for the first 5 seconds
+--cl-perf-dump perf_out --cl-perf-timeline 5
+
+Example: Collect with default 10 seconds
+--cl-perf-dump perf_out --cl-perf-timeline
+```
+
+The generated `timeline.html` is a Canvas 2D based interactive viewer supporting zoom/pan/hover for detailed inspection. It has two sections: host thread lanes and device queue lanes, with host/device correspondence highlighted by matching seq numbers.
 
 ### --cl-perf-disasm-tool &lt;string&gt;
 Use with [--cl-perf-dump](#--cl-perf-dump-dir) to select the disassembler passed to cl_perf aggregate.

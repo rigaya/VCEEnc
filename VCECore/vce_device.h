@@ -54,7 +54,7 @@ public:
     VCEDevice(shared_ptr<RGYLog>& log, amf::AMFFactory *factory, amf::AMFTrace *trace);
     virtual ~VCEDevice();
 
-    virtual RGY_ERR init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const RGYParamInitVulkan interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor, bool enableAV1Check, const int openCLBuildThreads, const tstring& clPerfDumpDir = tstring());
+    virtual RGY_ERR init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const RGYParamInitVulkan interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor, bool enableAV1Check, const int openCLBuildThreads, const tstring& clPerfDumpDir = tstring(), const double clPerfTimelineSec = 0.0);
 
     amf::AMFCapsPtr getEncCaps(RGY_CODEC codec, bool for10bit);
     amf::AMFCapsPtr getEncCapsWithInit(AMF_RESULT& initRes, RGY_CODEC codec, bool for10bit);
@@ -90,7 +90,7 @@ public:
     static const wchar_t *CAP_10BITDEPTH;
 protected:
     amf::AMFCapsPtr getEncCapsImpl(AMF_RESULT& initRes, RGY_CODEC codec, bool for10bit, bool useInit);
-    RGY_ERR initOpenCL(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool enableVppPerfMonitor, const int openCLBuildThreads, const tstring& clPerfDumpDir);
+    RGY_ERR initOpenCL(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool enableVppPerfMonitor, const int openCLBuildThreads, const tstring& clPerfDumpDir, const double clPerfTimelineSec = 0.0);
     virtual RGY_ERR CreateContext();
     void getAllCaps();
 

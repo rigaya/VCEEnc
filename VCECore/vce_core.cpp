@@ -4099,7 +4099,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     if (deviceInfoCache
         && (deviceInfoCache->getDeviceIds().size() == 0
             || (prm->deviceID >= 0 && deviceInfoCache->getDeviceIds().size() <= prm->deviceID))) {
-        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, -1, prm->ctrl.clPerfDumpDir);
+        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, -1, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
         if (devList.size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
             return ret;
@@ -4121,7 +4121,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     });
 
     if (devList.size() == 0) {
-        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, -1, prm->ctrl.clPerfDumpDir);
+        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, -1, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
         if (devList.size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
             return ret;

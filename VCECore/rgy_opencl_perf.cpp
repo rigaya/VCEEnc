@@ -36,8 +36,14 @@
 #include <chrono>
 #include <iomanip>
 #include <ctime>
+#include <thread>
+#include <cstdarg>
+#include <cstdio>
+#include <filesystem>
 
 #include "rgy_filesystem.h"
+#include "rgy_resource.h"
+#include "rgy_pipe.h"
 #include "rgy_util.h"
 
 // CL_KERNEL_SPILL_MEM_SIZE_INTEL は公式 SDK に入っていない場合があるため自前定義
@@ -123,7 +129,13 @@ static std::string get_timestamp() {
 RGYOpenCLPerfCollector::RGYOpenCLPerfCollector()
     : m_enabled(false), m_dump_dir(), m_mtx(),
       m_next_program_id(1), m_programs(), m_aggs(), m_pending(),
-      m_command_aggs(), m_command_pending(), m_allocation_aggs() {
+      m_command_aggs(), m_command_pending(), m_allocation_aggs(),
+      m_timeline_enabled(false), m_timeline_window_ns(0),
+      m_capture_start_host_ns(0),
+      m_has_dev_host_timer(false), m_timeline_devid(nullptr),
+      m_cal_dev0(0), m_cal_steady0(0), m_cal_scale(1.0), m_cal_finalized(false),
+      m_timeline_seq(0),
+      m_timeline_events(), m_timeline_pending() {
 }
 
 RGYOpenCLPerfCollector& RGYOpenCLPerfCollector::instance() {
@@ -135,6 +147,57 @@ void RGYOpenCLPerfCollector::enable(const tstring& dump_dir) {
     std::lock_guard<std::mutex> lock(m_mtx);
     m_dump_dir = dump_dir;
     m_enabled.store(true, std::memory_order_release);
+}
+
+void RGYOpenCLPerfCollector::enableTimeline(uint64_t window_ns, cl_device_id devid) {
+    std::lock_guard<std::mutex> lock(m_mtx);
+    m_timeline_window_ns = window_ns;
+    m_capture_start_host_ns = (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+    m_has_dev_host_timer = false;
+    m_timeline_devid = devid;
+    m_cal_dev0 = 0;
+    m_cal_steady0 = 0;
+    m_cal_scale = 1.0;
+    m_cal_finalized = false;
+    if (f_clGetDeviceAndHostTimer && devid) {
+        cl_ulong dev_ts = 0;
+        cl_ulong host_ts = 0;
+        if (f_clGetDeviceAndHostTimer(devid, &dev_ts, &host_ts) == CL_SUCCESS && dev_ts != 0) {
+            m_cal_dev0 = dev_ts;
+            m_cal_steady0 = host_ts;
+            m_has_dev_host_timer = true;
+        }
+    }
+    m_timeline_enabled.store(true, std::memory_order_release);
+}
+
+void RGYOpenCLPerfCollector::finalizeTimelineCalibration(cl_device_id devid) {
+    if (!m_has_dev_host_timer || m_cal_finalized) return;
+    if (!f_clGetDeviceAndHostTimer || !devid) return;
+    cl_ulong dev_ts1 = 0;
+    cl_ulong host_ts1 = 0;
+    if (f_clGetDeviceAndHostTimer(devid, &dev_ts1, &host_ts1) == CL_SUCCESS && dev_ts1 > m_cal_dev0) {
+        const double dev_span = (double)(dev_ts1 - m_cal_dev0);
+        const double host_span = (double)(host_ts1 - m_cal_steady0);
+        if (dev_span > 1e6) {
+            m_cal_scale = host_span / dev_span;
+        }
+    }
+    m_cal_finalized = true;
+}
+
+uint64_t RGYOpenCLPerfCollector::normalizeHostNs(uint64_t abs_ns) const {
+    return (abs_ns >= m_capture_start_host_ns) ? (abs_ns - m_capture_start_host_ns) : 0;
+}
+
+uint64_t RGYOpenCLPerfCollector::normalizeDevNs(uint64_t dev_ns) const {
+    if (!m_has_dev_host_timer) return UINT64_MAX;
+    // dev_ns → steady_clock ns (線形補間)
+    // steady_ns = m_cal_steady0 + (dev_ns - m_cal_dev0) * m_cal_scale
+    const double delta = (double)((int64_t)dev_ns - (int64_t)m_cal_dev0) * m_cal_scale;
+    const int64_t steady_ns = (int64_t)m_cal_steady0 + (int64_t)delta;
+    return (steady_ns >= (int64_t)m_capture_start_host_ns) ? (uint64_t)(steady_ns - (int64_t)m_capture_start_host_ns) : 0;
 }
 
 uint64_t RGYOpenCLPerfCollector::recordProgramBuild(
@@ -321,7 +384,10 @@ void RGYOpenCLPerfCollector::recordLaunch(
     const RGYWorkSize& global_ceil,
     cl_kernel          kernel,
     cl_device_id       devid,
-    RGYOpenCLEvent&    event)
+    RGYOpenCLEvent&    event,
+    uint64_t           host_enqueue_abs_ns,
+    uint64_t           host_enqueue_end_abs_ns,
+    uint64_t           queue_id)
 {
     if (!isEnabled()) return;
 
@@ -356,13 +422,38 @@ void RGYOpenCLPerfCollector::recordLaunch(
 
     // event を pending キューに積む (コピーを shared_ptr で保持)
     m_pending.emplace_back(key, event, kernel);
+
+    // timeline
+    if (m_timeline_enabled.load(std::memory_order_acquire) && host_enqueue_abs_ns != 0) {
+        const uint64_t elapsed = normalizeHostNs(host_enqueue_abs_ns);
+        if (m_timeline_window_ns == 0 || elapsed <= m_timeline_window_ns) {
+            RGYOpenCLPerfTimelineEvent te;
+            te.seq                 = m_timeline_seq.fetch_add(1, std::memory_order_relaxed);
+            te.category            = "kernel";
+            te.name                = kernel_name;
+            te.program_id          = program_id;
+            te.thread_id           = (uint64_t)std::hash<std::thread::id>{}(std::this_thread::get_id());
+            te.queue_id            = queue_id;
+            te.host_enqueue_ns     = normalizeHostNs(host_enqueue_abs_ns);
+            te.host_enqueue_end_ns = normalizeHostNs(host_enqueue_end_abs_ns);
+            te.bytes               = 0;
+            if (event() != nullptr) {
+                te.event     = event;
+                te.has_event = true;
+            }
+            m_timeline_pending.push_back(std::move(te));
+        }
+    }
 }
 
 void RGYOpenCLPerfCollector::recordCommand(
     const std::string& command_name,
     uint64_t           bytes,
     uint64_t           host_time_ns,
-    RGYOpenCLEvent&    event)
+    RGYOpenCLEvent&    event,
+    uint64_t           host_enqueue_abs_ns,
+    uint64_t           host_enqueue_end_abs_ns,
+    uint64_t           queue_id)
 {
     if (!isEnabled()) return;
 
@@ -379,6 +470,28 @@ void RGYOpenCLPerfCollector::recordCommand(
         agg.host_time_sum_ns += host_time_ns;
         if (host_time_ns < agg.host_time_min_ns) agg.host_time_min_ns = host_time_ns;
         if (host_time_ns > agg.host_time_max_ns) agg.host_time_max_ns = host_time_ns;
+    }
+
+    // timeline
+    if (m_timeline_enabled.load(std::memory_order_acquire) && host_enqueue_abs_ns != 0) {
+        const uint64_t elapsed = normalizeHostNs(host_enqueue_abs_ns);
+        if (m_timeline_window_ns == 0 || elapsed <= m_timeline_window_ns) {
+            RGYOpenCLPerfTimelineEvent te;
+            te.seq                 = m_timeline_seq.fetch_add(1, std::memory_order_relaxed);
+            te.category            = "command";
+            te.name                = command_name;
+            te.program_id          = 0;
+            te.thread_id           = (uint64_t)std::hash<std::thread::id>{}(std::this_thread::get_id());
+            te.queue_id            = queue_id;
+            te.host_enqueue_ns     = normalizeHostNs(host_enqueue_abs_ns);
+            te.host_enqueue_end_ns = normalizeHostNs(host_enqueue_end_abs_ns);
+            te.bytes               = bytes;
+            if (event() != nullptr) {
+                te.event     = event;
+                te.has_event = true;
+            }
+            m_timeline_pending.push_back(std::move(te));
+        }
     }
 }
 
@@ -463,12 +576,32 @@ void RGYOpenCLPerfCollector::drainPending() {
     m_command_pending.clear();
 }
 
+void RGYOpenCLPerfCollector::drainTimelinePending() {
+    for (auto& te : m_timeline_pending) {
+        if (te.has_event && te.event() != nullptr) {
+            uint64_t t_queued = 0, t_submit = 0, t_start = 0, t_end = 0;
+            if (te.event.getProfilingTimeQueued(t_queued) == RGY_ERR_NONE)
+                te.dev_queued_ns = normalizeDevNs(t_queued);
+            if (te.event.getProfilingTimeSubmit(t_submit) == RGY_ERR_NONE)
+                te.dev_submit_ns = normalizeDevNs(t_submit);
+            if (te.event.getProfilingTimeStart(t_start) == RGY_ERR_NONE)
+                te.dev_start_ns = normalizeDevNs(t_start);
+            if (te.event.getProfilingTimeEnd(t_end) == RGY_ERR_NONE)
+                te.dev_end_ns = normalizeDevNs(t_end);
+        }
+        te.event = RGYOpenCLEvent();
+        te.has_event = false;
+        m_timeline_events.push_back(std::move(te));
+    }
+    m_timeline_pending.clear();
+}
+
 void RGYOpenCLPerfCollector::flush() {
     try {
         std::lock_guard<std::mutex> lock(m_mtx);
 
         // pending event を一括 wait してから drainPending
-        if (!m_pending.empty() || !m_command_pending.empty()) {
+        {
             std::vector<cl_event> cl_events;
             for (auto& [key, event, kobj] : m_pending) {
                 if (event() != nullptr) cl_events.push_back(event());
@@ -476,13 +609,27 @@ void RGYOpenCLPerfCollector::flush() {
             for (auto& [key, event, bytes, host_time_ns] : m_command_pending) {
                 if (event() != nullptr) cl_events.push_back(event());
             }
+            for (auto& te : m_timeline_pending) {
+                if (te.has_event && te.event() != nullptr) cl_events.push_back(te.event());
+            }
             if (!cl_events.empty()) {
                 clWaitForEvents((cl_uint)cl_events.size(), cl_events.data());
             }
+        }
+        if (!m_pending.empty() || !m_command_pending.empty()) {
             drainPending();
         }
+        // 2点目の calibration を取得してから timeline pending を drain
+        if (m_timeline_enabled.load(std::memory_order_acquire)) {
+            finalizeTimelineCalibration(m_timeline_devid);
+        }
+        if (!m_timeline_pending.empty()) {
+            drainTimelinePending();
+        }
 
-        if (m_programs.empty() && m_aggs.empty() && m_command_aggs.empty() && m_allocation_aggs.empty()) return;
+        const bool has_agg = !m_programs.empty() || !m_aggs.empty() || !m_command_aggs.empty() || !m_allocation_aggs.empty();
+        const bool has_timeline = !m_timeline_events.empty();
+        if (!has_agg && !has_timeline) return;
 
         const std::string dump_dir_str = tchar_to_string(m_dump_dir);
         if (dump_dir_str.empty()) return;
@@ -490,11 +637,16 @@ void RGYOpenCLPerfCollector::flush() {
         // dump_dir 作成
         CreateDirectoryRecursive(dump_dir_str.c_str());
 
-        writeProgramsJsonl(dump_dir_str + "/programs.jsonl");
-        writeLaunchesJsonl(dump_dir_str + "/launches.jsonl");
-        writeCommandsJsonl(dump_dir_str + "/commands.jsonl");
-        writeAllocationsJsonl(dump_dir_str + "/allocations.jsonl");
+        if (has_agg) {
+            writeProgramsJsonl(dump_dir_str + "/programs.jsonl");
+            writeLaunchesJsonl(dump_dir_str + "/launches.jsonl");
+            writeCommandsJsonl(dump_dir_str + "/commands.jsonl");
+            writeAllocationsJsonl(dump_dir_str + "/allocations.jsonl");
+        }
         writeMetaJson(dump_dir_str + "/meta.json");
+        if (has_timeline) {
+            writeTimelineJsonl(dump_dir_str + "/timeline.jsonl");
+        }
     } catch (...) {
         // best-effort: 例外を飲む
     }
@@ -697,8 +849,258 @@ void RGYOpenCLPerfCollector::writeMetaJson(const std::string& path) {
     else
         ofs << "  \"device_ip_version\":null,\n";
     ofs << "  \"device_arch_hint\":\"" << json_escape(arch_hint) << "\",\n";
-    ofs << "  \"ocloc_device_hint\":\"" << json_escape(ocloc_hint) << "\"\n";
-    ofs << "}\n";
+    ofs << "  \"ocloc_device_hint\":\"" << json_escape(ocloc_hint) << "\"";
+    if (m_timeline_enabled.load(std::memory_order_acquire)) {
+        ofs << ",\n  \"timeline\":{\n";
+        ofs << "    \"capture_start_host_ns\":" << m_capture_start_host_ns << ",\n";
+        ofs << "    \"cal_dev0\":" << m_cal_dev0 << ",\n";
+        ofs << "    \"cal_steady0\":" << m_cal_steady0 << ",\n";
+        ofs << std::setprecision(15);
+        ofs << "    \"cal_scale\":" << m_cal_scale << ",\n";
+        ofs << "    \"cal_finalized\":" << (m_cal_finalized ? "true" : "false") << ",\n";
+        ofs << "    \"has_dev_host_timer\":" << (m_has_dev_host_timer ? "true" : "false") << ",\n";
+        ofs << "    \"window_ns\":" << m_timeline_window_ns << ",\n";
+        ofs << "    \"event_count\":" << m_timeline_events.size() << "\n";
+        ofs << "  }";
+    }
+    ofs << "\n}\n";
+}
+
+void RGYOpenCLPerfCollector::writeTimelineJsonl(const std::string& path) {
+    std::ofstream ofs(path);
+    if (!ofs) return;
+
+    for (const auto& te : m_timeline_events) {
+        ofs << "{";
+        ofs << "\"seq\":" << te.seq;
+        ofs << ",\"cat\":\"" << json_escape(te.category) << "\"";
+        ofs << ",\"name\":\"" << json_escape(te.name) << "\"";
+        if (te.program_id != 0) ofs << ",\"pid\":" << te.program_id;
+        ofs << ",\"tid\":" << te.thread_id;
+        ofs << ",\"qid\":" << te.queue_id;
+        ofs << ",\"h_start\":" << te.host_enqueue_ns;
+        ofs << ",\"h_end\":" << te.host_enqueue_end_ns;
+        if (te.bytes != 0) ofs << ",\"bytes\":" << te.bytes;
+        if (te.dev_queued_ns != UINT64_MAX) ofs << ",\"d_queued\":" << te.dev_queued_ns;
+        if (te.dev_submit_ns != UINT64_MAX) ofs << ",\"d_submit\":" << te.dev_submit_ns;
+        if (te.dev_start_ns  != UINT64_MAX) ofs << ",\"d_start\":" << te.dev_start_ns;
+        if (te.dev_end_ns    != UINT64_MAX) ofs << ",\"d_end\":" << te.dev_end_ns;
+        ofs << "}\n";
+    }
+}
+
+static tstring cl_perf_path_to_tstring(const std::filesystem::path& path) {
+#if defined(_WIN32) || defined(_WIN64)
+    return path.wstring();
+#else
+    return path.string();
+#endif
+}
+
+static void cl_perf_print_warn(const TCHAR *format, ...) {
+    va_list args;
+    va_start(args, format);
+    _ftprintf(stderr, _T("cl_perf: warning: "));
+#if defined(_WIN32) || defined(_WIN64)
+    _vftprintf(stderr, format, args);
+#else
+    vfprintf(stderr, format, args);
+#endif
+    va_end(args);
+}
+
+static void cl_perf_print_info(const TCHAR *format, ...) {
+    va_list args;
+    va_start(args, format);
+    _ftprintf(stdout, _T("cl_perf: "));
+#if defined(_WIN32) || defined(_WIN64)
+    _vftprintf(stdout, format, args);
+#else
+    vfprintf(stdout, format, args);
+#endif
+    va_end(args);
+}
+
+static bool cl_perf_write_resource(const TCHAR *resourceName, const std::filesystem::path& outPath) {
+    void *resourceData = nullptr;
+    const auto resourceSize = getEmbeddedResource(&resourceData, resourceName, _T("CL_PERF_SRC"), nullptr);
+    if (resourceSize <= 0 || resourceData == nullptr) {
+        cl_perf_print_warn(_T("failed to load embedded resource %s.\n"), resourceName);
+        return false;
+    }
+
+    FILE *fp = nullptr;
+    const auto outPathT = cl_perf_path_to_tstring(outPath);
+    if (_tfopen_s(&fp, outPathT.c_str(), _T("wb")) != 0 || fp == nullptr) {
+        cl_perf_print_warn(_T("failed to open %s for writing.\n"), outPathT.c_str());
+        return false;
+    }
+    const auto written = fwrite(resourceData, 1, resourceSize, fp);
+    fclose(fp);
+    if (written != (size_t)resourceSize) {
+        cl_perf_print_warn(_T("failed to write embedded resource %s to %s.\n"), resourceName, outPathT.c_str());
+        return false;
+    }
+    return true;
+}
+
+static bool cl_perf_extract_tools(const std::filesystem::path& toolsDir) {
+    const auto toolsDirT = cl_perf_path_to_tstring(toolsDir);
+    if (!CreateDirectoryRecursive(toolsDirT.c_str())) {
+        cl_perf_print_warn(_T("failed to create tool directory %s.\n"), toolsDirT.c_str());
+        return false;
+    }
+
+    struct ClPerfResource {
+        const TCHAR *resourceName;
+        const TCHAR *filename;
+    };
+    static const ClPerfResource resources[] = {
+        { _T("CL_PERF_COMMON_PY"),       _T("cl_perf_common.py") },
+        { _T("CL_PERF_AGGREGATE_PY"),    _T("cl_perf_aggregate.py") },
+        { _T("CL_PERF_REPORT_PY"),       _T("cl_perf_report.py") },
+        { _T("CL_PERF_ARCH_TABLE_JSON"), _T("arch_table.json") },
+    };
+
+    for (const auto& resource : resources) {
+        if (!cl_perf_write_resource(resource.resourceName, toolsDir / resource.filename)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static tstring cl_perf_join_args(const std::vector<tstring>& args) {
+    tstring joined;
+    for (const auto& arg : args) {
+        if (!joined.empty()) {
+            joined += _T(" ");
+        }
+        joined += _T("\"") + arg + _T("\"");
+    }
+    return joined;
+}
+
+static void cl_perf_drain_pipe(RGYPipeProcess *process, const bool isStdErr) {
+    std::vector<uint8_t> buffer;
+    for (;;) {
+        buffer.clear();
+        const auto ret = isStdErr ? process->stdErrRead(buffer) : process->stdOutRead(buffer);
+        if (ret < 0) {
+            break;
+        }
+        if (!buffer.empty()) {
+            auto fp = isStdErr ? stderr : stdout;
+            fwrite(buffer.data(), 1, buffer.size(), fp);
+            fflush(fp);
+        }
+    }
+}
+
+static int cl_perf_run_process(const std::vector<tstring>& args) {
+    auto process = createRGYPipeProcess();
+    process->init(PIPE_MODE_DISABLE, PIPE_MODE_ENABLE, PIPE_MODE_ENABLE);
+
+    cl_perf_print_info(_T("run %s\n"), cl_perf_join_args(args).c_str());
+    if (process->run(args, nullptr, 0, true, false) != 0) {
+        cl_perf_print_warn(_T("failed to start %s.\n"), args.empty() ? _T("") : args[0].c_str());
+        process->close();
+        return -1;
+    }
+
+    std::thread stdoutThread(cl_perf_drain_pipe, process.get(), false);
+    std::thread stderrThread(cl_perf_drain_pipe, process.get(), true);
+    const auto exitCode = process->waitAndGetExitCode();
+    stdoutThread.join();
+    stderrThread.join();
+    process->close();
+    return exitCode;
+}
+
+static bool cl_perf_check_python(const std::vector<tstring>& pythonArgs) {
+    auto args = pythonArgs;
+    args.push_back(_T("-c"));
+    args.push_back(_T("import sys"));
+    return cl_perf_run_process(args) == 0;
+}
+
+static int cl_perf_run_python_script(const std::filesystem::path& scriptPath, const std::vector<tstring>& scriptArgs, const tstring& pythonPath) {
+    const auto scriptPathT = cl_perf_path_to_tstring(scriptPath);
+
+    std::vector<std::vector<tstring>> pythonArgList;
+    if (!pythonPath.empty()) {
+        pythonArgList.push_back({ pythonPath });
+    } else {
+#if defined(_WIN32) || defined(_WIN64)
+        pythonArgList.push_back({ _T("py.exe") });
+        pythonArgList.push_back({ _T("python.exe") });
+#else
+        pythonArgList.push_back({ _T("python3") });
+#endif
+    }
+
+    for (auto pythonArgs : pythonArgList) {
+        if (!cl_perf_check_python(pythonArgs)) {
+            continue;
+        }
+        auto args = pythonArgs;
+        args.push_back(scriptPathT);
+        args.insert(args.end(), scriptArgs.begin(), scriptArgs.end());
+        return cl_perf_run_process(args);
+    }
+    return -1;
+}
+
+void cl_perf_generate_report(const tstring& dumpDir, const tstring& disasmTool, const tstring& oclocPath, const tstring& rgaPath, const tstring& pythonPath) {
+    if (dumpDir.empty()) {
+        return;
+    }
+
+    std::error_code ec;
+    const auto dumpDirPath = std::filesystem::absolute(std::filesystem::path(dumpDir), ec);
+    if (ec || !std::filesystem::is_directory(dumpDirPath, ec)) {
+        cl_perf_print_warn(_T("dump directory not found: %s\n"), dumpDir.c_str());
+        return;
+    }
+
+    const auto toolsDir = dumpDirPath / _T(".cl_perf_tools");
+    if (!cl_perf_extract_tools(toolsDir)) {
+        return;
+    }
+
+    const auto dumpDirT = cl_perf_path_to_tstring(dumpDirPath);
+    std::vector<tstring> aggregateArgs = { _T("--dump-dir"), dumpDirT };
+    if (!disasmTool.empty()) {
+        aggregateArgs.push_back(_T("--disasm-tool"));
+        aggregateArgs.push_back(disasmTool);
+    }
+    if (!oclocPath.empty()) {
+        aggregateArgs.push_back(_T("--ocloc"));
+        aggregateArgs.push_back(oclocPath);
+    }
+    if (!rgaPath.empty()) {
+        aggregateArgs.push_back(_T("--rga"));
+        aggregateArgs.push_back(rgaPath);
+    }
+
+    const auto aggregateExitCode = cl_perf_run_python_script(toolsDir / _T("cl_perf_aggregate.py"), aggregateArgs, pythonPath);
+    cl_perf_print_info(_T("aggregate exit code: %d\n"), aggregateExitCode);
+    if (aggregateExitCode != 0) {
+        cl_perf_print_warn(_T("aggregate failed, report generation skipped.\n"));
+        return;
+    }
+
+    const std::vector<tstring> reportArgs = { _T("--dump-dir"), dumpDirT };
+    const auto reportExitCode = cl_perf_run_python_script(toolsDir / _T("cl_perf_report.py"), reportArgs, pythonPath);
+    cl_perf_print_info(_T("report exit code: %d\n"), reportExitCode);
+
+    const auto reportPath = dumpDirPath / _T("report.html");
+    const auto reportPathT = cl_perf_path_to_tstring(reportPath);
+    if (reportExitCode == 0 && std::filesystem::is_regular_file(reportPath, ec)) {
+        cl_perf_print_info(_T("report generated: %s\n"), reportPathT.c_str());
+    } else {
+        cl_perf_print_warn(_T("report.html was not generated: %s\n"), reportPathT.c_str());
+    }
 }
 
 #endif // ENABLE_OPENCL

@@ -3413,6 +3413,7 @@ RGYParamControl::RGYParamControl() :
     enableVulkan(RGYParamInitVulkan::TargetVendor),
     openclBuildThreads(0),
     clPerfDumpDir(),
+    clPerfTimelineSec(0.0),
     clPerfDisasmTool(),
     clPerfOclocPath(),
     clPerfRgaPath(),
