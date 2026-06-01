@@ -3007,6 +3007,9 @@ H.264の非強フィルタ相当の空間デブロックフィルタ。エンコ
   - show=&lt;int&gt; (デフォルト=0)
     デバッグ表示。0=通常、1=マスクのみ、2=マスク+AA。
 
+  - edge=&lt;string&gt; (デフォルト=sobel)
+    エッジ検出方法。sobel, prewitt, sobel_full, scharr, kirsch, laplacian から選択する。
+
 - 使用例
   ```
   例: デフォルト設定
@@ -3014,6 +3017,9 @@ H.264の非強フィルタ相当の空間デブロックフィルタ。エンコ
 
   例: 輝度AAをやや強め、エッジ判定を少し強める
   --vpp-maa aa=64,mthresh=8
+
+  例: Scharr エッジ検出を使用する
+  --vpp-maa edge=scharr
   ```
 
 ### --vpp-enhance [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;][...]

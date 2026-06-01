@@ -3058,6 +3058,9 @@ Masked anti-aliasing for animated content (anime, cel-shaded). This combines dir
   - show=&lt;int&gt; (default=0)
     Debug overlay mode. 0=normal, 1=mask only, 2=mask+AA.
 
+  - edge=&lt;string&gt; (default=sobel)
+    Edge operator. Select from sobel, prewitt, sobel_full, scharr, kirsch, laplacian.
+
 - examples
   ```
   Example: Default settings
@@ -3065,6 +3068,9 @@ Masked anti-aliasing for animated content (anime, cel-shaded). This combines dir
 
   Example: Stronger luma AA with edge mask
   --vpp-maa aa=64,mthresh=8
+
+  Example: Use Scharr edge detection
+  --vpp-maa edge=scharr
   ```
 
 ### --vpp-enhance [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;][...]
