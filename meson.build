@@ -550,6 +550,7 @@ vcecore_sources = files(
   'VCECore/rgy_filter_edgelevel.cpp',
   'VCECore/rgy_filter_chromashift.cpp',
   'VCECore/rgy_filter_deblock.cpp',
+  'VCECore/rgy_filter_dehalo.cpp',
   'VCECore/rgy_filter_deflicker.cpp',
   'VCECore/rgy_filter_colorfix.cpp',
   'VCECore/rgy_filter_ivtc.cpp',
