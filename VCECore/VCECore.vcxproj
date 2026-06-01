@@ -646,6 +646,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="rgy_filter_deblock.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="rgy_filter_msharpen.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -854,6 +860,7 @@
     <ClInclude Include="rgy_filter_denoise_pmd.h" />
     <ClInclude Include="rgy_filter_edgelevel.h" />
     <ClInclude Include="rgy_filter_chromashift.h" />
+    <ClInclude Include="rgy_filter_deblock.h" />
     <ClInclude Include="rgy_filter_msharpen.h" />
     <ClInclude Include="rgy_filter_msmooth.h" />
     <ClInclude Include="rgy_filter_nnedi.h" />
@@ -909,6 +916,7 @@
     <None Include="rgy_filter_denoise_pmd.cl" />
     <None Include="rgy_filter_edgelevel.cl" />
     <None Include="rgy_filter_chromashift.cl" />
+    <None Include="rgy_filter_deblock.cl" />
     <None Include="rgy_filter_ivtc.cl" />
     <None Include="rgy_filter_msharpen.cl" />
     <None Include="rgy_filter_msmooth.cl" />
