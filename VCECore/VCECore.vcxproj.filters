@@ -213,6 +213,9 @@
     <ClCompile Include="rgy_filter_deblock.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="rgy_filter_deflicker.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClCompile Include="rgy_filter_msharpen.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -635,6 +638,9 @@
     <ClInclude Include="rgy_filter_deblock.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="rgy_filter_deflicker.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="rgy_filter_msharpen.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -908,6 +914,9 @@
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="rgy_filter_deblock.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="rgy_filter_deflicker.cl">
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="rgy_filter_msharpen.cl">

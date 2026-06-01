@@ -60,6 +60,7 @@ resource_specs = [
   ['rgy_filter_edgelevel_cl', '../VCECore/rgy_filter_edgelevel.cl', 'VCECore_rgy_filter_edgelevel_cl'],
   ['rgy_filter_chromashift_cl', '../VCECore/rgy_filter_chromashift.cl', 'VCECore_rgy_filter_chromashift_cl'],
   ['rgy_filter_deblock_cl', '../VCECore/rgy_filter_deblock.cl', 'VCECore_rgy_filter_deblock_cl'],
+  ['rgy_filter_deflicker_cl', '../VCECore/rgy_filter_deflicker.cl', 'VCECore_rgy_filter_deflicker_cl'],
   ['rgy_filter_ivtc_cl', '../VCECore/rgy_filter_ivtc.cl', 'VCECore_rgy_filter_ivtc_cl'],
   ['rgy_filter_rtgmc_bob_cl', '../VCECore/rgy_filter_rtgmc_bob.cl', 'VCECore_rgy_filter_rtgmc_bob_cl'],
   ['rgy_filter_maa_cl', '../VCECore/rgy_filter_maa.cl', 'VCECore_rgy_filter_maa_cl'],

@@ -60,6 +60,7 @@ RGY_FILTER_SUBBURN_CL       EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_subbur
 RGY_FILTER_UNSHARP_CL       EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_unsharp.cl"
 RGY_FILTER_CHROMASHIFT_CL   EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_chromashift.cl"
 RGY_FILTER_DEBLOCK_CL       EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_deblock.cl"
+RGY_FILTER_DEFLICKER_CL     EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_deflicker.cl"
 RGY_FILTER_EDGELEVEL_CL     EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_edgelevel.cl"
 RGY_FILTER_RTGMC_BOB_CL     EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_rtgmc_bob.cl"
 RGY_FILTER_MAA_CL           EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_maa.cl"
