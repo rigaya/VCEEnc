@@ -261,6 +261,8 @@ RGYFilterKfm::RGYFilterKfm(shared_ptr<RGYOpenCLContext> context) :
     m_nrFilter(),
     m_analyzer(),
     m_kfmFramePool(),
+    m_kfmSourceSlotFree(),
+    m_kfmSourceSlotRetired(),
     m_sourceCache(),
     m_deint60Cache(),
     m_before60Cache(),
@@ -365,6 +367,168 @@ std::shared_ptr<RGYCLFrame> RGYFilterKfm::acquireKfmFrame(const RGYFrameInfo& in
         AddMessage(RGY_LOG_ERROR, _T("failed to allocate KFM %s frame.\n"), label ? label : _T("cache"));
     }
     return frame;
+}
+
+std::shared_ptr<RGYFilterKfm::KfmSourceSlot> RGYFilterKfm::acquireKfmSourceSlot(const RGYFrameInfo& sourceInfo, cl_mem_flags flags) {
+    collectRetiredKfmSourceSlots();
+    auto matchSlot = [&sourceInfo, flags](const std::shared_ptr<KfmSourceSlot>& slot) {
+        return slot && slot->sourceFrame && slot->paddedFrame
+            && !cmpFrameInfoCspResolution(&slot->sourceFrame->frame, &sourceInfo)
+            && slot->sourceFrame->frame.bitdepth == sourceInfo.bitdepth
+            && slot->flags == flags;
+    };
+    auto pooled = std::find_if(m_kfmSourceSlotFree.begin(), m_kfmSourceSlotFree.end(), matchSlot);
+    if (pooled != m_kfmSourceSlotFree.end()) {
+        auto slot = std::move(*pooled);
+        m_kfmSourceSlotFree.erase(pooled);
+        slot->readyEvent.reset();
+        slot->sourceFrame->frame.dataList.clear();
+        slot->paddedFrame->frame.dataList.clear();
+        return slot;
+    }
+
+    auto paddedInfo = sourceInfo;
+    paddedInfo.height += KFM_SOURCE_VPAD * 2;
+    std::shared_ptr<RGYCLFrame> paddedFrame(m_cl->createFrameBuffer(paddedInfo, flags).release());
+    if (!paddedFrame) {
+        AddMessage(RGY_LOG_ERROR, _T("failed to allocate KFM padded source cache frame.\n"));
+        return nullptr;
+    }
+
+    RGYFrameInfo viewInfo = sourceInfo;
+    viewInfo.mem_type = RGY_MEM_TYPE_GPU;
+    for (int i = 0; i < _countof(viewInfo.ptr); i++) {
+        viewInfo.ptr[i] = nullptr;
+        viewInfo.pitch[i] = 0;
+    }
+
+    const auto memBaseAlignBits = m_cl && m_cl->platform()
+        ? std::max(1, m_cl->platform()->dev(0).info().mem_base_addr_align)
+        : 8;
+    const size_t memBaseAlignBytes = std::max<size_t>(1, (memBaseAlignBits + 7) / 8);
+    const int planes = RGY_CSP_PLANES[sourceInfo.csp];
+    for (int iplane = 0; iplane < planes; iplane++) {
+        const auto parent = getPlane(&paddedFrame->frame, (RGY_PLANE)iplane);
+        const auto view = getPlane(&sourceInfo, (RGY_PLANE)iplane);
+        const int vpad = (parent.height - view.height) >> 1;
+        if (parent.width != view.width || parent.height != view.height + vpad * 2 || vpad <= 0) {
+            AddMessage(RGY_LOG_ERROR, _T("invalid KFM source slot plane size (plane %d, src %dx%d, padded %dx%d).\n"),
+                iplane, view.width, view.height, parent.width, parent.height);
+            return nullptr;
+        }
+        const size_t origin = (size_t)parent.pitch[0] * vpad;
+        const size_t size = (size_t)parent.pitch[0] * view.height;
+        if ((origin % memBaseAlignBytes) != 0) {
+            AddMessage(RGY_LOG_ERROR, _T("KFM source sub-buffer offset is not aligned (plane %d, offset %zu, align %zu).\n"),
+                iplane, origin, memBaseAlignBytes);
+            return nullptr;
+        }
+
+        cl_buffer_region region = { origin, size };
+        cl_int clerr = CL_SUCCESS;
+        cl_mem subbuf = clCreateSubBuffer((cl_mem)parent.ptr[0], flags, CL_BUFFER_CREATE_TYPE_REGION, &region, &clerr);
+        if (clerr != CL_SUCCESS) {
+            AddMessage(RGY_LOG_ERROR, _T("failed to create KFM source sub-buffer (plane %d): %s.\n"), iplane, cl_errmes(clerr));
+            for (int j = 0; j < iplane; j++) {
+                if (viewInfo.ptr[j]) {
+                    clReleaseMemObject((cl_mem)viewInfo.ptr[j]);
+                    viewInfo.ptr[j] = nullptr;
+                }
+            }
+            return nullptr;
+        }
+        viewInfo.ptr[iplane] = (uint8_t *)subbuf;
+        viewInfo.pitch[iplane] = parent.pitch[0];
+    }
+
+    auto sourceFrame = std::shared_ptr<RGYCLFrame>(
+        new RGYCLFrame(viewInfo, flags),
+        [paddedKeepAlive = paddedFrame](RGYCLFrame *frame) {
+            delete frame;
+        });
+
+    auto slot = std::make_shared<KfmSourceSlot>();
+    slot->paddedFrame = paddedFrame;
+    slot->sourceFrame = sourceFrame;
+    slot->flags = flags;
+    return slot;
+}
+
+void RGYFilterKfm::retireKfmSourceSlot(std::shared_ptr<KfmSourceSlot>&& slot, RGYOpenCLQueue &queue) {
+    if (!slot) {
+        return;
+    }
+    slot->sourceFrame->frame.dataList.clear();
+    slot->paddedFrame->frame.dataList.clear();
+    slot->readyEvent.reset();
+    if (queue.getmarker(slot->readyEvent) != RGY_ERR_NONE) {
+        slot->readyEvent.reset();
+        queue.finish();
+        m_kfmSourceSlotFree.emplace_back(std::move(slot));
+    } else {
+        m_kfmSourceSlotRetired.emplace_back(std::move(slot));
+    }
+}
+
+void RGYFilterKfm::collectRetiredKfmSourceSlots() {
+    for (auto it = m_kfmSourceSlotRetired.begin(); it != m_kfmSourceSlotRetired.end();) {
+        auto& slot = *it;
+        if (!slot || slot->readyEvent() == nullptr || slot->readyEvent.getInfo().status == CL_COMPLETE) {
+            if (slot) {
+                slot->readyEvent.reset();
+                m_kfmSourceSlotFree.emplace_back(std::move(slot));
+            }
+            it = m_kfmSourceSlotRetired.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    trimFreeKfmSourceSlots();
+}
+
+void RGYFilterKfm::trimFreeKfmSourceSlots() {
+    const auto keep = std::max<size_t>(16, std::min<size_t>(sourceCacheLimit(), 256) + 8);
+    while (m_kfmSourceSlotFree.size() > keep) {
+        m_kfmSourceSlotFree.pop_front();
+    }
+}
+
+void RGYFilterKfm::clearKfmSourceSlotPool(bool wait) {
+    if (wait) {
+        for (auto& slot : m_kfmSourceSlotRetired) {
+            if (slot && slot->readyEvent() != nullptr) {
+                slot->readyEvent.wait();
+                slot->readyEvent.reset();
+            }
+        }
+    }
+    m_kfmSourceSlotRetired.clear();
+    m_kfmSourceSlotFree.clear();
+}
+
+void RGYFilterKfm::trimSourceCache(RGYOpenCLQueue &queue) {
+    const auto trimFloor = sourceCacheTrimFloor();
+    while (!m_sourceCache.empty() && m_sourceCache.front().sourceIndex < trimFloor) {
+        retireKfmSourceSlot(std::move(m_sourceCache.front().slot), queue);
+        m_sourceCache.pop_front();
+    }
+    const auto cacheLimit = sourceCacheLimit();
+    while (m_sourceCache.size() > cacheLimit && !m_sourceCache.empty() && m_sourceCache.front().sourceIndex < trimFloor) {
+        retireKfmSourceSlot(std::move(m_sourceCache.front().slot), queue);
+        m_sourceCache.pop_front();
+    }
+    collectRetiredKfmSourceSlots();
+}
+
+void RGYFilterKfm::trimDeint60Cache(std::deque<KfmCachedDeint60>& cache) {
+    const auto trimFloor = deint60CacheTrimFloor();
+    while (!cache.empty() && cache.front().n60 < trimFloor) {
+        cache.pop_front();
+    }
+    const auto cacheLimit = deint60CacheLimit();
+    while (cache.size() > cacheLimit && !cache.empty() && cache.front().n60 < trimFloor) {
+        cache.pop_front();
+    }
 }
 
 RGY_ERR RGYFilterKfm::allocWorkFrameBuf(const RGYFrameInfo& frame, int frames) {
@@ -916,7 +1080,11 @@ RGY_ERR RGYFilterKfm::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog>
             AddMessage(RGY_LOG_ERROR, _T("failed to allocate KFM static flag frame.\n"));
             return RGY_ERR_MEMORY_ALLOC;
         }
+        for (auto& source : m_sourceCache) {
+            retireKfmSourceSlot(std::move(source.slot), m_cl->queue());
+        }
         m_sourceCache.clear();
+        collectRetiredKfmSourceSlots();
         m_outputBufferIndex = 0;
         setFilterInfo(prm->print());
         m_param = prm;
@@ -1039,7 +1207,7 @@ int RGYFilterKfm::requiredOutputFrames() const {
 }
 
 RGY_ERR RGYFilterKfm::padSourceFrame(RGYFrameInfo *pPaddedFrame, const RGYFrameInfo *pSourceFrame,
-    RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+    RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event, bool sourceInPaddedFrame) {
     if (!pPaddedFrame || !pSourceFrame || !m_programs[KFM_PROG_PAD].get()) {
         return RGY_ERR_INVALID_CALL;
     }
@@ -1064,13 +1232,14 @@ RGY_ERR RGYFilterKfm::padSourceFrame(RGYFrameInfo *pPaddedFrame, const RGYFrameI
             : (prevEvent() != nullptr ? std::vector<RGYOpenCLEvent>{ prevEvent } : std::vector<RGYOpenCLEvent>());
         RGYOpenCLEvent planeEvent;
         RGYWorkSize local(32, 8);
-        RGYWorkSize global(dst.width, dst.height);
-        auto err = m_programs[KFM_PROG_PAD].get()->kernel("kernel_kfm_pad").config(queue, local, global, waitHere, &planeEvent).launch(
-            (cl_mem)dst.ptr[0], dst.pitch[0],
-            (cl_mem)src.ptr[0], src.pitch[0],
-            dst.width, src.height, vpad);
+        const char *kernelName = sourceInPaddedFrame ? "kernel_kfm_padv_inplace" : "kernel_kfm_pad";
+        const auto global = sourceInPaddedFrame ? RGYWorkSize(dst.width, vpad) : RGYWorkSize(dst.width, dst.height);
+        auto kernel = m_programs[KFM_PROG_PAD].get()->kernel(kernelName).config(queue, local, global, waitHere, &planeEvent);
+        auto err = sourceInPaddedFrame
+            ? kernel.launch((cl_mem)dst.ptr[0], dst.pitch[0], dst.width, src.height, vpad)
+            : kernel.launch((cl_mem)dst.ptr[0], dst.pitch[0], (cl_mem)src.ptr[0], src.pitch[0], dst.width, src.height, vpad);
         if (err != RGY_ERR_NONE) {
-            AddMessage(RGY_LOG_ERROR, _T("error at kernel_kfm_pad (plane %d): %s.\n"), iplane, get_err_mes(err));
+            AddMessage(RGY_LOG_ERROR, _T("error at %S (plane %d): %s.\n"), kernelName, iplane, get_err_mes(err));
             return err;
         }
         prevEvent = planeEvent;
@@ -1091,43 +1260,40 @@ RGY_ERR RGYFilterKfm::cacheSourceFrame(const RGYFrameInfo *frame, RGYOpenCLQueue
     entry.sourceIndex = m_cachedSourceFrames++;
     entry.inputFrameId = frame->inputFrameId;
     entry.timestamp = frame->timestamp;
-    entry.frame = acquireKfmFrame(*frame, _T("source cache"));
-    if (!entry.frame) {
+    entry.slot = acquireKfmSourceSlot(*frame, CL_MEM_READ_WRITE);
+    if (!entry.slot || !entry.slot->sourceFrame || !entry.slot->paddedFrame) {
         return RGY_ERR_MEMORY_ALLOC;
     }
+    entry.frame = entry.slot->sourceFrame;
+    entry.paddedFrame = entry.slot->paddedFrame;
     auto sts = m_cl->copyFrame(&entry.frame->frame, frame, nullptr, queue, wait_events, &entry.event, RGYFrameCopyMode::FRAME, "kfm.source_cache");
     if (sts != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("failed to cache KFM source frame: %s.\n"), get_err_mes(sts));
         return sts;
     }
     copyFramePropWithoutRes(&entry.frame->frame, frame);
+    m_sourceCache.push_back(std::move(entry));
+    auto& cachedEntry = m_sourceCache.back();
 
-    auto paddedFrameInfo = *frame;
-    paddedFrameInfo.height += KFM_SOURCE_VPAD * 2;
-    entry.paddedFrame = acquireKfmFrame(paddedFrameInfo, _T("padded source cache"));
-    if (!entry.paddedFrame) {
-        return RGY_ERR_MEMORY_ALLOC;
+    sts = analyzeAvailableSource(false, queue);
+    if (sts != RGY_ERR_NONE) {
+        return sts;
     }
+
     auto padWaitEvents = wait_events;
-    if (entry.event() != nullptr) {
-        padWaitEvents.push_back(entry.event);
+    if (cachedEntry.event() != nullptr) {
+        padWaitEvents.push_back(cachedEntry.event);
     }
-    sts = padSourceFrame(&entry.paddedFrame->frame, &entry.frame->frame, queue, padWaitEvents, &entry.paddedEvent);
+    sts = padSourceFrame(&cachedEntry.paddedFrame->frame, &cachedEntry.frame->frame, queue, padWaitEvents, &cachedEntry.paddedEvent, true);
     if (sts != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("failed to pad KFM source frame: %s.\n"), get_err_mes(sts));
         return sts;
     }
-    writeFrameInfoDump("source-pad", &entry.paddedFrame->frame);
+    writeFrameInfoDump("source-pad", &cachedEntry.paddedFrame->frame);
 
-    m_sourceCache.push_back(std::move(entry));
-    const auto cacheLimit = sourceCacheLimit();
-    const auto trimFloor = sourceCacheTrimFloor();
-    while (m_sourceCache.size() > cacheLimit && m_sourceCache.front().sourceIndex < trimFloor) {
-        m_sourceCache.pop_front();
-    }
-    sts = analyzeAvailableSource(false, queue);
+    trimSourceCache(queue);
     writeFrameInfoDump("source", frame);
-    return sts;
+    return RGY_ERR_NONE;
 }
 
 size_t RGYFilterKfm::sourceCacheLimit() const {
@@ -1306,11 +1472,7 @@ RGY_ERR RGYFilterKfm::cacheDeint60Frame(const RGYFrameInfo *frame, RGYOpenCLQueu
     }
 
     m_deint60Cache.push_back(std::move(entry));
-    const auto cacheLimit = deint60CacheLimit();
-    const auto trimFloor = deint60CacheTrimFloor();
-    while (m_deint60Cache.size() > cacheLimit && m_deint60Cache.front().n60 < trimFloor) {
-        m_deint60Cache.pop_front();
-    }
+    trimDeint60Cache(m_deint60Cache);
     return RGY_ERR_NONE;
 }
 
@@ -1505,11 +1667,7 @@ RGY_ERR RGYFilterKfm::cacheUcfRtgmcFrame(const char *stage, const RGYFrameInfo *
     }
 
     cache.push_back(std::move(entry));
-    const auto cacheLimit = deint60CacheLimit();
-    const auto trimFloor = deint60CacheTrimFloor();
-    while (cache.size() > cacheLimit && cache.front().n60 < trimFloor) {
-        cache.pop_front();
-    }
+    trimDeint60Cache(cache);
     return RGY_ERR_NONE;
 }
 
@@ -2448,19 +2606,18 @@ RGY_ERR RGYFilterKfm::clearPendingFMCounts() {
     RGY_ERR sts = RGY_ERR_NONE;
     RGYOpenCLQueue *queue = m_fmCountQueue.get() ? &m_fmCountQueue : nullptr;
     for (auto& pending : m_pendingFMCounts) {
-        for (auto& fmCountBuf : pending.pairCounts) {
-            if (!fmCountBuf) {
-                continue;
+        auto& fmCountBuf = pending.countBuf;
+        if (!fmCountBuf) {
+            continue;
+        }
+        if (fmCountBuf->isMapped()) {
+            const auto waitSts = fmCountBuf->mapEvent().wait();
+            if (waitSts != RGY_ERR_NONE && sts == RGY_ERR_NONE) {
+                sts = waitSts;
             }
-            if (fmCountBuf->isMapped()) {
-                const auto waitSts = fmCountBuf->mapEvent().wait();
-                if (waitSts != RGY_ERR_NONE && sts == RGY_ERR_NONE) {
-                    sts = waitSts;
-                }
-                const auto unmapSts = queue ? fmCountBuf->unmapBuffer(*queue) : fmCountBuf->unmapBuffer();
-                if (unmapSts != RGY_ERR_NONE && sts == RGY_ERR_NONE) {
-                    sts = unmapSts;
-                }
+            const auto unmapSts = queue ? fmCountBuf->unmapBuffer(*queue) : fmCountBuf->unmapBuffer();
+            if (unmapSts != RGY_ERR_NONE && sts == RGY_ERR_NONE) {
+                sts = unmapSts;
             }
         }
     }
@@ -2473,10 +2630,7 @@ RGY_ERR RGYFilterKfm::clearPendingFMCounts() {
     }
 
     for (auto& pending : m_pendingFMCounts) {
-        for (auto& fmCountBuf : pending.pairCounts) {
-            releaseFMCountBuf(std::move(fmCountBuf));
-        }
-        pending.pairCounts.clear();
+        releaseFMCountBuf(std::move(pending.countBuf));
     }
     m_pendingFMCounts.clear();
     return sts;
@@ -2976,7 +3130,7 @@ RGY_ERR RGYFilterKfm::submitFMCounts(int cycle, bool drain, RGYOpenCLQueue &queu
     std::array<const KfmCachedSource *, KFM_FMCOUNT_SOURCE_FRAMES> src = {};
     for (int i = 0; i < KFM_FMCOUNT_SOURCE_FRAMES; i++) {
         src[i] = findSourceByIndex(firstSourceIndex + i);
-        if (!src[i] || !src[i]->paddedFrame || !src[i]->paddedFrame->frame.ptr[0]) {
+        if (!src[i] || !src[i]->frame || !src[i]->frame->frame.ptr[0]) {
             return RGY_ERR_MORE_DATA;
         }
     }
@@ -2986,33 +3140,29 @@ RGY_ERR RGYFilterKfm::submitFMCounts(int cycle, bool drain, RGYOpenCLQueue &queu
         return sts;
     }
 
-    const size_t countBytes = sizeof(RGYKFM::FMCount) * 2;
+    const size_t countBytes = sizeof(RGYKFM::FMCount) * KFM_FMCOUNT_PAIRS * 2;
     KfmPendingFMCount pending;
     pending.cycle = cycle;
-    pending.pairCounts.resize(KFM_FMCOUNT_PAIRS);
-    for (auto& pairCount : pending.pairCounts) {
-        pairCount = acquireFMCountBuf(countBytes);
-        if (!pairCount) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to allocate KFM FMCount buffer.\n"));
-            for (auto& releasedPairCount : pending.pairCounts) {
-                releaseFMCountBuf(std::move(releasedPairCount));
-            }
-            return RGY_ERR_MEMORY_ALLOC;
-        }
+    pending.countBuf = acquireFMCountBuf(countBytes);
+    if (!pending.countBuf) {
+        AddMessage(RGY_LOG_ERROR, _T("failed to allocate KFM FMCount buffer.\n"));
+        return RGY_ERR_MEMORY_ALLOC;
+    }
+
+    const cl_int zero = 0;
+    RGYOpenCLEvent initEvent;
+    sts = m_cl->setBuf(&zero, sizeof(zero), countBytes, pending.countBuf.get(), queue, &initEvent);
+    if (sts != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("failed to clear KFM FMCount buffer: %s.\n"), get_err_mes(sts));
+        return sts;
     }
 
     const bool useFusedFMCount = kfmUseFusedFMCount();
+    std::vector<RGYOpenCLEvent> pairCountEvents;
+    pairCountEvents.reserve(KFM_FMCOUNT_PAIRS);
     for (int pair = 0; pair < KFM_FMCOUNT_PAIRS; pair++) {
-        auto& fmCountBuf = pending.pairCounts[pair];
-        const cl_int zero = 0;
-        RGYOpenCLEvent initEvent;
-        sts = m_cl->setBuf(&zero, sizeof(zero), countBytes, fmCountBuf.get(), queue, &initEvent);
-        if (sts != RGY_ERR_NONE) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to clear KFM FMCount buffer: %s.\n"), get_err_mes(sts));
-            return sts;
-        }
-
         RGYOpenCLEvent prevCountEvent = initEvent;
+        const int dstOffset = pair * 2;
         const auto csp = src[pair + 1]->frame->frame.csp;
         const bool interleavedUV = kfmCspHasInterleavedUV(csp);
         const int targetPlanes = (RGY_CSP_PLANES[csp] >= 3) ? 3 : (interleavedUV ? 3 : 1);
@@ -3050,17 +3200,18 @@ RGY_ERR RGYFilterKfm::submitFMCounts(int cycle, bool drain, RGYOpenCLQueue &queu
             if (useFusedFMCount) {
                 std::vector<RGYOpenCLEvent> countWaitEvents;
                 countWaitEvents.push_back(prevCountEvent);
-                if (src[pair + 0]->paddedEvent() != nullptr) {
-                    countWaitEvents.push_back(src[pair + 0]->paddedEvent);
+                if (src[pair + 0]->event() != nullptr) {
+                    countWaitEvents.push_back(src[pair + 0]->event);
                 }
-                if (src[pair + 1]->paddedEvent() != nullptr) {
-                    countWaitEvents.push_back(src[pair + 1]->paddedEvent);
+                if (src[pair + 1]->event() != nullptr) {
+                    countWaitEvents.push_back(src[pair + 1]->event);
                 }
-                if (src[pair + 2]->paddedEvent() != nullptr) {
-                    countWaitEvents.push_back(src[pair + 2]->paddedEvent);
+                if (src[pair + 2]->event() != nullptr) {
+                    countWaitEvents.push_back(src[pair + 2]->event);
                 }
                 sts = m_programs[KFM_PROG_ANALYZE].get()->kernel("kernel_kfm_analyze_count_cmflags_clean").config(queue, countLocal, countGlobal, countWaitEvents, &countEvent).launch(
-                    (cl_mem)fmCountBuf->mem(),
+                    (cl_mem)pending.countBuf->mem(),
+                    dstOffset,
                     (cl_mem)prevSrc0.ptr[0],
                     (cl_mem)prevSrc1.ptr[0],
                     (cl_mem)curSrc0.ptr[0],
@@ -3092,18 +3243,18 @@ RGY_ERR RGYFilterKfm::submitFMCounts(int cycle, bool drain, RGYOpenCLQueue &queu
                 }
 
                 std::vector<RGYOpenCLEvent> prevWaitEvents;
-                if (src[pair + 0]->paddedEvent() != nullptr) {
-                    prevWaitEvents.push_back(src[pair + 0]->paddedEvent);
+                if (src[pair + 0]->event() != nullptr) {
+                    prevWaitEvents.push_back(src[pair + 0]->event);
                 }
-                if (src[pair + 1]->paddedEvent() != nullptr) {
-                    prevWaitEvents.push_back(src[pair + 1]->paddedEvent);
+                if (src[pair + 1]->event() != nullptr) {
+                    prevWaitEvents.push_back(src[pair + 1]->event);
                 }
                 std::vector<RGYOpenCLEvent> curWaitEvents;
-                if (src[pair + 1]->paddedEvent() != nullptr) {
-                    curWaitEvents.push_back(src[pair + 1]->paddedEvent);
+                if (src[pair + 1]->event() != nullptr) {
+                    curWaitEvents.push_back(src[pair + 1]->event);
                 }
-                if (src[pair + 2]->paddedEvent() != nullptr) {
-                    curWaitEvents.push_back(src[pair + 2]->paddedEvent);
+                if (src[pair + 2]->event() != nullptr) {
+                    curWaitEvents.push_back(src[pair + 2]->event);
                 }
 
                 std::array<RGYOpenCLEvent, 2> analyzeEvents;
@@ -3132,7 +3283,8 @@ RGY_ERR RGYFilterKfm::submitFMCounts(int cycle, bool drain, RGYOpenCLQueue &queu
 
                 std::vector<RGYOpenCLEvent> countWaitEvents = { prevCountEvent, analyzeEvents[0], analyzeEvents[1] };
                 sts = m_programs[KFM_PROG_ANALYZE].get()->kernel("kernel_kfm_count_cmflags_clean").config(queue, countLocal, countGlobal, countWaitEvents, &countEvent).launch(
-                    (cl_mem)fmCountBuf->mem(),
+                    (cl_mem)pending.countBuf->mem(),
+                    dstOffset,
                     (cl_mem)m_analyzeFlags[0]->mem(),
                     (cl_mem)m_analyzeFlags[1]->mem(),
                     flagPitch, gridWidth - 1, gridHeight - 1, countParity,
@@ -3145,11 +3297,14 @@ RGY_ERR RGYFilterKfm::submitFMCounts(int cycle, bool drain, RGYOpenCLQueue &queu
             prevCountEvent = countEvent;
         }
 
-        sts = fmCountBuf->queueMapBuffer(m_fmCountQueue, CL_MAP_READ, { prevCountEvent }, RGY_CL_MAP_BLOCK_NONE);
-        if (sts != RGY_ERR_NONE) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to map KFM FMCount buffer: %s.\n"), get_err_mes(sts));
-            return sts;
+        if (prevCountEvent() != nullptr) {
+            pairCountEvents.push_back(prevCountEvent);
         }
+    }
+    sts = pending.countBuf->queueMapBuffer(m_fmCountQueue, CL_MAP_READ, pairCountEvents, RGY_CL_MAP_BLOCK_NONE, "kfm.fmcount.cycle");
+    if (sts != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("failed to map KFM FMCount buffer: %s.\n"), get_err_mes(sts));
+        return sts;
     }
     queue.flush();
     m_fmCountQueue.flush();
@@ -3169,34 +3324,31 @@ RGY_ERR RGYFilterKfm::readbackFMCounts(std::array<RGYKFM::FMCount, 18>& counts, 
     counts = {};
     RGYOpenCLQueue& mapQueue = m_fmCountQueue.get() ? m_fmCountQueue : queue;
     RGY_ERR sts = RGY_ERR_NONE;
-    std::vector<std::unique_ptr<RGYCLBuf>*> recycleBufs;
-    recycleBufs.reserve(KFM_FMCOUNT_PAIRS);
+    auto& fmCountBuf = pending.countBuf;
+    if (!fmCountBuf) {
+        AddMessage(RGY_LOG_ERROR, _T("KFM FMCount pending buffer is missing.\n"));
+        return RGY_ERR_NULL_PTR;
+    }
+    const auto waitSts = fmCountBuf->mapEvent().wait();
+    if (waitSts != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("failed to wait KFM FMCount map event: %s.\n"), get_err_mes(waitSts));
+        return waitSts;
+    }
+    const auto *gpuCounts = reinterpret_cast<const RGYKFM::FMCount *>(fmCountBuf->mappedPtr());
+    if (!gpuCounts) {
+        const auto unmapSts = fmCountBuf->unmapBuffer(mapQueue);
+        if (unmapSts != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("failed to unmap KFM FMCount buffer after access error: %s.\n"), get_err_mes(unmapSts));
+        }
+        AddMessage(RGY_LOG_ERROR, _T("failed to access KFM FMCount buffer.\n"));
+        return RGY_ERR_NULL_PTR;
+    }
     for (int pair = 0; pair < KFM_FMCOUNT_PAIRS; pair++) {
-        auto& fmCountBuf = pending.pairCounts[pair];
-        if (!fmCountBuf) {
-            AddMessage(RGY_LOG_ERROR, _T("KFM FMCount pending buffer is missing.\n"));
-            return RGY_ERR_NULL_PTR;
-        }
-        const auto waitSts = fmCountBuf->mapEvent().wait();
-        if (waitSts != RGY_ERR_NONE) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to wait KFM FMCount map event: %s.\n"), get_err_mes(waitSts));
-            return waitSts;
-        }
-        const auto *gpuCounts = reinterpret_cast<const RGYKFM::FMCount *>(fmCountBuf->mappedPtr());
-        if (!gpuCounts) {
-            const auto unmapSts = fmCountBuf->unmapBuffer(mapQueue);
-            if (unmapSts != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("failed to unmap KFM FMCount buffer after access error: %s.\n"), get_err_mes(unmapSts));
-            }
-            AddMessage(RGY_LOG_ERROR, _T("failed to access KFM FMCount buffer.\n"));
-            return RGY_ERR_NULL_PTR;
-        }
         const int countFrameIndex = pending.cycle * 5 - 3 + pair + 1;
         if (countFrameIndex >= 0) {
-            counts[pair * 2 + 0] = gpuCounts[0];
-            counts[pair * 2 + 1] = gpuCounts[1];
+            counts[pair * 2 + 0] = gpuCounts[pair * 2 + 0];
+            counts[pair * 2 + 1] = gpuCounts[pair * 2 + 1];
         }
-        recycleBufs.push_back(&fmCountBuf);
     }
     const int firstSourceIndex = pending.cycle * 5 - 3;
     const int firstValidPair = std::max(0, -(firstSourceIndex + 1));
@@ -3206,21 +3358,17 @@ RGY_ERR RGYFilterKfm::readbackFMCounts(std::array<RGYKFM::FMCount, 18>& counts, 
             counts[pair * 2 + 1] = counts[firstValidPair * 2 + 1];
         }
     }
-    for (auto *fmCountBuf : recycleBufs) {
-        sts = (*fmCountBuf)->unmapBuffer(mapQueue);
-        if (sts != RGY_ERR_NONE) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to unmap KFM FMCount buffer: %s.\n"), get_err_mes(sts));
-            return sts;
-        }
+    sts = fmCountBuf->unmapBuffer(mapQueue);
+    if (sts != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("failed to unmap KFM FMCount buffer: %s.\n"), get_err_mes(sts));
+        return sts;
     }
     sts = mapQueue.finish();
     if (sts != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("failed to finish KFM FMCount readback queue: %s.\n"), get_err_mes(sts));
         return sts;
     }
-    for (auto *fmCountBuf : recycleBufs) {
-        releaseFMCountBuf(std::move(*fmCountBuf));
-    }
+    releaseFMCountBuf(std::move(fmCountBuf));
     m_pendingFMCounts.pop_front();
     return RGY_ERR_NONE;
 }
@@ -4861,11 +5009,57 @@ RGY_ERR RGYFilterKfm::ensureMaskBranchFrames(RGYFrameInfo **ppSwitchFlagFrame, R
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYFilterKfm::renderMaskBranch(RGYFrameInfo *pSwitchFlagFrame, RGYFrameInfo *pContainsCombeFrame, RGYFrameInfo *pCombeMaskFrame, const RGYFrameInfo *pTelecineSuperPrevFrame, const RGYFrameInfo *pTelecineSuperFrame, const RGYFrameInfo *pTelecineSuperNextFrame, const char *switchFlagStage, const char *containsCombeStage, const char *combeMaskStage, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event, cl_uint *containsCombeCount) {
+RGY_ERR RGYFilterKfm::resolveContainsCombeCount(KfmContainsCombeReadback& readback, cl_uint *containsCombeCount) {
+    if (!readback.submitted) {
+        if (containsCombeCount) {
+            *containsCombeCount = 0;
+        }
+        return RGY_ERR_NONE;
+    }
+    if (!m_containsCombeCount) {
+        readback.submitted = false;
+        AddMessage(RGY_LOG_ERROR, _T("KFM contains-combe count buffer is missing.\n"));
+        return RGY_ERR_NULL_PTR;
+    }
+    const auto waitSts = m_containsCombeCount->mapEvent().wait();
+    if (waitSts != RGY_ERR_NONE) {
+        m_containsCombeCount->unmapBuffer(m_fmCountQueue);
+        m_fmCountQueue.finish();
+        readback.submitted = false;
+        AddMessage(RGY_LOG_ERROR, _T("failed to wait KFM contains-combe count readback: %s.\n"), get_err_mes(waitSts));
+        return waitSts;
+    }
+    const auto *mappedCount = reinterpret_cast<const cl_uint *>(m_containsCombeCount->mappedPtr());
+    if (!mappedCount) {
+        m_containsCombeCount->unmapBuffer(m_fmCountQueue);
+        m_fmCountQueue.finish();
+        readback.submitted = false;
+        AddMessage(RGY_LOG_ERROR, _T("failed to access KFM contains-combe count readback.\n"));
+        return RGY_ERR_NULL_PTR;
+    }
+    if (containsCombeCount) {
+        *containsCombeCount = *mappedCount;
+    }
+    auto unmapSts = m_containsCombeCount->unmapBuffer(m_fmCountQueue);
+    if (unmapSts == RGY_ERR_NONE) {
+        unmapSts = m_fmCountQueue.finish();
+    }
+    readback.submitted = false;
+    if (unmapSts != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("failed to unmap KFM contains-combe count readback: %s.\n"), get_err_mes(unmapSts));
+        return unmapSts;
+    }
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR RGYFilterKfm::renderMaskBranch(RGYFrameInfo *pSwitchFlagFrame, RGYFrameInfo *pContainsCombeFrame, RGYFrameInfo *pCombeMaskFrame, const RGYFrameInfo *pTelecineSuperPrevFrame, const RGYFrameInfo *pTelecineSuperFrame, const RGYFrameInfo *pTelecineSuperNextFrame, const char *switchFlagStage, const char *containsCombeStage, const char *combeMaskStage, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event, KfmContainsCombeReadback *containsCombeReadback) {
     if (!pSwitchFlagFrame || !pContainsCombeFrame || !pCombeMaskFrame
         || !pTelecineSuperPrevFrame || !pTelecineSuperFrame || !pTelecineSuperNextFrame
         || !m_programs[KFM_PROG_MASK].get()) {
         return RGY_ERR_INVALID_CALL;
+    }
+    if (containsCombeReadback) {
+        containsCombeReadback->submitted = false;
     }
     const auto superPrevY = getPlane(pTelecineSuperPrevFrame, RGY_PLANE_Y);
     const auto superY = getPlane(pTelecineSuperFrame, RGY_PLANE_Y);
@@ -5141,43 +5335,13 @@ RGY_ERR RGYFilterKfm::renderMaskBranch(RGYFrameInfo *pSwitchFlagFrame, RGYFrameI
         AddMessage(RGY_LOG_ERROR, _T("error at kernel_kfm_contains_combe_mark: %s.\n"), get_err_mes(sts));
         return sts;
     }
-    bool countReadSubmitted = false;
-    auto waitContainsCombeCount = [&]() {
-        if (!countReadSubmitted) {
+    auto cleanupContainsCombeReadback = [&]() {
+        if (!containsCombeReadback) {
             return RGY_ERR_NONE;
         }
-        const auto waitSts = m_containsCombeCount->mapEvent().wait();
-        if (waitSts != RGY_ERR_NONE) {
-            m_containsCombeCount->unmapBuffer(m_fmCountQueue);
-            m_fmCountQueue.finish();
-            countReadSubmitted = false;
-            AddMessage(RGY_LOG_ERROR, _T("failed to wait KFM contains-combe count readback: %s.\n"), get_err_mes(waitSts));
-            return waitSts;
-        }
-        const auto *mappedCount = reinterpret_cast<const cl_uint *>(m_containsCombeCount->mappedPtr());
-        if (!mappedCount) {
-            m_containsCombeCount->unmapBuffer(m_fmCountQueue);
-            m_fmCountQueue.finish();
-            countReadSubmitted = false;
-            AddMessage(RGY_LOG_ERROR, _T("failed to access KFM contains-combe count readback.\n"));
-            return RGY_ERR_NULL_PTR;
-        }
-        if (containsCombeCount) {
-            *containsCombeCount = *mappedCount;
-        }
-        auto unmapSts = m_containsCombeCount->unmapBuffer(m_fmCountQueue);
-        if (unmapSts == RGY_ERR_NONE) {
-            unmapSts = m_fmCountQueue.finish();
-        }
-        countReadSubmitted = false;
-        if (unmapSts != RGY_ERR_NONE) {
-            AddMessage(RGY_LOG_ERROR, _T("failed to unmap KFM contains-combe count readback: %s.\n"), get_err_mes(unmapSts));
-            return unmapSts;
-        }
-        return RGY_ERR_NONE;
+        return resolveContainsCombeCount(*containsCombeReadback, nullptr);
     };
-    if (containsCombeCount) {
-        *containsCombeCount = 0;
+    if (containsCombeReadback) {
         auto readSts = ensureFMCountQueue();
         if (readSts != RGY_ERR_NONE) {
             return readSts;
@@ -5189,7 +5353,7 @@ RGY_ERR RGYFilterKfm::renderMaskBranch(RGYFrameInfo *pSwitchFlagFrame, RGYFrameI
         }
         queue.flush();
         m_fmCountQueue.flush();
-        countReadSubmitted = true;
+        containsCombeReadback->submitted = true;
     }
 
     RGYOpenCLEvent prevEvent = markEvent;
@@ -5210,7 +5374,7 @@ RGY_ERR RGYFilterKfm::renderMaskBranch(RGYFrameInfo *pSwitchFlagFrame, RGYFrameI
         if (logicalWidth <= 0 || logicalHeight <= 0 || logicalWidth != innerWidth * scaleX || logicalHeight != innerHeight * scaleY || shiftX < 0 || shiftY < 0) {
             AddMessage(RGY_LOG_ERROR, _T("unsupported KFM combe-mask-min scale (plane %d, dst %dx%d, flag inner %dx%d).\n"),
                 iplane, logicalWidth, logicalHeight, innerWidth, innerHeight);
-            auto readSts = waitContainsCombeCount();
+            auto readSts = cleanupContainsCombeReadback();
             if (readSts != RGY_ERR_NONE) {
                 return readSts;
             }
@@ -5227,7 +5391,7 @@ RGY_ERR RGYFilterKfm::renderMaskBranch(RGYFrameInfo *pSwitchFlagFrame, RGYFrameI
             innerWidth, innerHeight);
         if (sts != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("error at kernel_kfm_combe_mask_resize_bilinear_min (plane %d): %s.\n"), iplane, get_err_mes(sts));
-            auto readSts = waitContainsCombeCount();
+            auto readSts = cleanupContainsCombeReadback();
             if (readSts != RGY_ERR_NONE) {
                 return readSts;
             }
@@ -5247,7 +5411,7 @@ RGY_ERR RGYFilterKfm::renderMaskBranch(RGYFrameInfo *pSwitchFlagFrame, RGYFrameI
     writeFrameInfoDump(combeMaskStage, pCombeMaskFrame);
     sts = dumpStageFrame(switchFlagStage, pSwitchFlagFrame, maskDumpFrameIndex, queue, { switchEvent });
     if (sts != RGY_ERR_NONE) {
-        auto readSts = waitContainsCombeCount();
+        auto readSts = cleanupContainsCombeReadback();
         if (readSts != RGY_ERR_NONE) {
             return readSts;
         }
@@ -5255,7 +5419,7 @@ RGY_ERR RGYFilterKfm::renderMaskBranch(RGYFrameInfo *pSwitchFlagFrame, RGYFrameI
     }
     sts = dumpStageFrame(containsCombeStage, pContainsCombeFrame, maskDumpFrameIndex, queue, { markEvent });
     if (sts != RGY_ERR_NONE) {
-        auto readSts = waitContainsCombeCount();
+        auto readSts = cleanupContainsCombeReadback();
         if (readSts != RGY_ERR_NONE) {
             return readSts;
         }
@@ -5263,14 +5427,10 @@ RGY_ERR RGYFilterKfm::renderMaskBranch(RGYFrameInfo *pSwitchFlagFrame, RGYFrameI
     }
     sts = dumpStageFrame(combeMaskStage, pCombeMaskFrame, maskDumpFrameIndex, queue, { prevEvent });
     if (sts != RGY_ERR_NONE) {
-        auto readSts = waitContainsCombeCount();
+        auto readSts = cleanupContainsCombeReadback();
         if (readSts != RGY_ERR_NONE) {
             return readSts;
         }
-        return sts;
-    }
-    sts = waitContainsCombeCount();
-    if (sts != RGY_ERR_NONE) {
         return sts;
     }
     if (event && prevEvent() != nullptr) {
@@ -5328,6 +5488,7 @@ RGY_ERR RGYFilterKfm::processMainRtgmcOutputs(const RGYFilterParamKfm& prm, RGYF
             if (sts != RGY_ERR_NONE) {
                 return sts;
             }
+            copyFramePropWithoutRes(ucfOut, out);
             sts = emitOutputFrame(ucfOut, ppOutputFrames, pOutputFrameNum, queue, ucfEvent, event);
             if (sts != RGY_ERR_NONE) {
                 return sts;
@@ -5673,28 +5834,46 @@ RGY_ERR RGYFilterKfm::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo *
                 }
                 RGYOpenCLEvent maskEvent;
                 cl_uint containsCombeCount = 0;
-                sts = renderMaskBranch(switchFlag, containsCombe, combeMask, superPrev24, super24, superNext24, "switch-flag-min", "contains-combe", "combe-mask-min", queue, maskWaitEvents, &maskEvent, switchSingleFrameDurationEnabled() ? &containsCombeCount : nullptr);
+                KfmContainsCombeReadback containsCombeReadback;
+                const bool needsContainsCombeCount = switchSingleFrameDurationEnabled();
+                sts = renderMaskBranch(switchFlag, containsCombe, combeMask, superPrev24, super24, superNext24, "switch-flag-min", "contains-combe", "combe-mask-min", queue, maskWaitEvents, &maskEvent, needsContainsCombeCount ? &containsCombeReadback : nullptr);
                 if (sts != RGY_ERR_NONE) {
                     return sts;
-                }
-                writeContainsCombeDump("24p", outputTiming, containsCombeCount, containsCombeCount > 0, switchResult);
-                if (containsCombeCount > 0) {
-                    markSwitchSingleFrameN60Range(outputTiming.start60, outputTiming.duration60);
-                    outputTiming.duration60 = 1;
-                    outputTiming.duration120 = 2;
-                    outputTiming.numSourceFrames = 1;
                 }
                 if (maskEvent() != nullptr) {
                     removeWaitEvents.push_back(maskEvent);
                 }
+                auto resolveContainsCombeDuration = [&]() -> RGY_ERR {
+                    auto readSts = resolveContainsCombeCount(containsCombeReadback, needsContainsCombeCount ? &containsCombeCount : nullptr);
+                    if (readSts != RGY_ERR_NONE) {
+                        return readSts;
+                    }
+                    writeContainsCombeDump("24p", outputTiming, containsCombeCount, containsCombeCount > 0, switchResult);
+                    if (containsCombeCount > 0) {
+                        markSwitchSingleFrameN60Range(outputTiming.start60, outputTiming.duration60);
+                        outputTiming.duration60 = 1;
+                        outputTiming.duration120 = 2;
+                        outputTiming.numSourceFrames = 1;
+                    }
+                    return RGY_ERR_NONE;
+                };
                 if (auto debugOut = kfmDebugStageFrame(prm->kfm.debugStage, switchFlag, containsCombe, combeMask)) {
                     copyFramePropWithoutRes(debugOut, deint24);
                     debugOut->picstruct = RGY_PICSTRUCT_FRAME;
                     debugOut->flags = RGY_FRAME_FLAG_NONE;
                     out = debugOut;
                     outputEvent = maskEvent;
+                    sts = resolveContainsCombeDuration();
+                    if (sts != RGY_ERR_NONE) {
+                        return sts;
+                    }
                 } else {
                     sts = removeCombe24(out, deint24, super24, outputTiming.frame24Index, queue, removeWaitEvents, &outputEvent);
+                    if (sts != RGY_ERR_NONE) {
+                        resolveContainsCombeCount(containsCombeReadback, nullptr);
+                        return sts;
+                    }
+                    sts = resolveContainsCombeDuration();
                     if (sts != RGY_ERR_NONE) {
                         return sts;
                     }
@@ -5971,7 +6150,13 @@ RGY_ERR RGYFilterKfm::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo *
                     }
                     RGYOpenCLEvent maskEvent;
                     cl_uint containsCombeCount = 0;
-                    sts = renderMaskBranch(switchFlag, containsCombe, combeMask, superPrev30, &m_telecineSuperFrames[superIndex]->frame, superNext30, "switch-flag30-min", "contains-combe30", "combe-mask30-min", queue, maskWaitEvents, &maskEvent, (switchSingleFrameDurationEnabled() || patchCombe30Enabled) ? &containsCombeCount : nullptr);
+                    KfmContainsCombeReadback containsCombeReadback;
+                    const bool needsContainsCombeCount = switchSingleFrameDurationEnabled() || patchCombe30Enabled;
+                    sts = renderMaskBranch(switchFlag, containsCombe, combeMask, superPrev30, &m_telecineSuperFrames[superIndex]->frame, superNext30, "switch-flag30-min", "contains-combe30", "combe-mask30-min", queue, maskWaitEvents, &maskEvent, needsContainsCombeCount ? &containsCombeReadback : nullptr);
+                    if (sts != RGY_ERR_NONE) {
+                        return sts;
+                    }
+                    sts = resolveContainsCombeCount(containsCombeReadback, needsContainsCombeCount ? &containsCombeCount : nullptr);
                     if (sts != RGY_ERR_NONE) {
                         return sts;
                     }
@@ -6487,11 +6672,17 @@ void RGYFilterKfm::close() {
     m_after60Rtgmc.reset();
     m_nrFilter.reset();
     m_analyzer.reset();
+    if (m_cl) {
+        for (auto& source : m_sourceCache) {
+            retireKfmSourceSlot(std::move(source.slot), m_cl->queue());
+        }
+    }
     m_sourceCache.clear();
     m_deint60Cache.clear();
     m_before60Cache.clear();
     m_after60Cache.clear();
     m_ucfNoiseCache.clear();
+    clearKfmSourceSlotPool(true);
     if (m_kfmFramePool) {
         m_kfmFramePool->clear();
     }

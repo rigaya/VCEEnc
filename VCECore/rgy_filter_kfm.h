@@ -147,6 +147,11 @@ protected:
 
         KfmSwitchTiming() : start60(0), start120(0), sourceIndex(0), frame24Index(-1), baseType(KFM_FRAME_60), sourceStart(0), numSourceFrames(1), duration60(1), duration120(2), isFrame24(false), isFrame60(false) {};
     };
+    struct KfmContainsCombeReadback {
+        bool submitted;
+
+        KfmContainsCombeReadback() : submitted(false) {};
+    };
 
     virtual RGY_ERR run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) override;
     virtual void close() override;
@@ -156,7 +161,7 @@ protected:
     RGY_ERR initNrFilter(const std::shared_ptr<RGYFilterParamKfm>& prm);
     RGY_ERR initAnalyzer(const RGYFilterParamKfm& prm);
     RGY_ERR padSourceFrame(RGYFrameInfo *pPaddedFrame, const RGYFrameInfo *pSourceFrame,
-        RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+        RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event, bool sourceInPaddedFrame = false);
     RGY_ERR cacheSourceFrame(const RGYFrameInfo *frame, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events);
     RGY_ERR runDeint60Branch(const RGYFrameInfo *frame, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, int *cachedFrames = nullptr);
     RGY_ERR drainDeint60Branch(RGYOpenCLQueue &queue, int *cachedFrames = nullptr);
@@ -259,24 +264,43 @@ protected:
         int firstField, int fieldCount, int stageFrameIndex, const char *stageName, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
     RGY_ERR removeCombe24(RGYFrameInfo *pOutputFrame, const RGYFrameInfo *pDeint24Frame, const RGYFrameInfo *pTelecineSuperFrame, int frame24Index, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
     RGY_ERR ensureMaskBranchFrames(RGYFrameInfo **ppSwitchFlagFrame, RGYFrameInfo **ppContainsCombeFrame, RGYFrameInfo **ppCombeMaskFrame, const RGYFrameInfo *pTelecineSuperFrame, const TCHAR *stageLabel);
-    RGY_ERR renderMaskBranch(RGYFrameInfo *pSwitchFlagFrame, RGYFrameInfo *pContainsCombeFrame, RGYFrameInfo *pCombeMaskFrame, const RGYFrameInfo *pTelecineSuperPrevFrame, const RGYFrameInfo *pTelecineSuperFrame, const RGYFrameInfo *pTelecineSuperNextFrame, const char *switchFlagStage, const char *containsCombeStage, const char *combeMaskStage, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event, cl_uint *containsCombeCount = nullptr);
+    RGY_ERR renderMaskBranch(RGYFrameInfo *pSwitchFlagFrame, RGYFrameInfo *pContainsCombeFrame, RGYFrameInfo *pCombeMaskFrame, const RGYFrameInfo *pTelecineSuperPrevFrame, const RGYFrameInfo *pTelecineSuperFrame, const RGYFrameInfo *pTelecineSuperNextFrame, const char *switchFlagStage, const char *containsCombeStage, const char *combeMaskStage, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event, KfmContainsCombeReadback *containsCombeReadback = nullptr);
+    RGY_ERR resolveContainsCombeCount(KfmContainsCombeReadback& readback, cl_uint *containsCombeCount);
     RGY_ERR patchCombe(RGYFrameInfo *pOutputFrame, const RGYFrameInfo *pBaseFrame, const RGYFrameInfo *pPatchFrame, const RGYFrameInfo *pMaskFrame, int frameIndex, const char *stageName, RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
     int telecine24FrameCount(bool drain) const;
     std::shared_ptr<RGYCLFrame> acquireKfmFrame(const RGYFrameInfo& info, const TCHAR *label, cl_mem_flags flags = CL_MEM_READ_WRITE);
+    struct KfmSourceSlot;
+    std::shared_ptr<KfmSourceSlot> acquireKfmSourceSlot(const RGYFrameInfo& sourceInfo, cl_mem_flags flags);
+    void retireKfmSourceSlot(std::shared_ptr<KfmSourceSlot>&& slot, RGYOpenCLQueue &queue);
+    void collectRetiredKfmSourceSlots();
+    void trimFreeKfmSourceSlots();
+    void clearKfmSourceSlotPool(bool wait);
+    void trimSourceCache(RGYOpenCLQueue &queue);
+    void trimDeint60Cache(std::deque<KfmCachedDeint60>& cache);
     RGY_ERR allocWorkFrameBuf(const RGYFrameInfo& frame, int frames);
     RGYFrameInfo *nextOutputFrame();
     RGYFrameInfo *nextWorkFrame();
+
+    struct KfmSourceSlot {
+        std::shared_ptr<RGYCLFrame> paddedFrame;
+        std::shared_ptr<RGYCLFrame> sourceFrame;
+        RGYOpenCLEvent readyEvent;
+        cl_mem_flags flags;
+
+        KfmSourceSlot() : paddedFrame(), sourceFrame(), readyEvent(), flags(0) {};
+    };
 
     struct KfmCachedSource {
         int sourceIndex;
         int inputFrameId;
         int64_t timestamp;
+        std::shared_ptr<KfmSourceSlot> slot;
         std::shared_ptr<RGYCLFrame> frame;
         std::shared_ptr<RGYCLFrame> paddedFrame;
         RGYOpenCLEvent event;
         RGYOpenCLEvent paddedEvent;
 
-        KfmCachedSource() : sourceIndex(-1), inputFrameId(-1), timestamp(0), frame(), paddedFrame(), event(), paddedEvent() {};
+        KfmCachedSource() : sourceIndex(-1), inputFrameId(-1), timestamp(0), slot(), frame(), paddedFrame(), event(), paddedEvent() {};
     };
 
     struct KfmCachedDeint60 {
@@ -335,9 +359,9 @@ protected:
 
     struct KfmPendingFMCount {
         int cycle;
-        std::vector<std::unique_ptr<RGYCLBuf>> pairCounts;
+        std::unique_ptr<RGYCLBuf> countBuf;
 
-        KfmPendingFMCount() : cycle(-1), pairCounts() {};
+        KfmPendingFMCount() : cycle(-1), countBuf() {};
     };
 
     struct KfmPendingVfrOutput {
@@ -355,6 +379,8 @@ protected:
     std::unique_ptr<RGYFilterDegrain> m_nrFilter;
     std::unique_ptr<RGYKFM::KFMAnalyze> m_analyzer;
     std::shared_ptr<RGYCLSharedFramePool> m_kfmFramePool;
+    std::deque<std::shared_ptr<KfmSourceSlot>> m_kfmSourceSlotFree;
+    std::deque<std::shared_ptr<KfmSourceSlot>> m_kfmSourceSlotRetired;
     std::deque<KfmCachedSource> m_sourceCache;
     std::deque<KfmCachedDeint60> m_deint60Cache;
     std::deque<KfmCachedDeint60> m_before60Cache;

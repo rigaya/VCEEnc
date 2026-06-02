@@ -28,9 +28,11 @@
 
 #include "rgy_filter_degrain.h"
 #include "rgy_filter_degrain_common.h"
+#include "rgy_opencl_perf.h"
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <limits>
@@ -51,6 +53,23 @@ uint32_t degrainDisableMask(const RGYDegrainRefDisableArray &disableRefs, const 
 bool degrainTraceEnvEnabled(const char *name) {
     const auto value = std::getenv(name);
     return value != nullptr && value[0] != '\0' && value[0] != '0';
+}
+
+static uint64_t degrain_cl_perf_now_ns() {
+    return (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+static uint64_t degrain_cl_perf_begin(const bool enabled) {
+    return enabled ? degrain_cl_perf_now_ns() : 0;
+}
+
+static uint64_t degrain_cl_perf_end(const bool enabled, const uint64_t start_ns) {
+    if (!enabled) {
+        return 0;
+    }
+    const auto end_ns = degrain_cl_perf_now_ns();
+    return (end_ns >= start_ns) ? end_ns - start_ns : 0;
 }
 
 int degrainTraceEnvInt(const char *name, const int fallback) {
@@ -492,6 +511,7 @@ RGY_ERR RGYFilterDegrain::emitDebugFrame(const RGYFilterDegrainFrameSet &frames,
 
 RGY_ERR RGYFilterDegrain::emitCompensateFrame(const RGYFilterDegrainFrameSet &frames, VppDegrainMode mode,
     const RGYDegrainRefDisableArray &disableRefs,
+    RGYCLBuf *disableMaskBuf, const RGYOpenCLEvent *disableMaskEvent,
     RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
     RGYOpenCLQueue &queue, RGYOpenCLEvent *event) {
     if (!frames.cur || frames.cur->ptr[0] == nullptr) {
@@ -565,6 +585,22 @@ RGY_ERR RGYFilterDegrain::emitCompensateFrame(const RGYFilterDegrainFrameSet &fr
     // a direction, but MotionBack/MotionForw must not use per-block thSAD fallback.
     const uint32_t compensateThSad = std::numeric_limits<uint32_t>::max();
     const uint32_t disableMask = degrainDisableMask(disableRefs, analysisLayout().temporalDirections);
+    RGYOpenCLEvent localDisableMaskEvent;
+    if (!disableMaskBuf) {
+        if (!m_sceneChangeDisableMask || m_sceneChangeDisableMask->size() != sizeof(uint32_t)) {
+            m_sceneChangeDisableMask = m_cl->createBuffer(sizeof(uint32_t), CL_MEM_READ_WRITE);
+            if (!m_sceneChangeDisableMask) {
+                AddMessage(RGY_LOG_ERROR, _T("failed to allocate degrain disable mask buffer.\n"));
+                return RGY_ERR_MEMORY_ALLOC;
+            }
+        }
+        err = m_cl->setBuf(&disableMask, sizeof(disableMask), sizeof(disableMask), m_sceneChangeDisableMask.get(), queue, &localDisableMaskEvent);
+        if (err != RGY_ERR_NONE) {
+            return err;
+        }
+        disableMaskBuf = m_sceneChangeDisableMask.get();
+        disableMaskEvent = &localDisableMaskEvent;
+    }
     const bool useOverlapRamp = analysisLayout().overlap > 0;
     auto ensureWindowRamp = [&](RGYDegrainWindowRampState &state, const int planeScaleX, const int planeScaleY) {
         const int planeOverlapX = std::max(analysisLayout().overlap / std::max(planeScaleX, 1), 0);
@@ -651,7 +687,7 @@ RGY_ERR RGYFilterDegrain::emitCompensateFrame(const RGYFilterDegrainFrameSet &fr
                 planeScaleX,
                 planeScaleY,
                 planeThSad,
-                disableMask,
+                disableMaskBuf->mem(),
                 windowRamp->mem());
         }
         return program->kernel("kernel_degrain_overlap_plane").config(queue, local, RGYWorkSize(planeDst.width, planeDst.height), planeWaitEvents, planeEvent).launch(
@@ -684,12 +720,15 @@ RGY_ERR RGYFilterDegrain::emitCompensateFrame(const RGYFilterDegrainFrameSet &fr
             (mode == VppDegrainMode::MotionBack || mode == VppDegrainMode::MotionBack2) ? 0 : 1,
             refIndex,
             planeThSad,
-            disableMask);
+            disableMaskBuf->mem());
     };
 
     const bool processChroma = degrainCanProcessChroma(frames.cur);
     const std::array<RGY_PLANE, 3> planes = { RGY_PLANE_Y, RGY_PLANE_U, RGY_PLANE_V };
     auto waitEvents = std::vector<RGYOpenCLEvent>{ copyEvent };
+    if (disableMaskEvent && (*disableMaskEvent)() != nullptr) {
+        waitEvents.push_back(*disableMaskEvent);
+    }
     for (int iplane = 0; iplane < (processChroma ? (int)planes.size() : 1); iplane++) {
         RGYOpenCLEvent renderEvent;
         const auto plane = planes[iplane];
@@ -724,7 +763,7 @@ RGY_ERR RGYFilterDegrain::resolveSceneChange(const std::shared_ptr<RGYFilterPara
 }
 
 RGY_ERR RGYFilterDegrain::submitSceneChangeReadback(const std::shared_ptr<RGYFilterParamDegrain> &prm, const RGYFilterDegrainProcessFrameSet &frames,
-    RGYOpenCLQueue &queue, PendingSceneChange *pending) {
+    RGYOpenCLQueue &queue, PendingSceneChange *pending, const bool isolateMappedSad) {
     if (!pending) {
         return RGY_ERR_INVALID_PARAM;
     }
@@ -783,14 +822,58 @@ RGY_ERR RGYFilterDegrain::submitSceneChangeReadback(const std::shared_ptr<RGYFil
     if (analysisEvent()() != nullptr) {
         mapWaitEvents.push_back(analysisEvent());
     }
-    auto err = sad->queueMapBuffer(queue, CL_MAP_READ, mapWaitEvents, RGY_CL_MAP_BLOCK_NONE, "degrain.apply.scene.sad");
+    auto *mapSad = sad;
+    if (isolateMappedSad) {
+        const auto readbackBytes = rgy_degrain_sad_bytes(pending->layout);
+        pending->readbackSad = acquireSceneChangeReadbackSAD(readbackBytes);
+        if (!pending->readbackSad) {
+            AddMessage(RGY_LOG_ERROR, _T("failed to allocate degrain SAD readback buffer.\n"));
+            return RGY_ERR_MEMORY_ALLOC;
+        }
+        RGYOpenCLEvent copyEvent;
+        auto& perf_collector = RGYOpenCLPerfCollector::instance();
+        const bool perf_enabled = perf_collector.isEnabled();
+        const auto copyWaitList = degrainWaitEventList(mapWaitEvents);
+        const auto copyStart = degrain_cl_perf_begin(perf_enabled);
+        cl_int clerr = clEnqueueCopyBuffer(
+            queue.get(),
+            sad->mem(),
+            pending->readbackSad->mem(),
+            0, 0,
+            readbackBytes,
+            (cl_uint)copyWaitList.size(),
+            copyWaitList.data(),
+            copyEvent.reset_ptr());
+        const auto copyHostTime = degrain_cl_perf_end(perf_enabled, copyStart);
+        if (perf_enabled && clerr == CL_SUCCESS) {
+            perf_collector.recordCommand("clEnqueueCopyBuffer:degrain.apply.scene.sad.readback", readbackBytes, copyHostTime, copyEvent,
+                copyStart, copyStart + copyHostTime, (uint64_t)(uintptr_t)queue.get());
+        }
+        auto err = err_cl_to_rgy(clerr);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("failed to copy degrain SAD buffer for scene change detection: %s.\n"), get_err_mes(err));
+            return err;
+        }
+        mapWaitEvents = { copyEvent };
+        mapSad = pending->readbackSad;
+    }
+    auto err = mapSad->queueMapBuffer(queue, CL_MAP_READ, mapWaitEvents, RGY_CL_MAP_BLOCK_NONE, "degrain.apply.scene.sad");
     if (err != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("failed to map degrain SAD buffer for scene change detection: %s.\n"), get_err_mes(err));
         return err;
     }
-    pending->mapEvent = sad->mapEvent();
+    pending->mapEvent = mapSad->mapEvent();
     pending->mapSubmitted = true;
     return RGY_ERR_NONE;
+}
+
+RGYCLBuf *RGYFilterDegrain::acquireSceneChangeReadbackSAD(const size_t bytes) {
+    auto &buf = m_sceneChangeReadbackSAD[m_sceneChangeReadbackSADIndex];
+    m_sceneChangeReadbackSADIndex = (m_sceneChangeReadbackSADIndex + 1) % (int)m_sceneChangeReadbackSAD.size();
+    if (!buf || buf->size() != bytes) {
+        buf = m_cl->createBuffer(bytes, CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR);
+    }
+    return buf.get();
 }
 
 RGY_ERR RGYFilterDegrain::resolveSceneChangeReadback(PendingSceneChange &pending, RGYOpenCLQueue &queue, RGYDegrainRefDisableArray *disableRefs) {
@@ -810,9 +893,10 @@ RGY_ERR RGYFilterDegrain::resolveSceneChangeReadback(PendingSceneChange &pending
     }
     pending.mapEvent.wait();
 
-    const auto *sadValues = reinterpret_cast<const RGYDegrainSAD *>(pending.sad->mappedPtr());
+    auto *mapSad = pending.readbackSad ? pending.readbackSad : pending.sad;
+    const auto *sadValues = reinterpret_cast<const RGYDegrainSAD *>(mapSad->mappedPtr());
     if (!sadValues) {
-        pending.sad->unmapBuffer(queue);
+        mapSad->unmapBuffer(queue);
         AddMessage(RGY_LOG_ERROR, _T("failed to access degrain SAD buffer for scene change detection.\n"));
         return RGY_ERR_NULL_PTR;
     }
@@ -829,7 +913,7 @@ RGY_ERR RGYFilterDegrain::resolveSceneChangeReadback(PendingSceneChange &pending
             }
         }
     }
-    auto err = pending.sad->unmapBuffer(queue);
+    auto err = mapSad->unmapBuffer(queue);
     if (err != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("failed to unmap degrain SAD buffer for scene change detection: %s.\n"), get_err_mes(err));
         return err;
@@ -849,8 +933,9 @@ RGY_ERR RGYFilterDegrain::resolveSceneChangeReadback(PendingSceneChange &pending
 
 void RGYFilterDegrain::clearPendingSceneChange() {
     if (m_pendingSceneChange && m_pendingSceneChange->mapSubmitted && m_pendingSceneChange->sad) {
+        auto *mapSad = m_pendingSceneChange->readbackSad ? m_pendingSceneChange->readbackSad : m_pendingSceneChange->sad;
         m_pendingSceneChange->mapEvent.wait();
-        m_pendingSceneChange->sad->unmapBuffer();
+        mapSad->unmapBuffer();
         m_pendingSceneChange->mapSubmitted = false;
     }
     m_pendingSceneChange.reset();
@@ -877,7 +962,7 @@ RGY_ERR RGYFilterDegrain::resolvePendingSceneChangeFrame(RGYFrameInfo **ppOutput
         return err;
     }
     logApplyTrace(m_pendingSceneChange->prm, m_pendingSceneChange->frames, disableRefs, queue);
-    err = emitDegrainFrame(m_pendingSceneChange->frames.render, disableRefs, ppOutputFrames, pOutputFrameNum, queue, event);
+    err = emitDegrainFrame(m_pendingSceneChange->frames.render, disableRefs, nullptr, nullptr, ppOutputFrames, pOutputFrameNum, queue, event);
     m_pendingSceneChange.reset();
     return err;
 }
@@ -895,8 +980,113 @@ RGY_ERR RGYFilterDegrain::resolveSceneChangeRefs(const std::shared_ptr<RGYFilter
     return resolveSceneChangeReadback(pending, queue, disableRefs);
 }
 
+RGY_ERR RGYFilterDegrain::prepareSceneChangeMask(const std::shared_ptr<RGYFilterParamDegrain> &prm, const RGYFilterDegrainProcessFrameSet &frames,
+    RGYOpenCLQueue &queue, RGYCLBuf **disableMaskBuf, RGYOpenCLEvent *disableMaskEvent) {
+    if (!disableMaskBuf || !disableMaskEvent) {
+        return RGY_ERR_INVALID_PARAM;
+    }
+    *disableMaskBuf = nullptr;
+    disableMaskEvent->reset();
+
+    auto availabilityDisableRefs = analysisAvailabilityDisableRefs(frames.analysis);
+    auto useFlagDisableRefs = RGYDegrainRefDisableArray();
+    useFlagDisableRefs.fill(false);
+    auto disableRefs = availabilityDisableRefs;
+    if (prm) {
+        if (prm->degrain.useFlag == 1) {
+            for (int delta = 1; delta <= RGY_DEGRAIN_MAX_DELTA; delta++) {
+                const int refIndex = rgy_degrain_ref_index(delta, true);
+                useFlagDisableRefs[refIndex] = true;
+                disableRefs[refIndex] = true;
+            }
+        } else if (prm->degrain.useFlag == 2) {
+            for (int delta = 1; delta <= RGY_DEGRAIN_MAX_DELTA; delta++) {
+                const int refIndex = rgy_degrain_ref_index(delta, false);
+                useFlagDisableRefs[refIndex] = true;
+                disableRefs[refIndex] = true;
+            }
+        }
+    }
+
+    const auto &layout = analysisLayout();
+    auto *sad = analysisSAD();
+    const uint32_t baseDisableMask = degrainDisableMask(disableRefs, layout.temporalDirections);
+    if (!m_sceneChangeDisableMask || m_sceneChangeDisableMask->size() != sizeof(uint32_t)) {
+        m_sceneChangeDisableMask = m_cl->createBuffer(sizeof(uint32_t), CL_MEM_READ_WRITE);
+        if (!m_sceneChangeDisableMask) {
+            AddMessage(RGY_LOG_ERROR, _T("failed to allocate degrain scene-change mask buffer.\n"));
+            return RGY_ERR_MEMORY_ALLOC;
+        }
+    }
+    *disableMaskBuf = m_sceneChangeDisableMask.get();
+
+    if (!prm || !sad || layout.blockCount() == 0 || layout.temporalDirections <= 0) {
+        return m_cl->setBuf(&baseDisableMask, sizeof(baseDisableMask), sizeof(baseDisableMask), m_sceneChangeDisableMask.get(), queue, disableMaskEvent);
+    }
+
+    bool allDirectionsDisabled = true;
+    for (int refDirection = 0; refDirection < std::min(layout.temporalDirections, RGY_DEGRAIN_MAX_TEMPORAL_DIRECTIONS); refDirection++) {
+        allDirectionsDisabled &= disableRefs[refDirection];
+    }
+    if (allDirectionsDisabled) {
+        return m_cl->setBuf(&baseDisableMask, sizeof(baseDisableMask), sizeof(baseDisableMask), m_sceneChangeDisableMask.get(), queue, disableMaskEvent);
+    }
+
+    const auto countBytes = sizeof(uint32_t) * (size_t)std::max(layout.temporalDirections, 1);
+    if (!m_sceneChangeCounts || m_sceneChangeCounts->size() != countBytes) {
+        m_sceneChangeCounts = m_cl->createBuffer(countBytes, CL_MEM_READ_WRITE);
+        if (!m_sceneChangeCounts) {
+            AddMessage(RGY_LOG_ERROR, _T("failed to allocate degrain scene-change count buffer.\n"));
+            return RGY_ERR_MEMORY_ALLOC;
+        }
+    }
+
+    const uint32_t zero = 0;
+    RGYOpenCLEvent clearEvent;
+    auto err = m_cl->setBuf(&zero, sizeof(zero), countBytes, m_sceneChangeCounts.get(), queue, &clearEvent);
+    if (err != RGY_ERR_NONE) {
+        return err;
+    }
+
+    std::vector<RGYOpenCLEvent> countWaitEvents = { clearEvent };
+    if (analysisEvent()() != nullptr) {
+        countWaitEvents.push_back(analysisEvent());
+    }
+    const bool includeChromaSad = analysisSADIncludesChroma(prm);
+    const uint32_t scaledThSCD1 = rgy_degrain_scale_sad_threshold(prm->degrain, prm->frameOut, prm->degrain.thscd1, includeChromaSad);
+    const uint32_t scaledThSCD2 = (uint32_t)rgy_degrain_scale_scene_change_block_threshold(layout.blockCount(), prm->degrain.thscd2);
+    RGYOpenCLEvent countEvent;
+    const auto totalItems = (int)(layout.blockCount() * (size_t)layout.temporalDirections);
+    err = m_degrain.get()->kernel("kernel_degrain_scene_change_count").config(
+        queue, RGYWorkSize(256), RGYWorkSize(totalItems), countWaitEvents, &countEvent).launch(
+            m_sceneChangeCounts->mem(),
+            sad->mem(),
+            (int)layout.blockCount(),
+            layout.temporalDirections,
+            scaledThSCD1,
+            baseDisableMask);
+    if (err != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("failed to count degrain scene-change blocks: %s.\n"), get_err_mes(err));
+        return err;
+    }
+
+    err = m_degrain.get()->kernel("kernel_degrain_scene_change_mask").config(
+        queue, RGYWorkSize(1), RGYWorkSize(1), { countEvent }, disableMaskEvent).launch(
+            m_sceneChangeDisableMask->mem(),
+            m_sceneChangeCounts->mem(),
+            layout.temporalDirections,
+            baseDisableMask,
+            scaledThSCD2);
+    if (err != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("failed to build degrain scene-change mask: %s.\n"), get_err_mes(err));
+        return err;
+    }
+    return RGY_ERR_NONE;
+}
+
 RGY_ERR RGYFilterDegrain::emitDegrainFrame(const RGYFilterDegrainFrameSet &frames,
     const RGYDegrainRefDisableArray &disableRefs,
+    RGYCLBuf *disableMaskBuf, const RGYOpenCLEvent *disableMaskEvent,
     RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
     RGYOpenCLQueue &queue, RGYOpenCLEvent *event) {
     if (!frames.cur || frames.cur->ptr[0] == nullptr) {
@@ -962,6 +1152,22 @@ RGY_ERR RGYFilterDegrain::emitDegrainFrame(const RGYFilterDegrainFrameSet &frame
 
     RGYWorkSize local(DEGRAIN_DEBUG_BLOCK_X, DEGRAIN_DEBUG_BLOCK_Y);
     const uint32_t disableMask = degrainDisableMask(disableRefs, analysisLayout().temporalDirections);
+    RGYOpenCLEvent localDisableMaskEvent;
+    if (!disableMaskBuf) {
+        if (!m_sceneChangeDisableMask || m_sceneChangeDisableMask->size() != sizeof(uint32_t)) {
+            m_sceneChangeDisableMask = m_cl->createBuffer(sizeof(uint32_t), CL_MEM_READ_WRITE);
+            if (!m_sceneChangeDisableMask) {
+                AddMessage(RGY_LOG_ERROR, _T("failed to allocate degrain disable mask buffer.\n"));
+                return RGY_ERR_MEMORY_ALLOC;
+            }
+        }
+        err = m_cl->setBuf(&disableMask, sizeof(disableMask), sizeof(disableMask), m_sceneChangeDisableMask.get(), queue, &localDisableMaskEvent);
+        if (err != RGY_ERR_NONE) {
+            return err;
+        }
+        disableMaskBuf = m_sceneChangeDisableMask.get();
+        disableMaskEvent = &localDisableMaskEvent;
+    }
     const bool useOverlapRamp = analysisLayout().overlap > 0;
     const bool pixelTrace = m_debugEnv.pixelTrace;
     const int pixelTraceX = m_debugEnv.pixelTraceX;
@@ -998,9 +1204,6 @@ RGY_ERR RGYFilterDegrain::emitDegrainFrame(const RGYFilterDegrainFrameSet &frame
     auto ensureTemporalMixPlan = [&](RGYDegrainTemporalMixPlanState &state, bool &ready, const uint32_t scaledThSad,
         const std::vector<RGYOpenCLEvent> &waitEvents) {
         const auto planBytes = degrainTemporalMixPlanBytes(analysisLayout());
-        if (ready && state.reusable(planBytes, scaledThSad, disableMask)) {
-            return RGY_ERR_NONE;
-        }
         if (planBytes == 0) {
             AddMessage(RGY_LOG_ERROR, _T("invalid degrain temporal mix plan buffer geometry.\n"));
             return RGY_ERR_INVALID_PARAM;
@@ -1025,7 +1228,7 @@ RGY_ERR RGYFilterDegrain::emitDegrainFrame(const RGYFilterDegrainFrameSet &frame
                 m_analysis.temporalMixPrior->mem(),
                 (int)analysisLayout().blockCount(),
                 scaledThSad,
-                disableMask);
+                disableMaskBuf->mem());
         if (err != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("failed to build degrain temporal mix plan: %s.\n"), get_err_mes(err));
             state.event.reset();
@@ -1122,7 +1325,7 @@ RGY_ERR RGYFilterDegrain::emitDegrainFrame(const RGYFilterDegrainFrameSet &frame
                     planeScaleX,
                     planeScaleY,
                     scaledThSad,
-                    disableMask,
+                    disableMaskBuf->mem(),
                     pixelTraceX,
                     pixelTraceY,
                     traceBuf->mem());
@@ -1199,7 +1402,7 @@ RGY_ERR RGYFilterDegrain::emitDegrainFrame(const RGYFilterDegrainFrameSet &frame
             planeScaleX,
             planeScaleY,
             scaledThSad,
-            disableMask);
+            disableMaskBuf->mem());
     };
 
     const bool includeChromaSad = analysisSADIncludesChroma(prm);
@@ -1207,6 +1410,9 @@ RGY_ERR RGYFilterDegrain::emitDegrainFrame(const RGYFilterDegrainFrameSet &frame
     const uint32_t scaledThSadC = rgy_degrain_scale_sad_threshold(prm->degrain, prm->frameOut, prm->degrain.thsadc, includeChromaSad);
     const std::array<RGY_PLANE, 3> planes = { RGY_PLANE_Y, RGY_PLANE_U, RGY_PLANE_V };
     auto waitEvents = initialWaitEvents;
+    if (disableMaskEvent && (*disableMaskEvent)() != nullptr) {
+        waitEvents.push_back(*disableMaskEvent);
+    }
     for (int iplane = 0; iplane < (processChroma ? (int)planes.size() : 1); iplane++) {
         RGYOpenCLEvent renderEvent;
         const auto plane = planes[iplane];
@@ -1243,12 +1449,23 @@ RGY_ERR RGYFilterDegrain::runCompensateMode(const RGYFilterDegrainProcessFrameSe
             return err;
         }
     }
+    auto prm = std::dynamic_pointer_cast<RGYFilterParamDegrain>(m_param);
     RGYDegrainRefDisableArray disableRefs;
-    auto err = resolveSceneChangeRefs(std::dynamic_pointer_cast<RGYFilterParamDegrain>(m_param), frames.analysis, queue, &disableRefs);
+    disableRefs.fill(false);
+    if (degrainDebugLogEnabled()) {
+        auto err = resolveSceneChangeRefs(prm, frames.analysis, queue, &disableRefs);
+        if (err != RGY_ERR_NONE) {
+            return err;
+        }
+        return emitCompensateFrame(frames.render, mode, disableRefs, nullptr, nullptr, ppOutputFrames, pOutputFrameNum, queue, event);
+    }
+    RGYCLBuf *disableMaskBuf = nullptr;
+    RGYOpenCLEvent disableMaskEvent;
+    auto err = prepareSceneChangeMask(prm, frames, queue, &disableMaskBuf, &disableMaskEvent);
     if (err != RGY_ERR_NONE) {
         return err;
     }
-    return emitCompensateFrame(frames.render, mode, disableRefs, ppOutputFrames, pOutputFrameNum, queue, event);
+    return emitCompensateFrame(frames.render, mode, disableRefs, disableMaskBuf, &disableMaskEvent, ppOutputFrames, pOutputFrameNum, queue, event);
 }
 
 RGY_ERR RGYFilterDegrain::runDegrainMode(const RGYFilterDegrainProcessFrameSet &frames, const int currentFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
@@ -1258,21 +1475,6 @@ RGY_ERR RGYFilterDegrain::runDegrainMode(const RGYFilterDegrainProcessFrameSet &
         AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
         return RGY_ERR_INVALID_PARAM;
     }
-    std::unique_ptr<PendingSceneChange> pendingOutput;
-    if (m_pendingSceneChange) {
-        pendingOutput = std::move(m_pendingSceneChange);
-        applyPendingSceneChangeAnalysisContext(*pendingOutput);
-        RGYDegrainRefDisableArray disableRefs;
-        auto err = resolveSceneChangeReadback(*pendingOutput, queue, &disableRefs);
-        if (err != RGY_ERR_NONE) {
-            return err;
-        }
-        logApplyTrace(pendingOutput->prm, pendingOutput->frames, disableRefs, queue);
-        err = emitDegrainFrame(pendingOutput->frames.render, disableRefs, ppOutputFrames, pOutputFrameNum, queue, event);
-        if (err != RGY_ERR_NONE) {
-            return err;
-        }
-    }
 
     if (!bindFrameAnalysisData(frames.render.cur, currentFrame, queue)) {
         auto err = prepareAnalysisState(frames.analysis, queue, wait_events);
@@ -1281,33 +1483,22 @@ RGY_ERR RGYFilterDegrain::runDegrainMode(const RGYFilterDegrainProcessFrameSet &
         }
     }
 
-    const bool canDeferSceneChange = !m_boundAnalyzeResult.valid() || m_frameAnalysisData;
-    if (!canDeferSceneChange) {
-        PendingSceneChange pending;
-        auto err = submitSceneChangeReadback(prm, frames, queue, &pending);
-        if (err != RGY_ERR_NONE) {
-            return err;
-        }
-        RGYDegrainRefDisableArray disableRefs;
-        err = resolveSceneChangeReadback(pending, queue, &disableRefs);
+    RGYDegrainRefDisableArray disableRefs;
+    disableRefs.fill(false);
+    if (degrainDebugLogEnabled() || degrainApplyTraceEnabled() || m_debugEnv.pixelTrace) {
+        auto err = resolveSceneChangeRefs(prm, frames.analysis, queue, &disableRefs);
         if (err != RGY_ERR_NONE) {
             return err;
         }
         logApplyTrace(prm, frames, disableRefs, queue);
-        return emitDegrainFrame(frames.render, disableRefs, ppOutputFrames, pOutputFrameNum, queue, event);
+        return emitDegrainFrame(frames.render, disableRefs, nullptr, nullptr, ppOutputFrames, pOutputFrameNum, queue, event);
     }
 
-    auto pending = std::make_unique<PendingSceneChange>();
-    auto err = submitSceneChangeReadback(prm, frames, queue, pending.get());
+    RGYCLBuf *disableMaskBuf = nullptr;
+    RGYOpenCLEvent disableMaskEvent;
+    auto err = prepareSceneChangeMask(prm, frames, queue, &disableMaskBuf, &disableMaskEvent);
     if (err != RGY_ERR_NONE) {
         return err;
     }
-    m_pendingSceneChange = std::move(pending);
-    if (pendingOutput) {
-        return RGY_ERR_NONE;
-    }
-
-    *pOutputFrameNum = 0;
-    ppOutputFrames[0] = nullptr;
-    return RGY_ERR_NONE;
+    return emitDegrainFrame(frames.render, disableRefs, disableMaskBuf, &disableMaskEvent, ppOutputFrames, pOutputFrameNum, queue, event);
 }
