@@ -2566,14 +2566,8 @@ Detects edges to create a mask, then applies iterative smoothing to non-edge are
   - threshold=&lt;float&gt;  (default=15.0, 0.0 - 255.0)  
     Edge detection threshold.
 
-  - slope=&lt;float&gt; (default=0.0, 0.0 -)
-    Slope of the sigmoid soft mask. 0.0 keeps the legacy binary mask.
-
-  - luma_limit=&lt;float&gt; (default=0.0, 0.0 - 255.0)
-    Reduces sharpening in luma areas darker than this value. 0.0 disables it.
-
-  - block_protect=&lt;float&gt; (default=0.0, 0.0 - 1.0)
-    Reduces sharpening near detected DCT block boundaries. 0.0 disables it.
+  - threshold_c=&lt;float&gt;  (default=-1.0, -1.0 / 0.0 - 255.0)
+    Edge detection threshold for chroma planes. -1.0 uses the same value as threshold.
 
   - highq=&lt;bool&gt;  (default=true)  
     When true, uses 4-direction edge detection (diagonal + horizontal/vertical). When false, uses only 2 diagonal directions.
@@ -2587,7 +2581,7 @@ Detects edges to create a mask, then applies iterative smoothing to non-edge are
   --vpp-msmooth
   
   Example: Stronger smoothing
-  --vpp-msmooth strength=6,threshold=10.0
+  --vpp-msmooth strength=6,threshold=10.0,threshold_c=18.0
   ```
 
 ### --vpp-knn [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
@@ -3140,6 +3134,15 @@ Edge-selective sharpening filter based on Donald A. Graft's MSharpen.
   
   - threshold=&lt;float&gt;  (default=15.0, 0.0 - 255.0)  
     Edge detection threshold.
+
+  - slope=&lt;float&gt; (default=0.0, 0.0 -)
+    Slope of the sigmoid soft mask. 0.0 keeps the legacy binary mask.
+
+  - luma_limit=&lt;float&gt; (default=0.0, 0.0 - 255.0)
+    Reduces sharpening in luma areas darker than this value. 0.0 disables it.
+
+  - block_protect=&lt;float&gt; (default=0.0, 0.0 - 1.0)
+    Reduces sharpening near detected DCT block boundaries. 0.0 disables it.
 
   - highq=&lt;bool&gt;  (default=true)  
     When true, uses 4-direction edge detection (diagonal + horizontal/vertical). When false, uses only 2 diagonal directions.
