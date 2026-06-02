@@ -64,6 +64,7 @@ resource_specs = [
   ['rgy_filter_finedehalo_cl', '../VCECore/rgy_filter_finedehalo.cl', 'VCECore_rgy_filter_finedehalo_cl'],
   ['rgy_filter_hqdering_cl', '../VCECore/rgy_filter_hqdering.cl', 'VCECore_rgy_filter_hqdering_cl'],
   ['rgy_filter_deflicker_cl', '../VCECore/rgy_filter_deflicker.cl', 'VCECore_rgy_filter_deflicker_cl'],
+  ['rgy_filter_stab_cl', '../VCECore/rgy_filter_stab.cl', 'VCECore_rgy_filter_stab_cl'],
   ['rgy_filter_colorfix_cl', '../VCECore/rgy_filter_colorfix.cl', 'VCECore_rgy_filter_colorfix_cl'],
   ['rgy_filter_ivtc_cl', '../VCECore/rgy_filter_ivtc.cl', 'VCECore_rgy_filter_ivtc_cl'],
   ['rgy_filter_rtgmc_bob_cl', '../VCECore/rgy_filter_rtgmc_bob.cl', 'VCECore_rgy_filter_rtgmc_bob_cl'],

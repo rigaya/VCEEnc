@@ -658,6 +658,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="rgy_filter_stab.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="rgy_filter_colorfix.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -892,6 +898,7 @@
     <ClInclude Include="rgy_filter_chromashift.h" />
     <ClInclude Include="rgy_filter_deblock.h" />
     <ClInclude Include="rgy_filter_deflicker.h" />
+    <ClInclude Include="rgy_filter_stab.h" />
     <ClInclude Include="rgy_filter_colorfix.h" />
     <ClInclude Include="rgy_filter_dehalo.h" />
     <ClInclude Include="rgy_filter_finedehalo.h" />
@@ -953,6 +960,7 @@
     <None Include="rgy_filter_chromashift.cl" />
     <None Include="rgy_filter_deblock.cl" />
     <None Include="rgy_filter_deflicker.cl" />
+    <None Include="rgy_filter_stab.cl" />
     <None Include="rgy_filter_colorfix.cl" />
     <None Include="rgy_filter_dehalo.cl" />
     <None Include="rgy_filter_finedehalo.cl" />
