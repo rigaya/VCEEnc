@@ -2851,9 +2851,20 @@ Specify the resizing algorithm.
   | lanczos2 | 4x4 Lanczos resampling |
   | lanczos3 | 6x6 Lanczos resampling |
   | lanczos4 | 8x8 Lanczos resampling |
+  | fsr1     | AMD FidelityFX Super Resolution 1.0 (EASU + RCAS) |
   | amf_bilinear | amf bilinear interpolation  |
   | amf_bicubic  | amf bicubic interpolation   |
   | amf_fsr      | amf fsr resampling          |
+
+- Additional parameters for fsr1
+  - sharpness=&lt;float&gt;
+    RCAS sharpness. (0.0 - 1.0, default = 0.5)
+
+- examples
+  ```
+  Examples: Use fsr1
+  --vpp-resize algo=fsr1,sharpness=0.8
+  ```
 
 ### --vpp-scaler-sharpness &lt;float&gt;
 sharpness for amf_fsr. (default=0.5, 0.0-2.0)
