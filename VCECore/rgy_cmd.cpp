@@ -5905,7 +5905,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             return 0;
         }
         i++;
-        const auto paramList = std::vector<std::string>{ "strength", "threshold", "threshold_c", "highq", "mask" };
+        const auto paramList = std::vector<std::string>{ "strength", "threshold", "highq", "mask" };
         for (const auto& param : split(strInput[i], _T(","))) {
             auto pos = param.find_first_of(_T("="));
             if (pos != std::string::npos) {
@@ -5934,15 +5934,6 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                 if (param_arg == _T("threshold")) {
                     try {
                         vpp->msmooth.threshold = std::stof(param_val);
-                    } catch (...) {
-                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
-                        return 1;
-                    }
-                    continue;
-                }
-                if (param_arg == _T("threshold_c")) {
-                    try {
-                        vpp->msmooth.threshold_c = std::stof(param_val);
                     } catch (...) {
                         print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                         return 1;
@@ -7252,7 +7243,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             return 0;
         }
         i++;
-        const auto paramList = std::vector<std::string>{ "strength", "threshold", "slope", "luma_limit", "highq", "mask" };
+        const auto paramList = std::vector<std::string>{ "strength", "threshold", "highq", "mask" };
         for (const auto& param : split(strInput[i], _T(","))) {
             auto pos = param.find_first_of(_T("="));
             if (pos != std::string::npos) {
@@ -7281,24 +7272,6 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                 if (param_arg == _T("threshold")) {
                     try {
                         vpp->msharpen.threshold = std::stof(param_val);
-                    } catch (...) {
-                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
-                        return 1;
-                    }
-                    continue;
-                }
-                if (param_arg == _T("slope")) {
-                    try {
-                        vpp->msharpen.slope = std::stof(param_val);
-                    } catch (...) {
-                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
-                        return 1;
-                    }
-                    continue;
-                }
-                if (param_arg == _T("luma_limit")) {
-                    try {
-                        vpp->msharpen.luma_limit = std::stof(param_val);
                     } catch (...) {
                         print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                         return 1;
@@ -12192,7 +12165,6 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
         if (param->msmooth.enable || save_disabled_prm) {
             ADD_NUM(_T("strength"), msmooth.strength);
             ADD_FLOAT(_T("threshold"), msmooth.threshold, 3);
-            ADD_FLOAT(_T("threshold_c"), msmooth.threshold_c, 3);
             ADD_BOOL(_T("highq"), msmooth.highq);
             ADD_BOOL(_T("mask"), msmooth.mask);
         }
@@ -12489,8 +12461,6 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
         if (param->msharpen.enable || save_disabled_prm) {
             ADD_FLOAT(_T("strength"), msharpen.strength, 3);
             ADD_FLOAT(_T("threshold"), msharpen.threshold, 3);
-            ADD_FLOAT(_T("slope"), msharpen.slope, 3);
-            ADD_FLOAT(_T("luma_limit"), msharpen.luma_limit, 3);
             ADD_BOOL(_T("highq"), msharpen.highq);
             ADD_BOOL(_T("mask"), msharpen.mask);
         }
@@ -14489,10 +14459,9 @@ tstring gen_cmd_help_vpp() {
         _T("    params\n")
         _T("      strength=<int>            smoothing iterations (default=%d, 0 - 20)\n")
         _T("      threshold=<float>         edge detection threshold (default=%.1f, 0.0 - 255.0)\n")
-        _T("      threshold_c=<float>       chroma edge detection threshold (default=%.1f, -1.0 follows threshold)\n")
         _T("      highq=<bool>              high quality edge detection (default=%s)\n")
         _T("      mask=<bool>               output edge mask only (default=%s)\n"),
-        FILTER_DEFAULT_MSMOOTH_STRENGTH, FILTER_DEFAULT_MSMOOTH_THRESHOLD, FILTER_DEFAULT_MSMOOTH_THRESHOLD_C,
+        FILTER_DEFAULT_MSMOOTH_STRENGTH, FILTER_DEFAULT_MSMOOTH_THRESHOLD,
         FILTER_DEFAULT_MSMOOTH_HIGHQ ? _T("true") : _T("false"),
         FILTER_DEFAULT_MSMOOTH_MASK  ? _T("true") : _T("false"));
 #endif
@@ -14733,12 +14702,9 @@ tstring gen_cmd_help_vpp() {
         _T("    params\n")
         _T("      strength=<float>          sharpening strength (default=%.2f, 0.0 - 1.0)\n")
         _T("      threshold=<float>         edge detection threshold (default=%.1f, 0.0 - 255.0)\n")
-        _T("      slope=<float>             sigmoid soft mask slope (default=%.2f, 0.0 disables)\n")
-        _T("      luma_limit=<float>        attenuate dark luma below this value (default=%.1f, 0.0 disables)\n")
         _T("      highq=<bool>              high quality edge detection (default=%s)\n")
         _T("      mask=<bool>               output edge mask only (default=%s)\n"),
         FILTER_DEFAULT_MSHARPEN_STRENGTH, FILTER_DEFAULT_MSHARPEN_THRESHOLD,
-        FILTER_DEFAULT_MSHARPEN_SLOPE, FILTER_DEFAULT_MSHARPEN_LUMA_LIMIT,
         FILTER_DEFAULT_MSHARPEN_HIGHQ ? _T("true") : _T("false"),
         FILTER_DEFAULT_MSHARPEN_MASK  ? _T("true") : _T("false"));
 #endif

@@ -2339,7 +2339,6 @@ VppMsmooth::VppMsmooth() :
     enable(false),
     strength(FILTER_DEFAULT_MSMOOTH_STRENGTH),
     threshold(FILTER_DEFAULT_MSMOOTH_THRESHOLD),
-    threshold_c(FILTER_DEFAULT_MSMOOTH_THRESHOLD_C),
     highq(FILTER_DEFAULT_MSMOOTH_HIGHQ),
     mask(FILTER_DEFAULT_MSMOOTH_MASK) {
 }
@@ -2348,7 +2347,6 @@ bool VppMsmooth::operator==(const VppMsmooth &x) const {
     return enable == x.enable
         && strength == x.strength
         && threshold == x.threshold
-        && threshold_c == x.threshold_c
         && highq == x.highq
         && mask == x.mask;
 }
@@ -2357,8 +2355,8 @@ bool VppMsmooth::operator!=(const VppMsmooth &x) const {
 }
 
 tstring VppMsmooth::print() const {
-    return strsprintf(_T("msmooth: strength %d, threshold %.1f, threshold_c %.1f, highq %s, mask %s"),
-        strength, threshold, threshold_c, highq ? _T("true") : _T("false"), mask ? _T("true") : _T("false"));
+    return strsprintf(_T("msmooth: strength %d, threshold %.1f, highq %s, mask %s"),
+        strength, threshold, highq ? _T("true") : _T("false"), mask ? _T("true") : _T("false"));
 }
 
 VppConvolution3d::VppConvolution3d() :
@@ -2795,8 +2793,6 @@ VppMsharpen::VppMsharpen() :
     enable(false),
     strength(FILTER_DEFAULT_MSHARPEN_STRENGTH),
     threshold(FILTER_DEFAULT_MSHARPEN_THRESHOLD),
-    slope(FILTER_DEFAULT_MSHARPEN_SLOPE),
-    luma_limit(FILTER_DEFAULT_MSHARPEN_LUMA_LIMIT),
     highq(FILTER_DEFAULT_MSHARPEN_HIGHQ),
     mask(FILTER_DEFAULT_MSHARPEN_MASK) {
 }
@@ -2805,8 +2801,6 @@ bool VppMsharpen::operator==(const VppMsharpen &x) const {
     return enable == x.enable
         && strength == x.strength
         && threshold == x.threshold
-        && slope == x.slope
-        && luma_limit == x.luma_limit
         && highq == x.highq
         && mask == x.mask;
 }
@@ -2815,8 +2809,8 @@ bool VppMsharpen::operator!=(const VppMsharpen &x) const {
 }
 
 tstring VppMsharpen::print() const {
-    return strsprintf(_T("msharpen: strength %.2f, threshold %.1f, slope %.2f, luma_limit %.1f, highq %s, mask %s"),
-        strength, threshold, slope, luma_limit, highq ? _T("true") : _T("false"), mask ? _T("true") : _T("false"));
+    return strsprintf(_T("msharpen: strength %.2f, threshold %.1f, highq %s, mask %s"),
+        strength, threshold, highq ? _T("true") : _T("false"), mask ? _T("true") : _T("false"));
 }
 
 VppWarpsharp::VppWarpsharp() :

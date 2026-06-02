@@ -510,7 +510,6 @@ static const bool  FILTER_DEFAULT_RTGMC_PRIMITIVE_CHROMA = true;
 
 static const int   FILTER_DEFAULT_MSMOOTH_STRENGTH = 3;
 static const float FILTER_DEFAULT_MSMOOTH_THRESHOLD = 15.0f;
-static const float FILTER_DEFAULT_MSMOOTH_THRESHOLD_C = -1.0f;
 static const bool  FILTER_DEFAULT_MSMOOTH_HIGHQ = true;
 static const bool  FILTER_DEFAULT_MSMOOTH_MASK = false;
 
@@ -527,8 +526,6 @@ static const float FILTER_DEFAULT_EDGELEVEL_WHITE = 0.0f;
 
 static const float FILTER_DEFAULT_MSHARPEN_STRENGTH = 1.0f;
 static const float FILTER_DEFAULT_MSHARPEN_THRESHOLD = 15.0f;
-static const float FILTER_DEFAULT_MSHARPEN_SLOPE = 0.0f;
-static const float FILTER_DEFAULT_MSHARPEN_LUMA_LIMIT = 0.0f;
 static const bool  FILTER_DEFAULT_MSHARPEN_HIGHQ = true;
 static const bool  FILTER_DEFAULT_MSHARPEN_MASK = false;
 
@@ -2777,7 +2774,6 @@ struct VppMsmooth {
     bool  enable;
     int   strength;
     float threshold;
-    float threshold_c;
     bool  highq;
     bool  mask;
 
@@ -2987,8 +2983,6 @@ struct VppMsharpen {
     bool  enable;
     float strength;
     float threshold;
-    float slope;
-    float luma_limit;
     bool  highq;
     bool  mask;
 
