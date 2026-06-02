@@ -84,6 +84,7 @@
 #include "rgy_filter_msmooth.h"
 #include "rgy_filter_subburn.h"
 #include "rgy_filter_unsharp.h"
+#include "rgy_filter_vinverse.h"
 #include "rgy_filter_chromashift.h"
 #include "rgy_filter_deblock.h"
 #include "rgy_filter_deflicker.h"
@@ -1435,6 +1436,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     ) filterPipeline.push_back(VppType::CL_RESIZE);
     else if (resizeRequired != RGY_VPP_RESIZE_TYPE_NONE)   filterPipeline.push_back(VppType::AMF_RESIZE);
     if (inputParam->vpp.unsharp.enable)    filterPipeline.push_back(VppType::CL_UNSHARP);
+    if (inputParam->vpp.vinverse.enable)   filterPipeline.push_back(VppType::CL_VINVERSE);
     if (inputParam->vpp.chromashift.enable) filterPipeline.push_back(VppType::CL_CHROMASHIFT);
     if (inputParam->vpp.deblock.enable)    filterPipeline.push_back(VppType::CL_DEBLOCK);
     if (inputParam->vpp.deflicker.enable)  filterPipeline.push_back(VppType::CL_DEFLICKER);
@@ -2502,6 +2504,29 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         unique_ptr<RGYFilter> filter(new RGYFilterUnsharp(m_dev->cl()));
         shared_ptr<RGYFilterParamUnsharp> param(new RGYFilterParamUnsharp());
         param->unsharp = inputParam->vpp.unsharp;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //vinverse
+    if (vppType == VppType::CL_VINVERSE) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterVinverse(m_dev->cl()));
+        shared_ptr<RGYFilterParamVinverse> param(new RGYFilterParamVinverse());
+        param->vinverse = inputParam->vpp.vinverse;
         param->frameIn = inputFrame;
         param->frameOut = inputFrame;
         param->baseFps = m_encFps;

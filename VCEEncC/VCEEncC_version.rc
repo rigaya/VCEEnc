@@ -58,6 +58,7 @@ RGY_FILTER_SMOOTH_CL        EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_smooth
 RGY_FILTER_MSMOOTH_CL       EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_msmooth.cl"
 RGY_FILTER_SUBBURN_CL       EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_subburn.cl"
 RGY_FILTER_UNSHARP_CL       EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_unsharp.cl"
+RGY_FILTER_VINVERSE_CL      EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_vinverse.cl"
 RGY_FILTER_CHROMASHIFT_CL   EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_chromashift.cl"
 RGY_FILTER_DEBLOCK_CL       EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_deblock.cl"
 RGY_FILTER_DEFLICKER_CL     EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_deflicker.cl"

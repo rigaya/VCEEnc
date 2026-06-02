@@ -576,6 +576,7 @@ vcecore_sources = files(
   'VCECore/rgy_filter_transform.cpp',
   'VCECore/rgy_filter_tweak.cpp',
   'VCECore/rgy_filter_unsharp.cpp',
+  'VCECore/rgy_filter_vinverse.cpp',
   'VCECore/rgy_filter_warpsharp.cpp',
   'VCECore/rgy_filter_yadif.cpp',
   'VCECore/rgy_frame.cpp',

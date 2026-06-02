@@ -82,6 +82,7 @@ resource_specs = [
   ['rgy_filter_transform_cl', '../VCECore/rgy_filter_transform.cl', 'VCECore_rgy_filter_transform_cl'],
   ['rgy_filter_tweak_cl', '../VCECore/rgy_filter_tweak.cl', 'VCECore_rgy_filter_tweak_cl'],
   ['rgy_filter_unsharp_cl', '../VCECore/rgy_filter_unsharp.cl', 'VCECore_rgy_filter_unsharp_cl'],
+  ['rgy_filter_vinverse_cl', '../VCECore/rgy_filter_vinverse.cl', 'VCECore_rgy_filter_vinverse_cl'],
   ['rgy_filter_warpsharp_cl', '../VCECore/rgy_filter_warpsharp.cl', 'VCECore_rgy_filter_warpsharp_cl'],
   ['rgy_filter_yadif_cl', '../VCECore/rgy_filter_yadif.cl', 'VCECore_rgy_filter_yadif_cl'],
 ]
