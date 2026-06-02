@@ -646,6 +646,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="rgy_filter_cas.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="rgy_filter_edgelevel.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -915,6 +921,7 @@
     <ClInclude Include="rgy_filter_deband.h" />
     <ClInclude Include="rgy_filter_denoise_knn.h" />
     <ClInclude Include="rgy_filter_denoise_pmd.h" />
+    <ClInclude Include="rgy_filter_cas.h" />
     <ClInclude Include="rgy_filter_edgelevel.h" />
     <ClInclude Include="rgy_filter_chromashift.h" />
     <ClInclude Include="rgy_filter_deblock.h" />
@@ -980,6 +987,7 @@
     <None Include="rgy_filter_denoise_knn.cl" />
     <None Include="rgy_filter_denoise_nlmeans.cl" />
     <None Include="rgy_filter_denoise_pmd.cl" />
+    <None Include="rgy_filter_cas.cl" />
     <None Include="rgy_filter_edgelevel.cl" />
     <None Include="rgy_filter_chromashift.cl" />
     <None Include="rgy_filter_deblock.cl" />

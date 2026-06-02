@@ -549,6 +549,7 @@ vcecore_sources = files(
   'VCECore/rgy_filter_rtgmc_lossless.cpp',
   'VCECore/rgy_filter_rtgmc_primitive.cpp',
   'VCECore/rgy_filter_rtgmc_mmask.cpp',
+  'VCECore/rgy_filter_cas.cpp',
   'VCECore/rgy_filter_edgelevel.cpp',
   'VCECore/rgy_filter_chromashift.cpp',
   'VCECore/rgy_filter_deblock.cpp',

@@ -97,6 +97,7 @@
 #include "rgy_filter_hqdering.h"
 #include "rgy_filter_edgelevel.h"
 #include "rgy_filter_msharpen.h"
+#include "rgy_filter_cas.h"
 #include "rgy_filter_warpsharp.h"
 #include "rgy_filter_curves.h"
 #include "rgy_filter_tweak.h"
@@ -1451,6 +1452,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.dering.enable)     filterPipeline.push_back(VppType::CL_HQDERING);
     if (inputParam->vpp.edgelevel.enable)  filterPipeline.push_back(VppType::CL_EDGELEVEL);
     if (inputParam->vpp.msharpen.enable)   filterPipeline.push_back(VppType::CL_MSHARPEN);
+    if (inputParam->vpp.cas.enable)        filterPipeline.push_back(VppType::CL_CAS);
     if (inputParam->vpp.warpsharp.enable)  filterPipeline.push_back(VppType::CL_WARPSHARP);
     if (inputParam->vpp.maa.enable)        filterPipeline.push_back(VppType::CL_MAA);
     if (inputParam->vppamf.enhancer.enable)  filterPipeline.push_back(VppType::AMF_VQENHANCE);
@@ -2832,6 +2834,29 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         unique_ptr<RGYFilter> filter(new RGYFilterMsharpen(m_dev->cl()));
         shared_ptr<RGYFilterParamMsharpen> param(new RGYFilterParamMsharpen());
         param->msharpen = inputParam->vpp.msharpen;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //cas
+    if (vppType == VppType::CL_CAS) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterCas(m_dev->cl()));
+        shared_ptr<RGYFilterParamCas> param(new RGYFilterParamCas());
+        param->cas = inputParam->vpp.cas;
         param->frameIn = inputFrame;
         param->frameOut = inputFrame;
         param->baseFps = m_encFps;

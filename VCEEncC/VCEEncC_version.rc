@@ -49,6 +49,7 @@ RGY_FILTER_RTGMC_SHIMMER_REPAIR_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter
 RGY_FILTER_RTGMC_LOSSLESS_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_rtgmc_lossless.cl"
 RGY_FILTER_RTGMC_PRIMITIVE_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_rtgmc_primitive.cl"
 RGY_FILTER_RTGMC_MMASK_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_rtgmc_mmask.cl"
+RGY_FILTER_CAS_CL         EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_cas.cl"
 RGY_FILTER_DENOISE_DCT_CL   EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_denoise_dct.cl"
 RGY_FILTER_DENOISE_FFT3D_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_denoise_fft3d.cl"
 RGY_FILTER_DENOISE_HQDN3D_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_denoise_hqdn3d.cl"
