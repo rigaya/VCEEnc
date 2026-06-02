@@ -205,6 +205,7 @@ enum class VppType : int {
     CL_RTGMC_SHIMMER_REPAIR_REP1,
     CL_RTGMC_SHIMMER_REPAIR_REP2,
     CL_RTGMC_PRIMITIVE,
+    CL_VINVERSE,
     CL_MSMOOTH,
 
     CL_LIBPLACEBO_SHADER,
@@ -214,7 +215,6 @@ enum class VppType : int {
     CL_SUBBURN,
 
     CL_UNSHARP,
-    CL_VINVERSE,
     CL_CHROMASHIFT,
     CL_DEBLOCK,
     CL_DEFLICKER,
@@ -2602,67 +2602,6 @@ struct VppHqdn3d {
     tstring print() const;
 };
 
-enum class VppDescaleKernel {
-    Bilinear,
-    Bicubic,
-    Spline16,
-    Spline36,
-    Spline64,
-    Lanczos2,
-    Lanczos3,
-    Lanczos4,
-    Auto,
-};
-
-enum class VppDescaleBorder {
-    Mirror,
-    Zero,
-    Repeat,
-};
-
-const CX_DESC list_vpp_descale_kernel[] = {
-    { _T("bilinear"), (int)VppDescaleKernel::Bilinear },
-    { _T("bicubic"),  (int)VppDescaleKernel::Bicubic  },
-    { _T("spline16"), (int)VppDescaleKernel::Spline16 },
-    { _T("spline36"), (int)VppDescaleKernel::Spline36 },
-    { _T("spline64"), (int)VppDescaleKernel::Spline64 },
-    { _T("lanczos2"), (int)VppDescaleKernel::Lanczos2 },
-    { _T("lanczos3"), (int)VppDescaleKernel::Lanczos3 },
-    { _T("lanczos4"), (int)VppDescaleKernel::Lanczos4 },
-    { _T("auto"),     (int)VppDescaleKernel::Auto     },
-    { NULL, 0 }
-};
-
-const CX_DESC list_vpp_descale_border[] = {
-    { _T("mirror"), (int)VppDescaleBorder::Mirror },
-    { _T("zero"),   (int)VppDescaleBorder::Zero   },
-    { _T("repeat"), (int)VppDescaleBorder::Repeat },
-    { NULL, 0 }
-};
-
-struct VppDescale {
-    bool enable;
-    VppDescaleKernel kernel;
-    int width;
-    int height;
-    float b;
-    float c;
-    float src_left;
-    float src_top;
-    VppDescaleBorder border;
-    bool autoDetect;
-    int search_min;
-    int search_max;
-    int search_step;
-    int detect_frames;
-    bool show_scores;
-
-    VppDescale();
-    bool operator==(const VppDescale &x) const;
-    bool operator!=(const VppDescale &x) const;
-    tstring print() const;
-};
-
 struct VppSmooth {
     bool enable;
     int quality;
@@ -3194,6 +3133,67 @@ struct VppMaa {
     VppMaa();
     bool operator==(const VppMaa &x) const;
     bool operator!=(const VppMaa &x) const;
+    tstring print() const;
+};
+
+enum class VppDescaleKernel {
+    Bilinear,
+    Bicubic,
+    Spline16,
+    Spline36,
+    Spline64,
+    Lanczos2,
+    Lanczos3,
+    Lanczos4,
+    Auto,
+};
+
+enum class VppDescaleBorder {
+    Mirror,
+    Zero,
+    Repeat,
+};
+
+const CX_DESC list_vpp_descale_kernel[] = {
+    { _T("bilinear"), (int)VppDescaleKernel::Bilinear },
+    { _T("bicubic"),  (int)VppDescaleKernel::Bicubic  },
+    { _T("spline16"), (int)VppDescaleKernel::Spline16 },
+    { _T("spline36"), (int)VppDescaleKernel::Spline36 },
+    { _T("spline64"), (int)VppDescaleKernel::Spline64 },
+    { _T("lanczos2"), (int)VppDescaleKernel::Lanczos2 },
+    { _T("lanczos3"), (int)VppDescaleKernel::Lanczos3 },
+    { _T("lanczos4"), (int)VppDescaleKernel::Lanczos4 },
+    { _T("auto"),     (int)VppDescaleKernel::Auto     },
+    { NULL, 0 }
+};
+
+const CX_DESC list_vpp_descale_border[] = {
+    { _T("mirror"), (int)VppDescaleBorder::Mirror },
+    { _T("zero"),   (int)VppDescaleBorder::Zero   },
+    { _T("repeat"), (int)VppDescaleBorder::Repeat },
+    { NULL, 0 }
+};
+
+struct VppDescale {
+    bool enable;
+    VppDescaleKernel kernel;
+    int width;
+    int height;
+    float b;
+    float c;
+    float src_left;
+    float src_top;
+    VppDescaleBorder border;
+    bool autoDetect;
+    int search_min;
+    int search_max;
+    int search_step;
+    int detect_frames;
+    bool show_scores;
+
+    VppDescale();
+    bool operator==(const VppDescale &x) const;
+    bool operator!=(const VppDescale &x) const;
     tstring print() const;
 };
 
