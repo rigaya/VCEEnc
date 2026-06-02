@@ -530,6 +530,7 @@ vcecore_sources = files(
   'VCECore/rgy_filter_denoise_dct.cpp',
   'VCECore/rgy_filter_denoise_fft3d.cpp',
   'VCECore/rgy_filter_denoise_hqdn3d.cpp',
+  'VCECore/rgy_filter_descale.cpp',
   'VCECore/rgy_filter_denoise_knn.cpp',
   'VCECore/rgy_filter_denoise_nlmeans.cpp',
   'VCECore/rgy_filter_denoise_pmd.cpp',

@@ -67,6 +67,7 @@
 #include "rgy_filter_denoise_nlmeans.h"
 #include "rgy_filter_denoise_pmd.h"
 #include "rgy_filter_denoise_hqdn3d.h"
+#include "rgy_filter_descale.h"
 #include "rgy_filter_degrain.h"
 #include "rgy_filter_rtgmc_retouch.h"
 #include "rgy_filter_rtgmc_shimmer_repair.h"
@@ -1419,6 +1420,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.nlmeans.enable)       filterPipeline.push_back(VppType::CL_DENOISE_NLMEANS);
     if (inputParam->vpp.pmd.enable)           filterPipeline.push_back(VppType::CL_DENOISE_PMD);
     if (inputParam->vpp.hqdn3d.enable)        filterPipeline.push_back(VppType::CL_DENOISE_HQDN3D);
+    if (inputParam->vpp.descale.enable)       filterPipeline.push_back(VppType::CL_DESCALE);
     if (degrainLegacy)                        filterPipeline.push_back(VppType::CL_DEGRAIN);
     if (inputParam->vpp.rtgmc_edi.enable && degrainLegacy) filterPipeline.push_back(VppType::CL_RTGMC_EDI);
     if (degrainTR1)                           filterPipeline.push_back(VppType::CL_DEGRAIN_APPLY_TR1);
@@ -2252,6 +2254,29 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         unique_ptr<RGYFilter> filter(new RGYFilterDenoiseHqdn3d(m_dev->cl()));
         shared_ptr<RGYFilterParamDenoiseHqdn3d> param(new RGYFilterParamDenoiseHqdn3d());
         param->hqdn3d = inputParam->vpp.hqdn3d;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //descale
+    if (vppType == VppType::CL_DESCALE) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterDescale(m_dev->cl()));
+        shared_ptr<RGYFilterParamDescale> param(new RGYFilterParamDescale());
+        param->descale = inputParam->vpp.descale;
         param->frameIn = inputFrame;
         param->frameOut = inputFrame;
         param->baseFps = m_encFps;
