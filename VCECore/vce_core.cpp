@@ -1662,6 +1662,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         shared_ptr<RGYFilterParamRff> param(new RGYFilterParamRff());
         param->frameIn = inputFrame;
         param->frameOut = inputFrame;
+        param->frameOut.picstruct = RGY_PICSTRUCT_FRAME;
         param->baseFps = m_encFps;
         param->inFps = m_inputFps;
         param->timebase = m_outputTimebase;
@@ -1976,6 +1977,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         unique_ptr<RGYFilter> filter(new RGYFilterIvtc(m_dev->cl()));
         shared_ptr<RGYFilterParamIvtc> param(new RGYFilterParamIvtc());
         param->ivtc = inputParam->vpp.ivtc;
+        param->inputFilePath = inputParam->common.inputFilename;
         param->frameIn = inputFrame;
         param->frameOut = inputFrame;
         param->frameOut.picstruct = RGY_PICSTRUCT_FRAME;
@@ -2279,6 +2281,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         unique_ptr<RGYFilter> filter(new RGYFilterDescale(m_dev->cl()));
         shared_ptr<RGYFilterParamDescale> param(new RGYFilterParamDescale());
         param->descale = inputParam->vpp.descale;
+        param->inputFilePath = inputParam->common.inputFilename;
         param->frameIn = inputFrame;
         param->frameOut = inputFrame;
         param->baseFps = m_encFps;
@@ -2513,6 +2516,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
             //入力フレーム情報を更新
             inputFrame = param->frameOut;
             m_encFps = param->baseFps;
+            m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
             //登録
             clfilters.push_back(std::move(filter));
         }
@@ -3802,7 +3806,8 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
                 //インタレ保持のチェック
                 const bool interlacedEncoding =
                     (prm->input.picstruct & RGY_PICSTRUCT_INTERLACED)
-                    && !hasVppDeinterlacer(prm, false);
+                    && !hasVppDeinterlacer(prm, true)
+                    && !prm->vpp.rff.enable;
                 if (interlacedEncoding
                     && !outputCaps->IsInterlacedSupported()) {
                     message += strsprintf(_T("GPU #%d (%s) does not support %s interlaced encoding.\n"),
