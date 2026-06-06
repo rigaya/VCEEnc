@@ -95,9 +95,10 @@ jobs:
         id: archieve
         run: |
           mkdir VCEEncC_Release
-          copy _build\${{ matrix.platform }}\RelStatic\VCEEncC*.exe VCEEncC_Release
-          copy _build\${{ matrix.platform }}\RelStatic\*.dll VCEEncC_Release
-          7z a -mx9 VCEEncC_${{ needs.get_version_name.outputs.version_name }}_${{ matrix.platform }}.7z .\VCEEncC_Release\*
+           copy _build\${{ matrix.platform }}\RelStatic\VCEEncC*.exe VCEEncC_Release
+           copy _build\${{ matrix.platform }}\RelStatic\*.dll VCEEncC_Release
+           copy resource\nnedi3_weight\nnedi3_weights.bin VCEEncC_Release
+           7z a -mx9 VCEEncC_${{ needs.get_version_name.outputs.version_name }}_${{ matrix.platform }}.7z .\VCEEncC_Release\*
 
       - name: Check dll
         run: |
@@ -211,23 +212,23 @@ jobs:
         id: archieve_win32
         if: matrix.platform == 'Win32'
         run: |
-          mkdir Aviutl_VCEEnc_release
-          7z x -oAviutl_VCEEnc_release\ auo_setup.zip
-          mkdir Aviutl_VCEEnc_release\exe_files\VCEEncC
-          mkdir Aviutl_VCEEnc_release\exe_files\VCEEncC\x86
-          mkdir Aviutl_VCEEnc_release\exe_files\VCEEncC\x64
-          7z x -oAviutl_VCEEnc_release\exe_files\VCEEncC\x86\ VCEEncC_${{ needs.get_version_name.outputs.version_name }}_Win32.7z
-          7z x -oAviutl_VCEEnc_release\exe_files\VCEEncC\x64\ VCEEncC_${{ needs.get_version_name.outputs.version_name }}_x64.7z
-          copy /y _build\Win32\Release\VCEEnc.auo Aviutl_VCEEnc_release\plugins\
-          copy /y VCEEnc\VCEEnc.ini Aviutl_VCEEnc_release\plugins\
-          copy /y VCEEnc\VCEEnc.en.ini Aviutl_VCEEnc_release\plugins\
-          copy /y VCEEnc\VCEEnc.zh.ini Aviutl_VCEEnc_release\plugins\
-          copy /y VCEEnc\VCEEnc_uninstall.bat Aviutl_VCEEnc_release\plugins\
-          copy /y VCEEnc\auo_setup.ini Aviutl_VCEEnc_release\exe_files\
-          copy /y VCEEnc\VCEEnc_readme.txt Aviutl_VCEEnc_release\
-          echo D | xcopy /y /e VCEEnc\stg Aviutl_VCEEnc_release\plugins\VCEEnc_stg
-          dir /b /s Aviutl_VCEEnc_release\
-          7z a -mx9 Aviutl_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.zip .\Aviutl_VCEEnc_release\*
+           mkdir Aviutl_VCEEnc_release
+           7z x -oAviutl_VCEEnc_release\ auo_setup.zip
+           mkdir Aviutl_VCEEnc_release\exe_files\VCEEncC
+           mkdir Aviutl_VCEEnc_release\exe_files\VCEEncC\x86
+           mkdir Aviutl_VCEEnc_release\exe_files\VCEEncC\x64
+           7z x -oAviutl_VCEEnc_release\exe_files\VCEEncC\x86\ VCEEncC_${{ needs.get_version_name.outputs.version_name }}_Win32.7z
+           7z x -oAviutl_VCEEnc_release\exe_files\VCEEncC\x64\ VCEEncC_${{ needs.get_version_name.outputs.version_name }}_x64.7z
+           copy /y _build\Win32\Release\VCEEnc.auo Aviutl_VCEEnc_release\plugins\
+           copy /y VCEEnc\VCEEnc.ini Aviutl_VCEEnc_release\plugins\
+           copy /y VCEEnc\VCEEnc.en.ini Aviutl_VCEEnc_release\plugins\
+           copy /y VCEEnc\VCEEnc.zh.ini Aviutl_VCEEnc_release\plugins\
+           copy /y VCEEnc\VCEEnc_uninstall.bat Aviutl_VCEEnc_release\plugins\
+           copy /y VCEEnc\auo_setup.ini Aviutl_VCEEnc_release\exe_files\
+           copy /y VCEEnc\VCEEnc_readme.txt Aviutl_VCEEnc_release\
+           echo D | xcopy /y /e VCEEnc\stg Aviutl_VCEEnc_release\plugins\
+           dir /b /s Aviutl_VCEEnc_release\
+           7z a -mx9 Aviutl_VCEEnc_${{ needs.get_version_name.outputs.version_name }}.zip .\Aviutl_VCEEnc_release\*
 
       - name: Create package x64
         id: archieve_x64
