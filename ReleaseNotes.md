@@ -1,5 +1,51 @@
 # VCEEnc Release Notes
 
+## 9.06
+
+- Add many VPP filters, port from QSVEnc.
+  - deinterlace
+    - [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2)
+    - [--vpp-degrain](./VCEEncC_Options.en.md#--vpp-degrain-param1value1)
+    - [--vpp-rtgmc](./VCEEncC_Options.en.md#--vpp-rtgmc-param1value1)
+    - [--vpp-bwdif](./VCEEncC_Options.en.md#--vpp-bwdif-param1value1)
+    - [--vpp-ivtc](./VCEEncC_Options.en.md#--vpp-ivtc-param1value1param2value2)
+  - denoise
+    - [--vpp-deblock](./VCEEncC_Options.en.md#--vpp-deblock-param1value1param2value2)
+    - [--vpp-deflicker](./VCEEncC_Options.en.md#--vpp-deflicker-param1value1param2value2)
+    - [--vpp-dehalo](./VCEEncC_Options.en.md#--vpp-dehalo-param1value1param2value2)
+    - [--vpp-finedehalo](./VCEEncC_Options.en.md#--vpp-finedehalo-param1value1param2value2)
+    - [--vpp-hqdering](./VCEEncC_Options.en.md#--vpp-hqdering-param1value1param2value2)
+    - [--vpp-stab](./VCEEncC_Options.en.md#--vpp-stab-param1value1param2value2)
+    - [--vpp-hqdn3d](./VCEEncC_Options.en.md#--vpp-hqdn3d-param1value1param2value2)
+    - [--vpp-msmooth](./VCEEncC_Options.en.md#--vpp-msmooth-param1value1param2value2)
+  - others
+    - [--vpp-colorfix](./VCEEncC_Options.en.md#--vpp-colorfix-param1value1param2value2)
+    - [--vpp-chromashift](./VCEEncC_Options.en.md#--vpp-chromashift-param1value1param2value2)
+    - [--vpp-vinverse](./VCEEncC_Options.en.md#--vpp-vinverse-param1value1param2value2)
+    - [--vpp-cas](./VCEEncC_Options.en.md#--vpp-cas-param1value1param2value2)
+    - [--vpp-descale](./VCEEncC_Options.en.md#--vpp-descale-param1value1param2value2)
+    - [--vpp-msharpen](./VCEEncC_Options.en.md#--vpp-msharpen-param1value1param2value2)
+    - [--vpp-maa](./VCEEncC_Options.en.md#--vpp-maa-param1value1param2value2)
+    - Add fsr1/gauss to [--vpp-resize](./VCEEncC_Options.en.md#--vpp-resize-string)
+- Add [--cl-perf-timeline](./VCEEncC_Options.en.md#--cl-perf-timeline-float) and extend [--cl-perf-dump](./VCEEncC_Options.en.md#--cl-perf-dump-dir) with AMD/RGA support.
+- Add sigmoid and input colorspace options to [--vpp-libplacebo-shader](./VCEEncC_Options.en.md#--vpp-libplacebo-shader-param1value1param2value2).
+- Automatically disable output thread when [--lowlatency](./VCEEncC_Options.en.md#--lowlatency) is specified.
+- Add [--vpy-assume-script-dir](./VCEEncC_Options.en.md#--vpy-assume-script-dir) to resolve relative paths in .vpy scripts.
+- Speed up various VPP filters including [--vpp-degrain](./VCEEncC_Options.en.md#--vpp-degrain-param1value1), [--vpp-smooth](./VCEEncC_Options.en.md#--vpp-smooth-param1value1param2value2), [--vpp-pmd](./VCEEncC_Options.en.md#--vpp-pmd-param1value1param2value2), and [--vpp-unsharp](./VCEEncC_Options.en.md#--vpp-unsharp-param1value1param2value2).
+- Reduce [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) memory usage.
+- Reduce pipe latency.
+- Fix interlace detection.
+- Propagate VPP filter output metadata correctly.
+- Fix index calculation errors in [--vpp-knn](./VCEEncC_Options.en.md#--vpp-knn-param1value1param2value2) and [--vpp-nlmeans](./VCEEncC_Options.en.md#--vpp-nlmeans-param1value1param2value2).
+- Fix subtitles not passed to [--vpp-subburn](./VCEEncC_Options.en.md#--vpp-subburn-param1value1param2value2) when no audio processing is performed.
+- Suppress PTS sorting of bitmap subtitles (PGS etc.) to fix [--vpp-subburn](./VCEEncC_Options.en.md#--vpp-subburn-param1value1param2value2) with Blu-ray MPEG-TS input.
+- Fix libopus/ffmpeg encoding of 5.1/7.1 surround audio.
+- Fix neroaacenc 2-pass output.
+- Improve VapourSynth log output.
+- Linux: Improve VapourSynth module discovery.
+- Linux: Enable static linking of libplacebo/libvmaf and VMAF build/run.
+- Linux: Update install guide and meson dependency checks.
+
 ## 9.05
 
 - Improve multi-channel audio layout detection.
@@ -57,7 +103,7 @@
     Example: [-c](./VCEEncC_Options.en.md#-c---codec-string) av_libsvtav1 [--avcodec-prms](./VCEEncC_Options.en.md#--avcodec-prms-string) "preset=6,crf=30,svtav1-params=enable-variance-boost=1:variance-boost-strength=2"
     Other usable options include av_libvvenc, av_libvpx-vp9, etc.
 - Add QSVEnc.auo2 with official support for AviUtl2.
-- Improve --vpp-subburn quality for moving subtitles. 
+- Improve --vpp-subburn quality for moving subtitles.
 - Update ffmpeg libraries. (Windows)
   - ffmpeg 7.1+ (20240822) -> 8.0
   - libpng 1.6.44 -> 1.6.50
@@ -196,7 +242,7 @@
   When H.264/HEVC header cannot be extracted, it can be now retrieved from the actual data packets.
 - Fix help of [--vpp-smooth](./VCEEncC_Options.en.md#--vpp-smooth-param1value1param2value2) showing wrong value range for qp option.
 - Fix [--vpp-transform](./VCEEncC_Options.en.md#--vpp-transform-param1value1param2value2) causing illegal memory access error when width or height cannot be divided by 64.
-- Fix timestamp error caused when using [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2) with VFR inputs. 
+- Fix timestamp error caused when using [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2) with VFR inputs.
 - Fix seek issue caused by audio getting muxed to a different fragment than the video at the same time, due to insufficient buffer for audio mux.
 - Fix muxer error copying PGS subtitles (using --sub-copy) when the input has unsorted subtitle packets.
   Now is able to avoid "Application provided invalid, non monotonically increasing dts to muxer" error.
@@ -227,7 +273,7 @@
 - Extend [--audio-resampler](./VCEEncC_Options.en.md#--audio-resampler-string) to take extra options.
 - Now [--avsw](./VCEEncC_Options.en.md#--avsw-string) can specify the decoder name to be used.
 - When [--audio-bitrate](./VCEEncC_Options.en.md#--audio-bitrate-intstringint) is not specified, let codec decide it's bitrate instead of setting a default bitrate of 192kbps.
-- Improve audio channel selection when output codec does not support the same audio channels as the input audio. 
+- Improve audio channel selection when output codec does not support the same audio channels as the input audio.
 - Improve Windows language locale settings.
 - Don't process audio/subtitle/data tracks specified by [--audio-bitrate](./VCEEncC_Options.en.md#--audio-bitrate-intstringint) or [--audio-copy](./VCEEncC_Options.en.md#--audio-copy-intstringintstring).
 - Improve handling of missing partial frame timestamps.

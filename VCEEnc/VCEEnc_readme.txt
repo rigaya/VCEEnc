@@ -188,6 +188,35 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2026.06.06 (9.06)
+[VCEEncC]
+- 多数のVPPフィルタを追加。
+  --vpp-kfm, --vpp-degrain, --vpp-rtgmc, --vpp-bwdif, --vpp-ivtc, --vpp-chromashift, --vpp-deblock, --vpp-deflicker, --vpp-colorfix, --vpp-dehalo, --vpp-finedehalo, --vpp-hqdering, --vpp-stab, --vpp-vinverse, --vpp-nlmeans, --vpp-cas, --vpp-descale, --vpp-hqdn3d, --vpp-msmooth, --vpp-msharpen, --vpp-warpsharp, --vpp-maa など。--vpp-resize に fsr1/gauss を追加。--vpp-deint-csp を追加。--vpp-nnedi を更新し nnedi3_weight.bin を同梱。
+- OpenCL性能解析機能を追加・拡張。(--cl-perf-timeline, --cl-perf-dump のAMD/RGA対応)
+- --vpp-libplacebo-shader に sigmoid系オプションと入力色空間指定オプションを追加。
+- --lowlatency 指定時は自動的に出力スレッドを無効化。
+- --vpy-assume-script-dir で vpy の相対パス解決をオプション化。
+- VPPフィルタの高速化。 (--vpp-degrain, --vpp-smooth, --vpp-pmd, --vpp-unsharp など)
+- --vpp-degrain の高速化と --vpp-kfm のメモリ使用量削減。
+- res指定が必要そうな条件で警告を表示するように。
+- パイプ時の遅延短縮。
+- インタレ解除判定の修正。
+- VPPフィルタの出力情報を正しく伝播。
+- --vpp-deflicker の scene change 判定、--vpp-chromashift の auto 検出、--vpp-colorfix の variance guard lock-in を修正。
+- vpp-knn/vpp-nlmeans のインデックス計算ミスを修正。
+- 音声処理がないと字幕が vpp-subburn に渡らなかった問題を修正。
+- ビットマップ字幕(PGS等)のPTSソートを抑制し、bluray等のMPEG-TS入力で字幕焼きこみが正しく動作するように。
+- libopus/opus で 5.1/7.1 などがエンコードできない問題を修正。
+- neroaacenc で 2pass 出力ができない問題を修正。
+- VapourSynth関連のログ表示を改善。
+[Linux]
+- VapourSynthモジュール探索を補強。
+- libplacebo/libvmaf を static link 可能に。VMAF をビルド・実行可能に。
+- インストール方法を更新。meson ビルドの依存関係チェックを調整。
+[VCEEnc.auo]
+- --vpp-bwdif, --vpp-ivtc の UI を追加。
+- AviUtl2 で不要になった ini ファイルへの書き出しを削除。
+
 2026.03.22 (9.05)
 [VCEEncC]
 - 音声のマルチチャンネルレイアウト判定を改善。
