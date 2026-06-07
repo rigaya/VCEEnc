@@ -384,7 +384,8 @@ public:
         return std::make_unique<RGYFrameAMF>(amf::AMFSurfacePtr(data));
     }
 public:
-    virtual void setTimestamp(uint64_t timestamp) override { m_amfptr->SetPts(timestamp); }
+    // AMF surfaceのPTSも内部ではsigned timestampとして扱う。
+    virtual void setTimestamp(int64_t timestamp) override { m_amfptr->SetPts(timestamp); }
     virtual void setDuration(uint64_t duration) override { m_amfptr->SetDuration(duration); }
     virtual void setPicstruct(RGY_PICSTRUCT picstruct) override { m_amfptr->SetFrameType(frametype_rgy_to_enc(picstruct)); }
     virtual void setInputFrameId(int id) override { int64_t value = id; m_amfptr->SetProperty(PROP_INPUT_FRAMEID, value); }

@@ -991,13 +991,14 @@ protected:
             PrintMes(RGY_LOG_ERROR, _T("Failed to load input frame: %s.\n"), get_err_mes(ret));
             return ret;
         }
-        if (!m_gotFrameFirstKeyPts && surfDecOut != nullptr && surfDecOut->GetPts() < m_firstKeyPts) {
+        const int64_t surfDecOutPts = (surfDecOut != nullptr) ? (int64_t)surfDecOut->GetPts() : AV_NOPTS_VALUE;
+        if (!m_gotFrameFirstKeyPts && surfDecOut != nullptr && surfDecOutPts < m_firstKeyPts) {
             return RGY_ERR_NONE;
         }
         m_gotFrameFirstKeyPts = true;
         if (m_endPts >= 0
             && surfDecOut != nullptr
-            && surfDecOut->GetPts() >= m_endPts) { // m_endPtsは含まないようにする(重要)
+            && surfDecOutPts >= m_endPts) { // m_endPtsは含まないようにする(重要)
             m_reachedEndPts = true; // 読み込みスレッドに終了を通知
             return RGY_ERR_MORE_BITSTREAM; //入力ビットストリームは終了
         }
@@ -1017,17 +1018,18 @@ protected:
                 auto surfDecOutCopy = std::make_unique<RGYFrameAMF>(surfCopy);
                 surfDecOutCopy->setInputFrameId(m_decOutFrames++);
 
+                const int64_t surfDecOutCopyTimestamp = (int64_t)surfDecOutCopy->timestamp();
                 auto flags = RGY_FRAME_FLAG_NONE;
-                if (getDataFlag(surfDecOutCopy->timestamp()) & RGY_FRAME_FLAG_RFF) {
+                if (getDataFlag(surfDecOutCopyTimestamp) & RGY_FRAME_FLAG_RFF) {
                     flags |= RGY_FRAME_FLAG_RFF;
                 }
                 surfDecOutCopy->setFlags(flags);
 
                 surfDecOutCopy->clearDataList();
-                if (auto data = getMetadata(RGY_FRAME_DATA_HDR10PLUS, surfDecOutCopy->timestamp()); data) {
+                if (auto data = getMetadata(RGY_FRAME_DATA_HDR10PLUS, surfDecOutCopyTimestamp); data) {
                     surfDecOutCopy->dataList().push_back(data);
                 }
-                if (auto data = getMetadata(RGY_FRAME_DATA_DOVIRPU, surfDecOutCopy->timestamp()); data) {
+                if (auto data = getMetadata(RGY_FRAME_DATA_DOVIRPU, surfDecOutCopyTimestamp); data) {
                     surfDecOutCopy->dataList().push_back(data);
                 }
                 m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(m_workSurfs.addSurface(surfDecOutCopy)));
@@ -1138,17 +1140,18 @@ public:
         }
         int64_t outPtsSource = m_tsOutEstimated; //(m_outputTimebase基準)
         int64_t outDuration = m_outFrameDuration; //入力fpsに従ったduration
+        int64_t srcTimestamp = AV_NOPTS_VALUE;
 
         PipelineTaskOutputSurf *taskSurf = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
         if (taskSurf == nullptr) {
             PrintMes(RGY_LOG_ERROR, _T("Invalid frame type: failed to cast to PipelineTaskOutputSurf.\n"));
             return RGY_ERR_UNSUPPORTED;
         }
+        srcTimestamp = (int64_t)taskSurf->surf().frame()->timestamp();
 
         if ((m_srcTimebase.n() > 0 && m_srcTimebase.is_valid())
             && ((m_avsync & (RGY_AVSYNC_VFR | RGY_AVSYNC_FORCE_CFR)) || m_vpp_rff || m_vpp_afs_rff_aware || m_timestampPassThrough)) {
             //CFR仮定ではなく、オリジナルの時間を見る
-            const auto srcTimestamp = taskSurf->surf().frame()->timestamp();
             if (srcTimestamp == AV_NOPTS_VALUE) {
                 outPtsSource = m_tsPrev + m_outFrameDuration + m_tsOutFirst/*あとでm_tsOutFirstが引かれるので*/;
             } else {
@@ -1190,7 +1193,7 @@ public:
             }
             if (ENCODER_VCEENC && m_framePosList) {
                 //cuvidデコード時は、timebaseの分子はかならず1なので、streamIn->time_baseとズレているかもしれないのでオリジナルを計算
-                const auto orig_pts = rational_rescale(taskSurf->surf().frame()->timestamp(), m_srcTimebase, m_streamTimebase);
+                const auto orig_pts = rational_rescale(srcTimestamp, m_srcTimebase, m_streamTimebase);
                 //ptsからフレーム情報を取得する
                 const auto framePos = m_framePosList->findpts(orig_pts, &m_inputFramePosIdx);
                 PrintMes(RGY_LOG_TRACE, _T("check_pts(%d):   estimetaed orig_pts %lld, framePos %d\n"), taskSurf->surf().frame()->inputFrameId(), orig_pts, framePos.poc);
@@ -1495,7 +1498,7 @@ public:
         m_input(input), m_currentChunk(-1), m_encTimestamp(encTimestamp), m_timecode(timecode),
         m_parallelEnc(parallelEnc), m_encStatus(encStatus), m_encFps(encFps), m_outputTimebase(outputTimebase),
         m_taskAudio(std::move(taskAudio)), m_fReader(std::unique_ptr<FILE, fp_deleter>(nullptr, fp_deleter())),
-        m_firstPts(-1), m_maxPts(-1), m_ptsOffset(0), m_encFrameOffset(0), m_inputFrameOffset(0), m_maxEncFrameIdx(-1), m_maxInputFrameIdx(-1),
+        m_firstPts(AV_NOPTS_VALUE), m_maxPts(AV_NOPTS_VALUE), m_ptsOffset(0), m_encFrameOffset(0), m_inputFrameOffset(0), m_maxEncFrameIdx(-1), m_maxInputFrameIdx(-1),
         m_decInputBitstream(), m_inputBitstreamEOF(false), m_bitStreamOut(), m_durationCheck(), m_tsDebug(false) {
         m_decInputBitstream.init(AVCODEC_READER_INPUT_BUF_SIZE);
         auto reader = dynamic_cast<RGYInputAvcodec*>(input);
@@ -1572,9 +1575,12 @@ protected:
         const auto inputFpsTimebase = rgy_rational<int>((int)inputFrameInfo.fpsD, (int)inputFrameInfo.fpsN);
         const auto srcTimebase = (m_input->getInputTimebase().n() > 0 && m_input->getInputTimebase().is_valid()) ? m_input->getInputTimebase() : inputFpsTimebase;
         // seek結果による入力ptsを用いて計算した本来のpts offset
-        const auto ptsOffsetOrig = (m_firstPts < 0) ? 0 : rational_rescale(m_parallelEnc->getVideofirstKeyPts(m_currentChunk), srcTimebase, m_outputTimebase) - m_firstPts;
+        // 33bit wrap後の負timestampは正当値なので、未初期化判定はAV_NOPTS_VALUEで行う。
+        const bool gotFirstPts = m_firstPts != AV_NOPTS_VALUE;
+        const bool gotMaxPts = m_maxPts != AV_NOPTS_VALUE;
+        const auto ptsOffsetOrig = (!gotFirstPts) ? 0 : rational_rescale(m_parallelEnc->getVideofirstKeyPts(m_currentChunk), srcTimebase, m_outputTimebase) - m_firstPts;
         // 直前のフレームから計算したpts offset(-1フレーム分) 最低でもこれ以上のoffsetがないといけない
-        const auto ptsOffsetMax = (m_firstPts < 0) ? 0 : m_maxPts - m_firstPts;
+        const auto ptsOffsetMax = (!gotFirstPts || !gotMaxPts) ? 0 : m_maxPts - m_firstPts;
         // フレームの長さを決める
         int64_t lastDuration = 0;
         const auto frameDuration = m_durationCheck.getDuration(lastDuration);
@@ -1608,7 +1614,7 @@ protected:
         } else {
             // ptsOffsetOrigが必要offsetの最小値(ptsOffsetMax)より大きく、そのずれが2フレーム以内ならそれを採用する
             // そうでなければ、ptsOffsetMaxに1フレーム分の時間を足した時刻にする
-            m_ptsOffset = (m_firstPts < 0) ? 0 :
+            m_ptsOffset = (!gotFirstPts) ? 0 :
                 ((ptsOffsetOrig - ptsOffsetMax > 0 && ptsOffsetOrig - ptsOffsetMax <= rational_rescale(2, m_encFps.inv(), m_outputTimebase))
                     ? ptsOffsetOrig : (ptsOffsetMax + rational_rescale(1, m_encFps.inv(), m_outputTimebase)));
         }
@@ -1747,8 +1753,12 @@ public:
             std::vector<std::shared_ptr<RGYFrameData>> metadatalist;
             const auto duration = (ENCODER_QSV) ? header.duration : bsOut->duration(); // QSVの場合、Bitstreamにdurationの値がないため、durationはheaderから取得する
             m_encTimestamp->add(bsOut->pts(), header.inputFrameIdx, header.encodeFrameIdx, duration, metadatalist);
-            if (m_firstPts < 0) m_firstPts = bsOut->pts();
-            m_maxPts = std::max(m_maxPts, bsOut->pts());
+            if (bsOut->pts() != AV_NOPTS_VALUE) {
+                if (m_firstPts == AV_NOPTS_VALUE) {
+                    m_firstPts = bsOut->pts();
+                }
+                m_maxPts = (m_maxPts == AV_NOPTS_VALUE) ? bsOut->pts() : std::max(m_maxPts, bsOut->pts());
+            }
             m_maxEncFrameIdx = std::max(m_maxEncFrameIdx, header.encodeFrameIdx);
             m_maxInputFrameIdx = std::max(m_maxInputFrameIdx, header.inputFrameIdx);
             PrintMes(m_tsDebug ? RGY_LOG_WARN : RGY_LOG_TRACE, _T("Packet: pts %lld, dts: %lld, duration: %d, input idx: %lld, encode idx: %lld, size %lld.\n"), bsOut->pts(), bsOut->dts(), duration, header.inputFrameIdx, header.encodeFrameIdx, bsOut->size());
@@ -1807,7 +1817,7 @@ public:
                 return RGY_ERR_NONE;
             }
         }
-        if (!m_input->checkTimeSeekTo(taskSurf->surf().frame()->timestamp(), m_srcTimebase)) {
+        if (!m_input->checkTimeSeekTo(surfPts, m_srcTimebase)) {
             return RGY_ERR_NONE; //seektoにより脱落させるフレーム
         }
         m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(taskSurf->surf()));
