@@ -95,7 +95,6 @@ RGY_FILTER_AFS_ANALYZE_CL    EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_afs_a
 RGY_FILTER_AFS_SYNTHESIZE_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_afs_synthesize.cl"
 
 RGY_FILTER_NNEDI_CL        EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_nnedi.cl"
-NNEDI_WEIGHTBIN            EXE_DATA DISCARDABLE "..\\resource\\nnedi3_weight\\nnedi3_weights.bin"
 
 RGY_FILTER_YADIF_CL        EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_yadif.cl"
 
