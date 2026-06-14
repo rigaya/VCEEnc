@@ -734,22 +734,6 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
         PrintMes(RGY_LOG_ERROR, _T("crop size is too big.\n"));
         return RGY_ERR_INVALID_PARAM;
     }
-    if (prm->input.crop.e.left % 2 != 0) {
-        PrintMes(RGY_LOG_ERROR, _T("Invalid crop - non mod2 (left: %d).\n"), prm->input.crop.e.left);
-        return RGY_ERR_INVALID_PARAM;
-    }
-    if (prm->input.crop.e.right % 2 != 0) {
-        PrintMes(RGY_LOG_ERROR, _T("Invalid crop - non mod2 (right: %d).\n"), prm->input.crop.e.right);
-        return RGY_ERR_INVALID_PARAM;
-    }
-    if (prm->input.crop.e.bottom % 2 != 0) {
-        PrintMes(RGY_LOG_ERROR, _T("Invalid crop - non mod2 (bottom: %d).\n"), prm->input.crop.e.bottom);
-        return RGY_ERR_INVALID_PARAM;
-    }
-    if (prm->input.crop.e.up % 2 != 0) {
-        PrintMes(RGY_LOG_ERROR, _T("Invalid crop - non mod2 (up: %d).\n"), prm->input.crop.e.up);
-        return RGY_ERR_INVALID_PARAM;
-    }
     if (prm->input.dstWidth % 2 != 0) {
         PrintMes(RGY_LOG_ERROR, _T("Invalid output frame size - non mod2 (width: %d).\n"), prm->input.dstWidth);
         return RGY_ERR_INVALID_PARAM;
