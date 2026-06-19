@@ -2518,6 +2518,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         param->frameOut.height = resize.second;
         param->fsr1 = inputParam->vpp.resize_fsr1;
         param->nis = inputParam->vpp.resize_nis;
+        param->bicubic = inputParam->vpp.resize_bicubic;
         param->vui = vuiInfo;
         if (isLibplaceboResizeFiter(inputParam->vpp.resize_algo)) {
             param->libplaceboResample = std::make_shared<RGYFilterParamLibplaceboResample>();
