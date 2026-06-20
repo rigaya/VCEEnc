@@ -99,6 +99,7 @@
 #include "rgy_filter_msharpen.h"
 #include "rgy_filter_cas.h"
 #include "rgy_filter_warpsharp.h"
+#include "rgy_filter_detailsharpen.h"
 #include "rgy_filter_curves.h"
 #include "rgy_filter_tweak.h"
 #include "rgy_filter_transform.h"
@@ -1438,6 +1439,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.msharpen.enable)   filterPipeline.push_back(VppType::CL_MSHARPEN);
     if (inputParam->vpp.cas.enable)        filterPipeline.push_back(VppType::CL_CAS);
     if (inputParam->vpp.warpsharp.enable)  filterPipeline.push_back(VppType::CL_WARPSHARP);
+    if (inputParam->vpp.detailsharpen.enable) filterPipeline.push_back(VppType::CL_DETAILSHARPEN);
     if (inputParam->vpp.maa.enable)        filterPipeline.push_back(VppType::CL_MAA);
     if (inputParam->vppamf.enhancer.enable)  filterPipeline.push_back(VppType::AMF_VQENHANCE);
     if (inputParam->vpp.transform.enable)  filterPipeline.push_back(VppType::CL_TRANSFORM);
@@ -2710,6 +2712,29 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         unique_ptr<RGYFilter> filter(new RGYFilterWarpsharp(m_dev->cl()));
         shared_ptr<RGYFilterParamWarpsharp> param(new RGYFilterParamWarpsharp());
         param->warpsharp = inputParam->vpp.warpsharp;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //フィルタチェーンに追加
+        clfilters.push_back(std::move(filter));
+        //パラメータ情報を更新
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //detailsharpen
+    if (vppType == VppType::CL_DETAILSHARPEN) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterDetailSharpen(m_dev->cl()));
+        shared_ptr<RGYFilterParamDetailSharpen> param(new RGYFilterParamDetailSharpen());
+        param->detailsharpen = inputParam->vpp.detailsharpen;
         param->frameIn = inputFrame;
         param->frameOut = inputFrame;
         param->baseFps = m_encFps;

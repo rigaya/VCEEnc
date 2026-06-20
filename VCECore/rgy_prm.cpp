@@ -138,6 +138,7 @@ static const auto VPPTYPE_TO_STR = make_array<std::pair<VppType, tstring>>(
     std::make_pair(VppType::CL_EDGELEVEL,            _T("edgelevel")),
     std::make_pair(VppType::CL_MSHARPEN,             _T("msharpen")),
     std::make_pair(VppType::CL_WARPSHARP,            _T("warpsharp")),
+    std::make_pair(VppType::CL_DETAILSHARPEN,         _T("detailsharpen")),
     std::make_pair(VppType::CL_CAS,                  _T("cas")),
     std::make_pair(VppType::CL_CURVES,               _T("curves")),
     std::make_pair(VppType::CL_TWEAK,                _T("tweak")),
@@ -3051,6 +3052,34 @@ tstring VppCas::print() const {
         sharpness, hdr ? _T("true") : _T("false"));
 }
 
+VppDetailSharpen::VppDetailSharpen() :
+    enable(false),
+    z(FILTER_DEFAULT_DETAILSHARPEN_Z),
+    sstr(FILTER_DEFAULT_DETAILSHARPEN_SSTR),
+    power(FILTER_DEFAULT_DETAILSHARPEN_POWER),
+    ldmp(FILTER_DEFAULT_DETAILSHARPEN_LDMP),
+    mode(FILTER_DEFAULT_DETAILSHARPEN_MODE),
+    med(FILTER_DEFAULT_DETAILSHARPEN_MED) {
+}
+
+bool VppDetailSharpen::operator==(const VppDetailSharpen& x) const {
+    return enable == x.enable
+        && z == x.z
+        && sstr == x.sstr
+        && power == x.power
+        && ldmp == x.ldmp
+        && mode == x.mode
+        && med == x.med;
+}
+bool VppDetailSharpen::operator!=(const VppDetailSharpen& x) const {
+    return !(*this == x);
+}
+
+tstring VppDetailSharpen::print() const {
+    return strsprintf(_T("detailsharpen: z %.2f, sstr %.2f, power %.2f, ldmp %.2f, mode %d, med %s"),
+        z, sstr, power, ldmp, mode, med ? _T("true") : _T("false"));
+}
+
 VppTweakChannel::VppTweakChannel() :
     offset(FILTER_DEFAULT_TWEAK_BRIGHTNESS),
     gain(FILTER_DEFAULT_TWEAK_CONTRAST),
@@ -3462,6 +3491,7 @@ RGYParamVpp::RGYParamVpp() :
     edgelevel(),
     msharpen(),
     warpsharp(),
+    detailsharpen(),
     cas(),
     maa(),
     curves(),
@@ -3535,6 +3565,7 @@ bool RGYParamVpp::operator==(const RGYParamVpp& x) const {
         && edgelevel == x.edgelevel
         && msharpen == x.msharpen
         && warpsharp == x.warpsharp
+        && detailsharpen == x.detailsharpen
         && cas == x.cas
         && maa == x.maa
         && curves == x.curves
