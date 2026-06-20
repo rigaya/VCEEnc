@@ -101,6 +101,7 @@
 #include "rgy_filter_warpsharp.h"
 #include "rgy_filter_detailsharpen.h"
 #include "rgy_filter_curves.h"
+#include "rgy_filter_softlight.h"
 #include "rgy_filter_tweak.h"
 #include "rgy_filter_transform.h"
 #include "rgy_filter_overlay.h"
@@ -1443,6 +1444,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.maa.enable)        filterPipeline.push_back(VppType::CL_MAA);
     if (inputParam->vppamf.enhancer.enable)  filterPipeline.push_back(VppType::AMF_VQENHANCE);
     if (inputParam->vpp.transform.enable)  filterPipeline.push_back(VppType::CL_TRANSFORM);
+    if (inputParam->vpp.softlight.enable)  filterPipeline.push_back(VppType::CL_SOFTLIGHT);
     if (inputParam->vpp.curves.enable)     filterPipeline.push_back(VppType::CL_CURVES);
     if (inputParam->vpp.tweak.enable)      filterPipeline.push_back(VppType::CL_TWEAK);
     if (inputParam->vpp.deband.enable)     filterPipeline.push_back(VppType::CL_DEBAND);
@@ -2888,6 +2890,28 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         //入力フレーム情報を更新
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    //softlight
+    if (vppType == VppType::CL_SOFTLIGHT) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterSoftLight(m_dev->cl()));
+        shared_ptr<RGYFilterParamSoftLight> param(new RGYFilterParamSoftLight());
+        param->softlight = inputParam->vpp.softlight;
+        param->vuiInfo = vuiInfo;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = true;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        //登録
+        clfilters.push_back(std::move(filter));
         return RGY_ERR_NONE;
     }
     //curves

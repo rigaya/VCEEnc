@@ -71,6 +71,7 @@ RGY_FILTER_DEHALO_CL        EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_dehalo
 RGY_FILTER_FINEDEHALO_CL    EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_finedehalo.cl"
 RGY_FILTER_HQDERING_CL      EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_hqdering.cl"
 RGY_FILTER_DETAILSHARPEN_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_detailsharpen.cl"
+RGY_FILTER_SOFTLIGHT_CL     EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_softlight.cl"
 RGY_FILTER_EDGELEVEL_CL     EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_edgelevel.cl"
 RGY_FILTER_RTGMC_BOB_CL     EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_rtgmc_bob.cl"
 RGY_FILTER_MAA_CL           EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_maa.cl"

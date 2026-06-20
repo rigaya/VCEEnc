@@ -197,6 +197,7 @@
   - [--vpp-mpdecimate \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-mpdecimate-param1value1param2value2)
   - [--vpp-rotate \<int\>](#--vpp-rotate-int)
   - [--vpp-transform \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-transform-param1value1param2value2)
+  - [--vpp-softlight \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-softlight-param1value1param2value2)
   - [--vpp-convolution3d \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-convolution3d-param1value1param2value2)
   - [--vpp-smooth \[\<param1\>=\<value1\>\[,\<param2\>=\<value2\>\]...\]](#--vpp-smooth-param1value1param2value2)
   - [--vpp-denoise-dct \[\<param1\>=\<value1\>\]\[,\<param2\>=\<value2\>\],...](#--vpp-denoise-dct-param1value1param2value2)
@@ -1638,6 +1639,7 @@ Vpp filters will be applied in fixed order, regardless of the order in the comma
   - [--vpp-warpsharp](#--vpp-warpsharp-param1value1param2value2)
   - [--vpp-detailsharpen](#--vpp-detailsharpen-param1value1param2value2)
   - [--vpp-maa](#--vpp-maa-param1value1param2value2)
+  - [--vpp-softlight](#--vpp-softlight-param1value1param2value2)
   - [--vpp-curves](#--vpp-overlay-param1value1param2value2)
   - [--vpp-tweak](#--vpp-tweak-param1value1param2value2)
   - [--vpp-deband](#--vpp-deband-param1value1param2value2)
@@ -3353,22 +3355,22 @@ Edge warping (sharpening) filter.
 Sharpening filter for fine detail enhancement. It boosts texture and low-amplitude detail while suppressing strong enhancement on large edges.
 
 - **Parameters**
-  - z=&lt;float&gt;  (default=4.0, 0.001 - 64.0)  
+  - z=&lt;float&gt;  (default=4.0, 0.001 - 64.0)
     Zero point. Larger values treat smaller luminance differences more weakly.
 
-  - sstr=&lt;float&gt;  (default=1.5, 0.0 - 16.0)  
+  - sstr=&lt;float&gt;  (default=1.5, 0.0 - 16.0)
     Strength of enhancement. Larger values boost details more strongly.
 
-  - power=&lt;float&gt;  (default=4.0, 1.0 - 16.0)  
+  - power=&lt;float&gt;  (default=4.0, 1.0 - 16.0)
     Exponent for nonlinear enhancement. Larger values prioritize mid-amplitude detail.
 
-  - ldmp=&lt;float&gt;  (default=1.0, 0.0 - 1000.0)  
+  - ldmp=&lt;float&gt;  (default=1.0, 0.0 - 1000.0)
     Low-amplitude damping. Larger values suppress tiny changes close to noise.
 
-  - mode=&lt;int&gt;  (default=1, 0 - 1)  
+  - mode=&lt;int&gt;  (default=1, 0 - 1)
     Blur type. 0 uses 3x3 Gauss, and 1 uses 3x3 Box.
 
-  - med=&lt;bool&gt;  (default=false)  
+  - med=&lt;bool&gt;  (default=false)
     Apply an additional 3x3 median to the blurred image.
 
 - examples
@@ -3426,6 +3428,36 @@ Masked anti-aliasing for animated content (anime, cel-shaded). This combines dir
   - attenuation=&lt;float&gt; (default: 0.1, range 0.02 - 0.4)
 
   - radius=&lt;int&gt; (default: 2, range 1 - 4)
+
+### --vpp-softlight [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+Neutralize color casts, normalize lightness, or boost contrast/saturation using whole-frame statistics.
+
+- **Parameters**
+  - mode=&lt;string&gt; (default=neutralize)
+    - neutralize: neutralize color cast while preserving original brightness.
+    - lightness: normalize brightness while preserving original hue and saturation.
+    - neutralize_boost_sat: neutralize color cast and boost saturation.
+    - neutralize_full: neutralize color and brightness without restoring brightness.
+    - neutralize_boost: neutralize_full plus RGB contrast boost.
+    - boost: apply RGB contrast boost only.
+    - saturation: apply saturation boost only.
+
+  - formula=&lt;string&gt; (default=pegtop)
+    - pegtop
+    - illusionshu
+    - w3c
+
+  - skipblack=&lt;bool&gt; (default=false)
+    Exclude pure black pixels from the average, useful for sources with letterbox areas.
+
+- examples
+  ```
+  Example:
+  --vpp-softlight
+  --vpp-softlight mode=lightness
+  --vpp-softlight mode=boost,formula=w3c
+  --vpp-softlight mode=neutralize,skipblack=true
+  ```
 
 ### --vpp-curves [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...  
 Apply color adjustments using curves.
