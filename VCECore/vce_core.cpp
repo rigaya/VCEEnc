@@ -2218,6 +2218,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         unique_ptr<RGYFilter> filter(new RGYFilterOnnx(m_dev->cl()));
         shared_ptr<RGYFilterParamOnnx> param(new RGYFilterParamOnnx());
         param->onnx = inputParam->vpp.onnxChain[instanceIndex];
+        param->modelDir = inputParam->vpp.onnxModelDir;
         param->sar[0] = inputParam->input.sar[0];
         param->sar[1] = inputParam->input.sar[1];
         const LUID devLuid = m_dev->luid();

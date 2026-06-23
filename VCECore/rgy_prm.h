@@ -3803,6 +3803,8 @@ struct RGYParamVpp {
     VppHqdn3d hqdn3d;
     std::vector<VppAnime4k> anime4kChain;     // ordered chain of --vpp-anime4k-shader invocations (one entry per CLI flag)
     std::vector<VppOnnx> onnxChain;           // ordered chain of --vpp-onnx invocations (one entry per CLI flag)
+    tstring onnxModelDir;
+    bool    onnxListModels;
     VppDescale descale;
     VppDenoiseDct dct;
     VppSmooth smooth;

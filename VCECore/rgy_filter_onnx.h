@@ -40,13 +40,14 @@ class RGYFilterResize; // opt-in end-of-chain resize sub-filter (out_res=/resize
 class RGYFilterParamOnnx : public RGYFilterParam {
 public:
     VppOnnx onnx;
+    tstring modelDir;
     int sar[2] = { 0, 0 };  // input SAR (set by pipeline) -- resolves a negative out_res= (auto-aspect) DAR-correctly
     // LUID of the GPU adapter VCEEnc selected, split for a windows.h-free header.
     // DirectML is vendor agnostic, so this is used to bind inference to the same
     // adapter as the encoder rather than DirectML's default (adapter 0).
     uint32_t adapterLuidLow  = 0;
     int32_t  adapterLuidHigh = 0;
-    RGYFilterParamOnnx() : onnx() {};
+    RGYFilterParamOnnx() : onnx(), modelDir() {};
     virtual ~RGYFilterParamOnnx() {};
     virtual tstring print() const override;
 };

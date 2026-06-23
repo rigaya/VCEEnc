@@ -6627,10 +6627,13 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             "enable", "model", "modelfile", "device", "interop",
             "colormatrix", "colorrange", "colorspace", "noise", "out_res", "resize"
         };
+        bool listModels = false;
+        bool hasFilterParam = false;
 
         for (const auto& param : split(strInput[i], _T(","))) {
             auto pos = param.find_first_of(_T("="));
             if (pos != std::string::npos) {
+                hasFilterParam = true;
                 auto param_arg = tolowercase(param.substr(0, pos));
                 auto param_val = param.substr(pos + 1);
                 if (param_arg == _T("enable")) {
@@ -6735,11 +6738,28 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                 print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
                 return 1;
             } else {
+                if (tolowercase(param) == _T("list")) {
+                    vpp->onnxListModels = true;
+                    listModels = true;
+                    continue;
+                }
                 print_cmd_error_unknown_opt_param(option_name, param, paramList);
                 return 1;
             }
         }
-        vpp->onnxChain.push_back(newOnnx);
+        if (!listModels || hasFilterParam) {
+            vpp->onnxChain.push_back(newOnnx);
+        }
+        return 0;
+    }
+
+    if (IS_OPTION("vpp-onnx-model-dir") && ENABLE_VPP_FILTER_ONNX) {
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            print_cmd_error_invalid_value(tstring(option_name), tstring(), _T("missing model directory"));
+            return 1;
+        }
+        i++;
+        vpp->onnxModelDir = tstring(strInput[i]);
         return 0;
     }
 
@@ -13310,6 +13330,9 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
             }
         }
     }
+    if (!param->onnxModelDir.empty()) {
+        cmd << _T(" --vpp-onnx-model-dir ") << param->onnxModelDir;
+    }
 
     for (size_t i = 0; i < param->anime4kChain.size(); i++) {
         const auto anime4kDefault = VppAnime4k();
@@ -15785,6 +15808,8 @@ tstring gen_cmd_help_vpp() {
         _T("                                  value on one axis keeps the source aspect:\n")
         _T("                                  out_res=-2x1080 -> 1440x1080 (4:3) or 1920x1080 (16:9).\n")
         _T("      resize=<string>             resampler for out_res (default=lanczos4)\n"));
+    str += strsprintf(_T("\n")
+        _T("   --vpp-onnx-model-dir <string>   Directory containing models.json for registered ONNX models.\n"));
 #endif
 #if ENABLE_VPP_FILTER_ANIME4K
     str += strsprintf(_T("\n")

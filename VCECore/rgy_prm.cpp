@@ -3640,6 +3640,8 @@ RGYParamVpp::RGYParamVpp() :
     hqdn3d(),
     anime4kChain(),
     onnxChain(),
+    onnxModelDir(),
+    onnxListModels(false),
     descale(),
     dct(),
     smooth(),
@@ -3717,6 +3719,7 @@ bool RGYParamVpp::operator==(const RGYParamVpp& x) const {
         && hqdn3d == x.hqdn3d
         && anime4kChain == x.anime4kChain
         && onnxChain == x.onnxChain
+        && onnxModelDir == x.onnxModelDir
         && descale == x.descale
         && dct == x.dct
         && smooth == x.smooth
