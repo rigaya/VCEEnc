@@ -1506,6 +1506,8 @@ vppフィルタの適用順は固定で、コマンドラインの順序によ�
   - [--vpp-nlmeans](#--vpp-nlmeans-param1value1param2value2)
   - [--vpp-pmd](#--vpp-pmd-param1value1param2value2)
   - [--vpp-hqdn3d](#--vpp-hqdn3d-param1value1param2value2)
+  - [--vpp-anime4k-shader](#--vpp-anime4k-shader-param1value1param2value2)
+  - [--vpp-onnx](#--vpp-onnx-param1value1param2value2)
   - [--vpp-descale](#--vpp-descale-param1value1param2value2)
   - [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
   - [--vpp-libplacebo-shader](#--vpp-libplacebo-shader-param1value1param2value2)
@@ -2630,6 +2632,64 @@ HQDN3D による空間・時間方向のノイズ除去を行う。`cl_khr_fp16`
   ```
   --vpp-hqdn3d luma_spatial=4.0,chroma_spatial=3.0,luma_temporal=6.0,chroma_temporal=4.5
   ```
+
+### --vpp-anime4k-shader [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
+
+Anime4K v3.2 GLSL シェーダ相当の輝度強調・2倍拡大チェーンを、OpenCLで実行する。モデルファイルは不要。
+
+- **パラメータ**
+  - mode=&lt;string&gt;
+    `ani4k_original`, `ani4k_deblur`, `ani4k_darken_hq`, `ani4k_thin_hq`, `ani4k_dog_sharpen`, `ani4k_dog`, `ani4k_dtd` から選択する。
+
+  - scale=&lt;int&gt;
+    1で等倍補正、2で2倍拡大して補正する。一部のmodeではscaleが固定される。
+
+  - strength=&lt;float&gt;
+    輝度補正の強度。
+
+  - prefilter_denoise=&lt;string&gt;, darken=&lt;string&gt;, thin=&lt;string&gt;, denoise=&lt;string&gt;
+    追加の前処理・線暗化・細線化・ノイズ除去を指定する。`off`, `mean`, `median`, `mode` または `hq`, `fast`, `veryfast` を指定する。
+
+  - clamp_highlights=&lt;bool&gt;
+    出力の明部を入力近傍の最大値に制限する。
+
+  - antiring=&lt;float&gt;
+    リンギング抑制の強度。(0.0 - 1.0)
+
+  - chroma_resize=&lt;string&gt;
+    2倍拡大時の色差リサイズ方式。`spline36`, `bilinear`, `bicubic`, `lanczos3`, `joint`。
+
+  - chroma=&lt;bool&gt;
+    2倍拡大時に色差もリサイズする。
+
+  - out_res=&lt;int&gt;x&lt;int&gt;, resize=&lt;string&gt;
+    Anime4K処理後に任意解像度へリサイズする。片方の値を負数にするとアスペクト比を維持する。
+
+### --vpp-onnx [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
+
+ONNX Runtime DirectML を使用し、指定したONNXモデルをGPUで実行する実験的なCNNフィルタ。WindowsのDirectML対応ビルドでのみ有効。
+
+- **パラメータ**
+  - model=&lt;string&gt; / modelfile=&lt;string&gt;
+    使用するONNXモデルファイル。
+
+  - device=&lt;string&gt;, interop=&lt;string&gt;
+    DirectMLではエンコーダと同じGPUに紐づけるため、現在は互換用パラメータ。
+
+  - colormatrix=&lt;string&gt;
+    `auto`, `bt601`, `bt709`, `bt2020`。
+
+  - colorrange=&lt;string&gt;
+    `auto`, `tv`, `pc`。
+
+  - colorspace=&lt;string&gt;
+    3chモデルへの入力色空間。`rgb`, `ycbcr`。
+
+  - noise=&lt;int&gt;
+    ノイズモデルに渡すsigma値。(0 - 255)
+
+  - out_res=&lt;int&gt;x&lt;int&gt;, resize=&lt;string&gt;
+    ネットワーク処理後に任意解像度へリサイズする。片方の値を負数にするとアスペクト比を維持する。
 
 ### --vpp-descale [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 既知のアップスケールカーネルを逆算し、元の低解像度に近い画像へ縮小します。

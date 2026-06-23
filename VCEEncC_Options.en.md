@@ -1611,6 +1611,8 @@ Vpp filters will be applied in fixed order, regardless of the order in the comma
   - [--vpp-nlmeans](#--vpp-nlmeans-param1value1param2value2)
   - [--vpp-pmd](#--vpp-pmd-param1value1param2value2)
   - [--vpp-hqdn3d](#--vpp-hqdn3d-param1value1param2value2)
+  - [--vpp-anime4k-shader](#--vpp-anime4k-shader-param1value1param2value2)
+  - [--vpp-onnx](#--vpp-onnx-param1value1param2value2)
   - [--vpp-descale](#--vpp-descale-param1value1param2value2)
   - [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
   - [--vpp-libplacebo-shader](#--vpp-libplacebo-shader-param1value1param2value2)
@@ -2649,6 +2651,64 @@ HQDN3D spatial and temporal denoise filter. Scratch buffers use FP16 automatical
   ```
   --vpp-hqdn3d luma_spatial=4.0,chroma_spatial=3.0,luma_temporal=6.0,chroma_temporal=4.5
   ```
+
+### --vpp-anime4k-shader [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
+
+Run an OpenCL implementation of an Anime4K v3.2 GLSL-style luma enhancement / 2x upscale chain. No model file is required.
+
+- **parameters**
+  - mode=&lt;string&gt;
+    Select from `ani4k_original`, `ani4k_deblur`, `ani4k_darken_hq`, `ani4k_thin_hq`, `ani4k_dog_sharpen`, `ani4k_dog`, `ani4k_dtd`.
+
+  - scale=&lt;int&gt;
+    1 refines at source resolution, 2 runs 2x upscale + refine. Some modes imply a fixed scale.
+
+  - strength=&lt;float&gt;
+    Luma refinement strength.
+
+  - prefilter_denoise=&lt;string&gt;, darken=&lt;string&gt;, thin=&lt;string&gt;, denoise=&lt;string&gt;
+    Optional pre-denoise, line darken, line thin, and denoise passes. Values are `off`, `mean`, `median`, `mode`, or `hq`, `fast`, `veryfast`.
+
+  - clamp_highlights=&lt;bool&gt;
+    Clamp output highlights to the local source maximum.
+
+  - antiring=&lt;float&gt;
+    Anti-ringing strength. (0.0 - 1.0)
+
+  - chroma_resize=&lt;string&gt;
+    Chroma resize method for 2x upscale. `spline36`, `bilinear`, `bicubic`, `lanczos3`, `joint`.
+
+  - chroma=&lt;bool&gt;
+    Resize chroma on 2x upscale.
+
+  - out_res=&lt;int&gt;x&lt;int&gt;, resize=&lt;string&gt;
+    Resize to an arbitrary final resolution after Anime4K processing. A negative value on one axis keeps aspect ratio.
+
+### --vpp-onnx [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
+
+Experimental CNN filter that runs the specified ONNX model on GPU through ONNX Runtime DirectML. Available only in Windows builds with DirectML support.
+
+- **parameters**
+  - model=&lt;string&gt; / modelfile=&lt;string&gt;
+    ONNX model file path.
+
+  - device=&lt;string&gt;, interop=&lt;string&gt;
+    Compatibility parameters. DirectML currently binds inference to the same GPU as the encoder.
+
+  - colormatrix=&lt;string&gt;
+    `auto`, `bt601`, `bt709`, `bt2020`.
+
+  - colorrange=&lt;string&gt;
+    `auto`, `tv`, `pc`.
+
+  - colorspace=&lt;string&gt;
+    Input color space for 3-channel models. `rgb`, `ycbcr`.
+
+  - noise=&lt;int&gt;
+    Sigma value passed to noise models. (0 - 255)
+
+  - out_res=&lt;int&gt;x&lt;int&gt;, resize=&lt;string&gt;
+    Resize to an arbitrary final resolution after network processing. A negative value on one axis keeps aspect ratio.
 
 ### --vpp-descale [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 Undo upscaling by solving the inverse system for a known upscaler kernel and output a lower native resolution.
