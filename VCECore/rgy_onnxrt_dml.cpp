@@ -39,60 +39,26 @@
 #include <dxgi1_4.h>
 #include <wrl/client.h>
 
-// ONNX Runtime is loaded dynamically (onnxruntime.dll dropped next to the exe),
-// so the C++ API must be initialised by hand rather than linking the import lib.
-#define ORT_API_MANUAL_INIT
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable: 4244 4267 4127 4100)
-#endif
-#include "onnxruntime_cxx_api.h"
-// The DirectML provider's append function is resolved dynamically by name
-// (PFN_AppendDML below), so dml_provider_factory.h -- which pulls in <DirectML.h>
-// and <d3d12.h> -- is not needed here.
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
+#include "rgy_onnxruntime.h"
 
 using Microsoft::WRL::ComPtr;
 
-// ------- one-time dynamic load of onnxruntime.dll + Ort C++ API init ----------
-
-// DML provider factory C entry point (exported by a DirectML-enabled
-// onnxruntime.dll). Resolved by name so no import library is needed.
-typedef OrtStatus*(ORT_API_CALL *PFN_AppendDML)(OrtSessionOptions *options, int device_id);
+// ------- one-time dynamic load of ONNX Runtime + Ort C++ API init -------------
 
 namespace {
     std::once_flag    s_ortInitOnce;
     bool              s_ortReady = false;
     std::string       s_ortError;
-    PFN_AppendDML     s_appendDML = nullptr;
+
+    RGYOnnxRuntimeLoader& onnxRuntime() {
+        static RGYOnnxRuntimeLoader loader;
+        return loader;
+    }
 
     void loadOrtOnce() {
         std::call_once(s_ortInitOnce, []() {
-            HMODULE h = LoadLibraryW(L"onnxruntime.dll");
-            if (!h) {
-                s_ortError = "could not load onnxruntime.dll (a DirectML-enabled ONNX Runtime). "
-                             "place onnxruntime.dll and DirectML.dll next to the executable.";
-                return;
-            }
-            auto pGetApiBase = reinterpret_cast<const OrtApiBase*(ORT_API_CALL*)()>(
-                GetProcAddress(h, "OrtGetApiBase"));
-            if (!pGetApiBase) {
-                s_ortError = "onnxruntime.dll is missing OrtGetApiBase (not an ONNX Runtime DLL?).";
-                return;
-            }
-            const OrtApi *api = pGetApiBase()->GetApi(ORT_API_VERSION);
-            if (!api) {
-                s_ortError = "this onnxruntime.dll is older than the headers VCEEnc was built against.";
-                return;
-            }
-            Ort::InitApi(api);
-            s_appendDML = reinterpret_cast<PFN_AppendDML>(
-                GetProcAddress(h, "OrtSessionOptionsAppendExecutionProvider_DML"));
-            if (!s_appendDML) {
-                s_ortError = "onnxruntime.dll has no DirectML provider "
-                             "(install the DirectML build of onnxruntime).";
+            if (!onnxRuntime().load()) {
+                s_ortError = onnxRuntime().errMessage();
                 return;
             }
             s_ortReady = true;
@@ -123,12 +89,16 @@ namespace {
         return 0;
     }
 
-    std::wstring utf8ToWide(const std::string &s) {
+    std::basic_string<ORTCHAR_T> stringToOrtPath(const std::string &s) {
+#if defined(_WIN32) || defined(_WIN64)
         if (s.empty()) return std::wstring();
         int n = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0);
         std::wstring w(n, L'\0');
         MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), &w[0], n);
         return w;
+#else
+        return s;
+#endif
     }
 }
 
@@ -173,7 +143,7 @@ RGY_ERR RGYOnnxRTDML::init(const std::string &modelPath, const uint32_t luidLow,
         opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
 
         const int deviceId = dxgiIndexForLuid(luidLow, luidHigh, I.adapterName);
-        OrtStatus *st = s_appendDML(static_cast<OrtSessionOptions*>(opts), deviceId);
+        OrtStatus *st = onnxRuntime().p_OrtSessionOptionsAppendExecutionProviderDML()(static_cast<OrtSessionOptions*>(opts), deviceId);
         if (st != nullptr) {
             errMessage = std::string("AppendExecutionProvider_DML failed: ")
                        + Ort::GetApi().GetErrorMessage(st);
@@ -181,8 +151,8 @@ RGY_ERR RGYOnnxRTDML::init(const std::string &modelPath, const uint32_t luidLow,
             return RGY_ERR_UNSUPPORTED;
         }
 
-        const std::wstring wpath = utf8ToWide(modelPath);
-        I.session = std::make_unique<Ort::Session>(*I.env, wpath.c_str(), opts);
+        const auto ortPath = stringToOrtPath(modelPath);
+        I.session = std::make_unique<Ort::Session>(*I.env, ortPath.c_str(), opts);
 
         if (I.session->GetInputCount() < 1 || I.session->GetOutputCount() < 1) {
             errMessage = "model has no input/output tensor.";

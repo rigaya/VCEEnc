@@ -29,10 +29,6 @@
 #ifndef __RGY_MODEL_REGISTRY_H__
 #define __RGY_MODEL_REGISTRY_H__
 
-#include "rgy_prm.h"
-
-#if ENABLE_VPP_FILTER_ONNX
-
 #include "rgy_osdep.h"
 #include "rgy_err.h"
 #include "rgy_log.h"
@@ -57,7 +53,5 @@ private:
     tstring m_baseDir;
     std::map<tstring, OnnxModelEntry> m_models;
 };
-
-#endif // ENABLE_VPP_FILTER_ONNX
 
 #endif // __RGY_MODEL_REGISTRY_H__

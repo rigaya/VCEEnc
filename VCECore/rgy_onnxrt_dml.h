@@ -37,9 +37,9 @@
 // Set to 1 by the build (preprocessor define) when VCEEnc is built with the
 // ONNX Runtime DirectML backend wired in. When 0 the wrapper still compiles but
 // every call returns RGY_ERR_UNSUPPORTED and --vpp-onnx reports that this build
-// has no DirectML support. onnxruntime.dll (a DirectML-enabled build) is loaded
-// at runtime; no import library is linked, so the exact runtime DLL can be
-// dropped next to the executable.
+// has no DirectML support. onnxruntime.dll / libonnxruntime.so (a
+// DirectML-enabled build) is loaded at runtime; no import library is linked,
+// so the exact runtime library can be dropped next to the executable.
 #ifndef ENABLE_ONNXRUNTIME
 #define ENABLE_ONNXRUNTIME 0
 #endif
