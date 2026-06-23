@@ -26,18 +26,18 @@
 //
 // ------------------------------------------------------------------------------------------
 
-#include "rgy_filter_kaizen.h"
-#include "rgy_filter_resize.h" // opt-in end-of-chain resize (kaizen.out_res=/resize=)
+#include "rgy_filter_anime4k.h"
+#include "rgy_filter_resize.h" // opt-in end-of-chain resize (anime4k.out_res=/resize=)
 #include "rgy_aspect_ratio.h"  // set_auto_resolution() for out_res= negative auto-aspect
 
 #include <fstream>
 #include <cstring>
 
-static const int KAIZEN_BLOCK_X = 16;
-static const int KAIZEN_BLOCK_Y = 16;
+static const int ANIME4K_BLOCK_X = 16;
+static const int ANIME4K_BLOCK_Y = 16;
 
-RGYFilterKaizen::RGYFilterKaizen(shared_ptr<RGYOpenCLContext> context) :
-    RGYFilter(context), m_kaizen(), m_scratchA(), m_scratchB(),
+RGYFilterAnime4k::RGYFilterAnime4k(shared_ptr<RGYOpenCLContext> context) :
+    RGYFilter(context), m_anime4k(), m_scratchA(), m_scratchB(),
     m_scratchPitchFloats(0), m_outW(0), m_outH(0),
     m_srcImagePool(), m_frameIdx(0),
     m_fp16Scratch(false),
@@ -47,17 +47,17 @@ RGYFilterKaizen::RGYFilterKaizen(shared_ptr<RGYOpenCLContext> context) :
     m_prefilterPlane(), m_prefilterPlanePitch(0),
     m_prefilterRef(), m_prefilterRefPitchF4(0),
     m_clampStatsMaxH(), m_clampStatsMax(), m_clampStatsStride(0) {
-    m_name = _T("kaizen");
+    m_name = _T("anime4k");
 }
 
-RGYFilterKaizen::~RGYFilterKaizen() {
+RGYFilterAnime4k::~RGYFilterAnime4k() {
     close();
 }
 
-RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog> pPrintMes) {
+RGY_ERR RGYFilterAnime4k::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog> pPrintMes) {
     RGY_ERR sts = RGY_ERR_NONE;
     m_pLog = pPrintMes;
-    auto prm = std::dynamic_pointer_cast<RGYFilterParamKaizen>(pParam);
+    auto prm = std::dynamic_pointer_cast<RGYFilterParamAnime4k>(pParam);
     if (!prm) {
         AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
         return RGY_ERR_INVALID_PARAM;
@@ -69,30 +69,30 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // mode=darken_hq and mode=thin_hq are aliases for the composable
     // darken=hq / thin=hq post-process flags applied on top of the
     // original base. Set the flag here so dispatch picks it up; leave
-    // prm->kaizen.mode untouched so print() shows the user-facing
+    // prm->anime4k.mode untouched so print() shows the user-facing
     // alias name. Dispatch sites that test mode==Original also accept
     // DarkenHQ/ThinHQ as equivalents (see runPlaneY below).
-    if (prm->kaizen.mode == VppKaizenMode::DarkenHQ) {
-        prm->kaizen.darken = VppKaizenDarken::HQ;
-    } else if (prm->kaizen.mode == VppKaizenMode::ThinHQ) {
-        prm->kaizen.thin = VppKaizenThin::HQ;
+    if (prm->anime4k.mode == VppAnime4kMode::DarkenHQ) {
+        prm->anime4k.darken = VppAnime4kDarken::HQ;
+    } else if (prm->anime4k.mode == VppAnime4kMode::ThinHQ) {
+        prm->anime4k.thin = VppAnime4kThin::HQ;
     }
     // GLSL modes with a fixed scale: dog_sharpen is a 1x sharpener; dog and dtd
     // are 2x DoG upscales; original / deblur / darken_hq / thin_hq keep the
     // default (2x). Auto-correct and inform if the user passed a mismatch.
     const int impliedScale =
-          (prm->kaizen.mode == VppKaizenMode::DogSharpen) ? 1
-        : (prm->kaizen.mode == VppKaizenMode::Dog
-           || prm->kaizen.mode == VppKaizenMode::Dtd)     ? 2
+          (prm->anime4k.mode == VppAnime4kMode::DogSharpen) ? 1
+        : (prm->anime4k.mode == VppAnime4kMode::Dog
+           || prm->anime4k.mode == VppAnime4kMode::Dtd)     ? 2
         : 0;
-    if (impliedScale != 0 && prm->kaizen.scale != impliedScale) {
+    if (impliedScale != 0 && prm->anime4k.scale != impliedScale) {
         AddMessage(RGY_LOG_INFO, _T("%s implies scale=%d\n"),
-            get_cx_desc(list_vpp_kaizen_mode, (int)prm->kaizen.mode),
+            get_cx_desc(list_vpp_anime4k_mode, (int)prm->anime4k.mode),
             impliedScale);
-        prm->kaizen.scale = impliedScale;
+        prm->anime4k.scale = impliedScale;
     }
-    if (prm->kaizen.scale != 1 && prm->kaizen.scale != 2) {
-        AddMessage(RGY_LOG_ERROR, _T("scale must be 1 or 2 (got %d).\n"), prm->kaizen.scale);
+    if (prm->anime4k.scale != 1 && prm->anime4k.scale != 2) {
+        AddMessage(RGY_LOG_ERROR, _T("scale must be 1 or 2 (got %d).\n"), prm->anime4k.scale);
         return RGY_ERR_INVALID_PARAM;
     }
 
@@ -100,9 +100,9 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // strengths (1.8 / 0.4); compounding user-supplied darken= / thin=
     // on top would double-apply with values the chain wasn't tuned for.
     // Reject up-front rather than silently produce a different result.
-    if (prm->kaizen.mode == VppKaizenMode::Dtd
-     && (prm->kaizen.darken != VppKaizenDarken::Off
-      || prm->kaizen.thin   != VppKaizenThin::Off)) {
+    if (prm->anime4k.mode == VppAnime4kMode::Dtd
+     && (prm->anime4k.darken != VppAnime4kDarken::Off
+      || prm->anime4k.thin   != VppAnime4kThin::Off)) {
         AddMessage(RGY_LOG_ERROR,
             _T("mode=dtd already includes darken and thin -- remove darken= and thin= flags.\n"));
         return RGY_ERR_INVALID_PARAM;
@@ -112,23 +112,23 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // tuned to compose with it. Log and disable to keep behaviour
     // predictable; users wanting denoise + DTD can compose denoise
     // after the encode externally if needed.
-    if (prm->kaizen.mode == VppKaizenMode::Dtd
-     && prm->kaizen.denoise != VppKaizenDenoise::Off) {
+    if (prm->anime4k.mode == VppAnime4kMode::Dtd
+     && prm->anime4k.denoise != VppAnime4kDenoise::Off) {
         AddMessage(RGY_LOG_INFO,
             _T("mode=dtd ignores denoise= (built-in chain handles sharpening only).\n"));
-        prm->kaizen.denoise = VppKaizenDenoise::Off;
+        prm->anime4k.denoise = VppAnime4kDenoise::Off;
     }
-    if (prm->kaizen.strength < FILTER_KAIZEN_STRENGTH_MIN
-     || prm->kaizen.strength > FILTER_KAIZEN_STRENGTH_MAX) {
+    if (prm->anime4k.strength < FILTER_ANIME4K_STRENGTH_MIN
+     || prm->anime4k.strength > FILTER_ANIME4K_STRENGTH_MAX) {
         AddMessage(RGY_LOG_WARN, _T("strength clamped to [%.2f, %.2f] (got %.2f).\n"),
-            FILTER_KAIZEN_STRENGTH_MIN, FILTER_KAIZEN_STRENGTH_MAX, prm->kaizen.strength);
-        prm->kaizen.strength = clamp(prm->kaizen.strength, FILTER_KAIZEN_STRENGTH_MIN, FILTER_KAIZEN_STRENGTH_MAX);
+            FILTER_ANIME4K_STRENGTH_MIN, FILTER_ANIME4K_STRENGTH_MAX, prm->anime4k.strength);
+        prm->anime4k.strength = clamp(prm->anime4k.strength, FILTER_ANIME4K_STRENGTH_MIN, FILTER_ANIME4K_STRENGTH_MAX);
     }
 
     const int srcW = prm->frameIn.width;
     const int srcH = prm->frameIn.height;
-    const int outW = srcW * prm->kaizen.scale;
-    const int outH = srcH * prm->kaizen.scale;
+    const int outW = srcW * prm->anime4k.scale;
+    const int outH = srcH * prm->anime4k.scale;
     m_outW = outW;
     m_outH = outH;
 
@@ -136,7 +136,7 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // baked in. We expose the user's strength= as the multiplier for
     // both modes; deblur's higher default comes from the CLI default
     // promotion (handled in rgy_cmd.cpp), not from the kernel side.
-    const float refineStrength = prm->kaizen.strength;
+    const float refineStrength = prm->anime4k.strength;
 
     // FP16 scratch is available when the device advertises cl_khr_fp16
     // AND the mode actually uses the darken / thin post-process chain
@@ -155,7 +155,7 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // rgy_filter_denoise_fft3d.cpp:370 use the same checkExtension probe.
     const bool deviceSupportsFP16 =
         RGYOpenCLDevice(m_cl->queue().devid()).checkExtension("cl_khr_fp16");
-    const bool modeAllowsFP16 = prm->kaizen.mode != VppKaizenMode::Dtd;
+    const bool modeAllowsFP16 = prm->anime4k.mode != VppAnime4kMode::Dtd;
     // We only enable FP16 scratch when every active tier runs at full
     // output resolution (i.e. HQ or Off). Fast / VeryFast tiers use the
     // existing FP32 m_darkenWork / m_thinWork structs and would need a
@@ -164,10 +164,10 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // and captures the biggest bandwidth win (HQ at 4K is the heaviest
     // path; ~25-35% wall-clock per the investigation report).
     const bool tierAllowsFP16 =
-           (prm->kaizen.darken == VppKaizenDarken::HQ
-         || prm->kaizen.darken == VppKaizenDarken::Off)
-        && (prm->kaizen.thin   == VppKaizenThin::HQ
-         || prm->kaizen.thin   == VppKaizenThin::Off);
+           (prm->anime4k.darken == VppAnime4kDarken::HQ
+         || prm->anime4k.darken == VppAnime4kDarken::Off)
+        && (prm->anime4k.thin   == VppAnime4kThin::HQ
+         || prm->anime4k.thin   == VppAnime4kThin::Off);
     m_fp16Scratch = deviceSupportsFP16 && modeAllowsFP16 && tierAllowsFP16;
     if (m_fp16Scratch) {
         AddMessage(RGY_LOG_DEBUG, _T("FP16 scratch enabled (cl_khr_fp16 available).\n"));
@@ -182,21 +182,21 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // and multiply by outH/1080 at runtime; the coefficient selects
     // the tier. Off uses the HQ value as a placeholder (kernels never
     // run when the corresponding tier is Off).
-    auto darkenSigmaCoef = [](VppKaizenDarken d) {
+    auto darkenSigmaCoef = [](VppAnime4kDarken d) {
         switch (d) {
-        case VppKaizenDarken::Fast:     return 0.5f;
-        case VppKaizenDarken::VeryFast: return 0.25f;
-        case VppKaizenDarken::HQ:
-        case VppKaizenDarken::Off:
+        case VppAnime4kDarken::Fast:     return 0.5f;
+        case VppAnime4kDarken::VeryFast: return 0.25f;
+        case VppAnime4kDarken::HQ:
+        case VppAnime4kDarken::Off:
         default:                         return 1.0f;
         }
     };
-    auto thinSigmaCoef = [](VppKaizenThin t) {
+    auto thinSigmaCoef = [](VppAnime4kThin t) {
         switch (t) {
-        case VppKaizenThin::Fast:     return 1.0f;
-        case VppKaizenThin::VeryFast: return 0.5f;
-        case VppKaizenThin::HQ:
-        case VppKaizenThin::Off:
+        case VppAnime4kThin::Fast:     return 1.0f;
+        case VppAnime4kThin::VeryFast: return 0.5f;
+        case VppAnime4kThin::HQ:
+        case VppAnime4kThin::Off:
         default:                       return 2.0f;
         }
     };
@@ -207,25 +207,25 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // The published shader defaults are intensity=0.1, spatial=1.0,
     // curve=1.0, hist_reg=0.0 (mean/median) / 0.2 (mode); we expose
     // sensible bounds here.
-    prm->kaizen.denoiseIntensity =
-        clamp(prm->kaizen.denoiseIntensity, 0.001f, 1.0f);
-    prm->kaizen.denoiseSpatial =
-        clamp(prm->kaizen.denoiseSpatial, 0.5f, 2.5f);
-    prm->kaizen.denoiseCurve =
-        clamp(prm->kaizen.denoiseCurve, 0.0f, 2.0f);
-    if (prm->kaizen.denoiseHistReg < 0.0f) {
-        prm->kaizen.denoiseHistReg =
-            (prm->kaizen.denoise == VppKaizenDenoise::Mode) ? 0.2f : 0.0f;
+    prm->anime4k.denoiseIntensity =
+        clamp(prm->anime4k.denoiseIntensity, 0.001f, 1.0f);
+    prm->anime4k.denoiseSpatial =
+        clamp(prm->anime4k.denoiseSpatial, 0.5f, 2.5f);
+    prm->anime4k.denoiseCurve =
+        clamp(prm->anime4k.denoiseCurve, 0.0f, 2.0f);
+    if (prm->anime4k.denoiseHistReg < 0.0f) {
+        prm->anime4k.denoiseHistReg =
+            (prm->anime4k.denoise == VppAnime4kDenoise::Mode) ? 0.2f : 0.0f;
     }
-    prm->kaizen.denoiseHistReg =
-        clamp(prm->kaizen.denoiseHistReg, 0.0f, 1.0f);
+    prm->anime4k.denoiseHistReg =
+        clamp(prm->anime4k.denoiseHistReg, 0.0f, 1.0f);
 
     // Kernel sizes follow the reference shader formulae, computed once
     // here and baked into the OCL program as -D defines. Mean uses a
     // wider kernel (ceil(s*2)*2+1) because its inner loop is O(K^2);
     // median / mode use a narrower kernel (int(s)*2+1) because their
     // inner loop is O(K^4).
-    const float dnSpatial = prm->kaizen.denoiseSpatial;
+    const float dnSpatial = prm->anime4k.denoiseSpatial;
     const int mean_khalf = std::max((int)std::ceil(dnSpatial * 2.0f), 1);
     const int mmm_khalf  = std::max((int)dnSpatial, 1);
     const int mmm_ksize  = mmm_khalf * 2 + 1;
@@ -236,20 +236,20 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // rebuild trigger list alongside scale / mode / strength. Denoise
     // parameters likewise drive -D defines (sigma values + kernel half
     // sizes) and need the same treatment.
-    auto prmPrev = std::dynamic_pointer_cast<RGYFilterParamKaizen>(m_param);
-    const bool rebuild = !m_kaizen.get()
+    auto prmPrev = std::dynamic_pointer_cast<RGYFilterParamAnime4k>(m_param);
+    const bool rebuild = !m_anime4k.get()
         || !prmPrev
         || RGY_CSP_BIT_DEPTH[prmPrev->frameOut.csp] != RGY_CSP_BIT_DEPTH[prm->frameOut.csp]
-        || prmPrev->kaizen.scale            != prm->kaizen.scale
-        || prmPrev->kaizen.mode             != prm->kaizen.mode
-        || prmPrev->kaizen.strength         != prm->kaizen.strength
-        || prmPrev->kaizen.darken           != prm->kaizen.darken
-        || prmPrev->kaizen.thin             != prm->kaizen.thin
-        || prmPrev->kaizen.denoise          != prm->kaizen.denoise
-        || prmPrev->kaizen.denoiseIntensity != prm->kaizen.denoiseIntensity
-        || prmPrev->kaizen.denoiseSpatial   != prm->kaizen.denoiseSpatial
-        || prmPrev->kaizen.denoiseCurve     != prm->kaizen.denoiseCurve
-        || prmPrev->kaizen.denoiseHistReg   != prm->kaizen.denoiseHistReg;
+        || prmPrev->anime4k.scale            != prm->anime4k.scale
+        || prmPrev->anime4k.mode             != prm->anime4k.mode
+        || prmPrev->anime4k.strength         != prm->anime4k.strength
+        || prmPrev->anime4k.darken           != prm->anime4k.darken
+        || prmPrev->anime4k.thin             != prm->anime4k.thin
+        || prmPrev->anime4k.denoise          != prm->anime4k.denoise
+        || prmPrev->anime4k.denoiseIntensity != prm->anime4k.denoiseIntensity
+        || prmPrev->anime4k.denoiseSpatial   != prm->anime4k.denoiseSpatial
+        || prmPrev->anime4k.denoiseCurve     != prm->anime4k.denoiseCurve
+        || prmPrev->anime4k.denoiseHistReg   != prm->anime4k.denoiseHistReg;
     // Per-mode constants baked into the OCL program at JIT time. The
     // composite mode=dtd path tunes the darken / thin / deblur stages
     // away from the standalone published values; mode=dog uses the
@@ -257,11 +257,11 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // the Deblur_DoG defaults. Non-DoG modes never reach the DoG
     // kernels, but the defines still need real values for the program
     // to compile.
-    const bool  modeIsDtd = (prm->kaizen.mode == VppKaizenMode::Dtd);
+    const bool  modeIsDtd = (prm->anime4k.mode == VppAnime4kMode::Dtd);
     const float darkenStrength = modeIsDtd ? 1.8f : 1.5f;
     const float thinStrength   = modeIsDtd ? 0.4f : 0.6f;
     const float dogStrength =
-          (prm->kaizen.mode == VppKaizenMode::Dog) ? 0.8f
+          (prm->anime4k.mode == VppAnime4kMode::Dog) ? 0.8f
         : modeIsDtd                                  ? 0.5f
         :                                              0.6f;
     const float dogBlurCurve     = modeIsDtd ? 0.8f   : 0.6f;
@@ -282,27 +282,27 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
             " -D ANIME4K_DENOISE_MEAN_KHALF=%d"
             " -D ANIME4K_DENOISE_MMM_KHALF=%d"
             " -D ANIME4K_DENOISE_MMM_KLEN=%d"
-            " -D KAIZEN_SCRATCH_FP16=%d",
+            " -D ANIME4K_SCRATCH_FP16=%d",
             RGY_CSP_BIT_DEPTH[prm->frameOut.csp] > 8 ? "ushort" : "uchar",
             RGY_CSP_BIT_DEPTH[prm->frameOut.csp],
-            prm->kaizen.scale,
+            prm->anime4k.scale,
             refineStrength,
-            darkenSigmaCoef(prm->kaizen.darken),
-            thinSigmaCoef(prm->kaizen.thin),
+            darkenSigmaCoef(prm->anime4k.darken),
+            thinSigmaCoef(prm->anime4k.thin),
             darkenStrength,
             thinStrength,
             dogStrength,
             dogBlurCurve,
             dogNoiseThreshold,
-            prm->kaizen.denoiseSpatial,
-            prm->kaizen.denoiseIntensity,
-            prm->kaizen.denoiseCurve,
-            prm->kaizen.denoiseHistReg,
+            prm->anime4k.denoiseSpatial,
+            prm->anime4k.denoiseIntensity,
+            prm->anime4k.denoiseCurve,
+            prm->anime4k.denoiseHistReg,
             mean_khalf,
             mmm_khalf,
             mmm_klen,
             m_fp16Scratch ? 1 : 0);
-        m_kaizen.set(m_cl->buildResourceAsync(_T("RGY_FILTER_KAIZEN_CL"), _T("EXE_DATA"), options.c_str()));
+        m_anime4k.set(m_cl->buildResourceAsync(_T("RGY_FILTER_ANIME4K_CL"), _T("EXE_DATA"), options.c_str()));
     }
 
     // Allocate output frame buffer at scaled dimensions. Chroma planes
@@ -342,12 +342,12 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // above, so these allocations are skipped for HQ and Off.
     auto tierDiv = [](int tier) {
         // 2 for Fast, 4 for VeryFast, 0 for Off / HQ (no allocation)
-        return (tier == (int)VppKaizenDarken::Fast)     ? 2
-             : (tier == (int)VppKaizenDarken::VeryFast) ? 4
+        return (tier == (int)VppAnime4kDarken::Fast)     ? 2
+             : (tier == (int)VppAnime4kDarken::VeryFast) ? 4
              : 0;
     };
     const int typeBytes = (RGY_CSP_BIT_DEPTH[prm->frameOut.csp] > 8) ? 2 : 1;
-    auto allocWork = [&](KaizenDownscaledScratches &w, int div, const TCHAR *label) -> RGY_ERR {
+    auto allocWork = [&](Anime4kDownscaledScratches &w, int div, const TCHAR *label) -> RGY_ERR {
         if (div <= 0) return RGY_ERR_NONE;
         w.workW = (outW + div - 1) / div;
         w.workH = (outH + div - 1) / div;
@@ -369,7 +369,7 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // storage (2 bytes per half * 4 halfs per pixel = 8 bytes/px,
     // vs 16 bytes/px for float4). pitchFloats stays as "4 elements
     // per pixel" since both half4 and float4 index spaces match.
-    auto allocWorkF16 = [&](KaizenDownscaledScratches &w, int workW, int workH, const TCHAR *label) -> RGY_ERR {
+    auto allocWorkF16 = [&](Anime4kDownscaledScratches &w, int workW, int workH, const TCHAR *label) -> RGY_ERR {
         if (workW <= 0 || workH <= 0) return RGY_ERR_NONE;
         w.workW = workW;
         w.workH = workH;
@@ -397,21 +397,21 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     //     only allocated for Fast / VeryFast (HQ tier reuses m_scratchA
     //     / m_scratchB). m_darkenWorkF16 / m_thinWorkF16 stay null.
     if (m_fp16Scratch) {
-        if (prm->kaizen.darken == VppKaizenDarken::HQ) {
+        if (prm->anime4k.darken == VppAnime4kDarken::HQ) {
             if (auto e = allocWorkF16(m_darkenWorkF16, outW, outH, _T("darken HQ FP16")); e != RGY_ERR_NONE) {
                 return e;
             }
         }
-        if (prm->kaizen.thin == VppKaizenThin::HQ) {
+        if (prm->anime4k.thin == VppAnime4kThin::HQ) {
             if (auto e = allocWorkF16(m_thinWorkF16, outW, outH, _T("thin HQ FP16")); e != RGY_ERR_NONE) {
                 return e;
             }
         }
     } else {
-        if (auto e = allocWork(m_darkenWork, tierDiv((int)prm->kaizen.darken), _T("darken")); e != RGY_ERR_NONE) {
+        if (auto e = allocWork(m_darkenWork, tierDiv((int)prm->anime4k.darken), _T("darken")); e != RGY_ERR_NONE) {
             return e;
         }
-        if (auto e = allocWork(m_thinWork, tierDiv((int)prm->kaizen.thin), _T("thin")); e != RGY_ERR_NONE) {
+        if (auto e = allocWork(m_thinWork, tierDiv((int)prm->anime4k.thin), _T("thin")); e != RGY_ERR_NONE) {
             return e;
         }
     }
@@ -422,7 +422,7 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // allocated at full 2x output dimensions, so the 1x stages use
     // the top-left srcW x srcH region of each buffer (with the same
     // float4 row pitch as the 2x case).
-    if (prm->kaizen.mode == VppKaizenMode::Dtd) {
+    if (prm->anime4k.mode == VppAnime4kMode::Dtd) {
         m_dtdSrcW = srcW;
         m_dtdSrcH = srcH;
         m_dtdSrcLumaPitch = srcW * typeBytes;
@@ -438,8 +438,8 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // chroma_resize=joint: allocate the low-res luma guide (source luma box-
     // downscaled to chroma resolution = srcW/2 x srcH/2 for yuv420). Only when
     // the joint-bilateral chroma path is actually selected (scale=2 + chroma).
-    if (prm->kaizen.chromaResize == VppKaizenChromaResize::Joint
-            && prm->kaizen.scale == 2 && prm->kaizen.chroma) {
+    if (prm->anime4k.chromaResize == VppAnime4kChromaResize::Joint
+            && prm->anime4k.scale == 2 && prm->anime4k.chroma) {
         m_chromaLowresW = (srcW + 1) / 2;
         m_chromaLowresH = (srcH + 1) / 2;
         m_chromaLowresPitch = m_chromaLowresW * typeBytes;
@@ -461,10 +461,10 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // m_prefilterPlane; the substitute RGYFrameInfo in run_filter
     // routes downstream consumers to read this buffer instead of the
     // source plane. m_prefilterRef is a float4 .x-channel reference
-    // built by kernel_kaizen_thin_copy_y_to_ref before each denoise
+    // built by kernel_anime4k_thin_copy_y_to_ref before each denoise
     // dispatch (matches the post-process denoise's reference-buffer
     // convention).
-    if (prm->kaizen.prefilterDenoise != VppKaizenDenoise::Off) {
+    if (prm->anime4k.prefilterDenoise != VppAnime4kDenoise::Off) {
         const int bitDepth = RGY_CSP_BIT_DEPTH[prm->frameIn.csp];
         const int pixBytes = (bitDepth > 8) ? 2 : 1;
         const size_t planeBytes = (size_t)srcW * srcH * pixBytes;
@@ -482,12 +482,12 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     // Clamp_Highlights scratches: 2 x (1-ch fp16 at source dims). Held for
     // the filter lifetime. Off by default; allocated for ANY active mode
     // when clamp_highlights=true -- the RGB pipeline uses the fp16-input
-    // kernels (kernel_kaizen_clamp_*_rgb) and the Y-only pipeline uses the
-    // native-Type kernels (kernel_kaizen_clamp_h_max_y /
-    // kernel_kaizen_clamp_apply_y) which read/write the Y plane in its
+    // kernels (kernel_anime4k_clamp_*_rgb) and the Y-only pipeline uses the
+    // native-Type kernels (kernel_anime4k_clamp_h_max_y /
+    // kernel_anime4k_clamp_apply_y) which read/write the Y plane in its
     // native pixel format via the Type macro set at OpenCL compile time.
     // STATSMAX storage is always fp16 regardless of source bit depth.
-    if (prm->kaizen.clampHighlights) {
+    if (prm->anime4k.clampHighlights) {
         const size_t bytes_1ch = (size_t)srcW * srcH * sizeof(uint16_t);
         m_clampStatsMaxH = m_cl->createBuffer(bytes_1ch, CL_MEM_READ_WRITE);
         m_clampStatsMax  = m_cl->createBuffer(bytes_1ch, CL_MEM_READ_WRITE);
@@ -499,24 +499,24 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     }
 
 
-    // Opt-in end-of-chain resize. The kaizen mode chain produces output at
+    // Opt-in end-of-chain resize. The anime4k mode chain produces output at
     // (outW x outH) = scale*src into m_frameBuf; if the user requested a
     // different final resolution via out_res=, instantiate an internal
     // RGYFilterResize whose input is that scale*src frame and whose output is
     // the requested size. run_filter chains it after the core. This reuses the
     // full resampler family (jinc/nis/lanczos/bicubic/spline) -- no duplicate
-    // resize code -- and runs in the correct order (kaizen THEN resize), which
-    // the global --vpp-resize stage (which precedes kaizen) cannot do.
+    // resize code -- and runs in the correct order (anime4k THEN resize), which
+    // the global --vpp-resize stage (which precedes anime4k) cannot do.
     m_postResize.reset();
-    if (prm->kaizen.postResizeW != 0 && prm->kaizen.postResizeH != 0) {
+    if (prm->anime4k.postResizeW != 0 && prm->anime4k.postResizeH != 0) {
         // Resolve the requested target. A negative value on one axis keeps the
         // source aspect (magnitude = rounding step), matching --output-res. The
-        // kaizen output (outW x outH) preserves the source aspect through the
+        // anime4k output (outW x outH) preserves the source aspect through the
         // integer CNN scale, so resolving against it + the input SAR gives the
         // same DAR-correct result the global resizer would (e.g. -2x1080 on a
         // 16:9 source -> 1920, not the raw-pixel 1908).
-        int tgtW = prm->kaizen.postResizeW;
-        int tgtH = prm->kaizen.postResizeH;
+        int tgtW = prm->anime4k.postResizeW;
+        int tgtH = prm->anime4k.postResizeH;
         if (tgtW < 0 || tgtH < 0) {
             sInputCrop nocrop;
             memset(&nocrop, 0, sizeof(nocrop));
@@ -527,9 +527,9 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
             auto resizeParam = std::make_shared<RGYFilterParamResize>();
             // AUTO is resolved upstream only for the global resize; pick a sane
             // concrete default here so the sub-filter never sees AUTO.
-            resizeParam->interp = (prm->kaizen.postResizeAlgo == RGY_VPP_RESIZE_AUTO)
-                                  ? RGY_VPP_RESIZE_LANCZOS4 : prm->kaizen.postResizeAlgo;
-            resizeParam->frameIn  = prm->frameOut;             // kaizen core output: outW x outH, csp/pitch set above
+            resizeParam->interp = (prm->anime4k.postResizeAlgo == RGY_VPP_RESIZE_AUTO)
+                                  ? RGY_VPP_RESIZE_LANCZOS4 : prm->anime4k.postResizeAlgo;
+            resizeParam->frameIn  = prm->frameOut;             // anime4k core output: outW x outH, csp/pitch set above
             resizeParam->frameOut = prm->frameOut;
             resizeParam->frameOut.width  = tgtW;
             resizeParam->frameOut.height = tgtH;
@@ -538,13 +538,13 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
             m_postResize = std::make_unique<RGYFilterResize>(m_cl);
             auto rsts = m_postResize->init(resizeParam, m_pLog);
             if (rsts != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("failed to init kaizen end-of-chain resize: %s.\n"), get_err_mes(rsts));
+                AddMessage(RGY_LOG_ERROR, _T("failed to init anime4k end-of-chain resize: %s.\n"), get_err_mes(rsts));
                 return rsts;
             }
             // Report the FINAL (resized) frame info (dims + pitches) to the
             // pipeline; m_frameBuf stays at outW x outH as the core intermediate.
             prm->frameOut = resizeParam->frameOut;
-            AddMessage(RGY_LOG_DEBUG, _T("kaizen: end-of-chain resize %dx%d -> %dx%d (%s).\n"),
+            AddMessage(RGY_LOG_DEBUG, _T("anime4k: end-of-chain resize %dx%d -> %dx%d (%s).\n"),
                 outW, outH, tgtW, tgtH,
                 get_cx_desc(list_vpp_resize, (int)resizeParam->interp));
         }
@@ -561,11 +561,11 @@ RGY_ERR RGYFilterKaizen::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
 // dispatch when prefilter_denoise= is active. Wait_events propagate
 // into the first kernel; the helper does not signal a completion event
 // (downstream consumers chain naturally on the same queue).
-RGY_ERR RGYFilterKaizen::runClampHighlightsY(
+RGY_ERR RGYFilterAnime4k::runClampHighlightsY(
     const RGYFrameInfo *pInputPlaneY,
     const RGYFrameInfo *pOutputPlaneY,
     RGYOpenCLQueue &queue) {
-    if (!m_kaizen.get() || !m_clampStatsMaxH || !m_clampStatsMax) {
+    if (!m_anime4k.get() || !m_clampStatsMaxH || !m_clampStatsMax) {
         AddMessage(RGY_LOG_ERROR, _T("clamp_highlights scratches not initialised.\n"));
         return RGY_ERR_OPENCL_CRUSH;
     }
@@ -573,16 +573,16 @@ RGY_ERR RGYFilterKaizen::runClampHighlightsY(
     const int srcH = pInputPlaneY->height;
     const int dstW = pOutputPlaneY->width;
     const int dstH = pOutputPlaneY->height;
-    const RGYWorkSize local_2d(KAIZEN_BLOCK_X, KAIZEN_BLOCK_Y);
+    const RGYWorkSize local_2d(ANIME4K_BLOCK_X, ANIME4K_BLOCK_Y);
     const RGYWorkSize global_src(srcW, srcH);
     const RGYWorkSize global_dst(dstW, dstH);
 
     // Pass 1: h-max from native-format Y plane -> fp16 STATSMAX_h.
-    // The kernel reads via kaizen_read_y_norm which uses the Type macro
+    // The kernel reads via anime4k_read_y_norm which uses the Type macro
     // (uchar or ushort) set at OpenCL compile time -- so we just pass the
     // raw cl_mem and the native pitch in bytes.
     {
-        auto err = m_kaizen.get()->kernel("kernel_kaizen_clamp_h_max_y")
+        auto err = m_anime4k.get()->kernel("kernel_anime4k_clamp_h_max_y")
             .config(queue, local_2d, global_src, {}, nullptr).launch(
                 m_clampStatsMaxH->mem(), m_clampStatsStride,
                 (cl_mem)pInputPlaneY->ptr[0], pInputPlaneY->pitch[0],
@@ -594,7 +594,7 @@ RGY_ERR RGYFilterKaizen::runClampHighlightsY(
     }
     // Pass 2: v-max (shared with RGB path; fp16 -> fp16, no Type involved).
     {
-        auto err = m_kaizen.get()->kernel("kernel_kaizen_clamp_v_max")
+        auto err = m_anime4k.get()->kernel("kernel_anime4k_clamp_v_max")
             .config(queue, local_2d, global_src, {}, nullptr).launch(
                 m_clampStatsMax->mem(),  m_clampStatsStride,
                 m_clampStatsMaxH->mem(), m_clampStatsStride,
@@ -606,7 +606,7 @@ RGY_ERR RGYFilterKaizen::runClampHighlightsY(
     }
     // Pass 3: apply (in-place modify native-format Y output at dst dims).
     {
-        auto err = m_kaizen.get()->kernel("kernel_kaizen_clamp_apply_y")
+        auto err = m_anime4k.get()->kernel("kernel_anime4k_clamp_apply_y")
             .config(queue, local_2d, global_dst, {}, nullptr).launch(
                 (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                 m_clampStatsMax->mem(), m_clampStatsStride,
@@ -624,50 +624,50 @@ RGY_ERR RGYFilterKaizen::runClampHighlightsY(
 // luma to the 2x2 source min/max envelope, mixed by strength. Reads the source
 // Y (pInputPlaneY, pre-upscale) and the output Y (pOutputPlaneY, scale*src) and
 // modifies the output in place. No scratch buffers.
-RGY_ERR RGYFilterKaizen::runAntiring(
+RGY_ERR RGYFilterAnime4k::runAntiring(
     const RGYFrameInfo *pInputPlaneY,
     const RGYFrameInfo *pOutputPlaneY,
     float strength,
     RGYOpenCLQueue &queue) {
-    if (!m_kaizen.get()) {
+    if (!m_anime4k.get()) {
         return RGY_ERR_OPENCL_CRUSH;
     }
     const int srcW = pInputPlaneY->width;
     const int srcH = pInputPlaneY->height;
     const int dstW = pOutputPlaneY->width;
     const int dstH = pOutputPlaneY->height;
-    const RGYWorkSize local_2d(KAIZEN_BLOCK_X, KAIZEN_BLOCK_Y);
+    const RGYWorkSize local_2d(ANIME4K_BLOCK_X, ANIME4K_BLOCK_Y);
     const RGYWorkSize global_dst(dstW, dstH);
-    auto err = m_kaizen.get()->kernel("kernel_kaizen_antiring_y")
+    auto err = m_anime4k.get()->kernel("kernel_anime4k_antiring_y")
         .config(queue, local_2d, global_dst, {}, nullptr).launch(
             (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
             (cl_mem)pInputPlaneY->ptr[0],  pInputPlaneY->pitch[0],
             dstW, dstH, srcW, srcH, strength);
     if (err != RGY_ERR_NONE) {
-        AddMessage(RGY_LOG_ERROR, _T("kernel_kaizen_antiring_y failed: %s.\n"), get_err_mes(err));
+        AddMessage(RGY_LOG_ERROR, _T("kernel_anime4k_antiring_y failed: %s.\n"), get_err_mes(err));
     }
     return err;
 }
 
-RGY_ERR RGYFilterKaizen::runPrefilterDenoise(
+RGY_ERR RGYFilterAnime4k::runPrefilterDenoise(
     const RGYFrameInfo *pInputPlaneY,
     RGYOpenCLQueue &queue,
     const std::vector<RGYOpenCLEvent> &wait_events) {
-    if (!m_kaizen.get() || !m_prefilterPlane || !m_prefilterRef) {
+    if (!m_anime4k.get() || !m_prefilterPlane || !m_prefilterRef) {
         return RGY_ERR_OPENCL_CRUSH;
     }
-    auto prm = std::dynamic_pointer_cast<RGYFilterParamKaizen>(m_param);
+    auto prm = std::dynamic_pointer_cast<RGYFilterParamAnime4k>(m_param);
     if (!prm) return RGY_ERR_INVALID_PARAM;
 
     const int srcW = pInputPlaneY->width;
     const int srcH = pInputPlaneY->height;
-    const RGYWorkSize local_2d(KAIZEN_BLOCK_X, KAIZEN_BLOCK_Y);
+    const RGYWorkSize local_2d(ANIME4K_BLOCK_X, ANIME4K_BLOCK_Y);
     const RGYWorkSize global(srcW, srcH);
 
     // Step 1: copy input Y into the float4 .x channel of m_prefilterRef.
     {
-        const char *kname = "kernel_kaizen_thin_copy_y_to_ref";
-        auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, wait_events, nullptr).launch(
+        const char *kname = "kernel_anime4k_thin_copy_y_to_ref";
+        auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, wait_events, nullptr).launch(
             m_prefilterRef->mem(), m_prefilterRefPitchF4,
             (cl_mem)pInputPlaneY->ptr[0], pInputPlaneY->pitch[0],
             srcW, srcH);
@@ -680,13 +680,13 @@ RGY_ERR RGYFilterKaizen::runPrefilterDenoise(
     // Step 2: run the bilateral denoise variant from the ref into the
     // prefiltered luma scratch.
     const char *kname = nullptr;
-    switch (prm->kaizen.prefilterDenoise) {
-    case VppKaizenDenoise::Mean:   kname = "kernel_kaizen_denoise_mean";   break;
-    case VppKaizenDenoise::Median: kname = "kernel_kaizen_denoise_median"; break;
-    case VppKaizenDenoise::Mode:   kname = "kernel_kaizen_denoise_mode";   break;
+    switch (prm->anime4k.prefilterDenoise) {
+    case VppAnime4kDenoise::Mean:   kname = "kernel_anime4k_denoise_mean";   break;
+    case VppAnime4kDenoise::Median: kname = "kernel_anime4k_denoise_median"; break;
+    case VppAnime4kDenoise::Mode:   kname = "kernel_anime4k_denoise_mode";   break;
     default: return RGY_ERR_NONE;  // unreachable: caller gates on != Off
     }
-    auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
+    auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
         m_prefilterPlane->mem(), m_prefilterPlanePitch,
         m_prefilterRef->mem(),   m_prefilterRefPitchF4,
         srcW, srcH);
@@ -698,10 +698,10 @@ RGY_ERR RGYFilterKaizen::runPrefilterDenoise(
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameInfo *pInputPlaneY,
+RGY_ERR RGYFilterAnime4k::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameInfo *pInputPlaneY,
                                     RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events,
                                     RGYOpenCLEvent *event) {
-    if (!m_kaizen.get()) {
+    if (!m_anime4k.get()) {
         return RGY_ERR_OPENCL_CRUSH;
     }
     const int outW = m_outW;
@@ -721,14 +721,14 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
     //                    taller 32-wide work-item column matches the
     //                    column reads that walk through pitched rows.
     // Perf rationale: Arc A770 measurements at 4K.
-    const RGYWorkSize local_2d(KAIZEN_BLOCK_X, KAIZEN_BLOCK_Y);
+    const RGYWorkSize local_2d(ANIME4K_BLOCK_X, ANIME4K_BLOCK_Y);
     const RGYWorkSize local_x_pass(32, 8);
     const RGYWorkSize local_y_pass(8, 32);
     const RGYWorkSize global(outW, outH);
 
     // One-shot probe of clGetKernelWorkGroupInfo for the kernels we
     // dispatch in this routine. The program build is async (see
-    // m_kaizen.set(m_cl->buildResourceAsync(...))) so the kernel
+    // m_anime4k.set(m_cl->buildResourceAsync(...))) so the kernel
     // handles aren't necessarily available at the end of init();
     // querying here on the first frame is the simplest way to make sure
     // the kernel objects exist. First codebase use of
@@ -739,33 +739,33 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
     if (!m_kernelWgQueried) {
         cl_device_id dev_id = m_cl->queue().devid();
         static const char *const probeKernels[] = {
-            "kernel_kaizen_sobel_x",
-            "kernel_kaizen_sobel_y",
-            "kernel_kaizen_refine_x",
-            "kernel_kaizen_refine_y",
-            "kernel_kaizen_apply",
-            "kernel_kaizen_darken_gauss1_x",
-            "kernel_kaizen_darken_gauss2_x",
-            "kernel_kaizen_darken_dog_y",
-            "kernel_kaizen_darken_apply_y",
-            "kernel_kaizen_darken_smooth_y",
-            "kernel_kaizen_darken_upsample_apply",
-            "kernel_kaizen_thin_sobel_xy",
-            "kernel_kaizen_thin_gauss_x",
-            "kernel_kaizen_thin_gauss_y",
-            "kernel_kaizen_thin_kernel_xy",
-            "kernel_kaizen_thin_copy_y_to_ref",
-            "kernel_kaizen_thin_warp",
-            "kernel_kaizen_dog_kernel_x",
-            "kernel_kaizen_dog_kernel_y",
-            "kernel_kaizen_dog_apply_soft",
-            "kernel_kaizen_dog_apply_upscale",
-            "kernel_kaizen_dtd_warp",
-            "kernel_kaizen_downsample_y",
-            "kernel_kaizen_copy_y_to_y",
+            "kernel_anime4k_sobel_x",
+            "kernel_anime4k_sobel_y",
+            "kernel_anime4k_refine_x",
+            "kernel_anime4k_refine_y",
+            "kernel_anime4k_apply",
+            "kernel_anime4k_darken_gauss1_x",
+            "kernel_anime4k_darken_gauss2_x",
+            "kernel_anime4k_darken_dog_y",
+            "kernel_anime4k_darken_apply_y",
+            "kernel_anime4k_darken_smooth_y",
+            "kernel_anime4k_darken_upsample_apply",
+            "kernel_anime4k_thin_sobel_xy",
+            "kernel_anime4k_thin_gauss_x",
+            "kernel_anime4k_thin_gauss_y",
+            "kernel_anime4k_thin_kernel_xy",
+            "kernel_anime4k_thin_copy_y_to_ref",
+            "kernel_anime4k_thin_warp",
+            "kernel_anime4k_dog_kernel_x",
+            "kernel_anime4k_dog_kernel_y",
+            "kernel_anime4k_dog_apply_soft",
+            "kernel_anime4k_dog_apply_upscale",
+            "kernel_anime4k_dtd_warp",
+            "kernel_anime4k_downsample_y",
+            "kernel_anime4k_copy_y_to_y",
         };
         for (const char *kname : probeKernels) {
-            auto holder = m_kaizen.get()->kernel(kname);
+            auto holder = m_anime4k.get()->kernel(kname);
             if (!holder.get()) continue;
             cl_kernel kobj = holder.get()->get();
             if (!kobj) continue;
@@ -801,24 +801,24 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
     // runThin / runDenoise are guaranteed false (rejected / cleared
     // in init()), so the existing post-process gates below stay
     // dormant and the dtd chain's stage-C apply takes the final event.
-    auto prm = std::dynamic_pointer_cast<RGYFilterParamKaizen>(m_param);
-    const VppKaizenMode    mode        = prm ? prm->kaizen.mode    : VppKaizenMode::Original;
-    const VppKaizenDarken  darkenTier  = prm ? prm->kaizen.darken  : VppKaizenDarken::Off;
-    const VppKaizenThin    thinTier    = prm ? prm->kaizen.thin    : VppKaizenThin::Off;
-    const VppKaizenDenoise denoiseTier = prm ? prm->kaizen.denoise : VppKaizenDenoise::Off;
-    const bool runDarken  = (darkenTier  != VppKaizenDarken::Off);
-    const bool runThin    = (thinTier    != VppKaizenThin::Off);
-    const bool runDenoise = (denoiseTier != VppKaizenDenoise::Off);
+    auto prm = std::dynamic_pointer_cast<RGYFilterParamAnime4k>(m_param);
+    const VppAnime4kMode    mode        = prm ? prm->anime4k.mode    : VppAnime4kMode::Original;
+    const VppAnime4kDarken  darkenTier  = prm ? prm->anime4k.darken  : VppAnime4kDarken::Off;
+    const VppAnime4kThin    thinTier    = prm ? prm->anime4k.thin    : VppAnime4kThin::Off;
+    const VppAnime4kDenoise denoiseTier = prm ? prm->anime4k.denoise : VppAnime4kDenoise::Off;
+    const bool runDarken  = (darkenTier  != VppAnime4kDarken::Off);
+    const bool runThin    = (thinTier    != VppAnime4kThin::Off);
+    const bool runDenoise = (denoiseTier != VppAnime4kDenoise::Off);
     RGYOpenCLEvent *applyEvent = (runDarken || runThin || runDenoise) ? nullptr : event;
 
-    if (mode == VppKaizenMode::Original || mode == VppKaizenMode::Deblur
-     || mode == VppKaizenMode::DarkenHQ || mode == VppKaizenMode::ThinHQ) {
+    if (mode == VppAnime4kMode::Original || mode == VppAnime4kMode::Deblur
+     || mode == VppAnime4kMode::DarkenHQ || mode == VppAnime4kMode::ThinHQ) {
         // Base shader chain: Sobel partial + polynomial-refinement
         // edge-blend at the 2x output resolution. Cite
         // Anime4K_Upscale_Original_x2.glsl v3.2.
         {
-            const char *kname = "kernel_kaizen_sobel_x";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_x_pass, global, wait_events, nullptr).launch(
+            const char *kname = "kernel_anime4k_sobel_x";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global, wait_events, nullptr).launch(
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 srcImageMem,
                 srcW, srcH, outW, outH);
@@ -829,8 +829,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_sobel_y";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_sobel_y";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 outW, outH);
@@ -841,8 +841,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_refine_x";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_refine_x";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
                 outW, outH);
@@ -853,8 +853,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_refine_y";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_refine_y";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 outW, outH);
@@ -865,8 +865,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_apply";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, applyEvent).launch(
+            const char *kname = "kernel_anime4k_apply";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, applyEvent).launch(
                 (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                 srcImageMem,
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
@@ -877,12 +877,12 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 return err;
             }
         }
-    } else if (mode == VppKaizenMode::DogSharpen) {
+    } else if (mode == VppAnime4kMode::DogSharpen) {
         // 1x DoG sharpener: outW == srcW, outH == srcH because init()
         // promoted scale to 1. Cite Anime4K_Deblur_DoG.glsl v3.2.
         {
-            const char *kname = "kernel_kaizen_dog_kernel_x";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_x_pass, global, wait_events, nullptr).launch(
+            const char *kname = "kernel_anime4k_dog_kernel_x";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global, wait_events, nullptr).launch(
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 (cl_mem)pInputPlaneY->ptr[0], pInputPlaneY->pitch[0],
                 outW, outH);
@@ -893,8 +893,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_dog_kernel_y";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_dog_kernel_y";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 outW, outH);
@@ -905,8 +905,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_dog_apply_soft";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, applyEvent).launch(
+            const char *kname = "kernel_anime4k_dog_apply_soft";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, applyEvent).launch(
                 (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                 (cl_mem)pInputPlaneY->ptr[0], pInputPlaneY->pitch[0],
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
@@ -917,15 +917,15 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 return err;
             }
         }
-    } else if (mode == VppKaizenMode::Dog) {
+    } else if (mode == VppAnime4kMode::Dog) {
         // 2x DoG upscale: DoG kernels at 1x source res (using the
         // top-left srcW x srcH region of the float4 ping-pong scratches),
         // then a 2x apply that bilinear-upsamples both luma and the
         // gauss / minmax scratch. Cite Anime4K_Upscale_DoG_x2.glsl v3.2.
         const RGYWorkSize global_1x(srcW, srcH);
         {
-            const char *kname = "kernel_kaizen_dog_kernel_x";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_x_pass, global_1x, wait_events, nullptr).launch(
+            const char *kname = "kernel_anime4k_dog_kernel_x";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global_1x, wait_events, nullptr).launch(
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 (cl_mem)pInputPlaneY->ptr[0], pInputPlaneY->pitch[0],
                 srcW, srcH);
@@ -936,8 +936,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_dog_kernel_y";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_y_pass, global_1x, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_dog_kernel_y";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global_1x, {}, nullptr).launch(
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 srcW, srcH);
@@ -948,8 +948,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_dog_apply_upscale";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, applyEvent).launch(
+            const char *kname = "kernel_anime4k_dog_apply_upscale";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, applyEvent).launch(
                 (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                 srcImageMem,
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
@@ -960,7 +960,7 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 return err;
             }
         }
-    } else if (mode == VppKaizenMode::Dtd) {
+    } else if (mode == VppAnime4kMode::Dtd) {
         // 2x composite: Darken -> Thin -> Deblur fused chain. Cite
         // Anime4K_Upscale_DTD_x2.glsl v3.2.
         // Stage A: darken at 1x source res with strength=1.8 baked.
@@ -968,8 +968,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
         // Stage C: DoG sharpen at 2x with strength=0.5 baked.
         const RGYWorkSize global_1x(srcW, srcH);
         {
-            const char *kname = "kernel_kaizen_copy_y_to_y";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global_1x, wait_events, nullptr).launch(
+            const char *kname = "kernel_anime4k_copy_y_to_y";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global_1x, wait_events, nullptr).launch(
                 m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
                 (cl_mem)pInputPlaneY->ptr[0], pInputPlaneY->pitch[0],
                 srcW, srcH);
@@ -981,8 +981,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
         }
         // Stage A: darken chain at 1x, in-place on m_dtdSrcLuma.
         {
-            const char *kname = "kernel_kaizen_darken_gauss1_x";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_x_pass, global_1x, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_darken_gauss1_x";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global_1x, {}, nullptr).launch(
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
                 srcW, srcH);
@@ -993,8 +993,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_darken_dog_y";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_y_pass, global_1x, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_darken_dog_y";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global_1x, {}, nullptr).launch(
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
@@ -1006,8 +1006,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_darken_gauss2_x";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_x_pass, global_1x, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_darken_gauss2_x";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global_1x, {}, nullptr).launch(
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
                 srcW, srcH);
@@ -1018,8 +1018,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_darken_apply_y";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_y_pass, global_1x, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_darken_apply_y";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global_1x, {}, nullptr).launch(
                 m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 srcW, srcH);
@@ -1033,8 +1033,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
         // Fused Sobel-X + Sobel-Y in one kernel; reads m_dtdSrcLuma at
         // a 3x3 stencil and writes shaped magnitude into m_scratchB.x.
         {
-            const char *kname = "kernel_kaizen_thin_sobel_xy";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global_1x, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_thin_sobel_xy";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global_1x, {}, nullptr).launch(
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
                 m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
                 srcW, srcH);
@@ -1045,8 +1045,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_thin_gauss_x";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_x_pass, global_1x, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_thin_gauss_x";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global_1x, {}, nullptr).launch(
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
                 srcW, srcH);
@@ -1057,8 +1057,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_thin_gauss_y";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_y_pass, global_1x, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_thin_gauss_y";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global_1x, {}, nullptr).launch(
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 srcW, srcH);
@@ -1074,8 +1074,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
         // flow in m_scratchB; the fused chain ends in A, so the warp
         // below reads its pSrcFlow from m_scratchA.
         {
-            const char *kname = "kernel_kaizen_thin_kernel_xy";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global_1x, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_thin_kernel_xy";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global_1x, {}, nullptr).launch(
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
                 srcW, srcH);
@@ -1086,8 +1086,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_dtd_warp";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_dtd_warp";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
                 (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                 m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
@@ -1100,8 +1100,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
         }
         // Stage C: DoG sharpen on the post-warp pDstY at 2x, in place.
         {
-            const char *kname = "kernel_kaizen_dog_kernel_x";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_dog_kernel_x";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                 outW, outH);
@@ -1112,8 +1112,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_dog_kernel_y";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_dog_kernel_y";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 outW, outH);
@@ -1124,8 +1124,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
         }
         {
-            const char *kname = "kernel_kaizen_dog_apply_soft";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, applyEvent).launch(
+            const char *kname = "kernel_anime4k_dog_apply_soft";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, applyEvent).launch(
                 (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                 (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                 m_scratchB->mem(), m_scratchPitchFloats / 4,
@@ -1160,11 +1160,11 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
     //   upsample_apply   : B.x   -> pDstY  (bilinear upsample + add)
     if (runDarken) {
         RGYOpenCLEvent *darkenEvent = (runThin || runDenoise) ? nullptr : event;
-        if (darkenTier == VppKaizenDarken::HQ) {
+        if (darkenTier == VppAnime4kDarken::HQ) {
             // FP16 path uses the dedicated m_darkenWorkF16 buffers
             // (half4 storage; kernels read/write via vload_half4 /
             // vstore_half4 because the program was built with
-            // -D KAIZEN_SCRATCH_FP16=1). The base chain's FP32
+            // -D ANIME4K_SCRATCH_FP16=1). The base chain's FP32
             // m_scratchA / m_scratchB are not aliased here so the
             // polynomial intermediates from runPlaneY remain available
             // for downstream stages.
@@ -1176,8 +1176,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 ? (m_darkenWorkF16.pitchFloats / 4)
                 : (m_scratchPitchFloats / 4);
             {
-                const char *kname = "kernel_kaizen_darken_gauss1_x";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_darken_gauss1_x";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
                     darkenA, darkenPitchF4,
                     (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                     outW, outH);
@@ -1188,8 +1188,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 }
             }
             {
-                const char *kname = "kernel_kaizen_darken_dog_y";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_darken_dog_y";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
                     darkenB, darkenPitchF4,
                     darkenA, darkenPitchF4,
                     (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
@@ -1201,8 +1201,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 }
             }
             {
-                const char *kname = "kernel_kaizen_darken_gauss2_x";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_darken_gauss2_x";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
                     darkenA, darkenPitchF4,
                     darkenB, darkenPitchF4,
                     outW, outH);
@@ -1213,8 +1213,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 }
             }
             {
-                const char *kname = "kernel_kaizen_darken_apply_y";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_y_pass, global, {}, darkenEvent).launch(
+                const char *kname = "kernel_anime4k_darken_apply_y";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global, {}, darkenEvent).launch(
                     (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                     darkenA, darkenPitchF4,
                     outW, outH);
@@ -1228,11 +1228,11 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             const int wW = m_darkenWork.workW;
             const int wH = m_darkenWork.workH;
             const int wPitchF4 = m_darkenWork.pitchFloats / 4;
-            const int box = (darkenTier == VppKaizenDarken::Fast) ? 2 : 4;
+            const int box = (darkenTier == VppAnime4kDarken::Fast) ? 2 : 4;
             const RGYWorkSize work_global(wW, wH);
             {
-                const char *kname = "kernel_kaizen_downsample_y";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, work_global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_downsample_y";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, work_global, {}, nullptr).launch(
                     m_darkenWork.luma->mem(), m_darkenWork.lumaPitch,
                     (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                     wW, wH, outW, outH, box);
@@ -1243,8 +1243,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 }
             }
             {
-                const char *kname = "kernel_kaizen_darken_gauss1_x";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_x_pass, work_global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_darken_gauss1_x";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, work_global, {}, nullptr).launch(
                     m_darkenWork.A->mem(), wPitchF4,
                     m_darkenWork.luma->mem(), m_darkenWork.lumaPitch,
                     wW, wH);
@@ -1255,8 +1255,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 }
             }
             {
-                const char *kname = "kernel_kaizen_darken_dog_y";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_y_pass, work_global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_darken_dog_y";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, work_global, {}, nullptr).launch(
                     m_darkenWork.B->mem(), wPitchF4,
                     m_darkenWork.A->mem(), wPitchF4,
                     m_darkenWork.luma->mem(), m_darkenWork.lumaPitch,
@@ -1268,8 +1268,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 }
             }
             {
-                const char *kname = "kernel_kaizen_darken_gauss2_x";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_x_pass, work_global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_darken_gauss2_x";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, work_global, {}, nullptr).launch(
                     m_darkenWork.A->mem(), wPitchF4,
                     m_darkenWork.B->mem(), wPitchF4,
                     wW, wH);
@@ -1280,8 +1280,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 }
             }
             {
-                const char *kname = "kernel_kaizen_darken_smooth_y";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_y_pass, work_global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_darken_smooth_y";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, work_global, {}, nullptr).launch(
                     m_darkenWork.B->mem(), wPitchF4,
                     m_darkenWork.A->mem(), wPitchF4,
                     wW, wH);
@@ -1292,8 +1292,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 }
             }
             {
-                const char *kname = "kernel_kaizen_darken_upsample_apply";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, darkenEvent).launch(
+                const char *kname = "kernel_anime4k_darken_upsample_apply";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, darkenEvent).launch(
                     (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                     m_darkenWork.B->mem(), wPitchF4,
                     outW, outH, wW, wH);
@@ -1338,7 +1338,7 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
         int    thinPitchF4 = 0;
         cl_mem yrefBuf = nullptr;
         int    yrefPitchF4 = 0;
-        if (thinTier == VppKaizenThin::HQ) {
+        if (thinTier == VppAnime4kThin::HQ) {
             thinA = m_fp16Scratch ? m_thinWorkF16.A->mem() : m_scratchA->mem();
             thinB = m_fp16Scratch ? m_thinWorkF16.B->mem() : m_scratchB->mem();
             thinPitchF4 = m_fp16Scratch
@@ -1348,8 +1348,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             // Replaces two kernels and one intermediate scratch round
             // trip from the original chain.
             {
-                const char *kname = "kernel_kaizen_thin_sobel_xy";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_thin_sobel_xy";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
                     thinB, thinPitchF4,
                     (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                     outW, outH);
@@ -1360,8 +1360,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 }
             }
             {
-                const char *kname = "kernel_kaizen_thin_gauss_x";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_thin_gauss_x";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
                     thinA, thinPitchF4,
                     thinB, thinPitchF4,
                     outW, outH);
@@ -1372,8 +1372,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 }
             }
             {
-                const char *kname = "kernel_kaizen_thin_gauss_y";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_thin_gauss_y";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
                     thinB, thinPitchF4,
                     thinA, thinPitchF4,
                     outW, outH);
@@ -1388,8 +1388,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             // thinA at the end of this pass (the original two-pass
             // form ended in thinB).
             {
-                const char *kname = "kernel_kaizen_thin_kernel_xy";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_thin_kernel_xy";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
                     thinA, thinPitchF4,
                     thinB, thinPitchF4,
                     outW, outH);
@@ -1409,11 +1409,11 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             const int wW = m_thinWork.workW;
             const int wH = m_thinWork.workH;
             const int wPitchF4 = m_thinWork.pitchFloats / 4;
-            const int box = (thinTier == VppKaizenThin::Fast) ? 2 : 4;
+            const int box = (thinTier == VppAnime4kThin::Fast) ? 2 : 4;
             const RGYWorkSize work_global(wW, wH);
             {
-                const char *kname = "kernel_kaizen_downsample_y";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, work_global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_downsample_y";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, work_global, {}, nullptr).launch(
                     m_thinWork.luma->mem(), m_thinWork.lumaPitch,
                     (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                     wW, wH, outW, outH, box);
@@ -1425,8 +1425,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             }
             // Fused Sobel-X + Sobel-Y in one kernel; luma -> B.
             {
-                const char *kname = "kernel_kaizen_thin_sobel_xy";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, work_global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_thin_sobel_xy";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, work_global, {}, nullptr).launch(
                     m_thinWork.B->mem(), wPitchF4,
                     m_thinWork.luma->mem(), m_thinWork.lumaPitch,
                     wW, wH);
@@ -1437,8 +1437,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 }
             }
             {
-                const char *kname = "kernel_kaizen_thin_gauss_x";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_x_pass, work_global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_thin_gauss_x";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, work_global, {}, nullptr).launch(
                     m_thinWork.A->mem(), wPitchF4,
                     m_thinWork.B->mem(), wPitchF4,
                     wW, wH);
@@ -1449,8 +1449,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
                 }
             }
             {
-                const char *kname = "kernel_kaizen_thin_gauss_y";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_y_pass, work_global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_thin_gauss_y";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, work_global, {}, nullptr).launch(
                     m_thinWork.B->mem(), wPitchF4,
                     m_thinWork.A->mem(), wPitchF4,
                     wW, wH);
@@ -1463,8 +1463,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
             // Fused Kernel-X + Kernel-Y in one kernel; B -> A (flow now
             // lives in m_thinWork.A; the original chain ended in B).
             {
-                const char *kname = "kernel_kaizen_thin_kernel_xy";
-                auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, work_global, {}, nullptr).launch(
+                const char *kname = "kernel_anime4k_thin_kernel_xy";
+                auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, work_global, {}, nullptr).launch(
                     m_thinWork.A->mem(), wPitchF4,
                     m_thinWork.B->mem(), wPitchF4,
                     wW, wH);
@@ -1496,8 +1496,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
         // writes pDstY in place; without this copy the read and write
         // would race.
         {
-            const char *kname = "kernel_kaizen_thin_copy_y_to_ref";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_thin_copy_y_to_ref";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
                 yrefBuf, yrefPitchF4,
                 (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                 outW, outH);
@@ -1509,8 +1509,8 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
         }
         {
             RGYOpenCLEvent *thinEvent = runDenoise ? nullptr : event;
-            const char *kname = "kernel_kaizen_thin_warp";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, thinEvent).launch(
+            const char *kname = "kernel_anime4k_thin_warp";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, thinEvent).launch(
                 (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                 yrefBuf, yrefPitchF4,
                 flowBuf, flowPitchF4,
@@ -1526,15 +1526,15 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
 
     // Bilateral denoise pass (Mean / Median / Mode). Single OCL kernel
     // each, all read a float Y reference written into m_scratchA.x by
-    // the same kernel_kaizen_thin_copy_y_to_ref used by the thin warp
+    // the same kernel_anime4k_thin_copy_y_to_ref used by the thin warp
     // path. The chain so far (base apply, optional darken, optional
     // thin) has already written pDstY in place; the copy step turns
     // that into the post-chain Y reference for the denoise kernel
     // to read while it writes back to pDstY without a read-write race.
     if (runDenoise) {
         {
-            const char *kname = "kernel_kaizen_thin_copy_y_to_ref";
-            auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
+            const char *kname = "kernel_anime4k_thin_copy_y_to_ref";
+            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
                 m_scratchA->mem(), m_scratchPitchFloats / 4,
                 (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
                 outW, outH);
@@ -1546,12 +1546,12 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
         }
         const char *kname = nullptr;
         switch (denoiseTier) {
-        case VppKaizenDenoise::Mean:   kname = "kernel_kaizen_denoise_mean";   break;
-        case VppKaizenDenoise::Median: kname = "kernel_kaizen_denoise_median"; break;
-        case VppKaizenDenoise::Mode:   kname = "kernel_kaizen_denoise_mode";   break;
+        case VppAnime4kDenoise::Mean:   kname = "kernel_anime4k_denoise_mean";   break;
+        case VppAnime4kDenoise::Median: kname = "kernel_anime4k_denoise_median"; break;
+        case VppAnime4kDenoise::Mode:   kname = "kernel_anime4k_denoise_mode";   break;
         default: return RGY_ERR_NONE;  // unreachable: runDenoise gated above
         }
-        auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, event).launch(
+        auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, event).launch(
             (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
             m_scratchA->mem(), m_scratchPitchFloats / 4,
             outW, outH);
@@ -1568,21 +1568,21 @@ RGY_ERR RGYFilterKaizen::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameIn
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYFilterKaizen::runPlaneChroma(RGYFrameInfo *pOutputPlaneC, const RGYFrameInfo *pInputPlaneC,
+RGY_ERR RGYFilterAnime4k::runPlaneChroma(RGYFrameInfo *pOutputPlaneC, const RGYFrameInfo *pInputPlaneC,
                                           RGYOpenCLQueue &queue, RGYOpenCLEvent *event) {
-    if (!m_kaizen.get()) {
+    if (!m_anime4k.get()) {
         return RGY_ERR_OPENCL_CRUSH;
     }
-    auto prm = std::dynamic_pointer_cast<RGYFilterParamKaizen>(m_param);
+    auto prm = std::dynamic_pointer_cast<RGYFilterParamAnime4k>(m_param);
     if (!prm) {
         return RGY_ERR_INVALID_PARAM;
     }
-    const RGYWorkSize local_2d(KAIZEN_BLOCK_X, KAIZEN_BLOCK_Y);
+    const RGYWorkSize local_2d(ANIME4K_BLOCK_X, ANIME4K_BLOCK_Y);
     const RGYWorkSize global(pOutputPlaneC->width, pOutputPlaneC->height);
-    const int chromaMode = (int)prm->kaizen.chromaResize;
+    const int chromaMode = (int)prm->anime4k.chromaResize;
 
-    const char *kname = "kernel_kaizen_chroma_resize";
-    auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, event).launch(
+    const char *kname = "kernel_anime4k_chroma_resize";
+    auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, event).launch(
         (cl_mem)pOutputPlaneC->ptr[0], pOutputPlaneC->pitch[0],
         pOutputPlaneC->width, pOutputPlaneC->height,
         (cl_mem)pInputPlaneC->ptr[0], pInputPlaneC->pitch[0],
@@ -1598,14 +1598,14 @@ RGY_ERR RGYFilterKaizen::runPlaneChroma(RGYFrameInfo *pOutputPlaneC, const RGYFr
 
 // chroma_resize=joint pass 1: box-downscale the source luma into the chroma-res
 // guide scratch m_chromaLumaLowres.
-RGY_ERR RGYFilterKaizen::runChromaLumaLowres(const RGYFrameInfo *pSrcLumaY, RGYOpenCLQueue &queue) {
-    if (!m_kaizen.get() || !m_chromaLumaLowres) {
+RGY_ERR RGYFilterAnime4k::runChromaLumaLowres(const RGYFrameInfo *pSrcLumaY, RGYOpenCLQueue &queue) {
+    if (!m_anime4k.get() || !m_chromaLumaLowres) {
         return RGY_ERR_OPENCL_CRUSH;
     }
-    const RGYWorkSize local_2d(KAIZEN_BLOCK_X, KAIZEN_BLOCK_Y);
+    const RGYWorkSize local_2d(ANIME4K_BLOCK_X, ANIME4K_BLOCK_Y);
     const RGYWorkSize global(m_chromaLowresW, m_chromaLowresH);
-    const char *kname = "kernel_kaizen_chroma_luma_lowres";
-    auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
+    const char *kname = "kernel_anime4k_chroma_luma_lowres";
+    auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
         m_chromaLumaLowres->mem(), m_chromaLowresPitch,
         m_chromaLowresW, m_chromaLowresH,
         (cl_mem)pSrcLumaY->ptr[0], pSrcLumaY->pitch[0],
@@ -1618,18 +1618,18 @@ RGY_ERR RGYFilterKaizen::runChromaLumaLowres(const RGYFrameInfo *pSrcLumaY, RGYO
 
 // chroma_resize=joint pass 2: luma-guided joint-bilateral upscale of one chroma
 // plane (FastBilateral, MIT). dist/int coeffs are FastBilateral's defaults.
-RGY_ERR RGYFilterKaizen::runPlaneChromaJoint(RGYFrameInfo *pOutputPlaneC, const RGYFrameInfo *pInputPlaneC,
+RGY_ERR RGYFilterAnime4k::runPlaneChromaJoint(RGYFrameInfo *pOutputPlaneC, const RGYFrameInfo *pInputPlaneC,
                                              const RGYFrameInfo *pSrcLumaY,
                                              RGYOpenCLQueue &queue, RGYOpenCLEvent *event) {
-    if (!m_kaizen.get() || !m_chromaLumaLowres) {
+    if (!m_anime4k.get() || !m_chromaLumaLowres) {
         return RGY_ERR_OPENCL_CRUSH;
     }
-    const RGYWorkSize local_2d(KAIZEN_BLOCK_X, KAIZEN_BLOCK_Y);
+    const RGYWorkSize local_2d(ANIME4K_BLOCK_X, ANIME4K_BLOCK_Y);
     const RGYWorkSize global(pOutputPlaneC->width, pOutputPlaneC->height);
     const float distCoeff = 2.0f;
     const float intCoeff  = 128.0f;
-    const char *kname = "kernel_kaizen_chroma_joint_bilateral";
-    auto err = m_kaizen.get()->kernel(kname).config(queue, local_2d, global, {}, event).launch(
+    const char *kname = "kernel_anime4k_chroma_joint_bilateral";
+    auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, event).launch(
         (cl_mem)pOutputPlaneC->ptr[0], pOutputPlaneC->pitch[0],
         pOutputPlaneC->width, pOutputPlaneC->height,
         (cl_mem)pInputPlaneC->ptr[0], pInputPlaneC->pitch[0],
@@ -1643,25 +1643,25 @@ RGY_ERR RGYFilterKaizen::runPlaneChromaJoint(RGYFrameInfo *pOutputPlaneC, const 
     return err;
 }
 
-RGY_ERR RGYFilterKaizen::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
+RGY_ERR RGYFilterAnime4k::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
                                      RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events,
                                      RGYOpenCLEvent *event) {
     // Fast path: no end-of-chain resize -> run the core directly (the output
     // and event semantics are byte-identical to the pre-feature behaviour).
     if (!m_postResize) {
-        return runKaizenCore(pInputFrame, ppOutputFrames, pOutputFrameNum, queue, wait_events, event);
+        return runAnime4kCore(pInputFrame, ppOutputFrames, pOutputFrameNum, queue, wait_events, event);
     }
     if (pInputFrame->ptr[0] == nullptr) {
         *pOutputFrameNum = 0;
         return RGY_ERR_NONE;
     }
-    // 1) Run the kaizen mode chain into its own (scale*src) buffer. Pass a null
+    // 1) Run the anime4k mode chain into its own (scale*src) buffer. Pass a null
     //    final event: the in-order OpenCL queue serialises the resize after the
     //    core, and the resize below signals the real completion event. Letting
-    //    coreOut[0] start null makes runKaizenCore assign its own m_frameBuf.
+    //    coreOut[0] start null makes runAnime4kCore assign its own m_frameBuf.
     RGYFrameInfo *coreOut[1] = { nullptr };
     int coreNum = 0;
-    auto cerr = runKaizenCore(pInputFrame, coreOut, &coreNum, queue, wait_events, nullptr);
+    auto cerr = runAnime4kCore(pInputFrame, coreOut, &coreNum, queue, wait_events, nullptr);
     if (cerr != RGY_ERR_NONE) {
         return cerr;
     }
@@ -1676,7 +1676,7 @@ RGY_ERR RGYFilterKaizen::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInf
     int resizeNum = 0;
     auto rerr = m_postResize->filter(coreOut[0], resizeOut, &resizeNum, queue, {}, event);
     if (rerr != RGY_ERR_NONE) {
-        AddMessage(RGY_LOG_ERROR, _T("kaizen end-of-chain resize failed: %s.\n"), get_err_mes(rerr));
+        AddMessage(RGY_LOG_ERROR, _T("anime4k end-of-chain resize failed: %s.\n"), get_err_mes(rerr));
         return rerr;
     }
     ppOutputFrames[0] = resizeOut[0];
@@ -1684,7 +1684,7 @@ RGY_ERR RGYFilterKaizen::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInf
     return RGY_ERR_NONE;
 }
 
-RGY_ERR RGYFilterKaizen::runKaizenCore(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
+RGY_ERR RGYFilterAnime4k::runAnime4kCore(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
                                      RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events,
                                      RGYOpenCLEvent *event) {
     if (pInputFrame->ptr[0] == nullptr) {
@@ -1695,7 +1695,7 @@ RGY_ERR RGYFilterKaizen::runKaizenCore(const RGYFrameInfo *pInputFrame, RGYFrame
         auto &outFrame = m_frameBuf[(m_frameIdx++) % m_frameBuf.size()];
         ppOutputFrames[0] = &outFrame->frame;
     }
-    auto prm = std::dynamic_pointer_cast<RGYFilterParamKaizen>(m_param);
+    auto prm = std::dynamic_pointer_cast<RGYFilterParamAnime4k>(m_param);
     if (!prm) {
         return RGY_ERR_INVALID_PARAM;
     }
@@ -1717,7 +1717,7 @@ RGY_ERR RGYFilterKaizen::runKaizenCore(const RGYFrameInfo *pInputFrame, RGYFrame
     RGYFrameInfo prefilteredSrcY = planeSrcY;
     const RGYFrameInfo *effectiveSrcY = &planeSrcY;
     std::vector<RGYOpenCLEvent> downstreamWaits = wait_events;
-    if (prm->kaizen.prefilterDenoise != VppKaizenDenoise::Off && m_prefilterPlane) {
+    if (prm->anime4k.prefilterDenoise != VppAnime4kDenoise::Off && m_prefilterPlane) {
         err = runPrefilterDenoise(&planeSrcY, queue, wait_events);
         if (err != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("prefilter denoise failed: %s\n"), get_err_mes(err));
@@ -1747,7 +1747,7 @@ RGY_ERR RGYFilterKaizen::runKaizenCore(const RGYFrameInfo *pInputFrame, RGYFrame
     // clamps each output pixel's Y at the bilinear-upsampled source
     // envelope. RGB-family modes already had their clamp applied inside
     // runPlaneRGB, so this hook is skipped for them.
-    if (prm->kaizen.clampHighlights && m_clampStatsMax) {
+    if (prm->anime4k.clampHighlights && m_clampStatsMax) {
         auto cerr = runClampHighlightsY(effectiveSrcY, &planeDstY, queue);
         if (cerr != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("clamp_highlights post-process (y) failed: %s\n"), get_err_mes(cerr));
@@ -1757,9 +1757,9 @@ RGY_ERR RGYFilterKaizen::runKaizenCore(const RGYFrameInfo *pInputFrame, RGYFrame
 
     // PixelClipper anti-ringing post-process (antiring=<0..1>, 0 = off). Clamps
     // the upscaled luma to the local 2x2 source envelope to remove ringing.
-    if (prm->kaizen.antiring > 0.0f) {
+    if (prm->anime4k.antiring > 0.0f) {
         auto aerr = runAntiring(effectiveSrcY, &planeDstY,
-                                clamp(prm->kaizen.antiring, 0.0f, 1.0f), queue);
+                                clamp(prm->anime4k.antiring, 0.0f, 1.0f), queue);
         if (aerr != RGY_ERR_NONE) {
             AddMessage(RGY_LOG_ERROR, _T("antiring post-process (y) failed: %s\n"), get_err_mes(aerr));
             return aerr;
@@ -1768,8 +1768,8 @@ RGY_ERR RGYFilterKaizen::runKaizenCore(const RGYFrameInfo *pInputFrame, RGYFrame
 
     // chroma_resize=joint: build the low-res luma guide once before the per-plane
     // chroma loop (the bilateral weights depend only on luma, shared by U and V).
-    const bool chromaJoint = (prm->kaizen.chromaResize == VppKaizenChromaResize::Joint
-                              && prm->kaizen.scale == 2 && prm->kaizen.chroma && m_chromaLumaLowres);
+    const bool chromaJoint = (prm->anime4k.chromaResize == VppAnime4kChromaResize::Joint
+                              && prm->anime4k.scale == 2 && prm->anime4k.chroma && m_chromaLumaLowres);
     if (chromaJoint) {
         err = runChromaLumaLowres(&planeSrcY, queue);
         if (err != RGY_ERR_NONE) {
@@ -1782,7 +1782,7 @@ RGY_ERR RGYFilterKaizen::runKaizenCore(const RGYFrameInfo *pInputFrame, RGYFrame
         auto planeDstC = getPlane(ppOutputFrames[0], (RGY_PLANE)i);
         auto planeSrcC = getPlane(pInputFrame,        (RGY_PLANE)i);
         RGYOpenCLEvent *plane_event = (i == planeCount - 1) ? event : nullptr;
-        if (prm->kaizen.scale == 1 || !prm->kaizen.chroma) {
+        if (prm->anime4k.scale == 1 || !prm->anime4k.chroma) {
             // scale=1 (or chroma=false): pass chroma through unchanged.
             err = m_cl->copyPlane(&planeDstC, &planeSrcC, nullptr, queue, {}, plane_event);
         } else if (chromaJoint) {
@@ -1798,7 +1798,7 @@ RGY_ERR RGYFilterKaizen::runKaizenCore(const RGYFrameInfo *pInputFrame, RGYFrame
     return RGY_ERR_NONE;
 }
 
-void RGYFilterKaizen::close() {
+void RGYFilterAnime4k::close() {
     m_postResize.reset();
     m_prefilterPlane.reset();
     m_prefilterRef.reset();
@@ -1830,7 +1830,7 @@ void RGYFilterKaizen::close() {
     m_chromaLowresPitch = m_chromaLowresW = m_chromaLowresH = 0;
     m_srcImagePool.clear();
     m_frameBuf.clear();
-    m_kaizen.clear();
+    m_anime4k.clear();
     m_cl.reset();
     m_frameIdx = 0;
 }

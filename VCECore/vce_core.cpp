@@ -86,7 +86,7 @@
 #include "rgy_filter_msmooth.h"
 #include "rgy_filter_subburn.h"
 #include "rgy_filter_unsharp.h"
-#include "rgy_filter_kaizen.h"
+#include "rgy_filter_anime4k.h"
 #include "rgy_filter_vinverse.h"
 #include "rgy_filter_chromashift.h"
 #include "rgy_filter_deblock.h"
@@ -1299,9 +1299,9 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
                 }
             }
             if (filterPipeline[i] != VppType::CL_CROP) {
-                int kaizenInstanceIdx = 0;
-                for (size_t j = 0; j < i; j++) if (filterPipeline[j] == VppType::CL_KAIZEN) kaizenInstanceIdx++;
-                auto err = AddFilterOpenCL(vppOpenCLFilters, inputFrame, filterPipeline[i], inputParam, inputCrop, resize, VuiFiltered, kaizenInstanceIdx);
+                int anime4kInstanceIdx = 0;
+                for (size_t j = 0; j < i; j++) if (filterPipeline[j] == VppType::CL_ANIME4K) anime4kInstanceIdx++;
+                auto err = AddFilterOpenCL(vppOpenCLFilters, inputFrame, filterPipeline[i], inputParam, inputCrop, resize, VuiFiltered, anime4kInstanceIdx);
                 if (err != RGY_ERR_NONE) {
                     return err;
                 }
@@ -1410,8 +1410,8 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.nlmeans.enable)       filterPipeline.push_back(VppType::CL_DENOISE_NLMEANS);
     if (inputParam->vpp.pmd.enable)           filterPipeline.push_back(VppType::CL_DENOISE_PMD);
     if (inputParam->vpp.hqdn3d.enable)        filterPipeline.push_back(VppType::CL_DENOISE_HQDN3D);
-    for (const auto& kaizenEntry : inputParam->vpp.kaizenChain) {
-        if (kaizenEntry.enable) filterPipeline.push_back(VppType::CL_KAIZEN);
+    for (const auto& anime4kEntry : inputParam->vpp.anime4kChain) {
+        if (anime4kEntry.enable) filterPipeline.push_back(VppType::CL_ANIME4K);
     }
     if (inputParam->vpp.descale.enable)       filterPipeline.push_back(VppType::CL_DESCALE);
     if (degrainLegacy)                        filterPipeline.push_back(VppType::CL_DEGRAIN);
@@ -2201,17 +2201,17 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         return RGY_ERR_NONE;
     }
     //nlmeans
-    //kaizen (hand-written GLSL luma refinement / 2x upscale)
-    if (vppType == VppType::CL_KAIZEN) {
+    //anime4k (hand-written GLSL luma refinement / 2x upscale)
+    if (vppType == VppType::CL_ANIME4K) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-        unique_ptr<RGYFilter> filter(new RGYFilterKaizen(m_dev->cl()));
-        shared_ptr<RGYFilterParamKaizen> param(new RGYFilterParamKaizen());
-        if (instanceIndex < 0 || instanceIndex >= (int)inputParam->vpp.kaizenChain.size()) {
-            PrintMes(RGY_LOG_ERROR, _T("kaizen: instanceIndex %d out of chain bounds (size %zu)\n"),
-                instanceIndex, inputParam->vpp.kaizenChain.size());
+        unique_ptr<RGYFilter> filter(new RGYFilterAnime4k(m_dev->cl()));
+        shared_ptr<RGYFilterParamAnime4k> param(new RGYFilterParamAnime4k());
+        if (instanceIndex < 0 || instanceIndex >= (int)inputParam->vpp.anime4kChain.size()) {
+            PrintMes(RGY_LOG_ERROR, _T("anime4k: instanceIndex %d out of chain bounds (size %zu)\n"),
+                instanceIndex, inputParam->vpp.anime4kChain.size());
             return RGY_ERR_INVALID_PARAM;
         }
-        param->kaizen = inputParam->vpp.kaizenChain[instanceIndex];
+        param->anime4k = inputParam->vpp.anime4kChain[instanceIndex];
         param->sar[0] = inputParam->input.sar[0];
         param->sar[1] = inputParam->input.sar[1];
         param->frameIn = inputFrame;

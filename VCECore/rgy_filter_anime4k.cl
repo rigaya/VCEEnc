@@ -53,7 +53,7 @@
 
 #define PIXEL_MAX  ((1 << (bit_depth)) - 1)
 #define RGY_FLT_EPS (1e-6f)
-#define KAIZEN_DVAL_THRESHOLD 0.1f
+#define ANIME4K_DVAL_THRESHOLD 0.1f
 
 // Polynomial-fit coefficients minimising MSE on the gradient-magnitude
 // curve. Cited from Anime4K_Upscale_Original_x2.glsl v3.2 lines 97-102.
@@ -68,10 +68,10 @@
 // Hardware bilinear gives the free 2x upscale when reading at the
 // 2x target grid; CLAMP_TO_EDGE matches the reference shader's
 // implicit edge behaviour at the source frame boundary.
-constant sampler_t kaizen_src_sampler =
+constant sampler_t anime4k_src_sampler =
     CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;
 
-static inline float kaizen_poly5(float x) {
+static inline float anime4k_poly5(float x) {
     float x2 = x * x;
     float x3 = x2 * x;
     float x4 = x2 * x2;
@@ -84,7 +84,7 @@ static inline float kaizen_poly5(float x) {
 // grid integer coordinates; out_w, out_h are output dims. For SCALE=2
 // the implicit step is half a source pixel, which is exactly what
 // hardware bilinear interpolates between source samples for.
-static inline float2 kaizen_src_coord(int ix, int iy, int out_w, int out_h) {
+static inline float2 anime4k_src_coord(int ix, int iy, int out_w, int out_h) {
     return (float2)(((float)ix + 0.5f) / (float)out_w,
                     ((float)iy + 0.5f) / (float)out_h);
 }
@@ -92,14 +92,14 @@ static inline float2 kaizen_src_coord(int ix, int iy, int out_w, int out_h) {
 // Forward declaration. Defined further down (next to the darken/thin
 // kernels that were its original first users); the Tier 1 chroma
 // kernels above the definition also need it, so declare it up-front.
-static inline float kaizen_read_y_norm(__global const uchar *pY, int pitch, int x, int y);
+static inline float anime4k_read_y_norm(__global const uchar *pY, int pitch, int x, int y);
 
 // Pass 2 (cite Anime4K_Upscale_Original_x2.glsl v3.2): horizontal Sobel
 // pre-pass. Reads three luma samples on a horizontal line via the
 // source sampler (hardware bilinear handles the SCALE=2 upscale
 // implicitly) and writes the partial Sobel (-l+r, l+2c+r) into the
 // LUMAD-partial scratch's .xy. .z and .w are zeroed.
-__kernel void kernel_kaizen_sobel_x(
+__kernel void kernel_anime4k_sobel_x(
     __global float4 *restrict pDstA, const int dstPitchFloats,
     __read_only image2d_t srcImage,
     const int srcW, const int srcH,
@@ -109,11 +109,11 @@ __kernel void kernel_kaizen_sobel_x(
     if (ix >= outW || iy >= outH) return;
 
     const float dx = 1.0f / (float)outW;
-    const float2 p = kaizen_src_coord(ix, iy, outW, outH);
+    const float2 p = anime4k_src_coord(ix, iy, outW, outH);
 
-    const float l = read_imagef(srcImage, kaizen_src_sampler, (float2)(p.x - dx, p.y)).x;
-    const float c = read_imagef(srcImage, kaizen_src_sampler, p).x;
-    const float r = read_imagef(srcImage, kaizen_src_sampler, (float2)(p.x + dx, p.y)).x;
+    const float l = read_imagef(srcImage, anime4k_src_sampler, (float2)(p.x - dx, p.y)).x;
+    const float c = read_imagef(srcImage, anime4k_src_sampler, p).x;
+    const float r = read_imagef(srcImage, anime4k_src_sampler, (float2)(p.x + dx, p.y)).x;
 
     const float xgrad = -l + r;
     const float ygrad = l + c + c + r;
@@ -128,7 +128,7 @@ __kernel void kernel_kaizen_sobel_x(
 // polynomial scaled by REFINE_STRENGTH to produce per-pixel dval.
 // Output scratchB.xy = (sobel_norm, dval); dval also lives in .y
 // for clarity. .z and .w zeroed.
-__kernel void kernel_kaizen_sobel_y(
+__kernel void kernel_anime4k_sobel_y(
     __global float4 *restrict pDstB, const int dstPitchFloats,
     __global const float4 *pSrcA, const int srcPitchFloats,
     const int outW, const int outH) {
@@ -147,7 +147,7 @@ __kernel void kernel_kaizen_sobel_y(
     const float ygrad = -t.y + b.y;
 
     const float sobel_norm = clamp(native_sqrt(xgrad * xgrad + ygrad * ygrad), 0.0f, 1.0f);
-    const float dval = clamp(kaizen_poly5(sobel_norm) * ANIME4K_REFINE_STRENGTH, 0.0f, 1.0f);
+    const float dval = clamp(anime4k_poly5(sobel_norm) * ANIME4K_REFINE_STRENGTH, 0.0f, 1.0f);
 
     pDstB[iy * dstPitchFloats + ix] = (float4)(sobel_norm, dval, 0.0f, 0.0f);
 }
@@ -158,7 +158,7 @@ __kernel void kernel_kaizen_sobel_y(
 // partial. Propagates dval (the .y component at the centre coord)
 // forward into the output .z so refine_y and apply have it without
 // rereading the LUMAD buffer.
-__kernel void kernel_kaizen_refine_x(
+__kernel void kernel_anime4k_refine_x(
     __global float4 *restrict pDstA, const int dstPitchFloats,
     __global const float4 *pSrcB, const int srcPitchFloats,
     const int outW, const int outH) {
@@ -168,7 +168,7 @@ __kernel void kernel_kaizen_refine_x(
 
     const float4 cval = pSrcB[iy * srcPitchFloats + ix];
     const float dval = cval.y;
-    if (dval < KAIZEN_DVAL_THRESHOLD) {
+    if (dval < ANIME4K_DVAL_THRESHOLD) {
         pDstA[iy * dstPitchFloats + ix] = (float4)(0.0f, 0.0f, dval, 0.0f);
         return;
     }
@@ -190,7 +190,7 @@ __kernel void kernel_kaizen_refine_x(
 // completion of LUMAMM, with norm normalisation. Reads the LUMAMM
 // partial at three vertical coords; output .xy is the normalised
 // gradient direction. dval is forwarded from the centre coord's .z.
-__kernel void kernel_kaizen_refine_y(
+__kernel void kernel_anime4k_refine_y(
     __global float4 *restrict pDstB, const int dstPitchFloats,
     __global const float4 *pSrcA, const int srcPitchFloats,
     const int outW, const int outH) {
@@ -200,7 +200,7 @@ __kernel void kernel_kaizen_refine_y(
 
     const float4 cval = pSrcA[iy * srcPitchFloats + ix];
     const float dval = cval.z;
-    if (dval < KAIZEN_DVAL_THRESHOLD) {
+    if (dval < ANIME4K_DVAL_THRESHOLD) {
         pDstB[iy * dstPitchFloats + ix] = (float4)(0.0f, 0.0f, dval, 0.0f);
         return;
     }
@@ -232,7 +232,7 @@ __kernel void kernel_kaizen_refine_y(
 // magnitude, then mix with the centre by dval. Final value is
 // denormalised to the output type / bit depth and stored in the
 // output luma plane.
-__kernel void kernel_kaizen_apply(
+__kernel void kernel_anime4k_apply(
     __global uchar *restrict pDstY, const int dstPitch,
     __read_only image2d_t srcImage,
     __global const float4 *pSrcB, const int srcPitchFloats,
@@ -243,21 +243,21 @@ __kernel void kernel_kaizen_apply(
 
     const float dx = 1.0f / (float)outW;
     const float dy = 1.0f / (float)outH;
-    const float2 p = kaizen_src_coord(ix, iy, outW, outH);
+    const float2 p = anime4k_src_coord(ix, iy, outW, outH);
 
-    const float center = read_imagef(srcImage, kaizen_src_sampler, p).x;
+    const float center = read_imagef(srcImage, anime4k_src_sampler, p).x;
 
     const float4 dc = pSrcB[iy * srcPitchFloats + ix];
     const float dval = dc.z;
 
     float result;
-    if (dval < KAIZEN_DVAL_THRESHOLD || fabs(dc.x + dc.y) <= 0.0001f) {
+    if (dval < ANIME4K_DVAL_THRESHOLD || fabs(dc.x + dc.y) <= 0.0001f) {
         result = center;
     } else {
         const float xstep = -sign(dc.x) * dx;
         const float ystep = -sign(dc.y) * dy;
-        const float xval = read_imagef(srcImage, kaizen_src_sampler, (float2)(p.x + xstep, p.y)).x;
-        const float yval = read_imagef(srcImage, kaizen_src_sampler, (float2)(p.x, p.y + ystep)).x;
+        const float xval = read_imagef(srcImage, anime4k_src_sampler, (float2)(p.x + xstep, p.y)).x;
+        const float yval = read_imagef(srcImage, anime4k_src_sampler, (float2)(p.x, p.y + ystep)).x;
         const float adx = fabs(dc.x);
         const float ady = fabs(dc.y);
         const float xyratio = adx / (adx + ady + RGY_FLT_EPS);
@@ -281,15 +281,15 @@ __kernel void kernel_kaizen_apply(
 // This is plain geometric resize, not luma-guided.
 
 // 3.14159265358979323846 is mathematical fact, not copyrightable.
-#define KAIZEN_PI_F 3.14159265358979323846f
+#define ANIME4K_PI_F 3.14159265358979323846f
 
-static inline float kaizen_sinc(float x) {
+static inline float anime4k_sinc(float x) {
     if (fabs(x) < 1e-9f) return 1.0f;
-    const float px = KAIZEN_PI_F * x;
+    const float px = ANIME4K_PI_F * x;
     return native_sin(px) / px;
 }
 
-static inline float kaizen_chroma_weight(int chromaMode, float x) {
+static inline float anime4k_chroma_weight(int chromaMode, float x) {
     const float ax = fabs(x);
     if (chromaMode == 1) {                       // bilinear (2-tap)
         return (ax < 1.0f) ? (1.0f - ax) : 0.0f;
@@ -309,7 +309,7 @@ static inline float kaizen_chroma_weight(int chromaMode, float x) {
         return 0.0f;
     } else if (chromaMode == 3) {                // lanczos3 (6-tap)
         if (ax < 3.0f) {
-            return kaizen_sinc(x) * kaizen_sinc(x / 3.0f);
+            return anime4k_sinc(x) * anime4k_sinc(x / 3.0f);
         }
         return 0.0f;
     } else {                                     // spline36 (6-tap)
@@ -324,9 +324,9 @@ static inline float kaizen_chroma_weight(int chromaMode, float x) {
     }
 }
 
-#define KAIZEN_CHROMA_TAPS 6
+#define ANIME4K_CHROMA_TAPS 6
 
-__kernel void kernel_kaizen_chroma_resize(
+__kernel void kernel_anime4k_chroma_resize(
     __global uchar *restrict pDstC, const int dstPitch,
     const int dstW, const int dstH,
     __global const uchar *pSrcC, const int srcPitch,
@@ -343,7 +343,7 @@ __kernel void kernel_kaizen_chroma_resize(
 
     // `half` is an OpenCL reserved type name (FP16), so the kernel
     // half-width is named kernel_half to avoid shadowing the type.
-    const int taps = (chromaMode == 1) ? 2 : ((chromaMode == 2) ? 4 : KAIZEN_CHROMA_TAPS);
+    const int taps = (chromaMode == 1) ? 2 : ((chromaMode == 2) ? 4 : ANIME4K_CHROMA_TAPS);
     const int kernel_half = taps / 2;
     const int t0 = 1 - kernel_half;
     const int t1 = kernel_half;
@@ -352,10 +352,10 @@ __kernel void kernel_kaizen_chroma_resize(
     float wsum = 0.0f;
     for (int dy = t0; dy <= t1; ++dy) {
         const int sy_c = clamp(syi + dy, 0, srcH - 1);
-        const float wy = kaizen_chroma_weight(chromaMode, (float)dy - (sy - (float)syi));
+        const float wy = anime4k_chroma_weight(chromaMode, (float)dy - (sy - (float)syi));
         for (int dx = t0; dx <= t1; ++dx) {
             const int sx_c = clamp(sxi + dx, 0, srcW - 1);
-            const float wx = kaizen_chroma_weight(chromaMode, (float)dx - (sx - (float)sxi));
+            const float wx = anime4k_chroma_weight(chromaMode, (float)dx - (sx - (float)sxi));
             const float w = wx * wy;
             const Type s = *(const __global Type *)(pSrcC + sy_c * srcPitch + sx_c * sizeof(Type));
             const float v = (float)s * (1.0f / (float)PIXEL_MAX);
@@ -380,7 +380,7 @@ __kernel void kernel_kaizen_chroma_resize(
 
 // Pass 1: box-downscale the source luma (lumaW x lumaH) to chroma resolution
 // (lowW x lowH) for the bilateral intensity-similarity term.
-__kernel void kernel_kaizen_chroma_luma_lowres(
+__kernel void kernel_anime4k_chroma_luma_lowres(
     __global uchar *restrict pLow, const int lowPitch,
     const int lowW, const int lowH,
     __global const uchar *pLuma,   const int lumaPitch,
@@ -392,10 +392,10 @@ __kernel void kernel_kaizen_chroma_luma_lowres(
     const int ly  = min(iy * 2,     lumaH - 1);
     const int lx1 = min(lx + 1,     lumaW - 1);
     const int ly1 = min(ly + 1,     lumaH - 1);
-    const float avg = 0.25f * (kaizen_read_y_norm(pLuma, lumaPitch, lx,  ly)
-                             + kaizen_read_y_norm(pLuma, lumaPitch, lx1, ly)
-                             + kaizen_read_y_norm(pLuma, lumaPitch, lx,  ly1)
-                             + kaizen_read_y_norm(pLuma, lumaPitch, lx1, ly1));
+    const float avg = 0.25f * (anime4k_read_y_norm(pLuma, lumaPitch, lx,  ly)
+                             + anime4k_read_y_norm(pLuma, lumaPitch, lx1, ly)
+                             + anime4k_read_y_norm(pLuma, lumaPitch, lx,  ly1)
+                             + anime4k_read_y_norm(pLuma, lumaPitch, lx1, ly1));
     __global Type *ptr = (__global Type *)(pLow + iy * lowPitch + ix * sizeof(Type));
     ptr[0] = (Type)(avg * (float)PIXEL_MAX + 0.5f);
 }
@@ -406,7 +406,7 @@ __kernel void kernel_kaizen_chroma_luma_lowres(
 // int_coeff are FastBilateral's defaults (2.0 / 128.0). Runs once per chroma
 // plane (U, V); the weights depend only on luma so both planes get the same
 // envelope.
-__kernel void kernel_kaizen_chroma_joint_bilateral(
+__kernel void kernel_anime4k_chroma_joint_bilateral(
     __global uchar *restrict pDstC, const int dstPitch,
     const int dstW, const int dstH,
     __global const uchar *pSrcC,  const int srcPitch,
@@ -417,7 +417,7 @@ __kernel void kernel_kaizen_chroma_joint_bilateral(
     const int ix = get_global_id(0);
     const int iy = get_global_id(1);
     if (ix >= dstW || iy >= dstH) return;
-    const float luma_zero = kaizen_read_y_norm(pLuma, lumaPitch, ix, iy);
+    const float luma_zero = anime4k_read_y_norm(pLuma, lumaPitch, ix, iy);
     const float px = ((float)ix + 0.5f) * (float)srcW / (float)dstW - 0.5f;
     const float py = ((float)iy + 0.5f) * (float)srcH / (float)dstH - 0.5f;
     const int fx = (int)floor(px);
@@ -429,8 +429,8 @@ __kernel void kernel_kaizen_chroma_joint_bilateral(
         for (int i = 0; i < 2; ++i) {
             const int cx = clamp(fx + i, 0, srcW - 1);
             const int cy = clamp(fy + j, 0, srcH - 1);
-            const float chroma = kaizen_read_y_norm(pSrcC, srcPitch, cx, cy);
-            const float lowl   = kaizen_read_y_norm(pLow,  lowPitch, cx, cy);
+            const float chroma = anime4k_read_y_norm(pSrcC, srcPitch, cx, cy);
+            const float lowl   = anime4k_read_y_norm(pLow,  lowPitch, cx, cy);
             const float sdx = (float)i - frx;
             const float sdy = (float)j - fry;
             const float idiff = luma_zero - lowl;
@@ -516,11 +516,11 @@ __kernel void kernel_kaizen_chroma_joint_bilateral(
 #ifndef ANIME4K_DOG_NOISE_THRESHOLD
 #define ANIME4K_DOG_NOISE_THRESHOLD  0.001f
 #endif
-#define KAIZEN_REF_HEIGHT       1080.0f
-#define KAIZEN_GAUSS_MAX_RADIUS 12      // safety cap; covers sigma <= 4 (~4K)
+#define ANIME4K_REF_HEIGHT       1080.0f
+#define ANIME4K_GAUSS_MAX_RADIUS 12      // safety cap; covers sigma <= 4 (~4K)
 
 // Scratch element type for the darken / thin chains. half (FP16) is
-// selected at JIT time via -D KAIZEN_SCRATCH_FP16=1 when the OpenCL
+// selected at JIT time via -D ANIME4K_SCRATCH_FP16=1 when the OpenCL
 // device advertises cl_khr_fp16; the kernel signatures use SCRATCH_BUF_T
 // as the buffer's element type so the same kernel source compiles
 // against either FP32 or FP16 scratch.
@@ -533,10 +533,10 @@ __kernel void kernel_kaizen_chroma_joint_bilateral(
 //
 // The base chain's m_scratchA / m_scratchB are not affected by this
 // macro -- those buffers are float4 always and the polynomial P5..P0
-// in `kaizen_poly5` needs full FP32 precision (worst-case
+// in `anime4k_poly5` needs full FP32 precision (worst-case
 // intermediate magnitude ~170; FP16 absolute precision at that
 // magnitude is ~0.17, ~40x the 1/255 quantisation step).
-#if defined(KAIZEN_SCRATCH_FP16) && KAIZEN_SCRATCH_FP16
+#if defined(ANIME4K_SCRATCH_FP16) && ANIME4K_SCRATCH_FP16
 #define SCRATCH_ELEM_T half
 #define SCRATCH_LOAD4(pBase, idx) vload_half4((idx), (__global const half *)(pBase))
 #define SCRATCH_STORE4(val, pBase, idx) vstore_half4((val), (idx), (__global half *)(pBase))
@@ -548,14 +548,14 @@ __kernel void kernel_kaizen_chroma_joint_bilateral(
 
 // Pixel-domain Gaussian weight: w(d) = exp(-0.5 * (d/sigma)^2). Caller
 // normalises by the running sum so the weights need not be pre-normalised.
-static inline float kaizen_gauss_w(float d, float sigma) {
+static inline float anime4k_gauss_w(float d, float sigma) {
     const float s = d / sigma;
     return native_exp(-0.5f * s * s);
 }
 
 // Read pDstY[x,y] as a float in [0, 1]. Used by every darken/thin kernel
 // that touches the output luma plane.
-static inline float kaizen_read_y_norm(__global const uchar *pY, int pitch, int x, int y) {
+static inline float anime4k_read_y_norm(__global const uchar *pY, int pitch, int x, int y) {
     const Type v = *(const __global Type *)(pY + y * pitch + x * sizeof(Type));
     return (float)v * (1.0f / (float)PIXEL_MAX);
 }
@@ -566,7 +566,7 @@ static inline float kaizen_read_y_norm(__global const uchar *pY, int pitch, int 
 
 // Darken pass 1 (cite Anime4K_Darken_HQ.glsl v3.2): separable horizontal
 // Gaussian blur of the post-apply luma plane. Writes float to scratchA.x.
-__kernel void kernel_kaizen_darken_gauss1_x(
+__kernel void kernel_anime4k_darken_gauss1_x(
     __global SCRATCH_ELEM_T *restrict pDstA, const int dstPitchFloats,
     __global const uchar *pSrcY, const int srcPitch,
     const int outW, const int outH) {
@@ -574,16 +574,16 @@ __kernel void kernel_kaizen_darken_gauss1_x(
     const int iy = get_global_id(1);
     if (ix >= outW || iy >= outH) return;
 
-    const float sigma = ANIME4K_DARKEN_SIGMA_REF * (float)outH / KAIZEN_REF_HEIGHT;
+    const float sigma = ANIME4K_DARKEN_SIGMA_REF * (float)outH / ANIME4K_REF_HEIGHT;
     const int radius = max((int)ceil(sigma * 2.0f), 1);
-    const int r = min(radius, KAIZEN_GAUSS_MAX_RADIUS);
+    const int r = min(radius, ANIME4K_GAUSS_MAX_RADIUS);
 
     float acc = 0.0f;
     float wsum = 0.0f;
     for (int dx = -r; dx <= r; ++dx) {
         const int xx = clamp(ix + dx, 0, outW - 1);
-        const float w = kaizen_gauss_w((float)dx, sigma);
-        acc  += kaizen_read_y_norm(pSrcY, srcPitch, xx, iy) * w;
+        const float w = anime4k_gauss_w((float)dx, sigma);
+        acc  += anime4k_read_y_norm(pSrcY, srcPitch, xx, iy) * w;
         wsum += w;
     }
     SCRATCH_STORE4((float4)(acc / wsum, 0.0f, 0.0f, 0.0f), pDstA, iy * dstPitchFloats + ix);
@@ -595,7 +595,7 @@ __kernel void kernel_kaizen_darken_gauss1_x(
 // Only the negative half of the difference is kept, so subsequent
 // passes act on dark lines only (the negative offset, added back later
 // with positive STRENGTH, darkens line interiors).
-__kernel void kernel_kaizen_darken_dog_y(
+__kernel void kernel_anime4k_darken_dog_y(
     __global SCRATCH_ELEM_T *restrict pDstB, const int dstPitchFloats,
     __global const SCRATCH_ELEM_T *pSrcA, const int srcPitchFloats,
     __global const uchar *pSrcY, const int srcPitch,
@@ -604,27 +604,27 @@ __kernel void kernel_kaizen_darken_dog_y(
     const int iy = get_global_id(1);
     if (ix >= outW || iy >= outH) return;
 
-    const float sigma = ANIME4K_DARKEN_SIGMA_REF * (float)outH / KAIZEN_REF_HEIGHT;
+    const float sigma = ANIME4K_DARKEN_SIGMA_REF * (float)outH / ANIME4K_REF_HEIGHT;
     const int radius = max((int)ceil(sigma * 2.0f), 1);
-    const int r = min(radius, KAIZEN_GAUSS_MAX_RADIUS);
+    const int r = min(radius, ANIME4K_GAUSS_MAX_RADIUS);
 
     float acc = 0.0f;
     float wsum = 0.0f;
     for (int dy = -r; dy <= r; ++dy) {
         const int yy = clamp(iy + dy, 0, outH - 1);
-        const float w = kaizen_gauss_w((float)dy, sigma);
+        const float w = anime4k_gauss_w((float)dy, sigma);
         acc  += SCRATCH_LOAD4(pSrcA, yy * srcPitchFloats + ix).x * w;
         wsum += w;
     }
     const float blur = acc / wsum;
-    const float luma = kaizen_read_y_norm(pSrcY, srcPitch, ix, iy);
+    const float luma = anime4k_read_y_norm(pSrcY, srcPitch, ix, iy);
     const float dog_dark = fmin(luma - blur, 0.0f);
     SCRATCH_STORE4((float4)(dog_dark, 0.0f, 0.0f, 0.0f), pDstB, iy * dstPitchFloats + ix);
 }
 
 // Darken pass 3 (cite Anime4K_Darken_HQ.glsl v3.2): horizontal Gaussian
 // smoothing of the DoG dark-edge mask. Writes float to scratchA.x.
-__kernel void kernel_kaizen_darken_gauss2_x(
+__kernel void kernel_anime4k_darken_gauss2_x(
     __global SCRATCH_ELEM_T *restrict pDstA, const int dstPitchFloats,
     __global const SCRATCH_ELEM_T *pSrcB, const int srcPitchFloats,
     const int outW, const int outH) {
@@ -632,15 +632,15 @@ __kernel void kernel_kaizen_darken_gauss2_x(
     const int iy = get_global_id(1);
     if (ix >= outW || iy >= outH) return;
 
-    const float sigma = ANIME4K_DARKEN_SIGMA_REF * (float)outH / KAIZEN_REF_HEIGHT;
+    const float sigma = ANIME4K_DARKEN_SIGMA_REF * (float)outH / ANIME4K_REF_HEIGHT;
     const int radius = max((int)ceil(sigma * 2.0f), 1);
-    const int r = min(radius, KAIZEN_GAUSS_MAX_RADIUS);
+    const int r = min(radius, ANIME4K_GAUSS_MAX_RADIUS);
 
     float acc = 0.0f;
     float wsum = 0.0f;
     for (int dx = -r; dx <= r; ++dx) {
         const int xx = clamp(ix + dx, 0, outW - 1);
-        const float w = kaizen_gauss_w((float)dx, sigma);
+        const float w = anime4k_gauss_w((float)dx, sigma);
         acc  += SCRATCH_LOAD4(pSrcB, iy * srcPitchFloats + xx).x * w;
         wsum += w;
     }
@@ -652,7 +652,7 @@ __kernel void kernel_kaizen_darken_gauss2_x(
 // horizontal-blur from passes 2-3) and the current Y plane; writes back
 // to Y with `Y + smoothed * STRENGTH`. STRENGTH=1.5 matches reference.
 // Because dog_dark is non-positive, the addition darkens line interiors.
-__kernel void kernel_kaizen_darken_apply_y(
+__kernel void kernel_anime4k_darken_apply_y(
     __global uchar *restrict pDstY, const int dstPitch,
     __global const SCRATCH_ELEM_T *pSrcA, const int srcPitchFloats,
     const int outW, const int outH) {
@@ -660,20 +660,20 @@ __kernel void kernel_kaizen_darken_apply_y(
     const int iy = get_global_id(1);
     if (ix >= outW || iy >= outH) return;
 
-    const float sigma = ANIME4K_DARKEN_SIGMA_REF * (float)outH / KAIZEN_REF_HEIGHT;
+    const float sigma = ANIME4K_DARKEN_SIGMA_REF * (float)outH / ANIME4K_REF_HEIGHT;
     const int radius = max((int)ceil(sigma * 2.0f), 1);
-    const int r = min(radius, KAIZEN_GAUSS_MAX_RADIUS);
+    const int r = min(radius, ANIME4K_GAUSS_MAX_RADIUS);
 
     float acc = 0.0f;
     float wsum = 0.0f;
     for (int dy = -r; dy <= r; ++dy) {
         const int yy = clamp(iy + dy, 0, outH - 1);
-        const float w = kaizen_gauss_w((float)dy, sigma);
+        const float w = anime4k_gauss_w((float)dy, sigma);
         acc  += SCRATCH_LOAD4(pSrcA, yy * srcPitchFloats + ix).x * w;
         wsum += w;
     }
     const float smoothed = acc / wsum;
-    const float luma = kaizen_read_y_norm(pDstY, dstPitch, ix, iy);
+    const float luma = anime4k_read_y_norm(pDstY, dstPitch, ix, iy);
     float result = luma + smoothed * ANIME4K_DARKEN_STRENGTH;
     result = clamp(result, 0.0f, 1.0f);
 
@@ -695,7 +695,7 @@ __kernel void kernel_kaizen_darken_apply_y(
 // original two-pass chain. Writes the shaped magnitude `pow(norm, 0.7)`
 // to .x of the destination scratch -- equivalent to original sobel_y
 // output. No SLM used.
-__kernel void kernel_kaizen_thin_sobel_xy(
+__kernel void kernel_anime4k_thin_sobel_xy(
     __global SCRATCH_ELEM_T *restrict pDstB, const int dstPitchFloats,
     __global const uchar *pSrcY, const int srcPitch,
     const int outW, const int outH) {
@@ -712,15 +712,15 @@ __kernel void kernel_kaizen_thin_sobel_xy(
     // partial is (xgrad_row, ygrad_row); the vertical Sobel completion
     // then combines the three rows' partials with the canonical
     // (1, 2, 1) / (-1, 0, 1) weights divided by 8.
-    const float l_t = kaizen_read_y_norm(pSrcY, srcPitch, ix_l, iy_t);
-    const float c_t = kaizen_read_y_norm(pSrcY, srcPitch, ix,   iy_t);
-    const float r_t = kaizen_read_y_norm(pSrcY, srcPitch, ix_r, iy_t);
-    const float l_c = kaizen_read_y_norm(pSrcY, srcPitch, ix_l, iy);
-    const float c_c = kaizen_read_y_norm(pSrcY, srcPitch, ix,   iy);
-    const float r_c = kaizen_read_y_norm(pSrcY, srcPitch, ix_r, iy);
-    const float l_b = kaizen_read_y_norm(pSrcY, srcPitch, ix_l, iy_b);
-    const float c_b = kaizen_read_y_norm(pSrcY, srcPitch, ix,   iy_b);
-    const float r_b = kaizen_read_y_norm(pSrcY, srcPitch, ix_r, iy_b);
+    const float l_t = anime4k_read_y_norm(pSrcY, srcPitch, ix_l, iy_t);
+    const float c_t = anime4k_read_y_norm(pSrcY, srcPitch, ix,   iy_t);
+    const float r_t = anime4k_read_y_norm(pSrcY, srcPitch, ix_r, iy_t);
+    const float l_c = anime4k_read_y_norm(pSrcY, srcPitch, ix_l, iy);
+    const float c_c = anime4k_read_y_norm(pSrcY, srcPitch, ix,   iy);
+    const float r_c = anime4k_read_y_norm(pSrcY, srcPitch, ix_r, iy);
+    const float l_b = anime4k_read_y_norm(pSrcY, srcPitch, ix_l, iy_b);
+    const float c_b = anime4k_read_y_norm(pSrcY, srcPitch, ix,   iy_b);
+    const float r_b = anime4k_read_y_norm(pSrcY, srcPitch, ix_r, iy_b);
 
     // Horizontal partials per row: xgrad = -l + r; ygrad = l + 2c + r.
     const float xg_t = -l_t + r_t;
@@ -741,7 +741,7 @@ __kernel void kernel_kaizen_thin_sobel_xy(
 
 // Thin pass 3 (cite Anime4K_Thin_HQ.glsl v3.2, "Gaussian-X"): horizontal
 // Gaussian smoothing of the shaped Sobel magnitude. sigma = 2 * h / 1080.
-__kernel void kernel_kaizen_thin_gauss_x(
+__kernel void kernel_anime4k_thin_gauss_x(
     __global SCRATCH_ELEM_T *restrict pDstA, const int dstPitchFloats,
     __global const SCRATCH_ELEM_T *pSrcB, const int srcPitchFloats,
     const int outW, const int outH) {
@@ -749,15 +749,15 @@ __kernel void kernel_kaizen_thin_gauss_x(
     const int iy = get_global_id(1);
     if (ix >= outW || iy >= outH) return;
 
-    const float sigma = ANIME4K_THIN_SIGMA_REF * (float)outH / KAIZEN_REF_HEIGHT;
+    const float sigma = ANIME4K_THIN_SIGMA_REF * (float)outH / ANIME4K_REF_HEIGHT;
     const int radius = max((int)ceil(sigma * 2.0f), 1);
-    const int r = min(radius, KAIZEN_GAUSS_MAX_RADIUS);
+    const int r = min(radius, ANIME4K_GAUSS_MAX_RADIUS);
 
     float acc = 0.0f;
     float wsum = 0.0f;
     for (int dx = -r; dx <= r; ++dx) {
         const int xx = clamp(ix + dx, 0, outW - 1);
-        const float w = kaizen_gauss_w((float)dx, sigma);
+        const float w = anime4k_gauss_w((float)dx, sigma);
         acc  += SCRATCH_LOAD4(pSrcB, iy * srcPitchFloats + xx).x * w;
         wsum += w;
     }
@@ -766,7 +766,7 @@ __kernel void kernel_kaizen_thin_gauss_x(
 
 // Thin pass 4 (cite Anime4K_Thin_HQ.glsl v3.2, "Gaussian-Y"): vertical
 // Gaussian completion of the shaped Sobel magnitude.
-__kernel void kernel_kaizen_thin_gauss_y(
+__kernel void kernel_anime4k_thin_gauss_y(
     __global SCRATCH_ELEM_T *restrict pDstB, const int dstPitchFloats,
     __global const SCRATCH_ELEM_T *pSrcA, const int srcPitchFloats,
     const int outW, const int outH) {
@@ -774,15 +774,15 @@ __kernel void kernel_kaizen_thin_gauss_y(
     const int iy = get_global_id(1);
     if (ix >= outW || iy >= outH) return;
 
-    const float sigma = ANIME4K_THIN_SIGMA_REF * (float)outH / KAIZEN_REF_HEIGHT;
+    const float sigma = ANIME4K_THIN_SIGMA_REF * (float)outH / ANIME4K_REF_HEIGHT;
     const int radius = max((int)ceil(sigma * 2.0f), 1);
-    const int r = min(radius, KAIZEN_GAUSS_MAX_RADIUS);
+    const int r = min(radius, ANIME4K_GAUSS_MAX_RADIUS);
 
     float acc = 0.0f;
     float wsum = 0.0f;
     for (int dy = -r; dy <= r; ++dy) {
         const int yy = clamp(iy + dy, 0, outH - 1);
-        const float w = kaizen_gauss_w((float)dy, sigma);
+        const float w = anime4k_gauss_w((float)dy, sigma);
         acc  += SCRATCH_LOAD4(pSrcA, yy * srcPitchFloats + ix).x * w;
         wsum += w;
     }
@@ -796,7 +796,7 @@ __kernel void kernel_kaizen_thin_gauss_y(
 // signed (xgrad, ygrad) flow field to .xy of the destination scratch.
 // No norm / pow on this pass -- the reference keeps the signed
 // gradient direction for the subsequent warp. No SLM used.
-__kernel void kernel_kaizen_thin_kernel_xy(
+__kernel void kernel_anime4k_thin_kernel_xy(
     __global SCRATCH_ELEM_T *restrict pDstA, const int dstPitchFloats,
     __global const SCRATCH_ELEM_T *pSrcB, const int srcPitchFloats,
     const int outW, const int outH) {
@@ -842,7 +842,7 @@ __kernel void kernel_kaizen_thin_kernel_xy(
 // scratch via manual bilinear interpolation and writes pDstY in place;
 // we must not read pDstY at sub-pixel positions while concurrently
 // writing it.
-__kernel void kernel_kaizen_thin_copy_y_to_ref(
+__kernel void kernel_anime4k_thin_copy_y_to_ref(
     __global SCRATCH_ELEM_T *restrict pDstA, const int dstPitchFloats,
     __global const uchar *pSrcY, const int srcPitch,
     const int outW, const int outH) {
@@ -850,17 +850,17 @@ __kernel void kernel_kaizen_thin_copy_y_to_ref(
     const int iy = get_global_id(1);
     if (ix >= outW || iy >= outH) return;
 
-    const float v = kaizen_read_y_norm(pSrcY, srcPitch, ix, iy);
+    const float v = anime4k_read_y_norm(pSrcY, srcPitch, ix, iy);
     SCRATCH_STORE4((float4)(v, 0.0f, 0.0f, 0.0f), pDstA, iy * dstPitchFloats + ix);
 }
 
 // Manual bilinear sample of the .x component of a float4 buffer at
 // fractional pixel coordinates (fx, fy). Used by the warp pass for the
 // Y reference and (when the flow buffer is at downsampled resolution
-// for the Fast / VeryFast tiers) by kaizen_bilinear_xy below.
+// for the Fast / VeryFast tiers) by anime4k_bilinear_xy below.
 // Equivalent to a hardware CLK_FILTER_LINEAR + CLK_ADDRESS_CLAMP_TO_EDGE
 // sampler on a buffer.
-static inline float kaizen_bilinear_x(__global const SCRATCH_ELEM_T *buf, int pitchFloats,
+static inline float anime4k_bilinear_x(__global const SCRATCH_ELEM_T *buf, int pitchFloats,
                                        int w, int h, float fx, float fy) {
     const int x0 = clamp((int)floor(fx), 0, w - 1);
     const int y0 = clamp((int)floor(fy), 0, h - 1);
@@ -883,7 +883,7 @@ static inline float kaizen_bilinear_x(__global const SCRATCH_ELEM_T *buf, int pi
 // field when it lives at a lower resolution than the output (Fast and
 // VeryFast tiers); for the HQ tier the caller passes integer coords
 // and this collapses to a single texel read.
-static inline float2 kaizen_bilinear_xy(__global const SCRATCH_ELEM_T *buf, int pitchFloats,
+static inline float2 anime4k_bilinear_xy(__global const SCRATCH_ELEM_T *buf, int pitchFloats,
                                          int w, int h, float fx, float fy) {
     const int x0 = clamp((int)floor(fx), 0, w - 1);
     const int y0 = clamp((int)floor(fy), 0, h - 1);
@@ -916,7 +916,7 @@ static inline float2 kaizen_bilinear_xy(__global const SCRATCH_ELEM_T *buf, int 
 // the HQ tier flowW=outW and flowH=outH so the flow read is at integer
 // coords. For Fast / VeryFast the flow buffer is half / quarter sized
 // and the flow read bilinear-interpolates.
-__kernel void kernel_kaizen_thin_warp(
+__kernel void kernel_anime4k_thin_warp(
     __global uchar *restrict pDstY, const int dstPitch,
     __global const SCRATCH_ELEM_T *pSrcA, const int srcAPitchFloats,
     __global const SCRATCH_ELEM_T *pSrcB, const int srcBPitchFloats,
@@ -926,14 +926,14 @@ __kernel void kernel_kaizen_thin_warp(
     const int iy = get_global_id(1);
     if (ix >= outW || iy >= outH) return;
 
-    const float relstr = (float)outH / KAIZEN_REF_HEIGHT * ANIME4K_THIN_STRENGTH;
+    const float relstr = (float)outH / ANIME4K_REF_HEIGHT * ANIME4K_THIN_STRENGTH;
 
     // Map output-grid coord into flow-buffer coord space; collapses to
     // (ix, iy) when flowW=outW. The -0.5 / +0.5 adjustment puts both
     // grids on a half-integer texel-centre convention.
     const float fx_flow = ((float)ix + 0.5f) * (float)flowW / (float)outW - 0.5f;
     const float fy_flow = ((float)iy + 0.5f) * (float)flowH / (float)outH - 0.5f;
-    const float2 flow = kaizen_bilinear_xy(pSrcB, srcBPitchFloats, flowW, flowH, fx_flow, fy_flow);
+    const float2 flow = anime4k_bilinear_xy(pSrcB, srcBPitchFloats, flowW, flowH, fx_flow, fy_flow);
     const float dnx = flow.x;
     const float dny = flow.y;
     const float invlen = 1.0f / (native_sqrt(dnx * dnx + dny * dny) + 0.01f);
@@ -942,7 +942,7 @@ __kernel void kernel_kaizen_thin_warp(
 
     const float fx = (float)ix - ddx;
     const float fy = (float)iy - ddy;
-    float result = kaizen_bilinear_x(pSrcA, srcAPitchFloats, outW, outH, fx, fy);
+    float result = anime4k_bilinear_x(pSrcA, srcAPitchFloats, outW, outH, fx, fy);
     result = clamp(result, 0.0f, 1.0f);
 
     __global Type *ptr = (__global Type *)(pDstY + iy * dstPitch + ix * sizeof(Type));
@@ -974,14 +974,14 @@ __kernel void kernel_kaizen_thin_warp(
 //
 // The thin chain doesn't need a smooth_y / upsample_apply pair because
 // its final pass is already a warp at full res that reads the flow
-// scratch via bilinear interpolation (see kernel_kaizen_thin_warp).
+// scratch via bilinear interpolation (see kernel_anime4k_thin_warp).
 
 // Box-average downsample of the Y plane to a work-resolution copy.
 // box=2 produces half-res (Fast), box=4 produces quarter-res (VeryFast).
 // Output type matches the source (uchar / ushort, selected via the
 // Type / bit_depth defines) so the downstream kernels can read it the
 // same way they read the full-res Y plane.
-__kernel void kernel_kaizen_downsample_y(
+__kernel void kernel_anime4k_downsample_y(
     __global uchar *restrict pDstY, const int dstPitch,
     __global const uchar *pSrcY, const int srcPitch,
     const int dstW, const int dstH,
@@ -1011,10 +1011,10 @@ __kernel void kernel_kaizen_downsample_y(
 
 // Darken Fast / VeryFast pass 4: vertical Gaussian smoothing of the
 // DoG mask, with NO apply step (the apply happens later at full res
-// via darken_upsample_apply). Equivalent to kernel_kaizen_darken_apply_y
+// via darken_upsample_apply). Equivalent to kernel_anime4k_darken_apply_y
 // minus the final pDstY write; writes the smoothed mask back to a
 // float4 scratch instead.
-__kernel void kernel_kaizen_darken_smooth_y(
+__kernel void kernel_anime4k_darken_smooth_y(
     __global SCRATCH_ELEM_T *restrict pDstB, const int dstPitchFloats,
     __global const SCRATCH_ELEM_T *pSrcA, const int srcPitchFloats,
     const int outW, const int outH) {
@@ -1022,15 +1022,15 @@ __kernel void kernel_kaizen_darken_smooth_y(
     const int iy = get_global_id(1);
     if (ix >= outW || iy >= outH) return;
 
-    const float sigma = ANIME4K_DARKEN_SIGMA_REF * (float)outH / KAIZEN_REF_HEIGHT;
+    const float sigma = ANIME4K_DARKEN_SIGMA_REF * (float)outH / ANIME4K_REF_HEIGHT;
     const int radius = max((int)ceil(sigma * 2.0f), 1);
-    const int r = min(radius, KAIZEN_GAUSS_MAX_RADIUS);
+    const int r = min(radius, ANIME4K_GAUSS_MAX_RADIUS);
 
     float acc = 0.0f;
     float wsum = 0.0f;
     for (int dy = -r; dy <= r; ++dy) {
         const int yy = clamp(iy + dy, 0, outH - 1);
-        const float w = kaizen_gauss_w((float)dy, sigma);
+        const float w = anime4k_gauss_w((float)dy, sigma);
         acc  += SCRATCH_LOAD4(pSrcA, yy * srcPitchFloats + ix).x * w;
         wsum += w;
     }
@@ -1041,7 +1041,7 @@ __kernel void kernel_kaizen_darken_smooth_y(
 // resolution (workW x workH) via bilinear interpolation, then add
 // STRENGTH * smoothed to the full-resolution Y plane. dog_dark is
 // non-positive throughout, so STRENGTH > 0 darkens line interiors.
-__kernel void kernel_kaizen_darken_upsample_apply(
+__kernel void kernel_anime4k_darken_upsample_apply(
     __global uchar *restrict pDstY, const int dstPitch,
     __global const SCRATCH_ELEM_T *pSrcMask, const int srcPitchFloats,
     const int outW, const int outH,
@@ -1054,9 +1054,9 @@ __kernel void kernel_kaizen_darken_upsample_apply(
     // texel-centre convention on both grids).
     const float fx = ((float)ix + 0.5f) * (float)workW / (float)outW - 0.5f;
     const float fy = ((float)iy + 0.5f) * (float)workH / (float)outH - 0.5f;
-    const float smoothed = kaizen_bilinear_x(pSrcMask, srcPitchFloats, workW, workH, fx, fy);
+    const float smoothed = anime4k_bilinear_x(pSrcMask, srcPitchFloats, workW, workH, fx, fy);
 
-    const float luma = kaizen_read_y_norm(pDstY, dstPitch, ix, iy);
+    const float luma = anime4k_read_y_norm(pDstY, dstPitch, ix, iy);
     float result = luma + smoothed * ANIME4K_DARKEN_STRENGTH;
     result = clamp(result, 0.0f, 1.0f);
 
@@ -1082,7 +1082,7 @@ __kernel void kernel_kaizen_darken_upsample_apply(
 // possible because the input is already a single-channel luma plane.
 // The kernels read luma values via a float scratch buffer holding the
 // post-darken / post-thin Y plane in [0, 1] -- typically m_scratchA.x
-// populated by kernel_kaizen_thin_copy_y_to_ref before dispatch.
+// populated by kernel_anime4k_thin_copy_y_to_ref before dispatch.
 //
 // Build-time defines (default to reference shader's published values
 // so the source compiles stand-alone for inspection):
@@ -1144,7 +1144,7 @@ static inline float anime4k_denoise_sigma_i(float vc) {
 
 // Bilateral-mean denoise: classic Tomasi-Manduchi weighted average.
 // Cite Anime4K_Denoise_Bilateral_Mean.glsl v3.2.
-__kernel void kernel_kaizen_denoise_mean(
+__kernel void kernel_anime4k_denoise_mean(
     __global uchar *restrict pDstY, const int dstPitch,
     __global const SCRATCH_ELEM_T *pSrcRef, const int srcPitchFloats,
     const int outW, const int outH) {
@@ -1180,7 +1180,7 @@ __kernel void kernel_kaizen_denoise_mean(
 // Bilateral-median denoise: weighted median by luma ordering with
 // optional Parzen-smoothing of weights when ANIME4K_DENOISE_HIST_REG > 0.
 // Cite Anime4K_Denoise_Bilateral_Median.glsl v3.2.
-__kernel void kernel_kaizen_denoise_median(
+__kernel void kernel_anime4k_denoise_median(
     __global uchar *restrict pDstY, const int dstPitch,
     __global const SCRATCH_ELEM_T *pSrcRef, const int srcPitchFloats,
     const int outW, const int outH) {
@@ -1268,7 +1268,7 @@ __kernel void kernel_kaizen_denoise_median(
 // is clamped to a small positive minimum to avoid divide-by-zero when
 // the user passes 0; the reference's published default is 0.2.
 // Cite Anime4K_Denoise_Bilateral_Mode.glsl v3.1.
-__kernel void kernel_kaizen_denoise_mode(
+__kernel void kernel_anime4k_denoise_mode(
     __global uchar *restrict pDstY, const int dstPitch,
     __global const SCRATCH_ELEM_T *pSrcRef, const int srcPitchFloats,
     const int outW, const int outH) {
@@ -1374,7 +1374,7 @@ __kernel void kernel_kaizen_denoise_mode(
 // Trivial Type->Type copy of a Y plane region. Used by mode=dtd to
 // stage pInputPlaneY into a writable scratch before stage A modifies
 // it in place. Iterates at the caller-supplied work dimensions.
-__kernel void kernel_kaizen_copy_y_to_y(
+__kernel void kernel_anime4k_copy_y_to_y(
     __global uchar *restrict pDstY, const int dstPitch,
     __global const uchar *pSrcY, const int srcPitch,
     const int width, const int height) {
@@ -1389,7 +1389,7 @@ __kernel void kernel_kaizen_copy_y_to_y(
 // .y = local min, .z = local max, .w = unused.
 // Cite Anime4K_Deblur_DoG.glsl v3.2 (Kernel-X). Same pattern is used by
 // Anime4K_Upscale_DoG_x2.glsl and the stage-C pass of DTD-x2.
-__kernel void kernel_kaizen_dog_kernel_x(
+__kernel void kernel_anime4k_dog_kernel_x(
     __global float4 *restrict pDstA, const int dstPitchFloats,
     __global const uchar *pSrcY, const int srcPitch,
     const int width, const int height) {
@@ -1402,11 +1402,11 @@ __kernel void kernel_kaizen_dog_kernel_x(
     const int x_p1 = clamp(ix + 1, 0, width - 1);
     const int x_p2 = clamp(ix + 2, 0, width - 1);
 
-    const float v_m2 = kaizen_read_y_norm(pSrcY, srcPitch, x_m2, iy);
-    const float v_m1 = kaizen_read_y_norm(pSrcY, srcPitch, x_m1, iy);
-    const float v_c  = kaizen_read_y_norm(pSrcY, srcPitch, ix,   iy);
-    const float v_p1 = kaizen_read_y_norm(pSrcY, srcPitch, x_p1, iy);
-    const float v_p2 = kaizen_read_y_norm(pSrcY, srcPitch, x_p2, iy);
+    const float v_m2 = anime4k_read_y_norm(pSrcY, srcPitch, x_m2, iy);
+    const float v_m1 = anime4k_read_y_norm(pSrcY, srcPitch, x_m1, iy);
+    const float v_c  = anime4k_read_y_norm(pSrcY, srcPitch, ix,   iy);
+    const float v_p1 = anime4k_read_y_norm(pSrcY, srcPitch, x_p1, iy);
+    const float v_p2 = anime4k_read_y_norm(pSrcY, srcPitch, x_p2, iy);
 
     const float g  = (v_m2 + v_p2) * 0.06136f
                    + (v_m1 + v_p1) * 0.24477f
@@ -1422,7 +1422,7 @@ __kernel void kernel_kaizen_dog_kernel_x(
 // fully-2D Gauss in .x, 2D min in .y, 2D max in .z. Source and
 // destination must be distinct buffers -- this kernel reads multiple
 // rows above and below its own row.
-__kernel void kernel_kaizen_dog_kernel_y(
+__kernel void kernel_anime4k_dog_kernel_y(
     __global float4 *restrict pDstB, const int dstPitchFloats,
     __global const float4 *pSrcA, const int srcPitchFloats,
     const int width, const int height) {
@@ -1455,7 +1455,7 @@ __kernel void kernel_kaizen_dog_kernel_y(
 // resolution. Used by mode=dog_sharpen (1x in-place via pSrcLuma =
 // pInputPlaneY and pDstY = output) and by mode=dtd stage C (2x
 // in-place via pSrcLuma == pDstY).
-__kernel void kernel_kaizen_dog_apply_soft(
+__kernel void kernel_anime4k_dog_apply_soft(
     __global uchar *restrict pDstY, const int dstPitch,
     __global const uchar *pSrcLuma, const int srcLumaPitch,
     __global const float4 *pSrcMM, const int srcMMPitchFloats,
@@ -1464,7 +1464,7 @@ __kernel void kernel_kaizen_dog_apply_soft(
     const int iy = get_global_id(1);
     if (ix >= width || iy >= height) return;
 
-    const float luma = kaizen_read_y_norm(pSrcLuma, srcLumaPitch, ix, iy);
+    const float luma = anime4k_read_y_norm(pSrcLuma, srcLumaPitch, ix, iy);
     const float4 mm  = pSrcMM[iy * srcMMPitchFloats + ix];
     const float blur = mm.x;
     const float lo   = mm.y;
@@ -1498,10 +1498,10 @@ __kernel void kernel_kaizen_dog_apply_soft(
 
 // Apply: simple unsharp + minmax clamp with 2x upscale. Reads source
 // luma via the hardware bilinear sampler on srcImage (same convention
-// as kernel_kaizen_apply), and the 1x Gauss+minmax scratch via
+// as kernel_anime4k_apply), and the 1x Gauss+minmax scratch via
 // manual bilinear. No soft threshold -- the upstream Upscale_DoG_x2
 // shader's apply pass deliberately skips it. Used by mode=dog.
-__kernel void kernel_kaizen_dog_apply_upscale(
+__kernel void kernel_anime4k_dog_apply_upscale(
     __global uchar *restrict pDstY, const int dstPitch,
     __read_only image2d_t srcImage,
     __global const float4 *pSrcMM, const int srcMMPitchFloats,
@@ -1511,8 +1511,8 @@ __kernel void kernel_kaizen_dog_apply_upscale(
     const int iy = get_global_id(1);
     if (ix >= outW || iy >= outH) return;
 
-    const float2 p = kaizen_src_coord(ix, iy, outW, outH);
-    const float luma = read_imagef(srcImage, kaizen_src_sampler, p).x;
+    const float2 p = anime4k_src_coord(ix, iy, outW, outH);
+    const float luma = read_imagef(srcImage, anime4k_src_sampler, p).x;
 
     // Map 2x output coord to 1x scratch pixel coord, then bilinear
     // sample .xyz from the float4 scratch.
@@ -1546,14 +1546,14 @@ __kernel void kernel_kaizen_dog_apply_upscale(
 }
 
 // DTD stage-B warp: per-output-pixel warped lookup into the 1x luma
-// source, with the flow field also at 1x. Unlike kernel_kaizen_thin_warp
+// source, with the flow field also at 1x. Unlike kernel_anime4k_thin_warp
 // (which assumes yRef and the output are at the same resolution),
 // the DTD warp upscales 1x -> 2x by sampling the 1x source at the
 // position corresponding to the 2x output pixel, displaced by the
 // flow vector. relstr uses the SOURCE height (matching the shader's
 // HOOKED_size.y = MAIN at 1x), so the per-pixel displacement is in
 // 1x-source-pixel units.
-__kernel void kernel_kaizen_dtd_warp(
+__kernel void kernel_anime4k_dtd_warp(
     __global uchar *restrict pDstY, const int dstPitch,
     __global const uchar *pSrcLuma, const int srcLumaPitch,
     __global const SCRATCH_ELEM_T *pSrcFlow, const int srcFlowPitchFloats,
@@ -1566,14 +1566,14 @@ __kernel void kernel_kaizen_dtd_warp(
     const float fx_1x = ((float)ix + 0.5f) * (float)srcW / (float)outW - 0.5f;
     const float fy_1x = ((float)iy + 0.5f) * (float)srcH / (float)outH - 0.5f;
 
-    const float2 flow = kaizen_bilinear_xy(pSrcFlow, srcFlowPitchFloats, srcW, srcH, fx_1x, fy_1x);
+    const float2 flow = anime4k_bilinear_xy(pSrcFlow, srcFlowPitchFloats, srcW, srcH, fx_1x, fy_1x);
     const float dnx = flow.x;
     const float dny = flow.y;
     const float invlen = 1.0f / (native_sqrt(dnx * dnx + dny * dny) + 0.01f);
 
     // DTD's thin uses the source height for relstr because the warp's
     // HOOKED in the shader is MAIN at 1x.
-    const float relstr = (float)srcH / KAIZEN_REF_HEIGHT * ANIME4K_THIN_STRENGTH;
+    const float relstr = (float)srcH / ANIME4K_REF_HEIGHT * ANIME4K_THIN_STRENGTH;
     const float ddx = dnx * invlen * relstr;
     const float ddy = dny * invlen * relstr;
 
@@ -1587,10 +1587,10 @@ __kernel void kernel_kaizen_dtd_warp(
     const int y1 = clamp(y0 + 1, 0, srcH - 1);
     const float dx = fx - (float)x0;
     const float dy = fy - (float)y0;
-    const float v00 = kaizen_read_y_norm(pSrcLuma, srcLumaPitch, x0, y0);
-    const float v01 = kaizen_read_y_norm(pSrcLuma, srcLumaPitch, x1, y0);
-    const float v10 = kaizen_read_y_norm(pSrcLuma, srcLumaPitch, x0, y1);
-    const float v11 = kaizen_read_y_norm(pSrcLuma, srcLumaPitch, x1, y1);
+    const float v00 = anime4k_read_y_norm(pSrcLuma, srcLumaPitch, x0, y0);
+    const float v01 = anime4k_read_y_norm(pSrcLuma, srcLumaPitch, x1, y0);
+    const float v10 = anime4k_read_y_norm(pSrcLuma, srcLumaPitch, x0, y1);
+    const float v11 = anime4k_read_y_norm(pSrcLuma, srcLumaPitch, x1, y1);
     float result = (1.0f - dx) * (1.0f - dy) * v00
                  +         dx  * (1.0f - dy) * v01
                  + (1.0f - dx) *         dy  * v10
@@ -1603,7 +1603,7 @@ __kernel void kernel_kaizen_dtd_warp(
 
 // Clamp_Highlights post-process (bloc97 Anime4K_Clamp_Highlights, MIT).
 // 3 kernels: vertical-max (shared), then horizontal-max + apply for the
-// Y-only pipeline. STATSMAX is computed at source res from the kaizen input;
+// Y-only pipeline. STATSMAX is computed at source res from the anime4k input;
 // the apply pass bilinear-upsamples STATSMAX to output res, then clamps each
 // output pixel's luma at the source's local 5x5 max.
 //
@@ -1611,7 +1611,7 @@ __kernel void kernel_kaizen_dtd_warp(
 // (radius=2). Edge handling: clamp-to-edge.
 
 // Sample STATSMAX (1-ch fp16) at fractional position via bilinear.
-static inline float kaizen_clamp_bilinear_stats(
+static inline float anime4k_clamp_bilinear_stats(
     __global const half *pStatsMax, const int statsStride,
     const int srcW, const int srcH,
     const float sx_f, const float sy_f) {
@@ -1633,7 +1633,7 @@ static inline float kaizen_clamp_bilinear_stats(
 // Combined with either horizontal-max pass it yields a separable 5x5 max
 // dilation (kernel radius = 2, 5 taps per axis).
 __attribute__((reqd_work_group_size(16, 16, 1)))
-__kernel void kernel_kaizen_clamp_v_max(
+__kernel void kernel_anime4k_clamp_v_max(
     __global half *restrict pDst, const int dstStride,
     __global const half *pSrc,    const int srcStride,
     const int W, const int H) {
@@ -1651,10 +1651,10 @@ __kernel void kernel_kaizen_clamp_v_max(
 // Y-only horizontal-max: read native pixel-format Y plane (Type is uchar
 // or ushort depending on output bit depth; the macro is set at OpenCL
 // compile time via the build options). Normalises Y to [0, 1] via the
-// existing kaizen_read_y_norm helper so STATSMAX storage is always fp16
+// existing anime4k_read_y_norm helper so STATSMAX storage is always fp16
 // regardless of source bit depth. Output is 1-ch fp16, source spatial.
 __attribute__((reqd_work_group_size(16, 16, 1)))
-__kernel void kernel_kaizen_clamp_h_max_y(
+__kernel void kernel_anime4k_clamp_h_max_y(
     __global half *restrict pDst,    const int dstStride,
     __global const uchar *pSrcY,     const int srcPitch,
     const int W, const int H) {
@@ -1664,18 +1664,18 @@ __kernel void kernel_kaizen_clamp_h_max_y(
     float m = -1.0e30f;
     for (int i = -2; i <= 2; ++i) {
         const int xx = clamp(x + i, 0, W - 1);
-        m = max(m, kaizen_read_y_norm(pSrcY, srcPitch, xx, y));
+        m = max(m, anime4k_read_y_norm(pSrcY, srcPitch, xx, y));
     }
     vstore_half(m, y * dstStride + x, pDst);
 }
 
 // Y-only apply: in-place clamp on native pixel-format Y plane. Reads Y as
-// Type, normalises via kaizen_read_y_norm, bilinear-samples STATSMAX,
+// Type, normalises via anime4k_read_y_norm, bilinear-samples STATSMAX,
 // min-caps, denormalises, writes back as Type. No broadcast (single
 // channel). Only writes when curY > statsMax (skip the round-trip on the
 // no-op path to preserve byte-exactness on unaffected pixels).
 __attribute__((reqd_work_group_size(16, 16, 1)))
-__kernel void kernel_kaizen_clamp_apply_y(
+__kernel void kernel_anime4k_clamp_apply_y(
     __global uchar *restrict pYOut,  const int dstPitch,
     __global const half *pStatsMax,  const int statsStride,
     const int dstW, const int dstH,
@@ -1685,9 +1685,9 @@ __kernel void kernel_kaizen_clamp_apply_y(
     if (dx >= dstW || dy >= dstH) return;
     const float sx_f = ((float)dx + 0.5f) * (float)srcW / (float)dstW - 0.5f;
     const float sy_f = ((float)dy + 0.5f) * (float)srcH / (float)dstH - 0.5f;
-    const float statsMax = kaizen_clamp_bilinear_stats(
+    const float statsMax = anime4k_clamp_bilinear_stats(
         pStatsMax, statsStride, srcW, srcH, sx_f, sy_f);
-    const float curY = kaizen_read_y_norm(pYOut, dstPitch, dx, dy);
+    const float curY = anime4k_read_y_norm(pYOut, dstPitch, dx, dy);
     if (curY > statsMax) {
         __global Type *ptr = (__global Type *)(pYOut + dy * dstPitch + dx * sizeof(Type));
         ptr[0] = (Type)(statsMax * (float)PIXEL_MAX + 0.5f);
@@ -1701,7 +1701,7 @@ __kernel void kernel_kaizen_clamp_apply_y(
 // (unlike clamp_highlights, which clamps the high side only). antiring=<0..1>;
 // 0 disables. Reads source + output Y directly (no scratch). Cite
 // github.com/Artoriuz/glsl-pixel-clipper.
-__kernel void kernel_kaizen_antiring_y(
+__kernel void kernel_anime4k_antiring_y(
     __global uchar *restrict pYOut, const int dstPitch,
     __global const uchar *pSrcY,    const int srcPitch,
     const int dstW, const int dstH,
@@ -1719,13 +1719,13 @@ __kernel void kernel_kaizen_antiring_y(
     const int x1 = clamp(fx + 1, 0, srcW - 1);
     const int y0 = clamp(fy,     0, srcH - 1);
     const int y1 = clamp(fy + 1, 0, srcH - 1);
-    const float a = kaizen_read_y_norm(pSrcY, srcPitch, x0, y0);
-    const float b = kaizen_read_y_norm(pSrcY, srcPitch, x1, y0);
-    const float c = kaizen_read_y_norm(pSrcY, srcPitch, x0, y1);
-    const float d = kaizen_read_y_norm(pSrcY, srcPitch, x1, y1);
+    const float a = anime4k_read_y_norm(pSrcY, srcPitch, x0, y0);
+    const float b = anime4k_read_y_norm(pSrcY, srcPitch, x1, y0);
+    const float c = anime4k_read_y_norm(pSrcY, srcPitch, x0, y1);
+    const float d = anime4k_read_y_norm(pSrcY, srcPitch, x1, y1);
     const float lo = fmin(fmin(a, b), fmin(c, d));
     const float hi = fmax(fmax(a, b), fmax(c, d));
-    const float cur = kaizen_read_y_norm(pYOut, dstPitch, dx, dy);
+    const float cur = anime4k_read_y_norm(pYOut, dstPitch, dx, dy);
     const float outv = cur + (clamp(cur, lo, hi) - cur) * strength;
     __global Type *ptr = (__global Type *)(pYOut + dy * dstPitch + dx * sizeof(Type));
     ptr[0] = (Type)(clamp(outv, 0.0f, 1.0f) * (float)PIXEL_MAX + 0.5f);

@@ -213,7 +213,7 @@
     <ClCompile Include="rgy_filter_cas.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="rgy_filter_kaizen.cpp">
+    <ClCompile Include="rgy_filter_anime4k.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="rgy_filter_detailsharpen.cpp">
@@ -674,7 +674,7 @@
     <ClInclude Include="rgy_filter_cas.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="rgy_filter_kaizen.h">
+    <ClInclude Include="rgy_filter_anime4k.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="rgy_filter_detailsharpen.h">
@@ -991,7 +991,7 @@
     <None Include="rgy_filter_cas.cl">
       <Filter>ソース ファイル</Filter>
     </None>
-    <None Include="rgy_filter_kaizen.cl">
+    <None Include="rgy_filter_anime4k.cl">
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="rgy_filter_detailsharpen.cl">

@@ -42,39 +42,39 @@
 // Luma-guided chroma upsampling is not used and is not required
 // for the YV12 pipeline.
 
-#ifndef __RGY_FILTER_KAIZEN_H__
-#define __RGY_FILTER_KAIZEN_H__
+#ifndef __RGY_FILTER_ANIME4K_H__
+#define __RGY_FILTER_ANIME4K_H__
 
 #include "rgy_filter_cl.h"
 #include "rgy_prm.h"
 
-class RGYFilterResize; // opt-in end-of-chain resize sub-filter (see RGYFilterKaizen::m_postResize)
+class RGYFilterResize; // opt-in end-of-chain resize sub-filter (see RGYFilterAnime4k::m_postResize)
 
-class RGYFilterParamKaizen : public RGYFilterParam {
+class RGYFilterParamAnime4k : public RGYFilterParam {
 public:
-    VppKaizen kaizen;
+    VppAnime4k anime4k;
     int sar[2] = { 0, 0 };               // input SAR (set by pipeline) -- used to resolve a negative out_res= (auto-aspect) DAR-correctly
-    RGYFilterParamKaizen() : kaizen() {};
-    virtual ~RGYFilterParamKaizen() {};
-    virtual tstring print() const override { return kaizen.print(); };
+    RGYFilterParamAnime4k() : anime4k() {};
+    virtual ~RGYFilterParamAnime4k() {};
+    virtual tstring print() const override { return anime4k.print(); };
 };
 
-class RGYFilterKaizen : public RGYFilter {
+class RGYFilterAnime4k : public RGYFilter {
 public:
-    RGYFilterKaizen(shared_ptr<RGYOpenCLContext> context);
-    virtual ~RGYFilterKaizen();
+    RGYFilterAnime4k(shared_ptr<RGYOpenCLContext> context);
+    virtual ~RGYFilterAnime4k();
     virtual RGY_ERR init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog> pPrintMes) override;
 protected:
     virtual RGY_ERR run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
                                RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events,
                                RGYOpenCLEvent *event) override;
-    // The kaizen mode chain itself (denoise/restore/upscale/refine). run_filter
+    // The anime4k mode chain itself (denoise/restore/upscale/refine). run_filter
     // is now a thin wrapper: when an end-of-chain resize is configured
     // (m_postResize != null) it runs this core into the scale*src buffer with a
     // null completion event, then runs m_postResize to land the final size and
     // signal the real event. When no resize is configured run_filter calls this
     // directly so the path is byte-identical to before.
-    RGY_ERR runKaizenCore(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
+    RGY_ERR runAnime4kCore(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
                           RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events,
                           RGYOpenCLEvent *event);
     virtual void close() override;
@@ -101,7 +101,7 @@ protected:
                                 RGYOpenCLQueue &queue, RGYOpenCLEvent *event);
 
 
-    RGYOpenCLProgramAsync m_kaizen;
+    RGYOpenCLProgramAsync m_anime4k;
     // Scratch ping-pong buffers sized to the output luma plane. Float
     // throughout to preserve the polynomial-refinement precision.
     std::unique_ptr<RGYCLBuf> m_scratchA;
@@ -122,7 +122,7 @@ protected:
     // holds a 2x or 4x box-averaged copy of pDstY in the matching
     // uchar / ushort type so the existing gauss / sobel kernels can
     // read it the same way they read the full-res Y plane.
-    struct KaizenDownscaledScratches {
+    struct Anime4kDownscaledScratches {
         int workW = 0;
         int workH = 0;
         int pitchFloats = 0;    // float4 row pitch, in floats (= workW * 4)
@@ -131,12 +131,12 @@ protected:
         std::unique_ptr<RGYCLBuf> B;
         std::unique_ptr<RGYCLBuf> luma;
     };
-    KaizenDownscaledScratches m_darkenWork;
-    KaizenDownscaledScratches m_thinWork;
+    Anime4kDownscaledScratches m_darkenWork;
+    Anime4kDownscaledScratches m_thinWork;
 
     // FP16-storage variants of the darken / thin scratches, allocated
     // when cl_khr_fp16 is advertised by the OpenCL device (detected at
-    // init). The OpenCL program is JIT-built with `-D KAIZEN_SCRATCH_FP16=1`
+    // init). The OpenCL program is JIT-built with `-D ANIME4K_SCRATCH_FP16=1`
     // in this case, and the darken / thin kernels read / write these
     // buffers via vload_half4 / vstore_half4 (OpenCL 1.2 core, no
     // extension required). Halves the per-pixel scratch bandwidth at
@@ -146,14 +146,14 @@ protected:
     // evaluation) is NEVER converted -- the polynomial intermediates
     // reach magnitudes around |P3|=60 and would lose accuracy beyond
     // the 1/255 quantisation floor.
-    KaizenDownscaledScratches m_darkenWorkF16;
-    KaizenDownscaledScratches m_thinWorkF16;
+    Anime4kDownscaledScratches m_darkenWorkF16;
+    Anime4kDownscaledScratches m_thinWorkF16;
     bool m_fp16Scratch;
 
     // One-shot guard for the clGetKernelWorkGroupInfo
     // CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE probe. The probe runs
     // once on the first dispatch (lazy: the async program build behind
-    // m_kaizen may not be ready at end of init()) and logs the per-
+    // m_anime4k may not be ready at end of init()) and logs the per-
     // kernel preferred multiple at DEBUG. First codebase use of
     // clGetKernelWorkGroupInfo -- no precedent elsewhere. We do not
     // override workgroup sizes from the result; the log is informational
@@ -179,7 +179,7 @@ protected:
     int                       m_chromaLowresH;
 
     // Pre-process denoise scratches (allocated only when
-    // prm->kaizen.prefilterDenoise != Off). m_prefilterPlane is a
+    // prm->anime4k.prefilterDenoise != Off). m_prefilterPlane is a
     // luma-format scratch at INPUT dimensions; the chosen Mean/Median/Mode
     // bilateral denoise kernel writes the prefiltered luma into it. The
     // downstream luma dispatch (runPlaneY / runPlaneYCNN /
@@ -187,7 +187,7 @@ protected:
     // plane when the prefilter is active. m_prefilterRef is a float4
     // scratch holding the .x-channel luma reference required by the
     // denoise kernels (matches the post-process denoise's reference-
-    // buffer convention; built by kernel_kaizen_thin_copy_y_to_ref).
+    // buffer convention; built by kernel_anime4k_thin_copy_y_to_ref).
     std::unique_ptr<RGYCLBuf> m_prefilterPlane;
     int                       m_prefilterPlanePitch;
     std::unique_ptr<RGYCLBuf> m_prefilterRef;
@@ -195,7 +195,7 @@ protected:
 
 
     // Clamp_Highlights post-process scratches. Allocated only when
-    // prm->kaizen.clampHighlights is enabled. Both are 1-channel fp16 at
+    // prm->anime4k.clampHighlights is enabled. Both are 1-channel fp16 at
     // SOURCE spatial dims; clampStatsMaxH is the horizontal-max intermediate,
     // clampStatsMax is the final separable 5x5 max-dilation. Apply pass
     // bilinear-upsamples STATSMAX to output dims and clamps each output
@@ -228,12 +228,12 @@ protected:
                         float strength,
                         RGYOpenCLQueue &queue);
 
-    // Opt-in end-of-chain resize. Non-null only when kaizen.postResizeW/H > 0.
-    // Instantiated and init'd in RGYFilterKaizen::init() with frameIn = the
-    // kaizen mode's output (scale*src) and frameOut = the requested target res;
+    // Opt-in end-of-chain resize. Non-null only when anime4k.postResizeW/H > 0.
+    // Instantiated and init'd in RGYFilterAnime4k::init() with frameIn = the
+    // anime4k mode's output (scale*src) and frameOut = the requested target res;
     // invoked as the last sub-stage of run_filter. Reuses the full resampler
     // family (jinc/nis/lanczos/...) instead of duplicating resize code.
     std::unique_ptr<RGYFilterResize> m_postResize;
 };
 
-#endif //__RGY_FILTER_KAIZEN_H__
+#endif //__RGY_FILTER_ANIME4K_H__

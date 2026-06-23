@@ -108,7 +108,7 @@ static const auto VPPTYPE_TO_STR = make_array<std::pair<VppType, tstring>>(
     std::make_pair(VppType::CL_DENOISE_NLMEANS,      _T("nlmeans")),
     std::make_pair(VppType::CL_DENOISE_PMD,          _T("pmd")),
     std::make_pair(VppType::CL_DENOISE_HQDN3D,       _T("hqdn3d")),
-    std::make_pair(VppType::CL_KAIZEN,               _T("kaizen")),
+    std::make_pair(VppType::CL_ANIME4K,               _T("anime4k")),
     std::make_pair(VppType::CL_DESCALE,              _T("descale")),
     std::make_pair(VppType::CL_DENOISE_DCT,          _T("denoise-dct")),
     std::make_pair(VppType::CL_DENOISE_SMOOTH,       _T("smooth")),
@@ -1952,21 +1952,21 @@ tstring VppHqdn3d::print() const {
         luma_spatial, chroma_spatial, luma_temporal, chroma_temporal);
 }
 
-VppKaizen::VppKaizen() :
+VppAnime4k::VppAnime4k() :
     enable(false),
-    mode(VppKaizenMode::Original),
-    scale(FILTER_DEFAULT_KAIZEN_SCALE),
-    strength(FILTER_DEFAULT_KAIZEN_STRENGTH),
-    chromaResize(VppKaizenChromaResize::Spline36),
+    mode(VppAnime4kMode::Original),
+    scale(FILTER_DEFAULT_ANIME4K_SCALE),
+    strength(FILTER_DEFAULT_ANIME4K_STRENGTH),
+    chromaResize(VppAnime4kChromaResize::Spline36),
     chroma(true),
-    darken(VppKaizenDarken::Off),
-    thin(VppKaizenThin::Off),
-    denoise(VppKaizenDenoise::Off),
+    darken(VppAnime4kDarken::Off),
+    thin(VppAnime4kThin::Off),
+    denoise(VppAnime4kDenoise::Off),
     denoiseIntensity(0.1f),
     denoiseSpatial(1.0f),
     denoiseCurve(1.0f),
     denoiseHistReg(-1.0f),
-    prefilterDenoise(VppKaizenDenoise::Off),
+    prefilterDenoise(VppAnime4kDenoise::Off),
     clampHighlights(false),
     antiring(0.0f),
     postResizeW(0),
@@ -1974,7 +1974,7 @@ VppKaizen::VppKaizen() :
     postResizeAlgo(RGY_VPP_RESIZE_AUTO) {
 }
 
-bool VppKaizen::operator==(const VppKaizen &x) const {
+bool VppAnime4k::operator==(const VppAnime4k &x) const {
     return enable           == x.enable
         && mode             == x.mode
         && scale            == x.scale
@@ -1995,15 +1995,15 @@ bool VppKaizen::operator==(const VppKaizen &x) const {
         && postResizeH      == x.postResizeH
         && postResizeAlgo   == x.postResizeAlgo;
 }
-bool VppKaizen::operator!=(const VppKaizen &x) const {
+bool VppAnime4k::operator!=(const VppAnime4k &x) const {
     return !(*this == x);
 }
 
-tstring VppKaizen::print() const {
+tstring VppAnime4k::print() const {
     tstring prefilterExtra;
-    if (prefilterDenoise != VppKaizenDenoise::Off) {
+    if (prefilterDenoise != VppAnime4kDenoise::Off) {
         prefilterExtra = strsprintf(_T(", prefilter_denoise %s"),
-            get_cx_desc(list_vpp_kaizen_denoise, (int)prefilterDenoise));
+            get_cx_desc(list_vpp_anime4k_denoise, (int)prefilterDenoise));
     }
     tstring clampExtra;
     if (clampHighlights) {
@@ -2020,35 +2020,35 @@ tstring VppKaizen::print() const {
     tstring extras;
     // Don't repeat the darken/thin value when the mode= alias already
     // encodes it (mode=darken_hq → darken=HQ side-effect; same for thin).
-    const bool darkenEncodedInMode = (mode == VppKaizenMode::DarkenHQ && darken == VppKaizenDarken::HQ);
-    const bool thinEncodedInMode   = (mode == VppKaizenMode::ThinHQ   && thin   == VppKaizenThin::HQ);
-    if (darken != VppKaizenDarken::Off && !darkenEncodedInMode) {
+    const bool darkenEncodedInMode = (mode == VppAnime4kMode::DarkenHQ && darken == VppAnime4kDarken::HQ);
+    const bool thinEncodedInMode   = (mode == VppAnime4kMode::ThinHQ   && thin   == VppAnime4kThin::HQ);
+    if (darken != VppAnime4kDarken::Off && !darkenEncodedInMode) {
         extras += strsprintf(_T(", darken %s"),
-            get_cx_desc(list_vpp_kaizen_darken, (int)darken));
+            get_cx_desc(list_vpp_anime4k_darken, (int)darken));
     }
-    if (thin != VppKaizenThin::Off && !thinEncodedInMode) {
+    if (thin != VppAnime4kThin::Off && !thinEncodedInMode) {
         extras += strsprintf(_T(", thin %s"),
-            get_cx_desc(list_vpp_kaizen_thin, (int)thin));
+            get_cx_desc(list_vpp_anime4k_thin, (int)thin));
     }
-    if (denoise != VppKaizenDenoise::Off) {
+    if (denoise != VppAnime4kDenoise::Off) {
         // denoiseHistReg may still hold the -1 sentinel here when the
         // user hasn't overridden it and init() hasn't resolved it yet;
         // print only when it's a real value to avoid showing "-1.00".
         if (denoiseHistReg >= 0.0f) {
             extras += strsprintf(_T(", denoise %s (intensity %.2f, spatial %.2f, curve %.2f, hist_reg %.2f)"),
-                get_cx_desc(list_vpp_kaizen_denoise, (int)denoise),
+                get_cx_desc(list_vpp_anime4k_denoise, (int)denoise),
                 denoiseIntensity, denoiseSpatial, denoiseCurve, denoiseHistReg);
         } else {
             extras += strsprintf(_T(", denoise %s (intensity %.2f, spatial %.2f, curve %.2f)"),
-                get_cx_desc(list_vpp_kaizen_denoise, (int)denoise),
+                get_cx_desc(list_vpp_anime4k_denoise, (int)denoise),
                 denoiseIntensity, denoiseSpatial, denoiseCurve);
         }
     }
     extras += prefilterExtra;
-    return strsprintf(_T("kaizen: mode %s, scale %dx, strength %.2f, chroma_resize %s%s"),
-        get_cx_desc(list_vpp_kaizen_mode, (int)mode),
+    return strsprintf(_T("anime4k: mode %s, scale %dx, strength %.2f, chroma_resize %s%s"),
+        get_cx_desc(list_vpp_anime4k_mode, (int)mode),
         scale, strength,
-        get_cx_desc(list_vpp_kaizen_chroma_resize, (int)chromaResize),
+        get_cx_desc(list_vpp_anime4k_chroma_resize, (int)chromaResize),
         extras.c_str());
 }
 

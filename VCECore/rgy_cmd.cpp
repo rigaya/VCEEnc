@@ -6614,11 +6614,11 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
         return 0;
     }
 
-    if (IS_OPTION("vpp-kaizen") && ENABLE_VPP_FILTER_KAIZEN) {
-        VppKaizen newKaizen;
-        newKaizen.enable = true;
+    if (IS_OPTION("vpp-anime4k-shader") && ENABLE_VPP_FILTER_ANIME4K) {
+        VppAnime4k newAnime4k;
+        newAnime4k.enable = true;
         if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
-            vpp->kaizenChain.push_back(newKaizen);
+            vpp->anime4kChain.push_back(newAnime4k);
             return 0;
         }
         i++;
@@ -6640,7 +6640,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             if (param_arg == _T("enable")) {
                 bool b = false;
                 if (!cmd_string_to_bool(&b, param_val)) {
-                    newKaizen.enable = b;
+                    newAnime4k.enable = b;
                 } else {
                     print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                     return 1;
@@ -6649,24 +6649,24 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             }
             if (param_arg == _T("mode")) {
                 int value = 0;
-                if (get_list_value(list_vpp_kaizen_mode, param_val.c_str(), &value)) {
-                    newKaizen.mode = (VppKaizenMode)value;
+                if (get_list_value(list_vpp_anime4k_mode, param_val.c_str(), &value)) {
+                    newAnime4k.mode = (VppAnime4kMode)value;
                     // deblur uses REFINE_STRENGTH=1.0 in the reference shader
                     // while original uses 0.5. Promote the default strength
                     // when the user picks deblur without an explicit value.
-                    if (newKaizen.mode == VppKaizenMode::Deblur
-                     && newKaizen.strength == FILTER_DEFAULT_KAIZEN_STRENGTH) {
-                        newKaizen.strength = 1.0f;
+                    if (newAnime4k.mode == VppAnime4kMode::Deblur
+                     && newAnime4k.strength == FILTER_DEFAULT_ANIME4K_STRENGTH) {
+                        newAnime4k.strength = 1.0f;
                     }
                 } else {
-                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_kaizen_mode);
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_anime4k_mode);
                     return 1;
                 }
                 continue;
             }
             if (param_arg == _T("scale")) {
                 try {
-                    newKaizen.scale = std::stoi(param_val);
+                    newAnime4k.scale = std::stoi(param_val);
                 } catch (...) {
                     print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                     return 1;
@@ -6675,7 +6675,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             }
             if (param_arg == _T("strength")) {
                 try {
-                    newKaizen.strength = std::stof(param_val);
+                    newAnime4k.strength = std::stof(param_val);
                 } catch (...) {
                     print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                     return 1;
@@ -6684,10 +6684,10 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             }
             if (param_arg == _T("chroma_resize")) {
                 int value = 0;
-                if (get_list_value(list_vpp_kaizen_chroma_resize, param_val.c_str(), &value)) {
-                    newKaizen.chromaResize = (VppKaizenChromaResize)value;
+                if (get_list_value(list_vpp_anime4k_chroma_resize, param_val.c_str(), &value)) {
+                    newAnime4k.chromaResize = (VppAnime4kChromaResize)value;
                 } else {
-                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_kaizen_chroma_resize);
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_anime4k_chroma_resize);
                     return 1;
                 }
                 continue;
@@ -6695,7 +6695,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             if (param_arg == _T("chroma")) {
                 bool b = false;
                 if (!cmd_string_to_bool(&b, param_val)) {
-                    newKaizen.chroma = b;
+                    newAnime4k.chroma = b;
                 } else {
                     print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                     return 1;
@@ -6723,14 +6723,14 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                         _T("expected WxH; a negative value keeps aspect (e.g. -2x1080); both cannot be negative"));
                     return 1;
                 }
-                newKaizen.postResizeW = w;
-                newKaizen.postResizeH = h;
+                newAnime4k.postResizeW = w;
+                newAnime4k.postResizeH = h;
                 continue;
             }
             if (param_arg == _T("resize")) {
                 int value = 0;
                 if (get_list_value(list_vpp_resize, param_val.c_str(), &value)) {
-                    newKaizen.postResizeAlgo = (RGY_VPP_RESIZE_ALGO)value;
+                    newAnime4k.postResizeAlgo = (RGY_VPP_RESIZE_ALGO)value;
                 } else {
                     print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_resize);
                     return 1;
@@ -6739,37 +6739,37 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             }
             if (param_arg == _T("darken")) {
                 int value = 0;
-                if (get_list_value(list_vpp_kaizen_darken, param_val.c_str(), &value)) {
-                    newKaizen.darken = (VppKaizenDarken)value;
+                if (get_list_value(list_vpp_anime4k_darken, param_val.c_str(), &value)) {
+                    newAnime4k.darken = (VppAnime4kDarken)value;
                 } else {
-                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_kaizen_darken);
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_anime4k_darken);
                     return 1;
                 }
                 continue;
             }
             if (param_arg == _T("thin")) {
                 int value = 0;
-                if (get_list_value(list_vpp_kaizen_thin, param_val.c_str(), &value)) {
-                    newKaizen.thin = (VppKaizenThin)value;
+                if (get_list_value(list_vpp_anime4k_thin, param_val.c_str(), &value)) {
+                    newAnime4k.thin = (VppAnime4kThin)value;
                 } else {
-                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_kaizen_thin);
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_anime4k_thin);
                     return 1;
                 }
                 continue;
             }
             if (param_arg == _T("denoise")) {
                 int value = 0;
-                if (get_list_value(list_vpp_kaizen_denoise, param_val.c_str(), &value)) {
-                    newKaizen.denoise = (VppKaizenDenoise)value;
+                if (get_list_value(list_vpp_anime4k_denoise, param_val.c_str(), &value)) {
+                    newAnime4k.denoise = (VppAnime4kDenoise)value;
                 } else {
-                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_kaizen_denoise);
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_anime4k_denoise);
                     return 1;
                 }
                 continue;
             }
             if (param_arg == _T("denoise_intensity")) {
                 try {
-                    newKaizen.denoiseIntensity = std::stof(param_val);
+                    newAnime4k.denoiseIntensity = std::stof(param_val);
                 } catch (...) {
                     print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                     return 1;
@@ -6778,7 +6778,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             }
             if (param_arg == _T("denoise_spatial")) {
                 try {
-                    newKaizen.denoiseSpatial = std::stof(param_val);
+                    newAnime4k.denoiseSpatial = std::stof(param_val);
                 } catch (...) {
                     print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                     return 1;
@@ -6787,7 +6787,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             }
             if (param_arg == _T("denoise_curve")) {
                 try {
-                    newKaizen.denoiseCurve = std::stof(param_val);
+                    newAnime4k.denoiseCurve = std::stof(param_val);
                 } catch (...) {
                     print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                     return 1;
@@ -6796,7 +6796,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             }
             if (param_arg == _T("denoise_hist_reg")) {
                 try {
-                    newKaizen.denoiseHistReg = std::stof(param_val);
+                    newAnime4k.denoiseHistReg = std::stof(param_val);
                 } catch (...) {
                     print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                     return 1;
@@ -6805,10 +6805,10 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             }
             if (param_arg == _T("prefilter_denoise")) {
                 int value = 0;
-                if (get_list_value(list_vpp_kaizen_denoise, param_val.c_str(), &value)) {
-                    newKaizen.prefilterDenoise = (VppKaizenDenoise)value;
+                if (get_list_value(list_vpp_anime4k_denoise, param_val.c_str(), &value)) {
+                    newAnime4k.prefilterDenoise = (VppAnime4kDenoise)value;
                 } else {
-                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_kaizen_denoise);
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_anime4k_denoise);
                     return 1;
                 }
                 continue;
@@ -6816,7 +6816,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             if (param_arg == _T("clamp_highlights")) {
                 bool b = false;
                 if (!cmd_string_to_bool(&b, param_val)) {
-                    newKaizen.clampHighlights = b;
+                    newAnime4k.clampHighlights = b;
                 } else {
                     print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                     return 1;
@@ -6825,7 +6825,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             }
             if (param_arg == _T("antiring")) {
                 try {
-                    newKaizen.antiring = std::stof(param_val);
+                    newAnime4k.antiring = std::stof(param_val);
                 } catch (...) {
                     print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                     return 1;
@@ -6835,7 +6835,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
             print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
             return 1;
         }
-        vpp->kaizenChain.push_back(newKaizen);
+        vpp->anime4kChain.push_back(newAnime4k);
         return 0;
     }
 
@@ -13150,39 +13150,39 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
         }
     }
 
-    for (size_t i = 0; i < param->kaizenChain.size(); i++) {
-        const auto kaizenDefault = VppKaizen();
-        if (param->kaizenChain[i] != kaizenDefault) {
+    for (size_t i = 0; i < param->anime4kChain.size(); i++) {
+        const auto anime4kDefault = VppAnime4k();
+        if (param->anime4kChain[i] != anime4kDefault) {
             tmp.str(tstring());
-            if (!param->kaizenChain[i].enable && save_disabled_prm) {
+            if (!param->anime4kChain[i].enable && save_disabled_prm) {
                 tmp << _T(",enable=false");
             }
-            if (param->kaizenChain[i].enable || save_disabled_prm) {
-                ADD_LST2(_T("mode"), param->kaizenChain[i], kaizenDefault, mode, list_vpp_kaizen_mode);
-                ADD_NUM2(_T("scale"), param->kaizenChain[i], kaizenDefault, scale);
-                ADD_FLOAT2(_T("strength"), param->kaizenChain[i], kaizenDefault, strength, 3);
-                ADD_LST2(_T("chroma_resize"), param->kaizenChain[i], kaizenDefault, chromaResize, list_vpp_kaizen_chroma_resize);
-                ADD_BOOL2(_T("chroma"), param->kaizenChain[i], kaizenDefault, chroma);
-                ADD_LST2(_T("darken"), param->kaizenChain[i], kaizenDefault, darken, list_vpp_kaizen_darken);
-                ADD_LST2(_T("thin"), param->kaizenChain[i], kaizenDefault, thin, list_vpp_kaizen_thin);
-                ADD_LST2(_T("denoise"), param->kaizenChain[i], kaizenDefault, denoise, list_vpp_kaizen_denoise);
-                ADD_FLOAT2(_T("denoise_intensity"), param->kaizenChain[i], kaizenDefault, denoiseIntensity, 3);
-                ADD_FLOAT2(_T("denoise_spatial"), param->kaizenChain[i], kaizenDefault, denoiseSpatial, 3);
-                ADD_FLOAT2(_T("denoise_curve"), param->kaizenChain[i], kaizenDefault, denoiseCurve, 3);
-                ADD_FLOAT2(_T("denoise_hist_reg"), param->kaizenChain[i], kaizenDefault, denoiseHistReg, 3);
-                ADD_LST2(_T("prefilter_denoise"), param->kaizenChain[i], kaizenDefault, prefilterDenoise, list_vpp_kaizen_denoise);
-                ADD_BOOL2(_T("clamp_highlights"), param->kaizenChain[i], kaizenDefault, clampHighlights);
-                ADD_FLOAT2(_T("antiring"), param->kaizenChain[i], kaizenDefault, antiring, 2);
-                if (param->kaizenChain[i].postResizeW != kaizenDefault.postResizeW
-                 || param->kaizenChain[i].postResizeH != kaizenDefault.postResizeH) {
-                    tmp << _T(",out_res=") << param->kaizenChain[i].postResizeW << _T("x") << param->kaizenChain[i].postResizeH;
+            if (param->anime4kChain[i].enable || save_disabled_prm) {
+                ADD_LST2(_T("mode"), param->anime4kChain[i], anime4kDefault, mode, list_vpp_anime4k_mode);
+                ADD_NUM2(_T("scale"), param->anime4kChain[i], anime4kDefault, scale);
+                ADD_FLOAT2(_T("strength"), param->anime4kChain[i], anime4kDefault, strength, 3);
+                ADD_LST2(_T("chroma_resize"), param->anime4kChain[i], anime4kDefault, chromaResize, list_vpp_anime4k_chroma_resize);
+                ADD_BOOL2(_T("chroma"), param->anime4kChain[i], anime4kDefault, chroma);
+                ADD_LST2(_T("darken"), param->anime4kChain[i], anime4kDefault, darken, list_vpp_anime4k_darken);
+                ADD_LST2(_T("thin"), param->anime4kChain[i], anime4kDefault, thin, list_vpp_anime4k_thin);
+                ADD_LST2(_T("denoise"), param->anime4kChain[i], anime4kDefault, denoise, list_vpp_anime4k_denoise);
+                ADD_FLOAT2(_T("denoise_intensity"), param->anime4kChain[i], anime4kDefault, denoiseIntensity, 3);
+                ADD_FLOAT2(_T("denoise_spatial"), param->anime4kChain[i], anime4kDefault, denoiseSpatial, 3);
+                ADD_FLOAT2(_T("denoise_curve"), param->anime4kChain[i], anime4kDefault, denoiseCurve, 3);
+                ADD_FLOAT2(_T("denoise_hist_reg"), param->anime4kChain[i], anime4kDefault, denoiseHistReg, 3);
+                ADD_LST2(_T("prefilter_denoise"), param->anime4kChain[i], anime4kDefault, prefilterDenoise, list_vpp_anime4k_denoise);
+                ADD_BOOL2(_T("clamp_highlights"), param->anime4kChain[i], anime4kDefault, clampHighlights);
+                ADD_FLOAT2(_T("antiring"), param->anime4kChain[i], anime4kDefault, antiring, 2);
+                if (param->anime4kChain[i].postResizeW != anime4kDefault.postResizeW
+                 || param->anime4kChain[i].postResizeH != anime4kDefault.postResizeH) {
+                    tmp << _T(",out_res=") << param->anime4kChain[i].postResizeW << _T("x") << param->anime4kChain[i].postResizeH;
                 }
-                ADD_LST2(_T("resize"), param->kaizenChain[i], kaizenDefault, postResizeAlgo, list_vpp_resize);
+                ADD_LST2(_T("resize"), param->anime4kChain[i], anime4kDefault, postResizeAlgo, list_vpp_resize);
             }
             if (!tmp.str().empty()) {
-                cmd << _T(" --vpp-kaizen ") << tmp.str().substr(1);
-            } else if (param->kaizenChain[i].enable) {
-                cmd << _T(" --vpp-kaizen");
+                cmd << _T(" --vpp-anime4k-shader ") << tmp.str().substr(1);
+            } else if (param->anime4kChain[i].enable) {
+                cmd << _T(" --vpp-anime4k-shader");
             }
         }
 
@@ -15603,9 +15603,9 @@ tstring gen_cmd_help_vpp() {
         FILTER_DEFAULT_LIBPLACEBO_SHADER_BLUR, FILTER_DEFAULT_LIBPLACEBO_SHADER_ANTIRING
     );
 #endif
-#if ENABLE_VPP_FILTER_KAIZEN
+#if ENABLE_VPP_FILTER_ANIME4K
     str += strsprintf(_T("\n")
-        _T("   --vpp-kaizen [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("   --vpp-anime4k-shader [<param1>=<value>][,<param2>=<value>][...]\n")
         _T("     enable a hand-written GLSL luma enhancement / 2x upscale chain.\n")
         _T("     the 7 modes are bloc97 Anime4K (MIT); antiring + chroma_resize=joint\n")
         _T("     are MIT shaders by J. Chrisostomo. Hand-tuned OpenCL, no CNN and no\n")
@@ -15656,8 +15656,8 @@ tstring gen_cmd_help_vpp() {
         _T("                                1920x1080 (16:9). default: off (output stays scale*src).\n")
         _T("      resize=<string>           resampler for out_res (default=lanczos4):\n")
         _T("                                lanczos4 | spline36 | jinc144 | nis | bicubic | ...\n"),
-        FILTER_DEFAULT_KAIZEN_SCALE, FILTER_DEFAULT_KAIZEN_STRENGTH,
-        FILTER_KAIZEN_STRENGTH_MIN, FILTER_KAIZEN_STRENGTH_MAX);
+        FILTER_DEFAULT_ANIME4K_SCALE, FILTER_DEFAULT_ANIME4K_STRENGTH,
+        FILTER_ANIME4K_STRENGTH_MIN, FILTER_ANIME4K_STRENGTH_MAX);
 #endif
 
 #if ENABLE_VPP_FILTER_UNSHARP

@@ -108,7 +108,7 @@ static const int RGY_AUDIO_QUALITY_DEFAULT = 0;
 #define ENABLE_VPP_FILTER_LIBPLACEBO   (ENABLE_LIBPLACEBO && (ENCODER_QSV || ENCODER_NVENC || ENCODER_VCEENC || CLFILTERS_AUF))
 #define ENABLE_VPP_FILTER_FRUC         (                 ENCODER_NVENC)
 #define ENABLE_VPP_FILTER_DELOGO_MULTIADD  (             ENCODER_NVENC)
-#define ENABLE_VPP_FILTER_KAIZEN      (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP)
+#define ENABLE_VPP_FILTER_ANIME4K      (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP)
 #define ENABLE_VPP_ORDER                   (CLFILTERS_AUF)
 
 #define ENABLE_PARALLEL_ENC            (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC)
@@ -195,7 +195,7 @@ enum class VppType : int {
     CL_DENOISE_NLMEANS,
     CL_DENOISE_PMD,
     CL_DENOISE_HQDN3D,
-    CL_KAIZEN,
+    CL_ANIME4K,
     CL_DESCALE,
     CL_DENOISE_DCT,
     CL_DENOISE_SMOOTH,
@@ -1165,10 +1165,10 @@ static const char *paramsResizeBicubic[]  = { "b", "c" };
 
 static const float FILTER_DEFAULT_RESIZE_FSR1_SHARPNESS = 0.5f;
 
-static const int   FILTER_DEFAULT_KAIZEN_SCALE = 2;
-static const float FILTER_DEFAULT_KAIZEN_STRENGTH = 0.5f;
-static const float FILTER_KAIZEN_STRENGTH_MIN = 0.2f;
-static const float FILTER_KAIZEN_STRENGTH_MAX = 4.0f;
+static const int   FILTER_DEFAULT_ANIME4K_SCALE = 2;
+static const float FILTER_DEFAULT_ANIME4K_STRENGTH = 0.5f;
+static const float FILTER_ANIME4K_STRENGTH_MIN = 0.2f;
+static const float FILTER_ANIME4K_STRENGTH_MAX = 4.0f;
 
 struct VppResizeFsr1 {
     float sharpness;
@@ -3556,7 +3556,7 @@ enum class VppDeintCsp {
 
 extern const CX_DESC list_vpp_deint_csp[];
 
-enum class VppKaizenMode {
+enum class VppAnime4kMode {
     Original  = 0,
     Deblur    = 1,
     DarkenHQ  = 2,
@@ -3579,7 +3579,7 @@ enum class VppKaizenMode {
     Dtd        = 9,
 };
 
-enum class VppKaizenChromaResize {
+enum class VppAnime4kChromaResize {
     Spline36 = 0,
     Bilinear = 1,
     Bicubic  = 2,
@@ -3587,23 +3587,23 @@ enum class VppKaizenChromaResize {
     Joint    = 4,   // luma-guided joint-bilateral chroma reconstruction (FastBilateral, MIT)
 };
 
-const CX_DESC list_vpp_kaizen_mode[] = {
-    { _T("ani4k_original"),    (int)VppKaizenMode::Original   },
-    { _T("ani4k_deblur"),      (int)VppKaizenMode::Deblur     },
-    { _T("ani4k_darken_hq"),   (int)VppKaizenMode::DarkenHQ   },
-    { _T("ani4k_thin_hq"),     (int)VppKaizenMode::ThinHQ     },
-    { _T("ani4k_dog_sharpen"), (int)VppKaizenMode::DogSharpen },
-    { _T("ani4k_dog"),         (int)VppKaizenMode::Dog        },
-    { _T("ani4k_dtd"),         (int)VppKaizenMode::Dtd        },
+const CX_DESC list_vpp_anime4k_mode[] = {
+    { _T("ani4k_original"),    (int)VppAnime4kMode::Original   },
+    { _T("ani4k_deblur"),      (int)VppAnime4kMode::Deblur     },
+    { _T("ani4k_darken_hq"),   (int)VppAnime4kMode::DarkenHQ   },
+    { _T("ani4k_thin_hq"),     (int)VppAnime4kMode::ThinHQ     },
+    { _T("ani4k_dog_sharpen"), (int)VppAnime4kMode::DogSharpen },
+    { _T("ani4k_dog"),         (int)VppAnime4kMode::Dog        },
+    { _T("ani4k_dtd"),         (int)VppAnime4kMode::Dtd        },
     { NULL, 0 }
 };
 
-const CX_DESC list_vpp_kaizen_chroma_resize[] = {
-    { _T("spline36"), (int)VppKaizenChromaResize::Spline36 },
-    { _T("bilinear"), (int)VppKaizenChromaResize::Bilinear },
-    { _T("bicubic"),  (int)VppKaizenChromaResize::Bicubic  },
-    { _T("lanczos3"), (int)VppKaizenChromaResize::Lanczos3 },
-    { _T("joint"),    (int)VppKaizenChromaResize::Joint    },
+const CX_DESC list_vpp_anime4k_chroma_resize[] = {
+    { _T("spline36"), (int)VppAnime4kChromaResize::Spline36 },
+    { _T("bilinear"), (int)VppAnime4kChromaResize::Bilinear },
+    { _T("bicubic"),  (int)VppAnime4kChromaResize::Bicubic  },
+    { _T("lanczos3"), (int)VppAnime4kChromaResize::Lanczos3 },
+    { _T("joint"),    (int)VppAnime4kChromaResize::Joint    },
     { NULL, 0 }
 };
 
@@ -3612,14 +3612,14 @@ const CX_DESC list_vpp_kaizen_chroma_resize[] = {
 // and progressively downsampled scratch buffers (full / half / quarter
 // output resolution). HQ is the published reference; Fast / VeryFast
 // are tuned for throughput at modest visual cost.
-enum class VppKaizenDarken {
+enum class VppAnime4kDarken {
     Off      = 0,
     HQ       = 1,
     Fast     = 2,
     VeryFast = 3,
 };
 
-enum class VppKaizenThin {
+enum class VppAnime4kThin {
     Off      = 0,
     HQ       = 1,
     Fast     = 2,
@@ -3633,7 +3633,7 @@ enum class VppKaizenThin {
 //   Mean   -- weighted average across the kernel
 //   Median -- weighted median by luma ordering
 //   Mode   -- Parzen-smoothed weighted mode
-enum class VppKaizenDenoise {
+enum class VppAnime4kDenoise {
     Off    = 0,
     Mean   = 1,
     Median = 2,
@@ -3646,44 +3646,44 @@ enum class VppKaizenDenoise {
 // legacy alias. The `true` / `false` aliases at the end keep older
 // command lines that used boolean flags working unchanged:
 // darken=true is parsed as HQ, darken=false as Off.
-const CX_DESC list_vpp_kaizen_darken[] = {
-    { _T("off"),      (int)VppKaizenDarken::Off      },
-    { _T("hq"),       (int)VppKaizenDarken::HQ       },
-    { _T("fast"),     (int)VppKaizenDarken::Fast     },
-    { _T("veryfast"), (int)VppKaizenDarken::VeryFast },
+const CX_DESC list_vpp_anime4k_darken[] = {
+    { _T("off"),      (int)VppAnime4kDarken::Off      },
+    { _T("hq"),       (int)VppAnime4kDarken::HQ       },
+    { _T("fast"),     (int)VppAnime4kDarken::Fast     },
+    { _T("veryfast"), (int)VppAnime4kDarken::VeryFast },
     // Legacy aliases parsed by get_list_value but not surfaced by print.
-    { _T("false"),    (int)VppKaizenDarken::Off      },
-    { _T("true"),     (int)VppKaizenDarken::HQ       },
+    { _T("false"),    (int)VppAnime4kDarken::Off      },
+    { _T("true"),     (int)VppAnime4kDarken::HQ       },
     { NULL, 0 }
 };
 
-const CX_DESC list_vpp_kaizen_thin[] = {
-    { _T("off"),      (int)VppKaizenThin::Off        },
-    { _T("hq"),       (int)VppKaizenThin::HQ         },
-    { _T("fast"),     (int)VppKaizenThin::Fast       },
-    { _T("veryfast"), (int)VppKaizenThin::VeryFast   },
+const CX_DESC list_vpp_anime4k_thin[] = {
+    { _T("off"),      (int)VppAnime4kThin::Off        },
+    { _T("hq"),       (int)VppAnime4kThin::HQ         },
+    { _T("fast"),     (int)VppAnime4kThin::Fast       },
+    { _T("veryfast"), (int)VppAnime4kThin::VeryFast   },
     // Legacy aliases parsed by get_list_value but not surfaced by print.
-    { _T("false"),    (int)VppKaizenThin::Off        },
-    { _T("true"),     (int)VppKaizenThin::HQ         },
+    { _T("false"),    (int)VppAnime4kThin::Off        },
+    { _T("true"),     (int)VppAnime4kThin::HQ         },
     { NULL, 0 }
 };
 
-const CX_DESC list_vpp_kaizen_denoise[] = {
-    { _T("off"),    (int)VppKaizenDenoise::Off    },
-    { _T("mean"),   (int)VppKaizenDenoise::Mean   },
-    { _T("median"), (int)VppKaizenDenoise::Median },
-    { _T("mode"),   (int)VppKaizenDenoise::Mode   },
+const CX_DESC list_vpp_anime4k_denoise[] = {
+    { _T("off"),    (int)VppAnime4kDenoise::Off    },
+    { _T("mean"),   (int)VppAnime4kDenoise::Mean   },
+    { _T("median"), (int)VppAnime4kDenoise::Median },
+    { _T("mode"),   (int)VppAnime4kDenoise::Mode   },
     // Legacy alias parsed by get_list_value but not surfaced by print.
-    { _T("false"),  (int)VppKaizenDenoise::Off    },
+    { _T("false"),  (int)VppAnime4kDenoise::Off    },
     { NULL, 0 }
 };
 
-struct VppKaizen {
+struct VppAnime4k {
     bool enable;
-    VppKaizenMode mode;
+    VppAnime4kMode mode;
     int scale;                          // 1 (refinement only) or 2 (upscale)
     float strength;                     // REFINE_STRENGTH analog, 0.2 - 4.0
-    VppKaizenChromaResize chromaResize;
+    VppAnime4kChromaResize chromaResize;
     bool chroma;                        // when scale=2: resize U/V (true) or passthrough (false; rare)
     // Additive post-process flags. Off skips the chain; otherwise the
     // tier selects sigma + scratch resolution:
@@ -3692,15 +3692,15 @@ struct VppKaizen {
     //   VeryFast -- quarter output resolution, quartered sigma
     // When both are Off the output is byte-identical to running just
     // the base shader chain.
-    VppKaizenDarken darken;
-    VppKaizenThin   thin;
+    VppAnime4kDarken darken;
+    VppAnime4kThin   thin;
     // Bilateral denoise (runs after darken and thin on the Y plane).
     // Sigma defaults match the reference shader's published constants
     // (intensity 0.1, spatial 1.0, curve 1.0). denoiseHistReg uses -1.0
     // as a sentinel for "tier default" -- resolved at filter init to
     // 0.0 for mean / median and 0.2 for mode, matching the upstream
     // shader defaults. A user-supplied non-negative value overrides.
-    VppKaizenDenoise denoise;
+    VppAnime4kDenoise denoise;
     float denoiseIntensity;
     float denoiseSpatial;
     float denoiseCurve;
@@ -3712,13 +3712,13 @@ struct VppKaizen {
     // denoise= is structurally skipped). Same kernel family as
     // denoise= (Mean / Median / Mode bilateral), with conservative
     // sigma defaults that preserve line detail.
-    VppKaizenDenoise prefilterDenoise;
+    VppAnime4kDenoise prefilterDenoise;
     // Post-process highlight clamp (bloc97 Anime4K_Clamp_Highlights, MIT).
     // When true, runs a 3-pass separable 5x5 max-dilation on the source's
     // luma, then clamps every output pixel's luma at the local 5x5 max
     // from the source. Suppresses CNN overshoot / ringing at edges.
     // Byte-identical to upstream when false (default). Works with every
-    // kaizen mode (RGB-family and Y-only); colormatrix= controls the luma
+    // anime4k mode (RGB-family and Y-only); colormatrix= controls the luma
     // weights for RGB-family modes.
     bool                 clampHighlights;
     // PixelClipper anti-ringing (Artoriuz / Joao Chrisostomo, MIT). 0 disables
@@ -3726,21 +3726,21 @@ struct VppKaizen {
     // output luma to the 2x2 source min/max envelope, killing upscale ringing on
     // both sides (clamp_highlights only clamps the high side).
     float                antiring;
-    // Opt-in end-of-chain resize. When postResizeW/H > 0, after the kaizen
+    // Opt-in end-of-chain resize. When postResizeW/H > 0, after the anime4k
     // mode's own output is produced (at scale*src), an internal RGYFilterResize
     // runs as the final sub-stage to land the frame on an ARBITRARY target
     // resolution. This lets a CNN's fixed integer upscale (e.g. artcnn 2x ->
     // 1280x960) be fitted to any size (1440x1080, 960x720) in ONE pass and in
     // the correct order (restore/upscale THEN resize) -- the global --vpp-resize
-    // stage runs BEFORE kaizen, so it cannot do this. Reuses the full resampler
+    // stage runs BEFORE anime4k, so it cannot do this. Reuses the full resampler
     // family (jinc/nis/lanczos/bicubic/spline); no duplicate resize code.
     // 0,0 = disabled (default): output stays at scale*src.
     int                  postResizeW;
     int                  postResizeH;
     RGY_VPP_RESIZE_ALGO  postResizeAlgo;
-    VppKaizen();
-    bool operator==(const VppKaizen &x) const;
-    bool operator!=(const VppKaizen &x) const;
+    VppAnime4k();
+    bool operator==(const VppAnime4k &x) const;
+    bool operator!=(const VppAnime4k &x) const;
     tstring print() const;
 };
 
@@ -3777,7 +3777,7 @@ struct RGYParamVpp {
     VppNLMeans nlmeans;
     VppPmd pmd;
     VppHqdn3d hqdn3d;
-    std::vector<VppKaizen> kaizenChain;     // ordered chain of --vpp-kaizen invocations (one entry per CLI flag)
+    std::vector<VppAnime4k> anime4kChain;     // ordered chain of --vpp-anime4k-shader invocations (one entry per CLI flag)
     VppDescale descale;
     VppDenoiseDct dct;
     VppSmooth smooth;
