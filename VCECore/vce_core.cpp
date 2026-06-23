@@ -87,6 +87,7 @@
 #include "rgy_filter_subburn.h"
 #include "rgy_filter_unsharp.h"
 #include "rgy_filter_anime4k.h"
+#include "rgy_filter_onnx.h"
 #include "rgy_filter_vinverse.h"
 #include "rgy_filter_chromashift.h"
 #include "rgy_filter_deblock.h"
@@ -1299,9 +1300,9 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
                 }
             }
             if (filterPipeline[i] != VppType::CL_CROP) {
-                int anime4kInstanceIdx = 0;
-                for (size_t j = 0; j < i; j++) if (filterPipeline[j] == VppType::CL_ANIME4K) anime4kInstanceIdx++;
-                auto err = AddFilterOpenCL(vppOpenCLFilters, inputFrame, filterPipeline[i], inputParam, inputCrop, resize, VuiFiltered, anime4kInstanceIdx);
+                int instanceIdx = 0;
+                for (size_t j = 0; j < i; j++) if (filterPipeline[j] == filterPipeline[i]) instanceIdx++;
+                auto err = AddFilterOpenCL(vppOpenCLFilters, inputFrame, filterPipeline[i], inputParam, inputCrop, resize, VuiFiltered, instanceIdx);
                 if (err != RGY_ERR_NONE) {
                     return err;
                 }
@@ -1413,6 +1414,11 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     for (const auto& anime4kEntry : inputParam->vpp.anime4kChain) {
         if (anime4kEntry.enable) filterPipeline.push_back(VppType::CL_ANIME4K);
     }
+#if ENABLE_VPP_FILTER_ONNX
+    for (const auto& onnxEntry : inputParam->vpp.onnxChain) {
+        if (onnxEntry.enable) filterPipeline.push_back(VppType::CL_ONNX);
+    }
+#endif
     if (inputParam->vpp.descale.enable)       filterPipeline.push_back(VppType::CL_DESCALE);
     if (degrainLegacy)                        filterPipeline.push_back(VppType::CL_DEGRAIN);
     if (inputParam->vpp.rtgmc_edi.enable && degrainLegacy) filterPipeline.push_back(VppType::CL_RTGMC_EDI);
@@ -2201,6 +2207,37 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         return RGY_ERR_NONE;
     }
     //nlmeans
+#if ENABLE_VPP_FILTER_ONNX
+    if (vppType == VppType::CL_ONNX) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        if (instanceIndex < 0 || instanceIndex >= (int)inputParam->vpp.onnxChain.size()) {
+            PrintMes(RGY_LOG_ERROR, _T("onnx: instanceIndex %d out of chain bounds (size %zu)\n"),
+                instanceIndex, inputParam->vpp.onnxChain.size());
+            return RGY_ERR_INVALID_PARAM;
+        }
+        unique_ptr<RGYFilter> filter(new RGYFilterOnnx(m_dev->cl()));
+        shared_ptr<RGYFilterParamOnnx> param(new RGYFilterParamOnnx());
+        param->onnx = inputParam->vpp.onnxChain[instanceIndex];
+        param->sar[0] = inputParam->input.sar[0];
+        param->sar[1] = inputParam->input.sar[1];
+        const LUID devLuid = m_dev->luid();
+        param->adapterLuidLow  = (uint32_t)devLuid.LowPart;
+        param->adapterLuidHigh = (int32_t)devLuid.HighPart;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        return RGY_ERR_NONE;
+    }
+#endif
     //anime4k (hand-written GLSL luma refinement / 2x upscale)
     if (vppType == VppType::CL_ANIME4K) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());

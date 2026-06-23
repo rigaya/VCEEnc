@@ -109,6 +109,10 @@ static const int RGY_AUDIO_QUALITY_DEFAULT = 0;
 #define ENABLE_VPP_FILTER_FRUC         (                 ENCODER_NVENC)
 #define ENABLE_VPP_FILTER_DELOGO_MULTIADD  (             ENCODER_NVENC)
 #define ENABLE_VPP_FILTER_ANIME4K      (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP)
+#ifndef ENABLE_ONNXRUNTIME
+#define ENABLE_ONNXRUNTIME 0
+#endif
+#define ENABLE_VPP_FILTER_ONNX         (ENABLE_ONNXRUNTIME && ENCODER_VCEENC)
 #define ENABLE_VPP_ORDER                   (CLFILTERS_AUF)
 
 #define ENABLE_PARALLEL_ENC            (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC)
@@ -196,6 +200,7 @@ enum class VppType : int {
     CL_DENOISE_PMD,
     CL_DENOISE_HQDN3D,
     CL_ANIME4K,
+    CL_ONNX,
     CL_DESCALE,
     CL_DENOISE_DCT,
     CL_DENOISE_SMOOTH,
@@ -3744,6 +3749,25 @@ struct VppAnime4k {
     tstring print() const;
 };
 
+struct VppOnnx {
+    bool    enable;
+    tstring modelFile;
+    tstring device;
+    tstring interop;
+    tstring colormatrix;
+    tstring colorrange;
+    tstring colorspace;
+    int     noise;
+    int                  postResizeW;
+    int                  postResizeH;
+    RGY_VPP_RESIZE_ALGO  postResizeAlgo;
+
+    VppOnnx();
+    bool operator==(const VppOnnx &x) const;
+    bool operator!=(const VppOnnx &x) const;
+    tstring print() const;
+};
+
 struct RGYParamVpp {
     std::vector<VppType> filterOrder;
     RGY_VPP_RESIZE_ALGO resize_algo;
@@ -3778,6 +3802,7 @@ struct RGYParamVpp {
     VppPmd pmd;
     VppHqdn3d hqdn3d;
     std::vector<VppAnime4k> anime4kChain;     // ordered chain of --vpp-anime4k-shader invocations (one entry per CLI flag)
+    std::vector<VppOnnx> onnxChain;           // ordered chain of --vpp-onnx invocations (one entry per CLI flag)
     VppDescale descale;
     VppDenoiseDct dct;
     VppSmooth smooth;
