@@ -108,6 +108,7 @@ static const auto VPPTYPE_TO_STR = make_array<std::pair<VppType, tstring>>(
     std::make_pair(VppType::CL_DENOISE_NLMEANS,      _T("nlmeans")),
     std::make_pair(VppType::CL_DENOISE_PMD,          _T("pmd")),
     std::make_pair(VppType::CL_DENOISE_HQDN3D,       _T("hqdn3d")),
+    std::make_pair(VppType::CL_KAIZEN,               _T("kaizen")),
     std::make_pair(VppType::CL_DESCALE,              _T("descale")),
     std::make_pair(VppType::CL_DENOISE_DCT,          _T("denoise-dct")),
     std::make_pair(VppType::CL_DENOISE_SMOOTH,       _T("smooth")),
@@ -1950,6 +1951,107 @@ tstring VppHqdn3d::print() const {
     return strsprintf(_T("hqdn3d: luma_spatial %.2f, chroma_spatial %.2f, luma_temporal %.2f, chroma_temporal %.2f"),
         luma_spatial, chroma_spatial, luma_temporal, chroma_temporal);
 }
+
+VppKaizen::VppKaizen() :
+    enable(false),
+    mode(VppKaizenMode::Original),
+    scale(FILTER_DEFAULT_KAIZEN_SCALE),
+    strength(FILTER_DEFAULT_KAIZEN_STRENGTH),
+    chromaResize(VppKaizenChromaResize::Spline36),
+    chroma(true),
+    darken(VppKaizenDarken::Off),
+    thin(VppKaizenThin::Off),
+    denoise(VppKaizenDenoise::Off),
+    denoiseIntensity(0.1f),
+    denoiseSpatial(1.0f),
+    denoiseCurve(1.0f),
+    denoiseHistReg(-1.0f),
+    prefilterDenoise(VppKaizenDenoise::Off),
+    clampHighlights(false),
+    antiring(0.0f),
+    postResizeW(0),
+    postResizeH(0),
+    postResizeAlgo(RGY_VPP_RESIZE_AUTO) {
+}
+
+bool VppKaizen::operator==(const VppKaizen &x) const {
+    return enable           == x.enable
+        && mode             == x.mode
+        && scale            == x.scale
+        && strength         == x.strength
+        && chromaResize     == x.chromaResize
+        && chroma           == x.chroma
+        && darken           == x.darken
+        && thin             == x.thin
+        && denoise          == x.denoise
+        && denoiseIntensity == x.denoiseIntensity
+        && denoiseSpatial   == x.denoiseSpatial
+        && denoiseCurve     == x.denoiseCurve
+        && denoiseHistReg   == x.denoiseHistReg
+        && prefilterDenoise == x.prefilterDenoise
+        && clampHighlights  == x.clampHighlights
+        && antiring         == x.antiring
+        && postResizeW      == x.postResizeW
+        && postResizeH      == x.postResizeH
+        && postResizeAlgo   == x.postResizeAlgo;
+}
+bool VppKaizen::operator!=(const VppKaizen &x) const {
+    return !(*this == x);
+}
+
+tstring VppKaizen::print() const {
+    tstring prefilterExtra;
+    if (prefilterDenoise != VppKaizenDenoise::Off) {
+        prefilterExtra = strsprintf(_T(", prefilter_denoise %s"),
+            get_cx_desc(list_vpp_kaizen_denoise, (int)prefilterDenoise));
+    }
+    tstring clampExtra;
+    if (clampHighlights) {
+        clampExtra = _T(", clamp_highlights on");
+    }
+    prefilterExtra += clampExtra;
+    if (antiring > 0.0f) {
+        prefilterExtra += strsprintf(_T(", antiring %.2f"), antiring);
+    }
+    if (postResizeW > 0 && postResizeH > 0) {
+        prefilterExtra += strsprintf(_T(", out_res %dx%d (%s)"),
+            postResizeW, postResizeH, get_cx_desc(list_vpp_resize, (int)postResizeAlgo));
+    }
+    tstring extras;
+    // Don't repeat the darken/thin value when the mode= alias already
+    // encodes it (mode=darken_hq → darken=HQ side-effect; same for thin).
+    const bool darkenEncodedInMode = (mode == VppKaizenMode::DarkenHQ && darken == VppKaizenDarken::HQ);
+    const bool thinEncodedInMode   = (mode == VppKaizenMode::ThinHQ   && thin   == VppKaizenThin::HQ);
+    if (darken != VppKaizenDarken::Off && !darkenEncodedInMode) {
+        extras += strsprintf(_T(", darken %s"),
+            get_cx_desc(list_vpp_kaizen_darken, (int)darken));
+    }
+    if (thin != VppKaizenThin::Off && !thinEncodedInMode) {
+        extras += strsprintf(_T(", thin %s"),
+            get_cx_desc(list_vpp_kaizen_thin, (int)thin));
+    }
+    if (denoise != VppKaizenDenoise::Off) {
+        // denoiseHistReg may still hold the -1 sentinel here when the
+        // user hasn't overridden it and init() hasn't resolved it yet;
+        // print only when it's a real value to avoid showing "-1.00".
+        if (denoiseHistReg >= 0.0f) {
+            extras += strsprintf(_T(", denoise %s (intensity %.2f, spatial %.2f, curve %.2f, hist_reg %.2f)"),
+                get_cx_desc(list_vpp_kaizen_denoise, (int)denoise),
+                denoiseIntensity, denoiseSpatial, denoiseCurve, denoiseHistReg);
+        } else {
+            extras += strsprintf(_T(", denoise %s (intensity %.2f, spatial %.2f, curve %.2f)"),
+                get_cx_desc(list_vpp_kaizen_denoise, (int)denoise),
+                denoiseIntensity, denoiseSpatial, denoiseCurve);
+        }
+    }
+    extras += prefilterExtra;
+    return strsprintf(_T("kaizen: mode %s, scale %dx, strength %.2f, chroma_resize %s%s"),
+        get_cx_desc(list_vpp_kaizen_mode, (int)mode),
+        scale, strength,
+        get_cx_desc(list_vpp_kaizen_chroma_resize, (int)chromaResize),
+        extras.c_str());
+}
+
 
 VppDescale::VppDescale() :
     enable(false),

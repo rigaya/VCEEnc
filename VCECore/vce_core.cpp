@@ -86,6 +86,7 @@
 #include "rgy_filter_msmooth.h"
 #include "rgy_filter_subburn.h"
 #include "rgy_filter_unsharp.h"
+#include "rgy_filter_kaizen.h"
 #include "rgy_filter_vinverse.h"
 #include "rgy_filter_chromashift.h"
 #include "rgy_filter_deblock.h"
@@ -1298,7 +1299,9 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
                 }
             }
             if (filterPipeline[i] != VppType::CL_CROP) {
-                auto err = AddFilterOpenCL(vppOpenCLFilters, inputFrame, filterPipeline[i], inputParam, inputCrop, resize, VuiFiltered);
+                int kaizenInstanceIdx = 0;
+                for (size_t j = 0; j < i; j++) if (filterPipeline[j] == VppType::CL_KAIZEN) kaizenInstanceIdx++;
+                auto err = AddFilterOpenCL(vppOpenCLFilters, inputFrame, filterPipeline[i], inputParam, inputCrop, resize, VuiFiltered, kaizenInstanceIdx);
                 if (err != RGY_ERR_NONE) {
                     return err;
                 }
@@ -1407,6 +1410,9 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.nlmeans.enable)       filterPipeline.push_back(VppType::CL_DENOISE_NLMEANS);
     if (inputParam->vpp.pmd.enable)           filterPipeline.push_back(VppType::CL_DENOISE_PMD);
     if (inputParam->vpp.hqdn3d.enable)        filterPipeline.push_back(VppType::CL_DENOISE_HQDN3D);
+    for (const auto& kaizenEntry : inputParam->vpp.kaizenChain) {
+        if (kaizenEntry.enable) filterPipeline.push_back(VppType::CL_KAIZEN);
+    }
     if (inputParam->vpp.descale.enable)       filterPipeline.push_back(VppType::CL_DESCALE);
     if (degrainLegacy)                        filterPipeline.push_back(VppType::CL_DEGRAIN);
     if (inputParam->vpp.rtgmc_edi.enable && degrainLegacy) filterPipeline.push_back(VppType::CL_RTGMC_EDI);
@@ -1590,7 +1596,7 @@ std::tuple<RGY_ERR, std::unique_ptr<AMFFilter>> VCECore::AddFilterAMF(
 }
 
 RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilters,
-        RGYFrameInfo & inputFrame, const VppType vppType, const VCEParam *inputParam, const sInputCrop *crop, const std::pair<int, int> resize, VideoVUIInfo& vuiInfo) {
+        RGYFrameInfo & inputFrame, const VppType vppType, const VCEParam *inputParam, const sInputCrop *crop, const std::pair<int, int> resize, VideoVUIInfo& vuiInfo, const int instanceIndex) {
     //colorspace
     if (vppType == VppType::CL_COLORSPACE) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
@@ -2195,6 +2201,33 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         return RGY_ERR_NONE;
     }
     //nlmeans
+    //kaizen (hand-written GLSL luma refinement / 2x upscale)
+    if (vppType == VppType::CL_KAIZEN) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterKaizen(m_dev->cl()));
+        shared_ptr<RGYFilterParamKaizen> param(new RGYFilterParamKaizen());
+        if (instanceIndex < 0 || instanceIndex >= (int)inputParam->vpp.kaizenChain.size()) {
+            PrintMes(RGY_LOG_ERROR, _T("kaizen: instanceIndex %d out of chain bounds (size %zu)\n"),
+                instanceIndex, inputParam->vpp.kaizenChain.size());
+            return RGY_ERR_INVALID_PARAM;
+        }
+        param->kaizen = inputParam->vpp.kaizenChain[instanceIndex];
+        param->sar[0] = inputParam->input.sar[0];
+        param->sar[1] = inputParam->input.sar[1];
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        return RGY_ERR_NONE;
+    }
     if (vppType == VppType::CL_DENOISE_NLMEANS) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
         unique_ptr<RGYFilter> filter(new RGYFilterDenoiseNLMeans(m_dev->cl()));

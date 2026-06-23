@@ -6614,6 +6614,231 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
         return 0;
     }
 
+    if (IS_OPTION("vpp-kaizen") && ENABLE_VPP_FILTER_KAIZEN) {
+        VppKaizen newKaizen;
+        newKaizen.enable = true;
+        if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
+            vpp->kaizenChain.push_back(newKaizen);
+            return 0;
+        }
+        i++;
+        const auto paramList = std::vector<std::string>{
+            "enable", "mode", "scale", "strength", "chroma_resize", "chroma",
+            "darken", "thin",
+            "denoise", "denoise_intensity", "denoise_spatial", "denoise_curve", "denoise_hist_reg",
+            "prefilter_denoise", "clamp_highlights", "antiring",
+            "out_res", "resize" };
+        for (const auto &param : split(strInput[i], _T(","))) {
+            auto pos = param.find_first_of(_T("="));
+            if (pos == std::string::npos) {
+                print_cmd_error_unknown_opt_param(option_name, param, paramList);
+                return 1;
+            }
+            auto param_arg = param.substr(0, pos);
+            auto param_val = param.substr(pos + 1);
+            param_arg = tolowercase(param_arg);
+            if (param_arg == _T("enable")) {
+                bool b = false;
+                if (!cmd_string_to_bool(&b, param_val)) {
+                    newKaizen.enable = b;
+                } else {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("mode")) {
+                int value = 0;
+                if (get_list_value(list_vpp_kaizen_mode, param_val.c_str(), &value)) {
+                    newKaizen.mode = (VppKaizenMode)value;
+                    // deblur uses REFINE_STRENGTH=1.0 in the reference shader
+                    // while original uses 0.5. Promote the default strength
+                    // when the user picks deblur without an explicit value.
+                    if (newKaizen.mode == VppKaizenMode::Deblur
+                     && newKaizen.strength == FILTER_DEFAULT_KAIZEN_STRENGTH) {
+                        newKaizen.strength = 1.0f;
+                    }
+                } else {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_kaizen_mode);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("scale")) {
+                try {
+                    newKaizen.scale = std::stoi(param_val);
+                } catch (...) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("strength")) {
+                try {
+                    newKaizen.strength = std::stof(param_val);
+                } catch (...) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("chroma_resize")) {
+                int value = 0;
+                if (get_list_value(list_vpp_kaizen_chroma_resize, param_val.c_str(), &value)) {
+                    newKaizen.chromaResize = (VppKaizenChromaResize)value;
+                } else {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_kaizen_chroma_resize);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("chroma")) {
+                bool b = false;
+                if (!cmd_string_to_bool(&b, param_val)) {
+                    newKaizen.chroma = b;
+                } else {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("out_res")) {
+                auto xpos = param_val.find_first_of(_T("xX"));
+                int w = 0, h = 0;
+                bool ok = false;
+                if (xpos != tstring::npos) {
+                    try {
+                        w = std::stoi(param_val.substr(0, xpos));
+                        h = std::stoi(param_val.substr(xpos + 1));
+                        ok = true;
+                    } catch (...) {
+                        ok = false;
+                    }
+                }
+                // A negative value on ONE axis keeps the source aspect (magnitude =
+                // rounding step), matching --output-res (e.g. -2x1080 -> auto-even width).
+                // Both negative, or any zero, is invalid.
+                if (!ok || w == 0 || h == 0 || (w < 0 && h < 0)) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val,
+                        _T("expected WxH; a negative value keeps aspect (e.g. -2x1080); both cannot be negative"));
+                    return 1;
+                }
+                newKaizen.postResizeW = w;
+                newKaizen.postResizeH = h;
+                continue;
+            }
+            if (param_arg == _T("resize")) {
+                int value = 0;
+                if (get_list_value(list_vpp_resize, param_val.c_str(), &value)) {
+                    newKaizen.postResizeAlgo = (RGY_VPP_RESIZE_ALGO)value;
+                } else {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_resize);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("darken")) {
+                int value = 0;
+                if (get_list_value(list_vpp_kaizen_darken, param_val.c_str(), &value)) {
+                    newKaizen.darken = (VppKaizenDarken)value;
+                } else {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_kaizen_darken);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("thin")) {
+                int value = 0;
+                if (get_list_value(list_vpp_kaizen_thin, param_val.c_str(), &value)) {
+                    newKaizen.thin = (VppKaizenThin)value;
+                } else {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_kaizen_thin);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("denoise")) {
+                int value = 0;
+                if (get_list_value(list_vpp_kaizen_denoise, param_val.c_str(), &value)) {
+                    newKaizen.denoise = (VppKaizenDenoise)value;
+                } else {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_kaizen_denoise);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("denoise_intensity")) {
+                try {
+                    newKaizen.denoiseIntensity = std::stof(param_val);
+                } catch (...) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("denoise_spatial")) {
+                try {
+                    newKaizen.denoiseSpatial = std::stof(param_val);
+                } catch (...) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("denoise_curve")) {
+                try {
+                    newKaizen.denoiseCurve = std::stof(param_val);
+                } catch (...) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("denoise_hist_reg")) {
+                try {
+                    newKaizen.denoiseHistReg = std::stof(param_val);
+                } catch (...) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("prefilter_denoise")) {
+                int value = 0;
+                if (get_list_value(list_vpp_kaizen_denoise, param_val.c_str(), &value)) {
+                    newKaizen.prefilterDenoise = (VppKaizenDenoise)value;
+                } else {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_vpp_kaizen_denoise);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("clamp_highlights")) {
+                bool b = false;
+                if (!cmd_string_to_bool(&b, param_val)) {
+                    newKaizen.clampHighlights = b;
+                } else {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+                continue;
+            }
+            if (param_arg == _T("antiring")) {
+                try {
+                    newKaizen.antiring = std::stof(param_val);
+                } catch (...) {
+                    print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                    return 1;
+                }
+                continue;
+            }
+            print_cmd_error_unknown_opt_param(option_name, param_arg, paramList);
+            return 1;
+        }
+        vpp->kaizenChain.push_back(newKaizen);
+        return 0;
+    }
+
     if (IS_OPTION("vpp-unsharp") && ENABLE_VPP_FILTER_UNSHARP) {
         vpp->unsharp.enable = true;
         if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
@@ -12925,6 +13150,43 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
         }
     }
 
+    for (size_t i = 0; i < param->kaizenChain.size(); i++) {
+        const auto kaizenDefault = VppKaizen();
+        if (param->kaizenChain[i] != kaizenDefault) {
+            tmp.str(tstring());
+            if (!param->kaizenChain[i].enable && save_disabled_prm) {
+                tmp << _T(",enable=false");
+            }
+            if (param->kaizenChain[i].enable || save_disabled_prm) {
+                ADD_LST2(_T("mode"), param->kaizenChain[i], kaizenDefault, mode, list_vpp_kaizen_mode);
+                ADD_NUM2(_T("scale"), param->kaizenChain[i], kaizenDefault, scale);
+                ADD_FLOAT2(_T("strength"), param->kaizenChain[i], kaizenDefault, strength, 3);
+                ADD_LST2(_T("chroma_resize"), param->kaizenChain[i], kaizenDefault, chromaResize, list_vpp_kaizen_chroma_resize);
+                ADD_BOOL2(_T("chroma"), param->kaizenChain[i], kaizenDefault, chroma);
+                ADD_LST2(_T("darken"), param->kaizenChain[i], kaizenDefault, darken, list_vpp_kaizen_darken);
+                ADD_LST2(_T("thin"), param->kaizenChain[i], kaizenDefault, thin, list_vpp_kaizen_thin);
+                ADD_LST2(_T("denoise"), param->kaizenChain[i], kaizenDefault, denoise, list_vpp_kaizen_denoise);
+                ADD_FLOAT2(_T("denoise_intensity"), param->kaizenChain[i], kaizenDefault, denoiseIntensity, 3);
+                ADD_FLOAT2(_T("denoise_spatial"), param->kaizenChain[i], kaizenDefault, denoiseSpatial, 3);
+                ADD_FLOAT2(_T("denoise_curve"), param->kaizenChain[i], kaizenDefault, denoiseCurve, 3);
+                ADD_FLOAT2(_T("denoise_hist_reg"), param->kaizenChain[i], kaizenDefault, denoiseHistReg, 3);
+                ADD_LST2(_T("prefilter_denoise"), param->kaizenChain[i], kaizenDefault, prefilterDenoise, list_vpp_kaizen_denoise);
+                ADD_BOOL2(_T("clamp_highlights"), param->kaizenChain[i], kaizenDefault, clampHighlights);
+                ADD_FLOAT2(_T("antiring"), param->kaizenChain[i], kaizenDefault, antiring, 2);
+                if (param->kaizenChain[i].postResizeW != kaizenDefault.postResizeW
+                 || param->kaizenChain[i].postResizeH != kaizenDefault.postResizeH) {
+                    tmp << _T(",out_res=") << param->kaizenChain[i].postResizeW << _T("x") << param->kaizenChain[i].postResizeH;
+                }
+                ADD_LST2(_T("resize"), param->kaizenChain[i], kaizenDefault, postResizeAlgo, list_vpp_resize);
+            }
+            if (!tmp.str().empty()) {
+                cmd << _T(" --vpp-kaizen ") << tmp.str().substr(1);
+            } else if (param->kaizenChain[i].enable) {
+                cmd << _T(" --vpp-kaizen");
+            }
+        }
+
+    }
     if (param->unsharp != defaultPrm->unsharp) {
         tmp.str(tstring());
         if (!param->unsharp.enable && save_disabled_prm) {
@@ -15341,6 +15603,63 @@ tstring gen_cmd_help_vpp() {
         FILTER_DEFAULT_LIBPLACEBO_SHADER_BLUR, FILTER_DEFAULT_LIBPLACEBO_SHADER_ANTIRING
     );
 #endif
+#if ENABLE_VPP_FILTER_KAIZEN
+    str += strsprintf(_T("\n")
+        _T("   --vpp-kaizen [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     enable a hand-written GLSL luma enhancement / 2x upscale chain.\n")
+        _T("     the 7 modes are bloc97 Anime4K (MIT); antiring + chroma_resize=joint\n")
+        _T("     are MIT shaders by J. Chrisostomo. Hand-tuned OpenCL, no CNN and no\n")
+        _T("     model files (the CNN model families now live in --vpp-onnx).\n")
+        _T("     A complete chain in one pass: optional pre-filter denoise, a main\n")
+        _T("     GLSL mode, optional line darken / thin / denoise, optional highlight\n")
+        _T("     clamp and anti-ring, chroma handling, and an end-of-chain resize.\n")
+        _T("    params\n")
+        _T("      mode=<string>             GLSL variant (default=ani4k_original)\n")
+        _T("                                ani4k_original    - edge-refine 2x upscale (strength 0.5)\n")
+        _T("                                ani4k_deblur      - edge-refine 2x upscale, stronger (1.0)\n")
+        _T("                                ani4k_darken_hq   - line-darkening 2x upscale\n")
+        _T("                                ani4k_thin_hq     - line-thinning 2x upscale\n")
+        _T("                                ani4k_dog_sharpen - 1x Difference-of-Gaussians sharpen\n")
+        _T("                                ani4k_dog         - 2x DoG upscale\n")
+        _T("                                ani4k_dtd         - 2x composite darken-thin-deblur upscale\n")
+        _T("      scale=<int>               1 = refine at source resolution,\n")
+        _T("                                2 = 2x upscale + refine (default=%d).\n")
+        _T("                                some modes imply scale (dog_sharpen=1, dog/dtd=2).\n")
+        _T("      strength=<float>          refine strength multiplier (default=%.2f, %.2f - %.2f).\n")
+        _T("                                promoted to 1.0 for mode=ani4k_deblur with no value.\n")
+        _T("      prefilter_denoise=<string> denoise the luma BEFORE the main pass (default=off)\n")
+        _T("                                off | mean | median | mode  (bilateral)\n")
+        _T("      darken=<string>           line-darkening pass after the main pass (default=off)\n")
+        _T("                                off | hq | fast | veryfast\n")
+        _T("      thin=<string>             line-thinning pass after the main pass (default=off)\n")
+        _T("                                off | hq | fast | veryfast\n")
+        _T("      denoise=<string>          denoise pass after the main pass (default=off)\n")
+        _T("                                off | mean | median | mode  (bilateral)\n")
+        _T("      denoise_intensity / denoise_spatial / denoise_curve / denoise_hist_reg=<float>\n")
+        _T("                                fine-tune the denoise passes (advanced, optional).\n")
+        _T("      clamp_highlights=<bool>   clamp output highlights to the local source max\n")
+        _T("                                (Anime4K Clamp_Highlights). default=false.\n")
+        _T("      antiring=<float>          anti-ringing strength 0..1 (default=0, off). clamps\n")
+        _T("                                each upscaled luma pixel to its 2x2 source min/max\n")
+        _T("                                envelope, removing overshoot ringing on both sides.\n")
+        _T("      chroma_resize=<string>    U/V resize kernel when scale=2 (default=spline36)\n")
+        _T("                                spline36 | bilinear | bicubic | lanczos3 | joint\n")
+        _T("                                joint = luma-guided joint-bilateral chroma rebuild.\n")
+        _T("      chroma=<bool>             when scale=2, resize chroma (true, default) or pass\n")
+        _T("                                it through unchanged (false). scale=1 always passes.\n")
+        _T("      out_res=<WxH>             end-of-chain resize to an arbitrary final size, AFTER\n")
+        _T("                                this stage (e.g. a 2x upscale), so a fixed integer\n")
+        _T("                                upscale fits any resolution in one pass, e.g.\n")
+        _T("                                out_res=1440x1080. a negative value on one axis keeps\n")
+        _T("                                the source aspect (magnitude=rounding step), like\n")
+        _T("                                --output-res: out_res=-2x1080 -> 1440x1080 (4:3) or\n")
+        _T("                                1920x1080 (16:9). default: off (output stays scale*src).\n")
+        _T("      resize=<string>           resampler for out_res (default=lanczos4):\n")
+        _T("                                lanczos4 | spline36 | jinc144 | nis | bicubic | ...\n"),
+        FILTER_DEFAULT_KAIZEN_SCALE, FILTER_DEFAULT_KAIZEN_STRENGTH,
+        FILTER_KAIZEN_STRENGTH_MIN, FILTER_KAIZEN_STRENGTH_MAX);
+#endif
+
 #if ENABLE_VPP_FILTER_UNSHARP
     str += strsprintf(_T("\n")
         _T("   --vpp-unsharp [<param1>=<value>][,<param2>=<value>][...]\n")
