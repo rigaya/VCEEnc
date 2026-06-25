@@ -40,6 +40,7 @@
 #include <wrl/client.h>
 
 #include "rgy_onnxruntime.h"
+#include "rgy_util.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -48,7 +49,7 @@ using Microsoft::WRL::ComPtr;
 namespace {
     std::once_flag    s_ortInitOnce;
     bool              s_ortReady = false;
-    std::string       s_ortError;
+    tstring           s_ortError;
 
     RGYOnnxRuntimeLoader& onnxRuntime() {
         static RGYOnnxRuntimeLoader loader;
@@ -68,7 +69,7 @@ namespace {
     // Map an adapter LUID to its DirectML device_id, which is the DXGI adapter
     // enumeration index (DirectML enumerates adapters in DXGI order). Returns 0
     // (DirectML's default) when no adapter matches or the LUID is zero.
-    int dxgiIndexForLuid(uint32_t luidLow, int32_t luidHigh, std::string &adapterName) {
+    int dxgiIndexForLuid(uint32_t luidLow, int32_t luidHigh, tstring &adapterName) {
         adapterName.clear();
         if (luidLow == 0 && luidHigh == 0) return 0;
         ComPtr<IDXGIFactory1> factory;
@@ -79,9 +80,7 @@ namespace {
             if (SUCCEEDED(adapter->GetDesc1(&desc))
                 && desc.AdapterLuid.LowPart == (DWORD)luidLow
                 && desc.AdapterLuid.HighPart == (LONG)luidHigh) {
-                char nm[256] = { 0 };
-                WideCharToMultiByte(CP_UTF8, 0, desc.Description, -1, nm, sizeof(nm) - 1, nullptr, nullptr);
-                adapterName = nm;
+                adapterName = wstring_to_tstring(desc.Description);
                 return (int)i;
             }
             adapter.Reset();
@@ -89,17 +88,6 @@ namespace {
         return 0;
     }
 
-    std::basic_string<ORTCHAR_T> stringToOrtPath(const std::string &s) {
-#if defined(_WIN32) || defined(_WIN64)
-        if (s.empty()) return std::wstring();
-        int n = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0);
-        std::wstring w(n, L'\0');
-        MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), &w[0], n);
-        return w;
-#else
-        return s;
-#endif
-    }
 }
 
 // ------------------------------- pimpl ---------------------------------------
@@ -116,15 +104,15 @@ public:
     std::string inName, outName;     // owned copies of the model's first I/O names
     int inC = 0, inH = 0, inW = 0;
     int outC = 0, outH = 0, outW = 0;
-    std::string adapterName;
-    std::string precision = "f32";
+    tstring adapterName;
+    tstring precision = _T("f32");
 };
 
 RGYOnnxRTDML::RGYOnnxRTDML() : m_impl(std::make_unique<Impl>()) {}
 RGYOnnxRTDML::~RGYOnnxRTDML() {}
 
-RGY_ERR RGYOnnxRTDML::init(const std::string &modelPath, const uint32_t luidLow, const int32_t luidHigh,
-                           const int height, const int width, std::string &errMessage) {
+RGY_ERR RGYOnnxRTDML::init(const tstring &modelPath, const uint32_t luidLow, const int32_t luidHigh,
+                           const int height, const int width, tstring &errMessage) {
     loadOrtOnce();
     if (!s_ortReady) {
         errMessage = s_ortError;
@@ -145,17 +133,16 @@ RGY_ERR RGYOnnxRTDML::init(const std::string &modelPath, const uint32_t luidLow,
         const int deviceId = dxgiIndexForLuid(luidLow, luidHigh, I.adapterName);
         OrtStatus *st = onnxRuntime().p_OrtSessionOptionsAppendExecutionProviderDML()(static_cast<OrtSessionOptions*>(opts), deviceId);
         if (st != nullptr) {
-            errMessage = std::string("AppendExecutionProvider_DML failed: ")
-                       + Ort::GetApi().GetErrorMessage(st);
+            errMessage = tstring(_T("AppendExecutionProvider_DML failed: "))
+                       + char_to_tstring(Ort::GetApi().GetErrorMessage(st));
             Ort::GetApi().ReleaseStatus(st);
             return RGY_ERR_UNSUPPORTED;
         }
 
-        const auto ortPath = stringToOrtPath(modelPath);
-        I.session = std::make_unique<Ort::Session>(*I.env, ortPath.c_str(), opts);
+        I.session = std::make_unique<Ort::Session>(*I.env, modelPath.c_str(), opts);
 
         if (I.session->GetInputCount() < 1 || I.session->GetOutputCount() < 1) {
-            errMessage = "model has no input/output tensor.";
+            errMessage = _T("model has no input/output tensor.");
             return RGY_ERR_UNSUPPORTED;
         }
         // names (own the strings; the AllocatedStringPtr frees on scope exit)
@@ -184,17 +171,17 @@ RGY_ERR RGYOnnxRTDML::init(const std::string &modelPath, const uint32_t luidLow,
         auto outs = I.session->Run(Ort::RunOptions{ nullptr }, inNames, &inT, 1, outNames, 1);
         auto oShape = outs[0].GetTensorTypeAndShapeInfo().GetShape();
         if (oShape.size() != 4) {
-            errMessage = "model output is not a 4D NCHW tensor.";
+            errMessage = _T("model output is not a 4D NCHW tensor.");
             return RGY_ERR_UNSUPPORTED;
         }
         I.outC = (int)oShape[1];
         I.outH = (int)oShape[2];
         I.outW = (int)oShape[3];
     } catch (const Ort::Exception &e) {
-        errMessage = e.what();
+        errMessage = char_to_tstring(e.what());
         return RGY_ERR_UNKNOWN;
     } catch (const std::exception &e) {
-        errMessage = e.what();
+        errMessage = char_to_tstring(e.what());
         return RGY_ERR_UNKNOWN;
     }
     return RGY_ERR_NONE;
@@ -230,16 +217,16 @@ int RGYOnnxRTDML::outWidth()    const { return m_impl->outW; }
 size_t RGYOnnxRTDML::outElemCount() const {
     return (size_t)m_impl->outC * m_impl->outH * m_impl->outW;
 }
-std::string RGYOnnxRTDML::deviceFullName() const { return m_impl->adapterName; }
-std::string RGYOnnxRTDML::inferencePrecision() const { return m_impl->precision; }
+tstring RGYOnnxRTDML::deviceFullName() const { return m_impl->adapterName; }
+tstring RGYOnnxRTDML::inferencePrecision() const { return m_impl->precision; }
 
 #else // !ENABLE_ONNXRUNTIME
 
 class RGYOnnxRTDML::Impl {};
 RGYOnnxRTDML::RGYOnnxRTDML() : m_impl(nullptr) {}
 RGYOnnxRTDML::~RGYOnnxRTDML() {}
-RGY_ERR RGYOnnxRTDML::init(const std::string &, const uint32_t, const int32_t, const int, const int, std::string &errMessage) {
-    errMessage = "this build of VCEEnc has no ONNX Runtime DirectML support.";
+RGY_ERR RGYOnnxRTDML::init(const tstring &, const uint32_t, const int32_t, const int, const int, tstring &errMessage) {
+    errMessage = _T("this build of VCEEnc has no ONNX Runtime DirectML support.");
     return RGY_ERR_UNSUPPORTED;
 }
 RGY_ERR RGYOnnxRTDML::infer(const float *, float *) { return RGY_ERR_UNSUPPORTED; }
@@ -250,7 +237,7 @@ int RGYOnnxRTDML::outChannels() const { return 0; }
 int RGYOnnxRTDML::outHeight()   const { return 0; }
 int RGYOnnxRTDML::outWidth()    const { return 0; }
 size_t RGYOnnxRTDML::outElemCount() const { return 0; }
-std::string RGYOnnxRTDML::deviceFullName() const { return std::string(); }
-std::string RGYOnnxRTDML::inferencePrecision() const { return std::string(); }
+tstring RGYOnnxRTDML::deviceFullName() const { return tstring(); }
+tstring RGYOnnxRTDML::inferencePrecision() const { return tstring(); }
 
 #endif // ENABLE_ONNXRUNTIME

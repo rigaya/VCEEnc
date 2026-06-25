@@ -227,13 +227,12 @@ RGY_ERR RGYFilterOnnx::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog
     // path for DirectML, so every model uses the host-readback path; the network
     // itself still runs on the GPU, only the pre/post pack runs on the host.
     m_ov = std::make_unique<RGYOnnxRTDML>();
-    std::string errMsg;
-    const std::string modelPathA = tchar_to_string(prm->onnx.modelFile);
+    tstring errMsg;
 
-    RGY_ERR err = m_ov->init(modelPathA, prm->adapterLuidLow, prm->adapterLuidHigh, inH, inW, errMsg);
+    RGY_ERR err = m_ov->init(prm->onnx.modelFile, prm->adapterLuidLow, prm->adapterLuidHigh, inH, inW, errMsg);
     if (err != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("onnx: failed to load/compile model on DirectML: %s\n"),
-            char_to_tstring(errMsg).c_str());
+            errMsg.c_str());
         return err;
     }
 
@@ -365,10 +364,10 @@ RGY_ERR RGYFilterOnnx::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog
         info += strsprintf(_T(" noise=%d"), noiseClamped);
     }
     if (!m_ov->deviceFullName().empty()) {
-        info += strsprintf(_T(" [%s]"), char_to_tstring(m_ov->deviceFullName()).c_str());
+        info += strsprintf(_T(" [%s]"), m_ov->deviceFullName().c_str());
     }
     if (!m_ov->inferencePrecision().empty()) {
-        info += strsprintf(_T(" prec=%s"), char_to_tstring(m_ov->inferencePrecision()).c_str());
+        info += strsprintf(_T(" prec=%s"), m_ov->inferencePrecision().c_str());
     }
     if (m_postResize) {
         info += strsprintf(_T(" -> out_res %dx%d (%s)"), prm->frameOut.width, prm->frameOut.height,

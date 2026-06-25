@@ -33,7 +33,6 @@
 
 #if ENABLE_ONNXRUNTIME
 
-#include <string>
 #include "rgy_osdep.h"
 #include "rgy_tchar.h"
 
@@ -63,7 +62,7 @@ public:
     bool load();
     void close();
     bool loaded() const { return m_loaded; }
-    const std::string& errMessage() const { return m_errMessage; }
+    const tstring& errMessage() const { return m_errMessage; }
 
     auto p_OrtGetApiBase() const { return m_OrtGetApiBase; }
     auto p_OrtSessionOptionsAppendExecutionProviderDML() const { return m_OrtSessionOptionsAppendExecutionProviderDML; }
@@ -71,7 +70,7 @@ public:
 private:
     HMODULE m_hModule;
     bool m_loaded;
-    std::string m_errMessage;
+    tstring m_errMessage;
 
     PFN_OrtGetApiBase m_OrtGetApiBase;
     PFN_OrtSessionOptionsAppendExecutionProviderDML m_OrtSessionOptionsAppendExecutionProviderDML;

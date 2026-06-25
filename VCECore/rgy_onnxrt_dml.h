@@ -29,7 +29,6 @@
 #ifndef __RGY_ONNXRT_DML_H__
 #define __RGY_ONNXRT_DML_H__
 
-#include <string>
 #include <memory>
 #include <cstdint>
 #include "rgy_err.h"
@@ -66,8 +65,8 @@ public:
     // input is treated as [1, channels, height, width] (channels read from the
     // model); a probe inference discovers the output shape (and warms the DML
     // graph compile). On failure errMessage carries the ONNX Runtime error text.
-    RGY_ERR init(const std::string &modelPath, const uint32_t luidLow, const int32_t luidHigh,
-                 const int height, const int width, std::string &errMessage);
+    RGY_ERR init(const tstring &modelPath, const uint32_t luidLow, const int32_t luidHigh,
+                 const int height, const int width, tstring &errMessage);
 
     // Synchronous inference. in points to inChannels()*inHeight()*inWidth()
     // floats (CHW); out receives outChannels()*outHeight()*outWidth() floats
@@ -82,8 +81,8 @@ public:
     int outWidth()    const;
     size_t outElemCount() const; // outChannels()*outHeight()*outWidth()
 
-    std::string deviceFullName() const;     // DXGI adapter description bound to
-    std::string inferencePrecision() const; // "f32" (DirectML runs the graph as authored)
+    tstring deviceFullName() const;     // DXGI adapter description bound to
+    tstring inferencePrecision() const; // "f32" (DirectML runs the graph as authored)
 
     static bool available() { return ENABLE_ONNXRUNTIME != 0; }
 
