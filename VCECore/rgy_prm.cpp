@@ -3509,6 +3509,7 @@ RGYParamVpp::RGYParamVpp() :
     chromashift(),
     deblock(),
     deflicker(),
+    stab(),
     colorfix(),
     dehalo(),
     finedehalo(),
