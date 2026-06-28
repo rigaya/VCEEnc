@@ -188,6 +188,20 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2026.06.28 (9.07)
+[VCEEncC]
+- VPPフィルタを追加。(--vpp-softlight, --vpp-detailsharpen)
+- --vpp-resize に nis を追加。jinc/bicubic/lanczos の指定を拡張。jinc の縮小時サンプリング範囲を修正。
+- --vpp-kfm, --vpp-rtgmc, --vpp-degrain, --vpp-dehalo, --vpp-edgelevel, --vpp-knn の処理の高速化。
+- --vpp-rtgmc / --vpp-kfm の各種不具合を修正。
+- --vpp-nnedi の参照バッファ確保不足を修正。
+- 音声PTS未設定時のmuxタイムスタンプを補正。
+- libavformatが負のPTSを返す場合の音ズレを修正。
+- 出力解像度が偶数になる条件の奇数cropに対応。
+
+[VCEEnc.auo]
+- VCEEnc.auoで誤ったコマンド生成がされうる問題を修正。
+
 2026.06.06 (9.06)
 [VCEEncC]
 - 多数のVPPフィルタを追加。

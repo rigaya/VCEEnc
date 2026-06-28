@@ -1,5 +1,21 @@
 # VCEEnc Release Notes
 
+## 9.07
+
+- Add VPP filters.
+  - [--vpp-softlight](./VCEEncC_Options.en.md#--vpp-softlight-param1value1param2value2)
+  - [--vpp-detailsharpen](./VCEEncC_Options.en.md#--vpp-detailsharpen-param1value1param2value2)
+- Extend [--vpp-resize](./VCEEncC_Options.en.md#--vpp-resize-string).
+  - Add nis algorithm.
+  - Extend jinc, bicubic, and lanczos options.
+  - Fix JINC downsampling range.
+- Optimize [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2), [--vpp-rtgmc](./VCEEncC_Options.en.md#--vpp-rtgmc-param1value1), [--vpp-dehalo](./VCEEncC_Options.en.md#--vpp-dehalo-param1value1param2value2), [--vpp-edgelevel](./VCEEncC_Options.en.md#--vpp-edgelevel-param1value1param2value2), and [--vpp-knn](./VCEEncC_Options.en.md#--vpp-knn-param1value1param2value2).
+- Fix various [--vpp-rtgmc](./VCEEncC_Options.en.md#--vpp-rtgmc-param1value1) and [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) issues (RFF source frame reference, chroma degrain, degrain reuse, source-match chroma, frame pool exhaustion, source cache).
+- Fix [--vpp-nnedi](./VCEEncC_Options.en.md#--vpp-nnedi-param1value1param2value2) reference buffer allocation.
+- Fix audio mux timestamps when audio PTS is unset.
+- Fix audio sync when libavformat returns negative PTS.
+- Support odd crop when output resolution must be even.
+
 ## 9.06
 
 - Add many VPP filters, port from QSVEnc.

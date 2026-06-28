@@ -11,69 +11,35 @@
   - githubのissue (#xxx)が含まれる変更は必ず含めること。
   - 「XXXの変更を反映」という変更は無視すること。
 
-- VCEEnc/VCEEnc_readme.txt の ```【どうでもいいメモ】```の下に、更新内容を日本語で書く。
-  新バージョンの記載がない場合は、他のバージョンと同様の見出しをつけましょう。
-
-- ReleaseNotes.md の上部に、```バージョン番号```を見出しにして更新内容を英語で書く。
-  - オプション名(--xxx)が出るときは、VCEEncC_Options.en.mdへのリンクを作成する。
-    オプションのリストとリンクは、VCEEncC_Options.en.md 上部の (## Command line exampleまで)に記載がある
-　　例: [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2)
-
-- この変更のトピックとなる変更を1～2つピックアップし、100文字程度でまとめた文章例を(日本語で)作成する。
-  - git logのメッセージの文体に近い形としつつ、ですます調で過去形にすること。
-
-- ブログに記載する文章例を作成する。
-  - VCEEnc/VCEEnc_readme.txt に記載した内容をHTML形式で記載。
-  - 各項目については、見出し(```<ul><li>など```)として扱う必要はなく、```<strong>- XXXという機能を追加。</strong>(--option-name)```などのようにすること。
-  - ```<br>```は不要。(かわりに通常の改行を用いる)
-  - 最後に下記を記載する。
-    ```
-    <hr size="1" />
-    <span style="color:#CC3300">※Aviutl向けには、Aviutl_VCEEnc_x.xx.zipをダウンロードしてください。</span>
-    <a href="javascript:void(0);" onclick="javascript:openDownloadUrl('VCEEnc',0);" title="ダウンロード"><strong><u>ダウンロード>></u></strong></a>
   
-    <a href="https://github.com/rigaya/VCEEnc/blob/master/VCEEnc_auo_readme.md#vceenc-の-aviutl-への導入更新" target="_blank" title="VCEEnc 7.xxの導入方法"><u>VCEEnc 7.xxの導入方法</u></a>
+- 収集した内容に基づき下記4点の記述を行う。
+  英単語と日本語の間にスペースを入れないこと。
 
-    <a href="https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.ja.md" target="_blank" title="VCEEncCオプション一覧&amp;gt;&amp;gt;"><u>VCEEncCオプション一覧&gt;&gt;</u></a>
-
-    <hr size="1" />
-    ```
-
-- 上記4点の記述が完了したら、リリース紹介画像の素材収集に移る。
-  ※ この工程はWindows環境のCursorから実行する前提。
-
-  ## ステップ1: 紹介候補の提示
-
-  git logの変更内容から、スクリーンショットで視覚的に紹介できそうな機能・変更を候補としてリストアップする。
-  各候補には以下を含める:
-    - 機能・変更の概要（1行）
-    - 実行コマンド例（VCEEncCのコマンドライン。ヘルプ表示やエンコード実行など）
-
-  候補の最後に必ず **「今回は画像なし（バグ修正のみ等）」** の選択肢を含める。
-  ユーザーに候補を提示し、どれを採用するか選んでもらう（複数選択可）。
-
-  ## ステップ2: スクリーンショットの収集
-
-  「画像なし」が選ばれた場合 → このステップ以降をすべてスキップして終了。
-
-  紹介内容が選ばれた場合、選ばれた各機能について:
-    - コマンドを実行し、ターミナル出力をキャプチャする。
-    - 保存先: プロジェクトルートの `_release_assets/` ディレクトリ（なければ作成）。
-    - ターミナル出力を `_release_assets/XX_バージョン名.txt` に保存する。
-    - 保存後、ユーザーにターミナル上でスクリーンショットを撮るか確認する。
-      （Windowsターミナルの場合、`type ファイル名` でカラー出力を再表示可能）
-
-  ## ステップ3: ChatGPT Images用プロンプトの生成
-
-  収集したスクリーンショットの内容を踏まえ、
-  ChatGPT Images に渡すためのプロンプトを生成する。
-  プロンプトはそのままコピペしてChatGPTに貼れる形式で出力する。
-
-  ### プロンプト（1200×675 または 1:1）
-  以下の要素を含めたプロンプトを生成する:
-    - 「添付のスクリーンショットを素材として組み込んでください」という指示
-    - ソフトウェア名「VCEEnc」とバージョン番号
-    - 紹介内容1つに絞った簡素な紹介文
-    - デザイン指示: スクリーンショットを最大限中心に、文字は大きく少なく
-    - 画像サイズ: 1200×675 または 1:1
-    - テキストは日本語で
+  - VCEEnc/VCEEnc_readme.txt の ```【どうでもいいメモ】```の下に、更新内容を日本語で書く。
+    新バージョンの記載がない場合は、他のバージョンと同様の見出しをつけましょう。
+  
+  - ReleaseNotes.md の上部に、```バージョン番号```を見出しにして更新内容を英語で書く。
+    - オプション名(--xxx)が出るときは、VCEEncC_Options.en.mdへのリンクを作成する。
+      オプションのリストとリンクは、VCEEncC_Options.en.md 上部の (## Command line exampleまで)に記載がある
+  　　例: [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2)
+  
+  - この変更のトピックとなる変更を1～2つピックアップし、100文字程度でまとめた文章例を(日本語で)作成する。
+    - git logのメッセージの文体に近い形としつつ、ですます調で過去形にすること。
+  
+  - ブログに記載する文章例を作成する。
+    - VCEEnc/VCEEnc_readme.txt に記載した内容をHTML形式で記載。
+    - 各項目については、見出し(```<ul><li>など```)として扱う必要はなく、```<strong>- XXXという機能を追加。</strong>(--option-name)```などのようにすること。
+    - ```<br>```は不要。(かわりに通常の改行を用いる)
+    - 最後に下記を記載する。
+      ```
+      <hr size="1" />
+      <span style="color:#CC3300">※Aviutl向けには、Aviutl_VCEEnc_x.xx.zipをダウンロードしてください。</span>
+      <a href="javascript:void(0);" onclick="javascript:openDownloadUrl('VCEEnc',0);" title="ダウンロード"><strong><u>ダウンロード>></u></strong></a>
+    
+      <a href="https://github.com/rigaya/VCEEnc/blob/master/VCEEnc_auo_readme.md#vceenc-の-aviutl-への導入更新" target="_blank" title="VCEEnc 7.xxの導入方法"><u>VCEEnc 7.xxの導入方法</u></a>
+  
+      <a href="https://github.com/rigaya/VCEEnc/blob/master/VCEEncC_Options.ja.md" target="_blank" title="VCEEncCオプション一覧&amp;gt;&amp;gt;"><u>VCEEncCオプション一覧&gt;&gt;</u></a>
+  
+      <hr size="1" />
+      ```
+  
