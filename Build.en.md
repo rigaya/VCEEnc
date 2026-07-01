@@ -56,8 +56,8 @@ copy /y onnxruntime-directml\runtimes\win-x64\native\onnxruntime_providers_share
 setx ONNXRUNTIME_DIR "%ONNXRUNTIME_DIR%"
 ```
 
-At runtime, add `%ONNXRUNTIME_DIR%\lib` to `PATH`.
-As Windows may have another `onnxruntime.dll` in the system directory, make sure the DirectML-enabled `onnxruntime.dll` is found first.
+For x64 VCEEncC builds, `onnxruntime.dll` and `onnxruntime_providers_shared.dll` are copied from `%ONNXRUNTIME_DIR%\lib` to the output directory.
+The release package also includes these two DLLs, so users do not need to configure `PATH` separately at runtime.
 
 
 ### 1. Download source code

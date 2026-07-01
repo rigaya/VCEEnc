@@ -85,6 +85,9 @@ jobs:
           7z x -oonnxruntime-directml -y onnxruntime-directml.nupkg
           if not exist ..\onnxruntime mkdir ..\onnxruntime
           xcopy /e /i /y onnxruntime-directml\build\native\include ..\onnxruntime\include
+          if not exist ..\onnxruntime\lib mkdir ..\onnxruntime\lib
+          copy /y onnxruntime-directml\runtimes\win-x64\native\onnxruntime.dll ..\onnxruntime\lib\
+          copy /y onnxruntime-directml\runtimes\win-x64\native\onnxruntime_providers_shared.dll ..\onnxruntime\lib\
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -182,6 +185,9 @@ jobs:
           7z x -oonnxruntime-directml -y onnxruntime-directml.nupkg
           if not exist ..\onnxruntime mkdir ..\onnxruntime
           xcopy /e /i /y onnxruntime-directml\build\native\include ..\onnxruntime\include
+          if not exist ..\onnxruntime\lib mkdir ..\onnxruntime\lib
+          copy /y onnxruntime-directml\runtimes\win-x64\native\onnxruntime.dll ..\onnxruntime\lib\
+          copy /y onnxruntime-directml\runtimes\win-x64\native\onnxruntime_providers_shared.dll ..\onnxruntime\lib\
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v2

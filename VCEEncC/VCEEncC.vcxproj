@@ -595,6 +595,13 @@ if exist "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\D
     <ClInclude Include="VCEEncC_version.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="CopyOnnxRuntimeDirectML" AfterTargets="Build" Condition="'$(Platform)'=='x64' and '$(ONNXRUNTIME_DIR)'!=''">
+    <ItemGroup>
+      <OnnxRuntimeDirectMLDll Include="$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" Condition="Exists('$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll')" />
+      <OnnxRuntimeDirectMLDll Include="$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" Condition="Exists('$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OnnxRuntimeDirectMLDll)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="'@(OnnxRuntimeDirectMLDll)'!=''" />
+  </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>

@@ -57,8 +57,8 @@ copy /y onnxruntime-directml\runtimes\win-x64\native\onnxruntime_providers_share
 setx ONNXRUNTIME_DIR "%ONNXRUNTIME_DIR%"
 ```
 
-実行時には `%ONNXRUNTIME_DIR%\lib` を `PATH` に追加してください。
-Windows のシステムディレクトリに別の `onnxruntime.dll` が存在することがあるため、DirectML対応版の `onnxruntime.dll` が先に見つかるように設定してください。
+x64 の VCEEncC ビルドでは、`%ONNXRUNTIME_DIR%\lib` の `onnxruntime.dll` と `onnxruntime_providers_shared.dll` が出力先にコピーされます。
+配布パッケージにもこの2つの DLL が同梱されるため、実行時に別途 `PATH` を設定する必要はありません。
 
 ### 1. ソースのダウンロード
 
