@@ -54,6 +54,10 @@ extern const TCHAR *RGY_ONNXRUNTIME_DLL_NAME;
 using PFN_OrtGetApiBase = const OrtApiBase*(ORT_API_CALL *)();
 using PFN_OrtSessionOptionsAppendExecutionProviderDML = OrtStatus*(ORT_API_CALL *)(OrtSessionOptions *options, int device_id);
 
+struct RGYOrtDmlApi {
+    PFN_OrtSessionOptionsAppendExecutionProviderDML SessionOptionsAppendExecutionProvider_DML;
+};
+
 class RGYOnnxRuntimeLoader {
 public:
     RGYOnnxRuntimeLoader();
@@ -74,6 +78,7 @@ private:
 
     PFN_OrtGetApiBase m_OrtGetApiBase;
     PFN_OrtSessionOptionsAppendExecutionProviderDML m_OrtSessionOptionsAppendExecutionProviderDML;
+    const RGYOrtDmlApi *m_OrtDmlApi;
 };
 
 #endif // ENABLE_ONNXRUNTIME

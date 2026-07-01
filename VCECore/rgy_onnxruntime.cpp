@@ -29,6 +29,8 @@
 
 #if ENABLE_ONNXRUNTIME
 
+#include <vector>
+
 #include "rgy_util.h"
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -37,12 +39,57 @@ const TCHAR *RGY_ONNXRUNTIME_DLL_NAME = _T("onnxruntime.dll");
 const TCHAR *RGY_ONNXRUNTIME_DLL_NAME = _T("libonnxruntime.so");
 #endif
 
+#if defined(_WIN32) || defined(_WIN64)
+static HMODULE loadOnnxRuntimeLibrary() {
+    std::vector<tstring> dirs;
+    std::vector<TCHAR> pathBuf(MAX_PATH + 1, 0);
+    const auto exePathLen = GetModuleFileName(nullptr, pathBuf.data(), (DWORD)pathBuf.size());
+    if (exePathLen > 0 && exePathLen < pathBuf.size()) {
+        tstring exePath(pathBuf.data());
+        const auto pos = exePath.find_last_of(_T("\\/"));
+        if (pos != tstring::npos) {
+            dirs.push_back(exePath.substr(0, pos));
+        }
+    }
+
+    const auto envLen = GetEnvironmentVariable(_T("PATH"), nullptr, 0);
+    if (envLen > 0) {
+        std::vector<TCHAR> envPath(envLen, 0);
+        if (GetEnvironmentVariable(_T("PATH"), envPath.data(), envLen) > 0) {
+            for (const auto& dir : split(tstring(envPath.data()), _T(";"))) {
+                if (dir.length() > 0) {
+                    dirs.push_back(dir);
+                }
+            }
+        }
+    }
+
+    for (auto dir : dirs) {
+        if (dir.back() != _T('\\') && dir.back() != _T('/')) {
+            dir += _T("\\");
+        }
+        const auto dllPath = dir + RGY_ONNXRUNTIME_DLL_NAME;
+        if (GetFileAttributes(dllPath.c_str()) != INVALID_FILE_ATTRIBUTES) {
+            if (auto hModule = LoadLibrary(dllPath.c_str()); hModule != nullptr) {
+                return hModule;
+            }
+        }
+    }
+    return LoadLibrary(RGY_ONNXRUNTIME_DLL_NAME);
+}
+#else
+static HMODULE loadOnnxRuntimeLibrary() {
+    return RGY_LOAD_LIBRARY(RGY_ONNXRUNTIME_DLL_NAME);
+}
+#endif
+
 RGYOnnxRuntimeLoader::RGYOnnxRuntimeLoader() :
     m_hModule(nullptr),
     m_loaded(false),
     m_errMessage(),
     m_OrtGetApiBase(nullptr),
-    m_OrtSessionOptionsAppendExecutionProviderDML(nullptr) {
+    m_OrtSessionOptionsAppendExecutionProviderDML(nullptr),
+    m_OrtDmlApi(nullptr) {
 }
 
 RGYOnnxRuntimeLoader::~RGYOnnxRuntimeLoader() {
@@ -55,7 +102,7 @@ bool RGYOnnxRuntimeLoader::load() {
     }
     m_errMessage.clear();
 
-    if ((m_hModule = RGY_LOAD_LIBRARY(RGY_ONNXRUNTIME_DLL_NAME)) == nullptr) {
+    if ((m_hModule = loadOnnxRuntimeLibrary()) == nullptr) {
         m_errMessage = strsprintf(_T("could not load %s (a DirectML-enabled ONNX Runtime). ")
                                   _T("place it and DirectML.dll next to the executable or in the library search path."),
                                   RGY_ONNXRUNTIME_DLL_NAME);
@@ -91,8 +138,24 @@ bool RGYOnnxRuntimeLoader::load() {
     }
     Ort::InitApi(api);
 
-    if (!loadFunc("OrtSessionOptionsAppendExecutionProvider_DML", (void **)&m_OrtSessionOptionsAppendExecutionProviderDML)) {
-        return false;
+    m_OrtSessionOptionsAppendExecutionProviderDML = (PFN_OrtSessionOptionsAppendExecutionProviderDML)RGY_GET_PROC_ADDRESS(m_hModule, "OrtSessionOptionsAppendExecutionProvider_DML");
+    if (m_OrtSessionOptionsAppendExecutionProviderDML == nullptr) {
+        const void *dmlApi = nullptr;
+        if (auto st = api->GetExecutionProviderApi("DML", ORT_API_VERSION, &dmlApi); st != nullptr) {
+            m_errMessage = tstring(_T("could not get ONNX Runtime DirectML API: "))
+                         + char_to_tstring(api->GetErrorMessage(st));
+            api->ReleaseStatus(st);
+            close();
+            return false;
+        }
+        m_OrtDmlApi = reinterpret_cast<const RGYOrtDmlApi *>(dmlApi);
+        if (m_OrtDmlApi == nullptr || m_OrtDmlApi->SessionOptionsAppendExecutionProvider_DML == nullptr) {
+            m_errMessage = strsprintf(_T("%s does not provide DirectML execution provider API."),
+                                      RGY_ONNXRUNTIME_DLL_NAME);
+            close();
+            return false;
+        }
+        m_OrtSessionOptionsAppendExecutionProviderDML = m_OrtDmlApi->SessionOptionsAppendExecutionProvider_DML;
     }
 
     m_loaded = true;
@@ -107,6 +170,7 @@ void RGYOnnxRuntimeLoader::close() {
     m_loaded = false;
     m_OrtGetApiBase = nullptr;
     m_OrtSessionOptionsAppendExecutionProviderDML = nullptr;
+    m_OrtDmlApi = nullptr;
 }
 
 #endif // ENABLE_ONNXRUNTIME
