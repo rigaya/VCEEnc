@@ -34,6 +34,31 @@ git clone https://github.com/KhronosGroup/OpenCL-Headers.git <path-to-clone>
 setx OPENCL_HEADERS <path-to-clone>
 ```
 
+To use `--vpp-onnx`, a DirectML-enabled ONNX Runtime is required.
+Extract the [Microsoft.ML.OnnxRuntime.DirectML](https://www.nuget.org/packages/Microsoft.ML.OnnxRuntime.DirectML) NuGet package, and set the extracted location to the `ONNXRUNTIME_DIR` environment variable.
+The Visual Studio project refers to `$(ONNXRUNTIME_DIR)\include`.
+The example below installs it to `F:\VisualStudio2022\Projects\onnxruntime`.
+
+```Batchfile
+set ONNXRUNTIME_DIR=F:\VisualStudio2022\Projects\onnxruntime
+if not exist "%ONNXRUNTIME_DIR%" mkdir "%ONNXRUNTIME_DIR%"
+if not exist "%ONNXRUNTIME_DIR%\include" mkdir "%ONNXRUNTIME_DIR%\include"
+if not exist "%ONNXRUNTIME_DIR%\lib" mkdir "%ONNXRUNTIME_DIR%\lib"
+
+curl -L -o onnxruntime-directml.nupkg https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime.directml/1.23.0/microsoft.ml.onnxruntime.directml.1.23.0.nupkg
+7z x -oonnxruntime-directml -y onnxruntime-directml.nupkg
+
+xcopy /e /i /y onnxruntime-directml\build\native\include "%ONNXRUNTIME_DIR%\include"
+copy /y onnxruntime-directml\runtimes\win-x64\native\onnxruntime.dll "%ONNXRUNTIME_DIR%\lib\"
+copy /y onnxruntime-directml\runtimes\win-x64\native\onnxruntime.lib "%ONNXRUNTIME_DIR%\lib\"
+copy /y onnxruntime-directml\runtimes\win-x64\native\onnxruntime_providers_shared.dll "%ONNXRUNTIME_DIR%\lib\"
+
+setx ONNXRUNTIME_DIR "%ONNXRUNTIME_DIR%"
+```
+
+At runtime, add `%ONNXRUNTIME_DIR%\lib` to `PATH`.
+As Windows may have another `onnxruntime.dll` in the system directory, make sure the DirectML-enabled `onnxruntime.dll` is found first.
+
 
 ### 1. Download source code
 

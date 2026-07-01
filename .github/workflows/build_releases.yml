@@ -8,6 +8,9 @@ on:
     tags:
       - '*'
 
+env:
+  ONNXRUNTIME_DIRECTML_VERSION: 1.23.0
+
 jobs:
   get_version_name:
     name: Get version name
@@ -78,6 +81,10 @@ jobs:
           git clone --depth 1 https://github.com/AviSynth/AviSynthPlus.git ..\AviSynthPlus
           git clone -b R72 --depth 1 https://github.com/vapoursynth/vapoursynth.git ..\vapoursynth
           git clone --depth 1 https://github.com/KhronosGroup/OpenCL-Headers.git ..\openclheaders
+          curl -s -o onnxruntime-directml.nupkg -L https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime.directml/${{ env.ONNXRUNTIME_DIRECTML_VERSION }}/microsoft.ml.onnxruntime.directml.${{ env.ONNXRUNTIME_DIRECTML_VERSION }}.nupkg
+          7z x -oonnxruntime-directml -y onnxruntime-directml.nupkg
+          if not exist ..\onnxruntime mkdir ..\onnxruntime
+          xcopy /e /i /y onnxruntime-directml\build\native\include ..\onnxruntime\include
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -89,6 +96,7 @@ jobs:
           set AVISYNTH_SDK=${{ github.workspace }}\..\AviSynthPlus\avs_core
           set VAPOURSYNTH_SDK=${{ github.workspace }}\..\vapoursynth
           set OPENCL_HEADERS=${{ github.workspace }}\..\openclheaders
+          set ONNXRUNTIME_DIR=${{ github.workspace }}\..\onnxruntime
           msbuild VCEEnc.sln /t:build /p:configuration=RelStatic /p:Platform=${{ matrix.platform }} -maxcpucount
 
       - name: Create Archieve
@@ -170,6 +178,10 @@ jobs:
           git clone https://github.com/AviSynth/AviSynthPlus.git ..\AviSynthPlus
           git clone -b R72 https://github.com/vapoursynth/vapoursynth.git ..\vapoursynth
           git clone https://github.com/KhronosGroup/OpenCL-Headers.git ..\openclheaders
+          curl -s -o onnxruntime-directml.nupkg -L https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime.directml/${{ env.ONNXRUNTIME_DIRECTML_VERSION }}/microsoft.ml.onnxruntime.directml.${{ env.ONNXRUNTIME_DIRECTML_VERSION }}.nupkg
+          7z x -oonnxruntime-directml -y onnxruntime-directml.nupkg
+          if not exist ..\onnxruntime mkdir ..\onnxruntime
+          xcopy /e /i /y onnxruntime-directml\build\native\include ..\onnxruntime\include
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -181,6 +193,7 @@ jobs:
           set AVISYNTH_SDK=${{ github.workspace }}\..\AviSynthPlus\avs_core
           set VAPOURSYNTH_SDK=${{ github.workspace }}\..\vapoursynth
           set OPENCL_HEADERS=${{ github.workspace }}\..\openclheaders
+          set ONNXRUNTIME_DIR=${{ github.workspace }}\..\onnxruntime
           msbuild VCEEnc.sln /t:build /p:configuration=Release /p:Platform=${{ matrix.platform }} -maxcpucount
 
       - name: Download auo_setup Win32

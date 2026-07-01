@@ -35,6 +35,31 @@ git clone https://github.com/KhronosGroup/OpenCL-Headers.git <path-to-clone>
 setx OPENCL_HEADERS <path-to-clone>
 ```
 
+`--vpp-onnx` を使用するには、DirectML対応版の ONNX Runtime が必要です。
+[Microsoft.ML.OnnxRuntime.DirectML](https://www.nuget.org/packages/Microsoft.ML.OnnxRuntime.DirectML) の NuGet パッケージを展開し、展開先を環境変数 `ONNXRUNTIME_DIR` に設定してください。
+Visual Studio プロジェクトは `$(ONNXRUNTIME_DIR)\include` を参照します。
+下記は `F:\VisualStudio2022\Projects\onnxruntime` に配置する例です。
+
+```Batchfile
+set ONNXRUNTIME_DIR=F:\VisualStudio2022\Projects\onnxruntime
+if not exist "%ONNXRUNTIME_DIR%" mkdir "%ONNXRUNTIME_DIR%"
+if not exist "%ONNXRUNTIME_DIR%\include" mkdir "%ONNXRUNTIME_DIR%\include"
+if not exist "%ONNXRUNTIME_DIR%\lib" mkdir "%ONNXRUNTIME_DIR%\lib"
+
+curl -L -o onnxruntime-directml.nupkg https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime.directml/1.23.0/microsoft.ml.onnxruntime.directml.1.23.0.nupkg
+7z x -oonnxruntime-directml -y onnxruntime-directml.nupkg
+
+xcopy /e /i /y onnxruntime-directml\build\native\include "%ONNXRUNTIME_DIR%\include"
+copy /y onnxruntime-directml\runtimes\win-x64\native\onnxruntime.dll "%ONNXRUNTIME_DIR%\lib\"
+copy /y onnxruntime-directml\runtimes\win-x64\native\onnxruntime.lib "%ONNXRUNTIME_DIR%\lib\"
+copy /y onnxruntime-directml\runtimes\win-x64\native\onnxruntime_providers_shared.dll "%ONNXRUNTIME_DIR%\lib\"
+
+setx ONNXRUNTIME_DIR "%ONNXRUNTIME_DIR%"
+```
+
+実行時には `%ONNXRUNTIME_DIR%\lib` を `PATH` に追加してください。
+Windows のシステムディレクトリに別の `onnxruntime.dll` が存在することがあるため、DirectML対応版の `onnxruntime.dll` が先に見つかるように設定してください。
+
 ### 1. ソースのダウンロード
 
 ```Batchfile
