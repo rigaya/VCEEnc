@@ -1411,15 +1411,9 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.nlmeans.enable)       filterPipeline.push_back(VppType::CL_DENOISE_NLMEANS);
     if (inputParam->vpp.pmd.enable)           filterPipeline.push_back(VppType::CL_DENOISE_PMD);
     if (inputParam->vpp.hqdn3d.enable)        filterPipeline.push_back(VppType::CL_DENOISE_HQDN3D);
-    for (const auto& anime4kEntry : inputParam->vpp.anime4kChain) {
-        if (anime4kEntry.enable) filterPipeline.push_back(VppType::CL_ANIME4K);
-    }
-#if ENABLE_VPP_FILTER_ONNX
-    for (const auto& onnxEntry : inputParam->vpp.onnxChain) {
-        if (onnxEntry.enable) filterPipeline.push_back(VppType::CL_ONNX);
-    }
-#endif
     if (inputParam->vpp.descale.enable)       filterPipeline.push_back(VppType::CL_DESCALE);
+    if (inputParam->vpp.anime4k.enable)       filterPipeline.push_back(VppType::CL_ANIME4K);
+    if (inputParam->vpp.onnx.enable)          filterPipeline.push_back(VppType::CL_ONNX);
     if (degrainLegacy)                        filterPipeline.push_back(VppType::CL_DEGRAIN);
     if (inputParam->vpp.rtgmc_edi.enable && degrainLegacy) filterPipeline.push_back(VppType::CL_RTGMC_EDI);
     if (degrainTR1)                           filterPipeline.push_back(VppType::CL_DEGRAIN_APPLY_TR1);
@@ -2210,14 +2204,9 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
 #if ENABLE_VPP_FILTER_ONNX
     if (vppType == VppType::CL_ONNX) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
-        if (instanceIndex < 0 || instanceIndex >= (int)inputParam->vpp.onnxChain.size()) {
-            PrintMes(RGY_LOG_ERROR, _T("onnx: instanceIndex %d out of chain bounds (size %zu)\n"),
-                instanceIndex, inputParam->vpp.onnxChain.size());
-            return RGY_ERR_INVALID_PARAM;
-        }
         unique_ptr<RGYFilter> filter(new RGYFilterOnnx(m_dev->cl()));
         shared_ptr<RGYFilterParamOnnx> param(new RGYFilterParamOnnx());
-        param->onnx = inputParam->vpp.onnxChain[instanceIndex];
+        param->onnx = inputParam->vpp.onnx;
         param->modelDir = inputParam->vpp.onnxModelDir;
         param->sar[0] = inputParam->input.sar[0];
         param->sar[1] = inputParam->input.sar[1];
@@ -2244,12 +2233,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
         unique_ptr<RGYFilter> filter(new RGYFilterAnime4k(m_dev->cl()));
         shared_ptr<RGYFilterParamAnime4k> param(new RGYFilterParamAnime4k());
-        if (instanceIndex < 0 || instanceIndex >= (int)inputParam->vpp.anime4kChain.size()) {
-            PrintMes(RGY_LOG_ERROR, _T("anime4k: instanceIndex %d out of chain bounds (size %zu)\n"),
-                instanceIndex, inputParam->vpp.anime4kChain.size());
-            return RGY_ERR_INVALID_PARAM;
-        }
-        param->anime4k = inputParam->vpp.anime4kChain[instanceIndex];
+        param->anime4k = inputParam->vpp.anime4k;
         param->sar[0] = inputParam->input.sar[0];
         param->sar[1] = inputParam->input.sar[1];
         param->frameIn = inputFrame;

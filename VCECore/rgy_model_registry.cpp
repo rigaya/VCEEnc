@@ -25,8 +25,9 @@
 //
 // ------------------------------------------------------------------------------------------
 
-#include "rgy_model_registry.h"
+#include "rgy_prm.h"
 
+#include "rgy_model_registry.h"
 #include "rgy_filesystem.h"
 #include "rgy_util.h"
 #include "../json/json.hpp"
@@ -81,6 +82,9 @@ RGY_ERR RGYModelRegistry::load(const tstring& jsonPath, std::shared_ptr<RGYLog> 
         entry.noise      = val.contains("noise") && val["noise"].is_number_integer()
                             ? val["noise"].get<int>()
                             : 15;
+        entry.fp32       = val.contains("fp32") && val["fp32"].is_boolean()
+                            ? val["fp32"].get<bool>()
+                            : false;
         m_models[char_to_tstring(name.c_str())] = std::move(entry);
     }
 

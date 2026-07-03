@@ -29,6 +29,8 @@
 #ifndef __RGY_MODEL_REGISTRY_H__
 #define __RGY_MODEL_REGISTRY_H__
 
+#include "rgy_prm.h"
+
 #include "rgy_osdep.h"
 #include "rgy_err.h"
 #include "rgy_log.h"
@@ -40,6 +42,7 @@ struct OnnxModelEntry {
     tstring path;
     tstring colorspace;  // "rgb" or "ycbcr", default "rgb"
     int noise;           // default 15
+    bool fp32;           // force fp32 inference, default false
 };
 
 class RGYModelRegistry {

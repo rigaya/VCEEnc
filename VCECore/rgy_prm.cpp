@@ -108,9 +108,9 @@ static const auto VPPTYPE_TO_STR = make_array<std::pair<VppType, tstring>>(
     std::make_pair(VppType::CL_DENOISE_NLMEANS,      _T("nlmeans")),
     std::make_pair(VppType::CL_DENOISE_PMD,          _T("pmd")),
     std::make_pair(VppType::CL_DENOISE_HQDN3D,       _T("hqdn3d")),
-    std::make_pair(VppType::CL_ANIME4K,               _T("anime4k")),
-    std::make_pair(VppType::CL_ONNX,                 _T("onnx")),
     std::make_pair(VppType::CL_DESCALE,              _T("descale")),
+    std::make_pair(VppType::CL_ANIME4K,              _T("anime4k")),
+    std::make_pair(VppType::CL_ONNX,                 _T("onnx")),
     std::make_pair(VppType::CL_DENOISE_DCT,          _T("denoise-dct")),
     std::make_pair(VppType::CL_DENOISE_SMOOTH,       _T("smooth")),
     std::make_pair(VppType::CL_DENOISE_FFT3D,        _T("fft3d")),
@@ -1953,11 +1953,73 @@ tstring VppHqdn3d::print() const {
         luma_spatial, chroma_spatial, luma_temporal, chroma_temporal);
 }
 
+VppDescale::VppDescale() :
+    enable(false),
+    kernel(VppDescaleKernel::Bicubic),
+    width(0),
+    height(0),
+    b(FILTER_DEFAULT_DESCALE_BICUBIC_B),
+    c(FILTER_DEFAULT_DESCALE_BICUBIC_C),
+    src_left(FILTER_DEFAULT_DESCALE_SRC_LEFT),
+    src_top(FILTER_DEFAULT_DESCALE_SRC_TOP),
+    border(VppDescaleBorder::Mirror),
+    autoDetect(false),
+    search_min(0),
+    search_max(0),
+    search_step(FILTER_DEFAULT_DESCALE_SEARCH_STEP),
+    detect_frames(FILTER_DEFAULT_DESCALE_DETECT_FRAMES),
+    show_scores(false) {
+}
+
+bool VppDescale::operator==(const VppDescale &x) const {
+    return enable == x.enable
+        && kernel == x.kernel
+        && width == x.width
+        && height == x.height
+        && b == x.b
+        && c == x.c
+        && src_left == x.src_left
+        && src_top == x.src_top
+        && border == x.border
+        && autoDetect == x.autoDetect
+        && search_min == x.search_min
+        && search_max == x.search_max
+        && search_step == x.search_step
+        && detect_frames == x.detect_frames
+        && show_scores == x.show_scores;
+}
+
+bool VppDescale::operator!=(const VppDescale &x) const {
+    return !(*this == x);
+}
+
+tstring VppDescale::print() const {
+    tstring extras;
+    if (kernel == VppDescaleKernel::Bicubic) {
+        extras = strsprintf(_T(", b %.3f, c %.3f"), b, c);
+    }
+    if (src_left != FILTER_DEFAULT_DESCALE_SRC_LEFT || src_top != FILTER_DEFAULT_DESCALE_SRC_TOP) {
+        extras += strsprintf(_T(", src_left %.3f, src_top %.3f"), src_left, src_top);
+    }
+    if (border != VppDescaleBorder::Mirror) {
+        extras += strsprintf(_T(", border %s"), get_cx_desc(list_vpp_descale_border, (int)border));
+    }
+    if (autoDetect) {
+        extras += strsprintf(_T(", auto (search %d-%d step %d detect_frames %d)"),
+            search_min, search_max, search_step, detect_frames);
+        return strsprintf(_T("descale: kernel %s%s"),
+            get_cx_desc(list_vpp_descale_kernel, (int)kernel), extras.c_str());
+    }
+    return strsprintf(_T("descale: kernel %s, target %dx%d%s"),
+        get_cx_desc(list_vpp_descale_kernel, (int)kernel), width, height, extras.c_str());
+}
+
 VppOnnx::VppOnnx() :
     enable(false),
     modelFile(),
     device(_T("GPU.0")),
     interop(_T("auto")),
+    precision(_T("auto")),
     colormatrix(_T("auto")),
     colorrange(_T("auto")),
     colorspace(_T("rgb")),
@@ -1973,6 +2035,7 @@ bool VppOnnx::operator==(const VppOnnx &x) const {
         && modelFile == x.modelFile
         && device == x.device
         && interop == x.interop
+        && precision == x.precision
         && colormatrix == x.colormatrix
         && colorrange == x.colorrange
         && colorspace == x.colorspace
@@ -1989,6 +2052,7 @@ tstring VppOnnx::print() const {
     tstring s = strsprintf(_T("model=%s"), modelFile.c_str());
     s += strsprintf(_T(",device=%s"), device.c_str());
     s += strsprintf(_T(",interop=%s"), interop.c_str());
+    s += strsprintf(_T(",prec=%s"), precision.c_str());
     s += strsprintf(_T(",colormatrix=%s"), colormatrix.c_str());
     s += strsprintf(_T(",colorrange=%s"), colorrange.c_str());
     s += strsprintf(_T(",colorspace=%s"), colorspace.c_str());
@@ -2066,8 +2130,6 @@ tstring VppAnime4k::print() const {
             postResizeW, postResizeH, get_cx_desc(list_vpp_resize, (int)postResizeAlgo));
     }
     tstring extras;
-    // Don't repeat the darken/thin value when the mode= alias already
-    // encodes it (mode=darken_hq → darken=HQ side-effect; same for thin).
     const bool darkenEncodedInMode = (mode == VppAnime4kMode::DarkenHQ && darken == VppAnime4kDarken::HQ);
     const bool thinEncodedInMode   = (mode == VppAnime4kMode::ThinHQ   && thin   == VppAnime4kThin::HQ);
     if (darken != VppAnime4kDarken::Off && !darkenEncodedInMode) {
@@ -2079,9 +2141,6 @@ tstring VppAnime4k::print() const {
             get_cx_desc(list_vpp_anime4k_thin, (int)thin));
     }
     if (denoise != VppAnime4kDenoise::Off) {
-        // denoiseHistReg may still hold the -1 sentinel here when the
-        // user hasn't overridden it and init() hasn't resolved it yet;
-        // print only when it's a real value to avoid showing "-1.00".
         if (denoiseHistReg >= 0.0f) {
             extras += strsprintf(_T(", denoise %s (intensity %.2f, spatial %.2f, curve %.2f, hist_reg %.2f)"),
                 get_cx_desc(list_vpp_anime4k_denoise, (int)denoise),
@@ -2098,68 +2157,6 @@ tstring VppAnime4k::print() const {
         scale, strength,
         get_cx_desc(list_vpp_anime4k_chroma_resize, (int)chromaResize),
         extras.c_str());
-}
-
-
-VppDescale::VppDescale() :
-    enable(false),
-    kernel(VppDescaleKernel::Bicubic),
-    width(0),
-    height(0),
-    b(FILTER_DEFAULT_DESCALE_BICUBIC_B),
-    c(FILTER_DEFAULT_DESCALE_BICUBIC_C),
-    src_left(FILTER_DEFAULT_DESCALE_SRC_LEFT),
-    src_top(FILTER_DEFAULT_DESCALE_SRC_TOP),
-    border(VppDescaleBorder::Mirror),
-    autoDetect(false),
-    search_min(0),
-    search_max(0),
-    search_step(FILTER_DEFAULT_DESCALE_SEARCH_STEP),
-    detect_frames(FILTER_DEFAULT_DESCALE_DETECT_FRAMES),
-    show_scores(false) {
-}
-
-bool VppDescale::operator==(const VppDescale &x) const {
-    return enable == x.enable
-        && kernel == x.kernel
-        && width == x.width
-        && height == x.height
-        && b == x.b
-        && c == x.c
-        && src_left == x.src_left
-        && src_top == x.src_top
-        && border == x.border
-        && autoDetect == x.autoDetect
-        && search_min == x.search_min
-        && search_max == x.search_max
-        && search_step == x.search_step
-        && detect_frames == x.detect_frames
-        && show_scores == x.show_scores;
-}
-
-bool VppDescale::operator!=(const VppDescale &x) const {
-    return !(*this == x);
-}
-
-tstring VppDescale::print() const {
-    tstring extras;
-    if (kernel == VppDescaleKernel::Bicubic) {
-        extras = strsprintf(_T(", b %.3f, c %.3f"), b, c);
-    }
-    if (src_left != FILTER_DEFAULT_DESCALE_SRC_LEFT || src_top != FILTER_DEFAULT_DESCALE_SRC_TOP) {
-        extras += strsprintf(_T(", src_left %.3f, src_top %.3f"), src_left, src_top);
-    }
-    if (border != VppDescaleBorder::Mirror) {
-        extras += strsprintf(_T(", border %s"), get_cx_desc(list_vpp_descale_border, (int)border));
-    }
-    if (autoDetect) {
-        extras += strsprintf(_T(", auto (search %d-%d step %d detect_frames %d)"),
-            search_min, search_max, search_step, detect_frames);
-        return strsprintf(_T("descale: kernel %s%s"),
-            get_cx_desc(list_vpp_descale_kernel, (int)kernel), extras.c_str());
-    }
-    return strsprintf(_T("descale: kernel %s, target %dx%d%s"),
-        get_cx_desc(list_vpp_descale_kernel, (int)kernel), width, height, extras.c_str());
 }
 
 VppSmooth::VppSmooth() :
@@ -3638,11 +3635,11 @@ RGYParamVpp::RGYParamVpp() :
     nlmeans(),
     pmd(),
     hqdn3d(),
-    anime4kChain(),
-    onnxChain(),
+    anime4k(),
+    descale(),
+    onnx(),
     onnxModelDir(),
     onnxListModels(false),
-    descale(),
     dct(),
     smooth(),
     fft3d(),
@@ -3717,10 +3714,11 @@ bool RGYParamVpp::operator==(const RGYParamVpp& x) const {
         && nlmeans == x.nlmeans
         && pmd == x.pmd
         && hqdn3d == x.hqdn3d
-        && anime4kChain == x.anime4kChain
-        && onnxChain == x.onnxChain
-        && onnxModelDir == x.onnxModelDir
         && descale == x.descale
+        && anime4k == x.anime4k
+        && onnx == x.onnx
+        && onnxModelDir == x.onnxModelDir
+        && onnxListModels == x.onnxListModels
         && dct == x.dct
         && smooth == x.smooth
         && fft3d == x.fft3d

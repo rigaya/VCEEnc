@@ -58,6 +58,7 @@ const char *get_encoder_version();
 #define ENABLE_AVOID_IDLE_CLOCK 0
 #define ENABLE_VPP_SMOOTH_QP_FRAME 0
 #define ENABLE_DOVI_METADATA_OPTIONS 1
+#define ENABLE_OPENVINO 0
 
 #if defined(_WIN32) || defined(_WIN64)
 
@@ -102,6 +103,7 @@ const char *get_encoder_version();
 #define ENABLE_OPENCL             0
 #define ENABLE_CAPTION2ASS        0
 #define ENABLE_AUTO_PICSTRUCT     0
+#define ENABLE_ONNXRUNTIME        0
 #else
 #define ENCODER_NAME  "VCEEnc"
 #define FOR_AUO                   0
@@ -115,6 +117,11 @@ const char *get_encoder_version();
 #define ENABLE_OPENCL             1
 #define ENABLE_CAPTION2ASS        1
 #define ENABLE_AUTO_PICSTRUCT     1
+#if defined(_M_IX86)
+#define ENABLE_ONNXRUNTIME        0
+#else
+#define ENABLE_ONNXRUNTIME        1
+#endif
 #endif
 
 #else //#if defined(WIN32) || defined(WIN64)
