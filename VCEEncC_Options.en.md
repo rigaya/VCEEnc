@@ -2690,7 +2690,8 @@ Experimental CNN filter that runs the specified ONNX model on GPU through ONNX R
 
 - **parameters**
   - model=&lt;string&gt; / modelfile=&lt;string&gt;
-    ONNX model file path.
+    ONNX model file path, or registered model name in models.json when [`--vpp-onnx-model-dir`](#--vpp-onnx-model-dir-string) is specified.
+    If a registered model has `"fp32": true` in models.json and `prec=auto`, VCEEnc automatically uses `prec=fp32`.
 
   - device=&lt;string&gt;, interop=&lt;string&gt;
     Compatibility parameters. DirectML currently binds inference to the same GPU as the encoder.
@@ -2704,11 +2705,17 @@ Experimental CNN filter that runs the specified ONNX model on GPU through ONNX R
   - colorspace=&lt;string&gt;
     Input color space for 3-channel models. `rgb`, `ycbcr`.
 
+  - prec=&lt;string&gt;
+    Inference precision. `auto`, `fp16`, `fp32`.
+
   - noise=&lt;int&gt;
     Sigma value passed to noise models. (0 - 255)
 
   - out_res=&lt;int&gt;x&lt;int&gt;, resize=&lt;string&gt;
     Resize to an arbitrary final resolution after network processing. A negative value on one axis keeps aspect ratio.
+
+### --vpp-onnx-model-dir &lt;string&gt;
+Directory containing models.json and the model files for registered ONNX models.
 
 ### --vpp-descale [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 Undo upscaling by solving the inverse system for a known upscaler kernel and output a lower native resolution.

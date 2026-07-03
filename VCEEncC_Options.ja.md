@@ -2671,7 +2671,8 @@ ONNX Runtime DirectML を使用し、指定したONNXモデルをGPUで実行す
 
 - **パラメータ**
   - model=&lt;string&gt; / modelfile=&lt;string&gt;
-    使用するONNXモデルファイル。
+    使用するONNXモデルファイル。または、[`--vpp-onnx-model-dir`](#--vpp-onnx-model-dir-string) 指定時は models.json に登録済みのモデル名。
+    登録モデルの models.json に `"fp32": true` があり、`prec=auto` の場合は、VCEEnc が自動的に `prec=fp32` を使用する。
 
   - device=&lt;string&gt;, interop=&lt;string&gt;
     DirectMLではエンコーダと同じGPUに紐づけるため、現在は互換用パラメータ。
@@ -2685,11 +2686,17 @@ ONNX Runtime DirectML を使用し、指定したONNXモデルをGPUで実行す
   - colorspace=&lt;string&gt;
     3chモデルへの入力色空間。`rgb`, `ycbcr`。
 
+  - prec=&lt;string&gt;
+    推論精度。`auto`, `fp16`, `fp32`。
+
   - noise=&lt;int&gt;
     ノイズモデルに渡すsigma値。(0 - 255)
 
   - out_res=&lt;int&gt;x&lt;int&gt;, resize=&lt;string&gt;
     ネットワーク処理後に任意解像度へリサイズする。片方の値を負数にするとアスペクト比を維持する。
+
+### --vpp-onnx-model-dir &lt;string&gt;
+登録済みONNXモデルのmodels.jsonおよびモデルファイルが格納されたディレクトリを指定する。
 
 ### --vpp-descale [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 既知のアップスケールカーネルを逆算し、元の低解像度に近い画像へ縮小します。
