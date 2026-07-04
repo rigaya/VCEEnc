@@ -196,7 +196,11 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avutil-*.dll" "$(OutDir)"
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\swresample-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avdevice-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libass-*.dll" "$(OutDir)" &gt; NUL
-copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL</Command>
+copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" "$(OutDir)" &gt; NUL</Command>
     </PostBuildEvent>
     <ResourceCompile>
       <Culture>0x0411</Culture>
@@ -242,7 +246,11 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avutil-*.dll" "$(OutDir)"
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\swresample-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avdevice-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libass-*.dll" "$(OutDir)" &gt; NUL
-copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL</Command>
+copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" "$(OutDir)" &gt; NUL</Command>
     </PostBuildEvent>
     <ResourceCompile>
       <Culture>0x0411</Culture>
@@ -285,7 +293,11 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avutil-*.dll" "$(OutDir)"
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\swresample-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avdevice-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libass-*.dll" "$(OutDir)" &gt; NUL
-copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL</Command>
+copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" "$(OutDir)" &gt; NUL</Command>
     </PostBuildEvent>
     <ResourceCompile>
       <Culture>0x0411</Culture>
@@ -328,7 +340,11 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avutil-*.dll" "$(OutDir)"
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\swresample-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avdevice-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libass-*.dll" "$(OutDir)" &gt; NUL
-copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL</Command>
+copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" "$(OutDir)" &gt; NUL</Command>
     </PostBuildEvent>
     <ResourceCompile>
       <Culture>0x0411</Culture>
@@ -375,7 +391,11 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avutil-*.dll" "$(OutDir)"
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\swresample-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avdevice-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libass-*.dll" "$(OutDir)" &gt; NUL
-copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL</Command>
+copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" "$(OutDir)" &gt; NUL</Command>
     </PostBuildEvent>
     <ResourceCompile>
       <Culture>0x0411</Culture>
@@ -426,7 +446,11 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avutil-*.dll" "$(OutDir)"
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\swresample-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avdevice-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libass-*.dll" "$(OutDir)" &gt; NUL
-copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL</Command>
+copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" "$(OutDir)" &gt; NUL</Command>
     </PostBuildEvent>
     <ResourceCompile>
       <Culture>0x0411</Culture>
@@ -479,7 +503,11 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avutil-*.dll" "$(OutDir)"
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\swresample-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avdevice-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libass-*.dll" "$(OutDir)" &gt; NUL
-copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL</Command>
+copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" "$(OutDir)" &gt; NUL</Command>
     </PostBuildEvent>
     <ResourceCompile>
       <Culture>0x0411</Culture>
@@ -530,7 +558,11 @@ copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avutil-*.dll" "$(OutDir)"
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\swresample-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\avdevice-*.dll" "$(OutDir)" &gt; NUL
 copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libass-*.dll" "$(OutDir)" &gt; NUL
-copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL</Command>
+copy /y "$(SolutionDir)ffmpeg_lgpl\lib\$(PlatformName)\libplacebo-*.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_shared.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\onnxruntime_providers_dml.dll" "$(OutDir)" &gt; NUL
+if exist "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" "$(OutDir)" &gt; NUL</Command>
     </PostBuildEvent>
     <ResourceCompile>
       <Culture>0x0411</Culture>
