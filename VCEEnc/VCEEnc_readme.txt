@@ -188,6 +188,15 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2026.07.04 (9.08)
+[VCEEncC]
+- VPPフィルタを追加。(--vpp-anime4k-shader, --vpp-onnx)
+- --vpp-degrain のghost問題を修正（fallback analyzeのMV/SADスナップショット）。
+- --vpp-finedehalo をインタレ非対応と明示。
+- 各種VPPフィルタ・色変換・OpenCL処理の不具合を修正。
+  --vpp-ivtc, --vpp-anime4k-shader, --vpp-decimate, --vpp-nnedi, --vpp-afs, --vpp-subburn, --vpp-deflicker, --vpp-curves, --vpp-colorspace など。
+- Avisynth入力の音声トラック選択で無限ループ/OOBが起きる問題を修正。
+
 2026.06.28 (9.07)
 [VCEEncC]
 - VPPフィルタを追加。(--vpp-softlight, --vpp-detailsharpen)

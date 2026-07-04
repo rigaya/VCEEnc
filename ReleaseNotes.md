@@ -1,5 +1,27 @@
 # VCEEnc Release Notes
 
+## 9.08
+
+- Add VPP filters.
+  - [--vpp-anime4k-shader](./VCEEncC_Options.en.md#--vpp-anime4k-shader-param1value1param2value2)
+  - [--vpp-onnx](./VCEEncC_Options.en.md#--vpp-onnx-param1value1param2value2)
+- Add model registry (models.json) and list display to [--vpp-onnx](./VCEEncC_Options.en.md#--vpp-onnx-param1value1param2value2). Bundle ONNX Runtime DLLs with VCEEncC.
+- Fix [--vpp-degrain](./VCEEncC_Options.en.md#--vpp-degrain-param1value1) ghost on scene-change delayed output (fallback analyze MV/SAD snapshot).
+- Mark [--vpp-finedehalo](./VCEEncC_Options.en.md#--vpp-finedehalo-param1value1param2value2) as not supporting interlaced input. (#782)
+- Fix various VPP filter, color conversion, and OpenCL issues.
+  - [--vpp-ivtc](./VCEEncC_Options.en.md#--vpp-ivtc-param1value1param2value2): frame corruption in expand/mixed path.
+  - [--vpp-anime4k-shader](./VCEEncC_Options.en.md#--vpp-anime4k-shader-param1value1param2value2): chroma joint-bilateral OOB on YUV444.
+  - [--vpp-decimate](./VCEEncC_Options.en.md#--vpp-decimate-param1value1param2value2): firstPlane sum/max accumulation.
+  - [--vpp-nnedi](./VCEEncC_Options.en.md#--vpp-nnedi-param1value1param2value2): prescreen_cubic Y tile stride on Intel iGPU.
+  - [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2): map_filter SRCPTR clamp.
+  - [--vpp-subburn](./VCEEncC_Options.en.md#--vpp-subburn-param1value1param2value2): OOB write when subtitle position is negative.
+  - [--vpp-deflicker](./VCEEncC_Options.en.md#--vpp-deflicker-param1value1param2value2): filter disabled after scene change.
+  - [--vpp-curves](./VCEEncC_Options.en.md#--vpp-curves-param1value1param2value2): LUT boundary clamp and spline coefficient.
+  - [--vpp-colorspace](./VCEEncC_Options.en.md#--vpp-colorspace-param1value1param2value2): constant-luminance YUV to RGB conversion.
+  - Color conversion (AVX2/SIMD/C) and OpenCL filter/plane operation fixes.
+- Fix infinite loop/OOB in Avisynth audio track selection fallback.
+- Linux: Enable Anime4K shader build and fix VCEEnc Linux build.
+
 ## 9.07
 
 - Add VPP filters.
