@@ -13,6 +13,7 @@
 [submodule "AMF"]
 	path = AMF
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/AMF.git
+	ignore = all
 [submodule "cl_perf"]
 	path = cl_perf
 	url = https://github.com/rigaya/cl_perf.git
