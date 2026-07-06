@@ -1736,6 +1736,9 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         unique_ptr<RGYFilter> filter(new RGYFilterNnedi(m_dev->cl()));
         shared_ptr<RGYFilterParamNnedi> param(new RGYFilterParamNnedi());
         param->nnedi.enable = inputParam->vpp.nnedi.enable;
+        for (size_t iplane = 0; iplane < inputParam->vpp.nnedi.planes.size(); iplane++) {
+            param->nnedi.processPlane[iplane] = inputParam->vpp.nnedi.planes[iplane];
+        }
         param->nnedi.field = inputParam->vpp.nnedi.field;
         param->nnedi.nsize = inputParam->vpp.nnedi.nsize;
         param->nnedi.nns = inputParam->vpp.nnedi.nns;
