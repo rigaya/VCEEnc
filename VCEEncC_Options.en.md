@@ -2027,6 +2027,8 @@ Activate Auto Field Shift (AFS) deinterlacer.
 nnedi deinterlacer.
 
 - **parameters**
+  - planes=&lt;string&gt;
+    Target planes. `all`, or `:`-separated list of `y`, `u`, `v`. Default: `all`.
   - field
   
     - auto (default)  
@@ -2398,6 +2400,8 @@ Please note that [--avsync](./NVEncC_Options.en.md#--avsync-string) vfr is autom
   - max=&lt;int&gt;  (default: 0)  
     Max consecutive frames which can be dropped (if positive).  
     Min interval between dropped frames (if negative).
+  - keep=&lt;int&gt;  (default: 0)
+    Number of similar consecutive frames to keep before starting to drop.
     
   - log=&lt;bool&gt;  
     output log file. (default: off)
@@ -2589,6 +2593,8 @@ Strong noise reduction filter.
 - **Parameters**
   - radius=&lt;int&gt;  (default=3, 1-5)  
     radius of filter. Larger value will result stronger denosing, but will require more calculation.
+  - d=&lt;int&gt;  (default=0, 0 - 2)
+    Temporal radius. Previous/next frames are included in the weighting window.
   
   - strength=&lt;float&gt;  (default=0.08, 0.0 - 1.0)  
     Strength of the filter. Larger value will result stronger denosing.
@@ -2765,6 +2771,8 @@ Undo upscaling by solving the inverse system for a known upscaler kernel and out
     Bicubic parameters. Default: b=0.0, c=0.5.
   - src_left=&lt;float&gt;, src_top=&lt;float&gt;  
     Source sub-pixel offsets. Default: 0.0.
+  - src_width=&lt;float&gt;, src_height=&lt;float&gt;
+    Fractional active source width/height for sources whose native size is not integer. Default: 0.0 (off).
   - border_handling=&lt;string&gt;  
     Border extension mode. Default: mirror.
     ```
@@ -3203,7 +3211,7 @@ Halo removal filter with a fine-line protection mask. Applies correction to luma
   ```
 
 ### --vpp-hqdering [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
-DCT ringing reduction filter. Applies correction to luma and copies chroma unchanged.
+DCT ringing reduction filter. Applies correction to luma by default.
 
 - **Parameters**
   - mrad=&lt;int&gt; (default=1, 1 - 3)  
@@ -3218,6 +3226,22 @@ DCT ringing reduction filter. Applies correction to luma and copies chroma uncha
     Protect original edge pixels.
   - edge=&lt;string&gt; (default=log)  
     Edge detector, one of log, sobel, prewitt, scharr, kirsch, laplacian.
+  - thr=&lt;int&gt; (default=0)
+    Limit for the change per pixel in 8-bit scale. `0` disables the limit.
+  - elast=&lt;float&gt; (default=2.0, 1.0 - 3.0)
+    Elastic falloff for `thr`.
+  - darkthr=&lt;int&gt; (default=-1)
+    Separate limit for darkening. `-1` follows `thr`.
+  - minp=&lt;int&gt; (default=0, 0 - 3)
+    Edge-core inpand iterations excluded from the ring mask.
+  - msmooth=&lt;int&gt; (default=0, 0 - 3)
+    Ring mask smoothing iterations.
+  - drrep=&lt;int&gt; (default=0)
+    Repair blurred clip. `0`=off, `1`=clamp to the source 3x3 min/max.
+  - sharp=&lt;int&gt; (default=0, 0 - 3)
+    Contra-sharpening level. Restores line strength lost to blur without reintroducing ringing.
+  - planes=&lt;string&gt; (default=y)
+    Target planes. `all`, or `:`-separated list of `y`, `u`, `v`.
 
 - examples
   ```
@@ -3284,13 +3308,15 @@ Edge-selective sharpening filter based on Donald A. Graft's MSharpen.
   ```
 
 ### --vpp-cas [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
-Luma-only Contrast Adaptive Sharpening filter. Applies CAS to luma and copies chroma unchanged.
+Contrast Adaptive Sharpening filter. Applies CAS to luma by default.
 
 - **Parameters**
   - sharpness=&lt;float&gt; (default=0.4, 0.0 - 1.0)  
     Sharpening strength. Internally maps to the CAS peak value.
   - hdr=&lt;bool&gt; (default=false)  
     Skips the SDR gamma 2.0 luma approximation. Enable this for HDR sources such as PQ or HLG.
+  - chroma=&lt;bool&gt; (default=false)
+    Also sharpen chroma planes.
 
 - examples
   ```
@@ -3470,6 +3496,8 @@ Apply color adjustments using curves.
   
   - all=&lt;string&gt;  
     Set curve points for r,g,b when not specified. Will override preset settings.
+  - interp=&lt;string&gt; (default=spline)
+    Interpolation method. `spline` uses natural cubic spline, `pchip` uses monotone cubic interpolation that avoids overshoot between points.
 
 - Examples
   ```
@@ -3490,6 +3518,12 @@ Apply color adjustments using curves.
   
   - hue=&lt;float&gt; (default=0.0, -180 - 180)  
   
+  - coring=&lt;bool&gt;  (default=false)
+
+  - start_hue=&lt;float&gt; (default=0.0, 0.0 - 360.0)
+  - end_hue=&lt;float&gt; (default=360.0, 0.0 - 360.0)
+    Limit hue/saturation adjustment to the hue angle range.
+
   - swapuv=&lt;bool&gt;  (default=false)
 
   - y_offset=&lt;float&gt; (default=0.0, -1.0 - 1.0)  
@@ -3555,6 +3589,8 @@ Apply color adjustments using curves.
   
   - rand_each_frame (default=off)  
     Change the random number used by the filter every frame.
+  - keep_tv_range=&lt;bool&gt; (default=off)
+    Clamp output to TV range, scaled by bit depth (`Y: 16-235`, `Cb/Cr: 16-240`).
   
 - examples
   ```

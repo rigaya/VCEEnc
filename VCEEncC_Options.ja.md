@@ -1980,6 +1980,8 @@ nnediによるインタレ解除を行う。基本的には片方フィールド
 ニューラルネットを使って輪郭を補正しながらフレームを再構築することでインタレ解除するが、とても重い…。
 
 - **パラメータ**
+  - planes=&lt;string&gt;
+    対象plane。`all`、または `y`, `u`, `v` を `:` 区切りで指定。デフォルト: `all`。
   - field  
     インタレ解除の方法。
     - auto (デフォルト)  
@@ -2368,6 +2370,8 @@ decombによるインタレ解除を行う。
   - max=&lt;int&gt;  (デフォルト: 0)  
     正の値での指定: 連続ドロップフレーム数の上限。  
     負の値での指定: 間引く1フレームを決めるフレーム間隔の下限。
+  - keep=&lt;int&gt;  (デフォルト: 0)
+    連続する類似フレームを何枚保持してから破棄を開始するか。
     
   - log=&lt;bool&gt;  
     判定結果のログファイルの出力。 (デフォルト: off)
@@ -2565,6 +2569,8 @@ decombによるインタレ解除を行う。
 - **パラメータ**
   - radius=&lt;int&gt;  (default=3, 1-5)  
     適用半径。値が大きいほど効果が強くなる一方、処理が重くなる。
+  - d=&lt;int&gt;  (default=0, 0 - 2)
+    時間方向半径。前後フレームを重み計算に含める。
   
   - strength=&lt;float&gt;  (default=0.08, 0.0 - 1.0)    
     フィルタの強さ。値が大きいほど効果が強くなる。
@@ -2748,6 +2754,8 @@ ONNX Runtime DirectML を使用し、指定したONNXモデルをGPUで実行す
 
   - src_left=&lt;float&gt;, src_top=&lt;float&gt;
     入力画像のサブピクセルオフセット。デフォルトは 0.0。
+  - src_width=&lt;float&gt;, src_height=&lt;float&gt;
+    非整数のネイティブサイズを持つソース向けの有効ソース幅/高さ。デフォルト: 0.0 (無効)。
 
   - border_handling=&lt;string&gt;
     端処理。デフォルトは mirror。
@@ -3251,7 +3259,7 @@ MFXの `--vpp-image-stab` とは別のフィルタ。
   ```
 
 ### --vpp-hqdering [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
-DCTリンギング低減フィルタ。輝度成分に補正を適用し、色差成分は元のままコピーする。
+DCTリンギング低減フィルタ。デフォルトでは輝度に補正をかける。
 
 - **パラメータ**
   - mrad=&lt;int&gt; (default=1, 1 - 3)
@@ -3271,6 +3279,22 @@ DCTリンギング低減フィルタ。輝度成分に補正を適用し、色�
 
   - edge=&lt;string&gt; (default=log)
     エッジ検出方式。log, sobel, prewitt, scharr, kirsch, laplacian から選択。
+  - thr=&lt;int&gt; (default=0)
+    1ピクセルあたりの変化量の上限。8bitスケール。`0` で無制限。
+  - elast=&lt;float&gt; (default=2.0, 1.0 - 3.0)
+    `thr` の弾性的な減衰。
+  - darkthr=&lt;int&gt; (default=-1)
+    暗くする方向の別上限。`-1` で `thr` に従う。
+  - minp=&lt;int&gt; (default=0, 0 - 3)
+    リングマスクから除外するエッジ芯のinpand回数。
+  - msmooth=&lt;int&gt; (default=0, 0 - 3)
+    リングマスクの平滑化回数。
+  - drrep=&lt;int&gt; (default=0)
+    ぼかしクリップの補修。`0`=off, `1`=入力の3x3最小/最大値へclamp。
+  - sharp=&lt;int&gt; (default=0, 0 - 3)
+    contra-sharpening強度。ぼかしで失われた線の強さを、リンギングを戻さない範囲で復元する。
+  - planes=&lt;string&gt; (default=y)
+    対象plane。`all`、または `y`, `u`, `v` を `:` 区切りで指定。
 
 - 使用例
   ```
@@ -3341,7 +3365,7 @@ DCTリンギング低減フィルタ。輝度成分に補正を適用し、色�
   ```
 
 ### --vpp-cas [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
-輝度のみを処理するContrast Adaptive Sharpeningフィルタ。CASを輝度に適用し、色差はそのままコピーする。
+Contrast Adaptive Sharpeningフィルタ。デフォルトでは輝度へ適用する。
 
 - **パラメータ**
   - sharpness=&lt;float&gt; (default=0.4, 0.0 - 1.0)
@@ -3349,6 +3373,8 @@ DCTリンギング低減フィルタ。輝度成分に補正を適用し、色�
 
   - hdr=&lt;bool&gt; (default=false)
     SDR向けのgamma 2.0輝度近似をスキップする。PQやHLGなどのHDR素材で有効にする。
+  - chroma=&lt;bool&gt; (default=false)
+    色差planeにもシャープ化を適用する。
 
 - 使用例
   ```
@@ -3497,6 +3523,12 @@ DCTリンギング低減フィルタ。輝度成分に補正を適用し、色�
   
   - hue=&lt;float&gt; (default=0.0, -180 - 180)  
   
+  - coring=&lt;bool&gt;  (default=false)
+
+  - start_hue=&lt;float&gt; (default=0.0, 0.0 - 360.0)
+  - end_hue=&lt;float&gt; (default=360.0, 0.0 - 360.0)
+    hue/saturation調整を適用する色相角の範囲を制限する。
+
   - swapuv=&lt;bool&gt;  (default=false)
 
   - y_offset=&lt;float&gt; (default=0.0, -1.0 - 1.0)  
@@ -3586,6 +3618,8 @@ DCTリンギング低減フィルタ。輝度成分に補正を適用し、色�
   
   - all=&lt;string&gt;  
     全成分のカーブの指定。r,g,bの固有の指定がない場合には、これが適用される。
+  - interp=&lt;string&gt; (default=spline)
+    補間方式。`spline` は自然3次スプライン、`pchip` は点間のオーバーシュートを抑える単調3次補間。
 
 - 使用例
   ```
@@ -3629,6 +3663,8 @@ DCTリンギング低減フィルタ。輝度成分に補正を適用し、色�
   
   - rand_each_frame (default=off)  
     毎フレーム使用する乱数を変更する。
+  - keep_tv_range=&lt;bool&gt; (default=off)
+    出力をbit深度に応じたTVレンジ (`Y: 16-235`, `Cb/Cr: 16-240`) にclampする。
   
 - 使用例
   ```
