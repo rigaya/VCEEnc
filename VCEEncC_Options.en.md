@@ -2735,10 +2735,13 @@ Experimental CNN filter that runs the specified ONNX model on GPU through ONNX R
     Compatibility parameters. DirectML currently binds inference to the same GPU as the encoder.
 
   - colormatrix=&lt;string&gt;
-    `auto`, `bt601`, `bt709`, `bt2020`.
+    Accepts the same names as [`--colormatrix`](#--colormatrix-string). `--vpp-onnx` supports `auto`, `auto_res`, `smpte170m`, `bt470bg`, `bt709`, `bt2020nc`.
+
+  - colormatrix_out=&lt;string&gt;
+    Output-side RGB to YUV color matrix. Accepts the same names as `colormatrix`. `auto` uses the same matrix as `colormatrix`. Use `bt2020nc` for SDR-to-HDR models that output BT.2020/PQ RGB.
 
   - colorrange=&lt;string&gt;
-    `auto`, `tv`, `pc`.
+    Accepts the same names as [`--colorrange`](#--colorrange-string). `--vpp-onnx` supports `auto`, `tv`, `limited`, `pc`, `full`.
 
   - colorspace=&lt;string&gt;
     Input color space for 3-channel models. `rgb`, `ycbcr`.
@@ -2751,6 +2754,13 @@ Experimental CNN filter that runs the specified ONNX model on GPU through ONNX R
 
   - out_res=&lt;int&gt;x&lt;int&gt;, resize=&lt;string&gt;
     Resize to an arbitrary final resolution after network processing. A negative value on one axis keeps aspect ratio.
+
+  Registered models can specify `"colormatrix_out": "bt2020nc"` in models.json. When `colormatrix_out=auto`, VCEEnc uses the registered output matrix.
+
+  Example:
+  ```
+  --vpp-onnx model=hdrtvnetpp_agcm_dynamic,colormatrix=bt709 --output-depth 10 --colormatrix bt2020nc --colorprim bt2020 --transfer smpte2084
+  ```
 
 ### --vpp-onnx-model-dir &lt;string&gt;
 Directory containing models.json and the model files for registered ONNX models.

@@ -75,6 +75,7 @@ public:
     virtual ~RGYFilterOnnx();
     virtual RGY_ERR init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog> pPrintMes) override;
 protected:
+    RGY_ERR checkParam(const std::shared_ptr<RGYFilterParamOnnx> prm);
     virtual RGY_ERR run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
         RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) override;
     virtual void close() override;
@@ -91,7 +92,7 @@ protected:
     void fillInputHost(const RGYFrameInfo &hin);
     void writeOutputHost(const RGYFrameInfo &hout, const RGYFrameInfo &hin);
     // compute the YUV<->RGB matrix + range coefficients.
-    void setupColorCoeffs(int matrixSel, bool rangeTV, int pixMax);
+    void setupColorCoeffs(int matrixSelIn, int matrixSelOut, bool rangeTV, int pixMax);
 
     std::unique_ptr<RGYOnnxRTDML> m_ov;
     OnnxIO m_io;                          // I/O convention inferred from channel counts

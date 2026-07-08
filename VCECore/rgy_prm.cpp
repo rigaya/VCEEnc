@@ -2034,8 +2034,10 @@ VppOnnx::VppOnnx() :
     device(_T("GPU.0")),
     interop(_T("auto")),
     precision(_T("auto")),
-    colormatrix(_T("auto")),
-    colorrange(_T("auto")),
+    cacheDir(),
+    colormatrix(RGY_MATRIX_AUTO),
+    colormatrixOut(RGY_MATRIX_AUTO),
+    colorrange(RGY_COLORRANGE_AUTO),
     colorspace(_T("rgb")),
     noise(15),
     postResizeW(0),
@@ -2050,7 +2052,9 @@ bool VppOnnx::operator==(const VppOnnx &x) const {
         && device == x.device
         && interop == x.interop
         && precision == x.precision
+        && cacheDir == x.cacheDir
         && colormatrix == x.colormatrix
+        && colormatrixOut == x.colormatrixOut
         && colorrange == x.colorrange
         && colorspace == x.colorspace
         && noise == x.noise
@@ -2067,8 +2071,14 @@ tstring VppOnnx::print() const {
     s += strsprintf(_T(",device=%s"), device.c_str());
     s += strsprintf(_T(",interop=%s"), interop.c_str());
     s += strsprintf(_T(",prec=%s"), precision.c_str());
-    s += strsprintf(_T(",colormatrix=%s"), colormatrix.c_str());
-    s += strsprintf(_T(",colorrange=%s"), colorrange.c_str());
+    if (!cacheDir.empty()) {
+        s += strsprintf(_T(",cache_dir=%s"), cacheDir.c_str());
+    }
+    s += strsprintf(_T(",colormatrix=%s"), get_cx_desc(list_colormatrix, colormatrix));
+    if (colormatrixOut != RGY_MATRIX_AUTO) {
+        s += strsprintf(_T(",colormatrix_out=%s"), get_cx_desc(list_colormatrix, colormatrixOut));
+    }
+    s += strsprintf(_T(",colorrange=%s"), get_cx_desc(list_colorrange, colorrange));
     s += strsprintf(_T(",colorspace=%s"), colorspace.c_str());
     s += strsprintf(_T(",noise=%d"), noise);
     if (postResizeW != 0 && postResizeH != 0) {

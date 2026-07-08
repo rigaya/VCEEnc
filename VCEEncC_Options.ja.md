@@ -2716,10 +2716,13 @@ ONNX Runtime DirectML を使用し、指定したONNXモデルをGPUで実行す
     DirectMLではエンコーダと同じGPUに紐づけるため、現在は互換用パラメータ。
 
   - colormatrix=&lt;string&gt;
-    `auto`, `bt601`, `bt709`, `bt2020`。
+    [`--colormatrix`](#--colormatrix-string) と同じ名前を受け付ける。`--vpp-onnx` で対応するのは `auto`, `auto_res`, `smpte170m`, `bt470bg`, `bt709`, `bt2020nc`。
+
+  - colormatrix_out=&lt;string&gt;
+    出力側 RGB→YUV 変換の色行列。`colormatrix` と同じ名前を受け付ける。`auto` では `colormatrix` と同じ色行列を使用する。BT.2020/PQ RGB を出力する SDR→HDR モデルでは `bt2020nc` を指定する。
 
   - colorrange=&lt;string&gt;
-    `auto`, `tv`, `pc`。
+    [`--colorrange`](#--colorrange-string) と同じ名前を受け付ける。`--vpp-onnx` で対応するのは `auto`, `tv`, `limited`, `pc`, `full`。
 
   - colorspace=&lt;string&gt;
     3chモデルへの入力色空間。`rgb`, `ycbcr`。
@@ -2732,6 +2735,13 @@ ONNX Runtime DirectML を使用し、指定したONNXモデルをGPUで実行す
 
   - out_res=&lt;int&gt;x&lt;int&gt;, resize=&lt;string&gt;
     ネットワーク処理後に任意解像度へリサイズする。片方の値を負数にするとアスペクト比を維持する。
+
+  models.json では `"colormatrix_out": "bt2020nc"` を指定できる。`colormatrix_out=auto` の場合は、VCEEnc が登録された出力側色行列を使用する。
+
+  例:
+  ```
+  --vpp-onnx model=hdrtvnetpp_agcm_dynamic,colormatrix=bt709 --output-depth 10 --colormatrix bt2020nc --colorprim bt2020 --transfer smpte2084
+  ```
 
 ### --vpp-onnx-model-dir &lt;string&gt;
 登録済みONNXモデルのmodels.jsonおよびモデルファイルが格納されたディレクトリを指定する。

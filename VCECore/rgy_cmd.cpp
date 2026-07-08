@@ -5797,7 +5797,7 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
 
         const auto paramList = std::vector<std::string>{
             "enable", "model", "modelfile", "device", "interop", "prec", "precision",
-            "colormatrix", "colorrange", "colorspace", "noise", "out_res", "resize"
+            "colormatrix", "colormatrix_out", "colorrange", "colorspace", "noise", "out_res", "resize"
         };
 
         for (const auto& param : split(strInput[i], _T(","))) {
@@ -5821,7 +5821,8 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                     continue;
                 }
                 if (param_arg == _T("device")) {
-                    vpp->onnx.device = param_val;
+                    //OpenVINOのデバイス名は大文字 (GPU.0/GPU/CPU/AUTO/NPU) - 小文字入力も受け付ける
+                    vpp->onnx.device = touppercase(param_val);
                     continue;
                 }
                 if (param_arg == _T("interop")) {
@@ -5845,21 +5846,39 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                     continue;
                 }
                 if (param_arg == _T("colormatrix")) {
-                    const tstring v = tolowercase(param_val);
-                    if (v == _T("auto") || v == _T("bt601") || v == _T("bt709") || v == _T("bt2020")) {
-                        vpp->onnx.colormatrix = v;
+                    int value = 0;
+                    if (get_list_value(list_colormatrix, param_val.c_str(), &value)) {
+                        vpp->onnx.colormatrix = (CspMatrix)value;
                     } else {
-                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        const auto compatMatrix = tolowercase(param_val);
+                        // 互換性のため、公開済みの旧指定名だけは --vpp-onnx colormatrix で吸収する。
+                        if (compatMatrix == _T("bt601")) {
+                            vpp->onnx.colormatrix = RGY_MATRIX_ST170_M;
+                        } else if (compatMatrix == _T("bt2020")) {
+                            vpp->onnx.colormatrix = RGY_MATRIX_BT2020_NCL;
+                        } else {
+                            print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_colormatrix);
+                            return 1;
+                        }
+                    }
+                    continue;
+                }
+                if (param_arg == _T("colormatrix_out")) {
+                    int value = 0;
+                    if (get_list_value(list_colormatrix, param_val.c_str(), &value)) {
+                        vpp->onnx.colormatrixOut = (CspMatrix)value;
+                    } else {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_colormatrix);
                         return 1;
                     }
                     continue;
                 }
                 if (param_arg == _T("colorrange")) {
-                    const tstring v = tolowercase(param_val);
-                    if (v == _T("auto") || v == _T("tv") || v == _T("limited") || v == _T("pc") || v == _T("full")) {
-                        vpp->onnx.colorrange = (v == _T("limited")) ? _T("tv") : (v == _T("full")) ? _T("pc") : v;
+                    int value = 0;
+                    if (get_list_value(list_colorrange, param_val.c_str(), &value)) {
+                        vpp->onnx.colorrange = (CspColorRange)value;
                     } else {
-                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, list_colorrange);
                         return 1;
                     }
                     continue;
@@ -5933,6 +5952,13 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
         vpp->onnxModelDir = tstring(strInput[i]);
         return 0;
     }
+#if ENABLE_OPENVINO
+    if (IS_OPTION("vpp-onnx-cache-dir") && ENABLE_VPP_FILTER_ONNX) {
+        i++;
+        vpp->onnx.cacheDir = tstring(strInput[i]);
+        return 0;
+    }
+#endif
     if (IS_OPTION("vpp-denoise-dct") && ENABLE_VPP_FILTER_DENOISE_DCT) {
         vpp->dct.enable = true;
         if (i + 1 >= nArgNum || strInput[i + 1][0] == _T('-')) {
@@ -13508,8 +13534,11 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
             tmp << _T(",device=") << param->onnx.device;
             tmp << _T(",interop=") << param->onnx.interop;
             tmp << _T(",prec=") << param->onnx.precision;
-            tmp << _T(",colormatrix=") << param->onnx.colormatrix;
-            tmp << _T(",colorrange=") << param->onnx.colorrange;
+            tmp << _T(",colormatrix=") << get_cx_desc(list_colormatrix, param->onnx.colormatrix);
+            if (param->onnx.colormatrixOut != RGY_MATRIX_AUTO) {
+                tmp << _T(",colormatrix_out=") << get_cx_desc(list_colormatrix, param->onnx.colormatrixOut);
+            }
+            tmp << _T(",colorrange=") << get_cx_desc(list_colorrange, param->onnx.colorrange);
             tmp << _T(",colorspace=") << param->onnx.colorspace;
             tmp << _T(",noise=") << param->onnx.noise;
             if (param->onnx.postResizeW != 0 && param->onnx.postResizeH != 0) {
@@ -13526,6 +13555,11 @@ tstring gen_cmd(const RGYParamVpp *param, const RGYParamVpp *defaultPrm, bool sa
     if (!param->onnxModelDir.empty()) {
         cmd << _T(" --vpp-onnx-model-dir ") << param->onnxModelDir;
     }
+#if ENABLE_OPENVINO
+    if (!param->onnx.cacheDir.empty()) {
+        cmd << _T(" --vpp-onnx-cache-dir ") << param->onnx.cacheDir;
+    }
+#endif
     if (param->dct != defaultPrm->dct) {
         tmp.str(tstring());
         if (!param->dct.enable && save_disabled_prm) {
@@ -16110,19 +16144,28 @@ tstring gen_cmd_help_vpp() {
         FILTER_ANIME4K_STRENGTH_MIN, FILTER_ANIME4K_STRENGTH_MAX);
 #endif
 #if ENABLE_VPP_FILTER_ONNX
+#if ENCODER_VCEENC
     str += strsprintf(_T("\n")
         _T("   --vpp-onnx [<param1>=<value>][,<param2>=<value>][...]\n")
-        _T("     OpenVINO-backed CNN filter: loads an ONNX/IR model directly and runs\n")
-        _T("     it on the GPU.\n")
+        _T("     ONNX Runtime DirectML-backed CNN filter: loads an ONNX model and runs\n")
+        _T("     it on the GPU selected by VCEEnc.\n")
         _T("     The pre/post a model needs is inferred from its channel count:\n")
         _T("     1ch=luma SR, 3ch=RGB, 4ch=RGB+noise, 2ch=gray+noise, 3->2ch=chroma.\n")
         _T("    params\n")
-        _T("      model=<path>                path to the .onnx / .xml model (required)\n")
-        _T("      device=<string>             OpenVINO device: GPU.0 (default) / GPU / CPU / AUTO\n")
-        _T("      interop=<string>            auto (default) / ocl (zero-copy, shared GPU context) / host\n")
+        _T("      model=<path>                path to the .onnx model (required)\n")
+        _T("      device=<string>             compatibility parameter; DirectML binds\n")
+        _T("                                    inference to the selected encoder GPU\n")
+        _T("      interop=<string>            compatibility parameter: auto / ocl / host\n")
         _T("      prec=<string>               auto (default) / fp16 / fp32\n")
-        _T("      colormatrix=<string>        auto (default, bt601 SD / bt709 HD) / bt601 / bt709 / bt2020\n")
-        _T("      colorrange=<string>         auto (default, tv) / tv / pc\n")
+        _T("      colormatrix=<string>        same list as --colormatrix; onnx supports\n")
+        _T("                                    auto / auto_res / smpte170m / bt470bg\n")
+        _T("                                    / bt709 / bt2020nc\n")
+        _T("      colormatrix_out=<string>    matrix for the OUTPUT RGB->YUV conversion\n")
+        _T("                                    (same list as colormatrix; auto=same as input;\n")
+        _T("                                    set bt2020nc for models\n")
+        _T("                                    that convert SDR/709 to HDR/2020)\n")
+        _T("      colorrange=<string>         same list as --colorrange; onnx supports\n")
+        _T("                                    auto (default, tv) / tv / limited / pc / full\n")
         _T("      colorspace=<string>         3ch models: rgb (default) / ycbcr (ArtCNN *_YCbCr)\n")
         _T("      noise=<int>                 noise sigma 0-255 for noise models (default 15)\n")
         _T("      out_res=<WxH>               end-of-chain resize to an arbitrary final size,\n")
@@ -16131,8 +16174,43 @@ tstring gen_cmd_help_vpp() {
         _T("                                  value on one axis keeps the source aspect:\n")
         _T("                                  out_res=-2x1080 -> 1440x1080 (4:3) or 1920x1080 (16:9).\n")
         _T("      resize=<string>             resampler for out_res (default=lanczos4)\n"));
+#else
+    str += strsprintf(_T("\n")
+        _T("   --vpp-onnx [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("     OpenVINO-backed CNN filter: loads an ONNX/IR model directly and runs\n")
+        _T("     it on the GPU.\n")
+        _T("     The pre/post a model needs is inferred from its channel count:\n")
+        _T("     1ch=luma SR, 3ch=RGB, 4ch=RGB+noise, 2ch=gray+noise, 3->2ch=chroma.\n")
+        _T("    params\n")
+        _T("      model=<path>                path to the .onnx / .xml model (required)\n")
+        _T("      device=<string>             OpenVINO device: GPU.0 (default) / GPU / CPU / AUTO / NPU\n")
+        _T("                                    NPU needs an NPU-enabled OpenVINO runtime (Core Ultra).\n")
+        _T("      interop=<string>            auto (default) / ocl (zero-copy, shared GPU context) / host\n")
+        _T("      prec=<string>               auto (default) / fp16 / fp32\n")
+        _T("      colormatrix=<string>        same list as --colormatrix; onnx supports\n")
+        _T("                                    auto / auto_res / smpte170m / bt470bg\n")
+        _T("                                    / bt709 / bt2020nc\n")
+        _T("      colormatrix_out=<string>    matrix for the OUTPUT RGB->YUV conversion\n")
+        _T("                                    (same list as colormatrix; auto=same as input;\n")
+        _T("                                    set bt2020nc for models\n")
+        _T("                                    that convert SDR/709 to HDR/2020)\n")
+        _T("      colorrange=<string>         same list as --colorrange; onnx supports\n")
+        _T("                                    auto (default, tv) / tv / limited / pc / full\n")
+        _T("      colorspace=<string>         3ch models: rgb (default) / ycbcr (ArtCNN *_YCbCr)\n")
+        _T("      noise=<int>                 noise sigma 0-255 for noise models (default 15)\n")
+        _T("      out_res=<WxH>               end-of-chain resize to an arbitrary final size,\n")
+        _T("                                  applied AFTER the network so CNN upscale + fit run\n")
+        _T("                                  in one pass, e.g. out_res=1440x1080. A negative\n")
+        _T("                                  value on one axis keeps the source aspect:\n")
+        _T("                                  out_res=-2x1080 -> 1440x1080 (4:3) or 1920x1080 (16:9).\n")
+        _T("      resize=<string>             resampler for out_res (default=lanczos4)\n"));
+#endif
     str += strsprintf(_T("\n")
         _T("   --vpp-onnx-model-dir <string>   Directory containing models.json for registered ONNX models.\n"));
+#if ENABLE_OPENVINO
+    str += strsprintf(_T("\n")
+        _T("   --vpp-onnx-cache-dir <string>   Cache compiled ONNX models in this folder.\n"));
+#endif
 #endif
 #if ENABLE_VPP_FILTER_SMOOTH
     str += strsprintf(_T("\n")

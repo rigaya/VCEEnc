@@ -3519,11 +3519,14 @@ struct VppAnime4k {
 struct VppOnnx {
     bool    enable;
     tstring modelFile;   // path to the ONNX (or OpenVINO IR .xml) model
-    tstring device;      // OpenVINO device: "GPU.0" (default), "GPU", "CPU", "AUTO"
-    tstring interop;     // "auto" (default), "ocl" (zero-copy shared context), "host" (readback)
+    tstring device;      // QSVEnc(OpenVINO)ではデバイス指定、VCEEnc(DirectML)では互換用。
+    tstring interop;     // QSVEnc(OpenVINO)ではinterop指定、VCEEnc(DirectML)では互換用。
     tstring precision;   // "auto" (default), "fp16", "fp32"
-    tstring colormatrix; // "auto" (bt601 for SD, bt709 for HD), "bt601", "bt709", "bt2020"
-    tstring colorrange;  // "auto" (tv), "tv", "pc"
+    tstring cacheDir;    // OpenVINOのCACHE_DIR (コンパイル済みモデルのキャッシュ先, ""=無効=従来動作)
+    CspMatrix colormatrix;    // 入力側YUV->RGB変換のマトリクス。auto=SD/HDで自動判定。
+    CspMatrix colormatrixOut; // 出力側RGB->YUV変換のマトリクス。auto=入力と同じ=従来動作。
+                              // SDR->HDR等、モデルが色空間を変えるとき用 (例: bt709入力/bt2020nc出力)
+    CspColorRange colorrange; // auto=tv
     tstring colorspace;  // 3ch models: "rgb" (default) or "ycbcr" (ArtCNN *_YCbCr / JPEG-YCbCr)
     int     noise;       // noise sigma (0..255) fed to the conditioning channel of noise models (default 15)
     int                  postResizeW;
