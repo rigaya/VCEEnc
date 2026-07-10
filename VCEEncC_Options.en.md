@@ -2360,6 +2360,14 @@ Inverse telecine for soft-telecine / hard-telecine sources.
       No post process.
     - 2  
       Per-pixel adaptive bob-deinterlace on second-field rows. Only pixels detected as combed are replaced with the vertical average of adjacent first-field rows. First-field rows are always passed through untouched.
+  - nt=&lt;int&gt;  (default: 10)
+    Match-metric noise tolerance in 8-bit scale.
+  - cthresh=&lt;int&gt;  (default: 4)
+    Per-pixel comb threshold used in match scoring in 8-bit scale.
+  - combpel=&lt;int&gt;  (default: 8)
+    Number of combed pixels per block before the block is counted as combed.
+  - scthresh=&lt;float&gt;  (default: 0.0)
+    Scene-change threshold as a fraction of the maximum SAD. `0.0` uses the adaptive threshold.
 
 ### --vpp-decimate [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]  
 Drop duplicated frame in cycles set.

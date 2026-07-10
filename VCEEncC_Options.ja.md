@@ -2326,6 +2326,14 @@ decombによるインタレ解除を行う。
       後処理なし。
     - 2  
       2nd field の row に対して、ピクセル単位で適応的に bob deinterlace を行い、コーミングと判定された pixel を、1st field の上下 row の垂直平均で置換する。1st field の row は常にそのまま通す。
+  - nt=&lt;int&gt;  (デフォルト: 10)
+    マッチ評価におけるノイズ許容値（8bit基準）。
+  - cthresh=&lt;int&gt;  (デフォルト: 4)
+    マッチ評価における画素単位の縞検出閾値（8bit基準）。
+  - combpel=&lt;int&gt;  (デフォルト: 8)
+    ブロックを縞ありと判定するために必要な縞画素数。
+  - scthresh=&lt;float&gt;  (デフォルト: 0.0)
+    最大SADに対するシーンチェンジ判定閾値。`0.0` の場合は適応閾値を使用する。
 
 ### --vpp-decimate [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]  
 重複フレームを削除します。
