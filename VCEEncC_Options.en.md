@@ -240,6 +240,7 @@
   - [--vpp-perf-monitor](#--vpp-perf-monitor)
 - [Other Options](#other-options)
   - [--parallel \[\<int\>\] or \[\<string\>\]](#--parallel-int-or-string)
+  - [--parallel-force-large-memory-filters](#--parallel-force-large-memory-filters)
   - [--output-buf \<int\>](#--output-buf-int)
   - [--output-thread \<int\>](#--output-thread-int)
   - [--log \<string\>](#--log-string)
@@ -3759,6 +3760,11 @@ Enables parallel encoding by file splitting. Divides the input file into multipl
   Example: Run with 3 parallel threads
   --parallel 3
   ```
+
+### --parallel-force-large-memory-filters
+Disables an automatic --parallel count limit when one is applied for filters with high GPU memory usage.
+
+Use this only when enough GPU memory is available, as it can increase the risk of GPU memory allocation errors or performance drops.
 
 ### --output-buf &lt;int&gt;
 Specify the output buffer size in MB. The default is 8 and the maximum value is 128.

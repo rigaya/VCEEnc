@@ -3312,7 +3312,7 @@ struct VppDetailSharpen {
 struct VppCas {
     bool enable;
     float sharpness;
-    bool  chroma; //色差プレーンにも適用する (default: false = 従来のluma-only)
+    bool chroma; //色差プレーンにも適用する (default: false = 従来のluma-only)
     bool hdr;
 
     VppCas();
@@ -3521,8 +3521,8 @@ struct VppAnime4k {
 struct VppOnnx {
     bool    enable;
     tstring modelFile;   // path to the ONNX (or OpenVINO IR .xml) model
-    tstring device;      // QSVEnc(OpenVINO)ではデバイス指定、VCEEnc(DirectML)では互換用。
-    tstring interop;     // QSVEnc(OpenVINO)ではinterop指定、VCEEnc(DirectML)では互換用。
+    tstring device;      // OpenVINO device: "GPU.0" (default), "GPU", "CPU", "AUTO", "NPU"
+    tstring interop;     // "auto" (default), "ocl" (zero-copy shared context), "host" (readback)
     tstring precision;   // "auto" (default), "fp16", "fp32"
     tstring cacheDir;    // OpenVINOのCACHE_DIR (コンパイル済みモデルのキャッシュ先, ""=無効=従来動作)
     CspMatrix colormatrix;    // 入力側YUV->RGB変換のマトリクス。auto=SD/HDで自動判定。
@@ -4211,6 +4211,7 @@ struct RGYParamParallelEnc {
     std::vector<RGYParamParallelEncPipeHandle> chunkPipeHandles; // 各チャンクの先頭のフレームID (raw読み込み時に使用)
     RGYParamParallelEncCache cacheMode;
     bool delayChildSync; // 親-子間のデータやり取りを少し遅らせる
+    bool forceLargeMemoryFilters; // GPUメモリ使用量が大きいフィルタでの並列数制限を無効化する
     RGYParallelEncSendData *sendData; // 並列処理時に親-子間のデータやり取り用
     RGYParamParallelEnc();
     bool operator==(const RGYParamParallelEnc &x) const;
@@ -4267,6 +4268,7 @@ struct RGYParamControl {
     bool enableOpenCL;
     RGYParamInitVulkan enableVulkan;
     int openclBuildThreads;
+    int openclTaskThreads;
     tstring clPerfDumpDir;          // --cl-perf-dump <dir>: OpenCL kernel perf dump 先ディレクトリ (空=無効)
     double  clPerfTimelineSec;      // --cl-perf-timeline [=<sec>]: timeline 収集の時間窓 (秒)。0 = 無効、負値 = 無制限
     tstring clPerfDisasmTool;       // --cl-perf-disasm-tool <auto|ocloc|rga|none>

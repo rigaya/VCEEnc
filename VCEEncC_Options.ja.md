@@ -3841,6 +3841,11 @@ Frame rate conversion filter.
   --parallel 3
   ```
 
+### --parallel-force-large-memory-filters
+GPUメモリ使用量の大きいフィルタに対して --parallel の並列数の自動制限が適用される場合、その制限を無効化する。
+
+GPUメモリ不足によるエラーや性能低下が起きやすくなるため、十分なGPUメモリがある場合のみ指定する。
+
 ### --output-buf &lt;int&gt;
 出力バッファサイズをMB単位で指定する。デフォルトは8、最大値は128。0で使用しない。
 
