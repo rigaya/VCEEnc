@@ -1613,6 +1613,7 @@ Vpp filters will be applied in fixed order, regardless of the order in the comma
   - [--vpp-hqdn3d](#--vpp-hqdn3d-param1value1param2value2)
   - [--vpp-anime4k-shader](#--vpp-anime4k-shader-param1value1param2value2)
   - [--vpp-onnx](#--vpp-onnx-param1value1param2value2)
+  - [--vpp-rife-ov](#--vpp-rife-ov-param1value1param2value2)
   - [--vpp-descale](#--vpp-descale-param1value1param2value2)
   - [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
   - [--vpp-libplacebo-shader](#--vpp-libplacebo-shader-param1value1param2value2)
@@ -2764,6 +2765,26 @@ Experimental CNN filter that runs the specified ONNX model on GPU through ONNX R
 
 ### --vpp-onnx-model-dir &lt;string&gt;
 Directory containing models.json and the model files for registered ONNX models.
+
+### --vpp-rife-ov [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+RIFE v4.x frame interpolation filter using ONNX Runtime DirectML. Input must be 8-bit YUV420 and its width and height must be multiples of 32. Available only in Windows builds with DirectML support.
+
+- **parameters**
+  - model=&lt;string&gt;
+    Path to the RIFE v4.x ONNX model (required).
+  - multi=&lt;int&gt; (default: 2, minimum: 2)
+    Frame-rate multiplier.
+  - device=&lt;string&gt; (default: GPU.0)
+    Compatibility parameter. DirectML binds inference to the same GPU as the encoder.
+  - colormatrix=&lt;string&gt; (default: auto)
+    auto / bt601 / bt709 / bt2020.
+  - colorrange=&lt;string&gt; (default: auto)
+    auto / tv / pc.
+
+  ```
+  --vpp-rife-ov model=rife_v4.6.onnx,multi=2
+  ```
 
 ### --vpp-descale [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 Undo upscaling by solving the inverse system for a known upscaler kernel and output a lower native resolution.

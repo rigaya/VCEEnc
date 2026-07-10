@@ -1508,6 +1508,7 @@ vppフィルタの適用順は固定で、コマンドラインの順序によ�
   - [--vpp-hqdn3d](#--vpp-hqdn3d-param1value1param2value2)
   - [--vpp-anime4k-shader](#--vpp-anime4k-shader-param1value1param2value2)
   - [--vpp-onnx](#--vpp-onnx-param1value1param2value2)
+  - [--vpp-rife-ov](#--vpp-rife-ov-param1value1param2value2)
   - [--vpp-descale](#--vpp-descale-param1value1param2value2)
   - [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
   - [--vpp-libplacebo-shader](#--vpp-libplacebo-shader-param1value1param2value2)
@@ -2745,6 +2746,26 @@ ONNX Runtime DirectML を使用し、指定したONNXモデルをGPUで実行す
 
 ### --vpp-onnx-model-dir &lt;string&gt;
 登録済みONNXモデルのmodels.jsonおよびモデルファイルが格納されたディレクトリを指定する。
+
+### --vpp-rife-ov [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+ONNX Runtime DirectMLでRIFE v4.x ONNXモデルを実行するフレーム補間フィルタ。入力は8bit YUV420で、幅・高さは32の倍数である必要がある。DirectML対応のWindowsビルドでのみ有効。
+
+- **パラメータ**
+  - model=&lt;string&gt;
+    RIFE v4.x ONNXモデルのパス (必須)。
+  - multi=&lt;int&gt; (デフォルト: 2、範囲: 2以上)
+    フレームレート倍率。
+  - device=&lt;string&gt; (デフォルト: GPU.0)
+    互換用パラメータ。DirectMLではエンコーダと同じGPUに推論を紐づける。
+  - colormatrix=&lt;string&gt; (デフォルト: auto)
+    auto / bt601 / bt709 / bt2020。
+  - colorrange=&lt;string&gt; (デフォルト: auto)
+    auto / tv / pc。
+
+  ```
+  --vpp-rife-ov model=rife_v4.6.onnx,multi=2
+  ```
 
 ### --vpp-descale [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
 既知のアップスケールカーネルを逆算し、元の低解像度に近い画像へ縮小します。
