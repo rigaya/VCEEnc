@@ -88,6 +88,7 @@
 #include "rgy_filter_unsharp.h"
 #include "rgy_filter_anime4k.h"
 #include "rgy_filter_onnx.h"
+#include "rgy_filter_rife_ov.h"
 #include "rgy_filter_vinverse.h"
 #include "rgy_filter_chromashift.h"
 #include "rgy_filter_deblock.h"
@@ -1414,6 +1415,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.descale.enable)       filterPipeline.push_back(VppType::CL_DESCALE);
     if (inputParam->vpp.anime4k.enable)       filterPipeline.push_back(VppType::CL_ANIME4K);
     if (inputParam->vpp.onnx.enable)          filterPipeline.push_back(VppType::CL_ONNX);
+    if (inputParam->vpp.rife_ov.enable)       filterPipeline.push_back(VppType::CL_RIFE_OV);
     if (degrainLegacy)                        filterPipeline.push_back(VppType::CL_DEGRAIN);
     if (inputParam->vpp.rtgmc_edi.enable && degrainLegacy) filterPipeline.push_back(VppType::CL_RTGMC_EDI);
     if (degrainTR1)                           filterPipeline.push_back(VppType::CL_DEGRAIN_APPLY_TR1);
@@ -2231,6 +2233,32 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         return RGY_ERR_NONE;
     }
 #endif
+    if (vppType == VppType::CL_RIFE_OV) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterRifeOV(m_dev->cl()));
+        shared_ptr<RGYFilterParamRifeOV> param(new RGYFilterParamRifeOV());
+        param->modelFile = inputParam->vpp.rife_ov.modelFile;
+        param->device = inputParam->vpp.rife_ov.device;
+        param->multi = inputParam->vpp.rife_ov.multi;
+        param->colormatrix = inputParam->vpp.rife_ov.colormatrix;
+        param->colorrange = inputParam->vpp.rife_ov.colorrange;
+        const LUID devLuid = m_dev->luid();
+        param->adapterLuidLow = (uint32_t)devLuid.LowPart;
+        param->adapterLuidHigh = (int32_t)devLuid.HighPart;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        return RGY_ERR_NONE;
+    }
     //anime4k (hand-written GLSL luma refinement / 2x upscale)
     if (vppType == VppType::CL_ANIME4K) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
