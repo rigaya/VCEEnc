@@ -2238,6 +2238,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         unique_ptr<RGYFilter> filter(new RGYFilterRifeOV(m_dev->cl()));
         shared_ptr<RGYFilterParamRifeOV> param(new RGYFilterParamRifeOV());
         param->modelFile = inputParam->vpp.rife_ov.modelFile;
+        param->modelDir = inputParam->vpp.onnxModelDir;
         param->device = inputParam->vpp.rife_ov.device;
         param->multi = inputParam->vpp.rife_ov.multi;
         param->colormatrix = inputParam->vpp.rife_ov.colormatrix;

@@ -53,13 +53,14 @@
 class RGYFilterParamRifeOV : public RGYFilterParam {
 public:
     tstring modelFile;        // path to a RIFE v4.x .onnx / .xml
+    tstring modelDir;
     tstring device;           // OpenVINO device ("GPU.0" default)
     int     multi;            // frame-rate multiplier (>=2; 2 = double the frame rate)
     tstring colormatrix;      // auto / bt601 / bt709 / bt2020
     tstring colorrange;       // auto / tv / pc
     uint32_t adapterLuidLow = 0;
     int32_t adapterLuidHigh = 0;
-    RGYFilterParamRifeOV() : modelFile(), device(_T("GPU.0")), multi(2), colormatrix(_T("auto")), colorrange(_T("auto")) {};
+    RGYFilterParamRifeOV() : modelFile(), modelDir(), device(_T("GPU.0")), multi(2), colormatrix(_T("auto")), colorrange(_T("auto")) {};
     virtual ~RGYFilterParamRifeOV() {};
     virtual tstring print() const override;
 };
