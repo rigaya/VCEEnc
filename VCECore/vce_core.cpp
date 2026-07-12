@@ -88,7 +88,9 @@
 #include "rgy_filter_unsharp.h"
 #include "rgy_filter_anime4k.h"
 #include "rgy_filter_onnx.h"
+#if ENABLE_VPP_FILTER_RIFE_OV
 #include "rgy_filter_rife_ov.h"
+#endif
 #include "rgy_filter_vinverse.h"
 #include "rgy_filter_chromashift.h"
 #include "rgy_filter_deblock.h"
@@ -2233,6 +2235,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         return RGY_ERR_NONE;
     }
 #endif
+#if ENABLE_VPP_FILTER_RIFE_OV
     if (vppType == VppType::CL_RIFE_OV) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
         unique_ptr<RGYFilter> filter(new RGYFilterRifeOV(m_dev->cl()));
@@ -2260,6 +2263,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
         return RGY_ERR_NONE;
     }
+#endif
     //anime4k (hand-written GLSL luma refinement / 2x upscale)
     if (vppType == VppType::CL_ANIME4K) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
