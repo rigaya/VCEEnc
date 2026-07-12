@@ -91,6 +91,9 @@
 #if ENABLE_VPP_FILTER_RIFE_OV
 #include "rgy_filter_rife_ov.h"
 #endif
+#if ENABLE_VPP_FILTER_STDEINT
+#include "rgy_filter_stdeint.h"
+#endif
 #include "rgy_filter_vinverse.h"
 #include "rgy_filter_chromashift.h"
 #include "rgy_filter_deblock.h"
@@ -145,6 +148,7 @@ int countVppDeinterlacer(const VCEParam *inputParam, const bool includeIvtc) {
     if (inputParam->vpp.rtgmc_bob.enable) deinterlacer++;
     if (inputParam->vpp.yadif.enable) deinterlacer++;
     if (inputParam->vpp.decomb.enable) deinterlacer++;
+    if (inputParam->vpp.stdeint.enable) deinterlacer++;
     if (includeIvtc && inputParam->vpp.ivtc.enable) deinterlacer++;
     return deinterlacer;
 }
@@ -1398,6 +1402,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.bwdif.enable)         filterPipeline.push_back(VppType::CL_BWDIF);
     if (inputParam->vpp.yadif.enable)         filterPipeline.push_back(VppType::CL_YADIF);
     if (inputParam->vpp.decomb.enable)        filterPipeline.push_back(VppType::CL_DECOMB);
+    if (inputParam->vpp.stdeint.enable)       filterPipeline.push_back(VppType::CL_STDEINT);
     if (inputParam->vpp.ivtc.enable)          filterPipeline.push_back(VppType::CL_IVTC);
     if (inputParam->vpp.decimate.enable)      filterPipeline.push_back(VppType::CL_DECIMATE);
     if (inputParam->vpp.mpdecimate.enable)    filterPipeline.push_back(VppType::CL_MPDECIMATE);
@@ -1972,6 +1977,39 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         m_encFps = param->baseFps;
         return RGY_ERR_NONE;
     }
+#if ENABLE_VPP_FILTER_STDEINT
+    // ST-DeIntデインターレース
+    if (vppType == VppType::CL_STDEINT) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterStDeint(m_dev->cl()));
+        shared_ptr<RGYFilterParamStDeint> param(new RGYFilterParamStDeint());
+        param->modelFile = inputParam->vpp.stdeint.modelFile;
+        param->modelDir = inputParam->vpp.onnxModelDir;
+        param->provider = inputParam->vpp.stdeint.provider;
+        param->precision = inputParam->vpp.stdeint.precision;
+        param->mode = inputParam->vpp.stdeint.mode;
+        param->colormatrix = inputParam->vpp.stdeint.colormatrix;
+        param->colorrange = inputParam->vpp.stdeint.colorrange;
+        const LUID devLuid = m_dev->luid();
+        param->adapterLuidLow = (uint32_t)devLuid.LowPart;
+        param->adapterLuidHigh = (int32_t)devLuid.HighPart;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->frameOut.picstruct = RGY_PICSTRUCT_FRAME;
+        param->baseFps = m_encFps;
+        param->timebase = m_outputTimebase;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        return RGY_ERR_NONE;
+    }
+#endif
     //ivtc
     if (vppType == VppType::CL_IVTC) {
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());

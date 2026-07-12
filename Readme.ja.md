@@ -90,6 +90,7 @@ Debian/Ubuntu系 (x64)
     - インタレ解除  
       - afs (自動フィールドシフト)
       - nnedi
+      - stdeint
     - 字幕焼きこみ
     - 色空間変換
       - hdr2sdr

@@ -76,6 +76,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
     - deinterlacer
       - afs (Automatic field shift)
       - nnedi
+      - stdeint
     - colorspace conversion
       - hdr2sdr
     - subburn
