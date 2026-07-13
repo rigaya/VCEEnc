@@ -581,8 +581,12 @@ int _tmain(int argc, TCHAR **argv) {
         return 1;
     }
 
+    // 標準入力や Windows 名前付きパイプに rgy_path_is_same を呼ばない。
+    // equivalent() が待機中のパイプへ接続し、インスタンスを消費するため。
     if (prm.common.inputFilename != _T("-")
         && prm.common.outputFilename != _T("-")
+        && !rgy_path_is_windows_named_pipe(prm.common.inputFilename)
+        && !rgy_path_is_windows_named_pipe(prm.common.outputFilename)
         && rgy_path_is_same(prm.common.inputFilename, prm.common.outputFilename)) {
         _ftprintf(stderr, _T("destination file is equal to source file!"));
         return 1;
