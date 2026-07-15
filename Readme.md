@@ -71,28 +71,21 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 - Supports decode using libavcodec
 - Parallel encoding supporting multi GPU
 - Calculation of ssim/psnr of the encode
-- High performance filtering (VPP, Video Pre-Processing)
-  - GPU filtering by OpenCL
-    - deinterlacer
-      - afs (Automatic field shift)
-      - nnedi
-      - stdeint
-    - colorspace conversion
-      - hdr2sdr
-    - subburn
-    - resize
-      - spline16, spline36, spline64
-      - lanczos2, lanczos3, lanczos4
-    - transpose / rotate / flip
-    - padding
-    - deband
-    - noise reduction
-      - knn (K-nearest neighbor)
-      - pmd (modified pmd method)
-    - edge / detail enhancement
-      - unsharp
-      - edgelevel (edge ​​level adjustment)
-      - warpsharp
+- VPP (Video Pre-Processing) filters
+
+  | Category | Filters |
+  |:--|:--|
+  | Deinterlace | afs, bwdif, yadif, nnedi, rtgmc, kfm, decomb, stdeint |
+  | Inverse Telecine / Decimation | rff, ivtc, decimate, mpdecimate |
+  | Noise Reduction | knn, pmd, nlmeans, hqdn3d, smooth, denoise-dct, fft3d, msmooth, degrain, convolution3d |
+  | Resize | resize (various algorithms), descale, preprocess |
+  | Edge / Detail Enhancement | unsharp, edgelevel, warpsharp, maa, cas, msharpen, detailsharpen, enhance |
+  | Dehalo / Deringing | dehalo, finedehalo, hqdering, vinverse |
+  | Color Adjustment | tweak, curves, softlight, chromashift, colorfix |
+  | Color Space / HDR | colorspace, libplacebo-tonemapping |
+  | Debanding | deband, libplacebo-deband |
+  | Frame Interpolation | frc, rife-ov |
+  | Other | delogo, subburn, pad, overlay, rotate, transform, stab, deflicker, deblock, libplacebo-shader, onnx, anime4k-shader |
 
 ### VCEEnc.auo (Aviutl plugin)
 - Audio encoding
