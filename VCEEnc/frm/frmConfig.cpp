@@ -851,6 +851,7 @@ System::Void frmConfig::InitComboBox() {
     setComboBox(fcgCXVppDenoiseFFT3DBlockSize, list_vpp_fft3d_block_size);
     setComboBox(fcgCXVppDenoiseFFT3DTemporal, list_vpp_fft3d_temporal_gui);
     setComboBox(fcgCXVppDenoiseFFT3DPrecision, list_vpp_fp_prec);
+    setComboBox(fcgCXVppDenoiseDegrainPreset, list_vpp_degrain_preset);
     setComboBox(fcgCXVppDetailEnhance, list_vpp_detail_enahance);
     setComboBox(fcgCXVppDeband, list_vpp_deband_names);
     setComboBox(fcgCXVppLibplaceboDebandDither, list_vpp_libplacebo_deband_dither_mode);
@@ -980,6 +981,7 @@ System::Void frmConfig::fcgChangeEnabled(System::Object^  sender, System::EventA
     fcgPNVppDenoiseConv3D->Visible = (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("convolution3d")));
     fcgPNVppPreProcess->Visible = (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("preprocess")));
     fcgPNVppDenoiseMSmooth->Visible = (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("msmooth")));
+    fcgPNVppDenoiseDegrain->Visible = (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("degrain")));
     fcgPNVppUnsharp->Visible = (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("unsharp")));
     fcgPNVppEdgelevel->Visible = (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("edgelevel")));
     fcgPNVppWarpsharp->Visible = (fcgCXVppDetailEnhance->SelectedIndex == get_cx_index(list_vpp_detail_enahance, _T("warpsharp")));
@@ -1475,7 +1477,10 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
 
 
         int denoise_idx = 0;
-        if (enc.vpp.knn.enable) {
+        const bool vppDegrainEnabled = enc.vpp.degrainTR1.enable || enc.vpp.degrainTR2.enable || enc.vpp.degrain.enable;
+        if (vppDegrainEnabled) {
+            denoise_idx = get_cx_index(list_vpp_denoise, _T("degrain"));
+        } else if (enc.vpp.knn.enable) {
             denoise_idx = get_cx_index(list_vpp_denoise, _T("knn"));
         } else if (enc.vpp.pmd.enable) {
             denoise_idx = get_cx_index(list_vpp_denoise, _T("pmd"));
@@ -1555,6 +1560,19 @@ System::Void frmConfig::ConfToFrm(CONF_GUIEX *cnf) {
         SetNUValue(fcgNUVppDenoiseFFT3DOverlap, enc.vpp.fft3d.overlap);
         SetCXIndex(fcgCXVppDenoiseFFT3DTemporal, get_cx_index(list_vpp_fft3d_temporal_gui, (int)enc.vpp.fft3d.temporal));
         SetCXIndex(fcgCXVppDenoiseFFT3DPrecision, get_cx_index(list_vpp_fp_prec, (int)enc.vpp.fft3d.precision));
+
+        const VppDegrain *degrainPrm = enc.vpp.degrainTR1.enable ? &enc.vpp.degrainTR1
+            : enc.vpp.degrainTR2.enable ? &enc.vpp.degrainTR2
+            : &enc.vpp.degrain;
+        const int degrainTr = (degrainPrm->stage == VppDegrainStage::TR2) ? 2
+            : (degrainPrm->stage == VppDegrainStage::TR1) ? 1
+            : (degrainPrm->delta == 2) ? 2 : 1;
+        SetCXIndex(fcgCXVppDenoiseDegrainPreset, get_cx_index(list_vpp_degrain_preset, (int)degrainPrm->preset));
+        SetNUValue(fcgNUVppDenoiseDegrainTr, degrainTr);
+        SetNUValue(fcgNUVppDenoiseDegrainBlksize, degrainPrm->blksize);
+        SetNUValue(fcgNUVppDenoiseDegrainThsad, degrainPrm->thsad);
+        SetNUValue(fcgNUVppDenoiseDegrainThsadc, degrainPrm->thsadc);
+        fcgCBVppDenoiseDegrainChroma->Checked = degrainPrm->chroma;
 
         SetCXIndex(fcgCXVppDenoiseConv3DMatrix, get_cx_index(list_vpp_convolution3d_matrix, (int)enc.vpp.convolution3d.matrix));
         SetNUValue(fcgNUVppDenoiseConv3DThreshYSpatial, enc.vpp.convolution3d.threshYspatial);
@@ -1802,6 +1820,24 @@ System::String^ frmConfig::FrmToConf(CONF_GUIEX *cnf) {
     enc.vpp.fft3d.overlap = (float)fcgNUVppDenoiseFFT3DOverlap->Value;
     enc.vpp.fft3d.temporal = list_vpp_fft3d_temporal_gui[fcgCXVppDenoiseFFT3DTemporal->SelectedIndex].value;
     enc.vpp.fft3d.precision = (VppFpPrecision)list_vpp_fp_prec[fcgCXVppDenoiseFFT3DPrecision->SelectedIndex].value;
+
+    enc.vpp.degrain.enable = false;
+    enc.vpp.degrainAnalyze.enable = false;
+    enc.vpp.degrainTR1.enable = false;
+    enc.vpp.degrainTR2.enable = false;
+    if (fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("degrain"))) {
+        const int degrainTr = (int)fcgNUVppDenoiseDegrainTr->Value;
+        VppDegrain *degrainPrm = (degrainTr == 2) ? &enc.vpp.degrainTR2 : &enc.vpp.degrainTR1;
+        degrainPrm->enable = true;
+        degrainPrm->preset = (VppDegrainPreset)list_vpp_degrain_preset[fcgCXVppDenoiseDegrainPreset->SelectedIndex].value;
+        degrainPrm->mode = VppDegrainMode::Degrain;
+        degrainPrm->stage = (degrainTr == 2) ? VppDegrainStage::TR2 : VppDegrainStage::TR1;
+        degrainPrm->delta = degrainTr;
+        degrainPrm->blksize = (int)fcgNUVppDenoiseDegrainBlksize->Value;
+        degrainPrm->thsad = (int)fcgNUVppDenoiseDegrainThsad->Value;
+        degrainPrm->thsadc = (int)fcgNUVppDenoiseDegrainThsadc->Value;
+        degrainPrm->chroma = fcgCBVppDenoiseDegrainChroma->Checked;
+    }
 
     enc.vppamf.pp.enable = fcgCXVppDenoiseMethod->SelectedIndex == get_cx_index(list_vpp_denoise, _T("preprocess"));
     enc.vppamf.pp.strength = (int)fcgNUVppPreProcessStrength->Value;
