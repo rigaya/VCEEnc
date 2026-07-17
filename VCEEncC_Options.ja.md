@@ -1481,7 +1481,6 @@ vppフィルタの適用順は固定で、コマンドラインの順序によ�
   - [--vpp-nnedi](#--vpp-nnedi-param1value1param2value2)
   - [--vpp-bwdif](#--vpp-bwdif-param1value1)
   - [--vpp-yadif](#--vpp-yadif-param1value1)
-  - [--vpp-stdeint](#--vpp-stdeint-param1value1param2value2)
   - [--vpp-rtgmc](#--vpp-rtgmc-param1value1)
   - [--vpp-rtgmc-bob](#--vpp-rtgmc-bob-param1value1)
   - [--vpp-rtgmc-search-prefilter](#--vpp-rtgmc-search-prefilter-param1value1)
@@ -1510,7 +1509,6 @@ vppフィルタの適用順は固定で、コマンドラインの順序によ�
   - [--vpp-anime4k-shader](#--vpp-anime4k-shader-param1value1param2value2)
   - [--vpp-onnx](#--vpp-onnx-param1value1param2value2)
   - [--vpp-rife-ov](#--vpp-rife-ov-param1value1param2value2)
-  - [--vpp-stdeint](#--vpp-stdeint-param1value1param2value2)
   - [--vpp-descale](#--vpp-descale-param1value1param2value2)
   - [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
   - [--vpp-libplacebo-shader](#--vpp-libplacebo-shader-param1value1param2value2)
@@ -2776,41 +2774,6 @@ ONNX Runtime DirectMLでRIFE v4.x ONNXモデルを実行するフレーム補間
   ```
   --vpp-onnx-model-dir C:\models\HWEnc-onnx-models --vpp-rife-ov model=rife_v4_6,multi=2
   --vpp-rife-ov model=C:\models\rife_v4.6.onnx,multi=2
-  ```
-
-### --vpp-stdeint [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
-
-ONNX Runtime DirectMLでST-DeInt ONNXモデルを実行するインタレ解除フィルタ。入力は8bit YUV420で、高さは4以上の偶数である必要がある。DirectML対応のWindowsビルドでのみ有効。
-
-モデルは現行の`export_stdeint.py`が生成する、高さ半分・6チャンネルの復元出力を使用する必要がある。ONNX内にweave処理を含む旧モデルは再出力が必要。
-
-- **パラメータ**
-  - model=&lt;string&gt;  
-    登録済みST-DeIntモデル名、またはONNXモデルのパス (必須)。`--vpp-onnx-model-dir` 指定時は、`stdeint_ov_models.json` の `stdeint` と `stdeint_fast` を使用できる。
-  - mode=&lt;string&gt; (デフォルト: bob)  
-    `bob`は各入力から時間順に2フレームを出力し、フレームレートを2倍にする。`normal`は先頭フィールドに対応するフレームのみ出力する。
-  - device=&lt;string&gt; (デフォルト: GPU.0)  
-    互換用パラメータ。DirectMLではエンコーダと同じGPUに推論を紐づける。
-  - provider=&lt;string&gt; (デフォルト: auto)  
-    VCEEncでは`auto` (DirectML) のみ対応。
-  - precision=&lt;string&gt; (デフォルト: fp32)  
-    `fp32`と`auto`を受け付ける。DirectMLではどちらもモデルに記述されたfp32精度で実行する。
-  - colormatrix=&lt;string&gt; (デフォルト: auto)  
-    `--colormatrix`と同じ標準名を使用する。対応値: auto / auto_res / bt709 / smpte170m / bt470bg / bt2020nc。
-  - colorrange=&lt;string&gt; (デフォルト: auto)  
-    `--colorrange`と同じ標準名を使用する。対応値: auto / limited (tv) / full (pc)。
-
-プログレッシブ入力は画素処理を行わずに通過する。`mode=bob`ではフレームを複製し、durationを半分ずつに分けて2倍フレームレートの時系列を維持する。DirectML推論はホストコピー経路を使用し、ログには`path host`と表示される。
-
-推奨設定:
-
-- 高品質: `model=stdeint,precision=fp32`。
-- 計算量を抑える場合: `model=stdeint_fast,precision=auto`。
-
-  ```
-  --vpp-onnx-model-dir C:\models\HWEnc-onnx-models --vpp-stdeint model=stdeint,mode=bob
-  --vpp-onnx-model-dir C:\models\HWEnc-onnx-models --vpp-stdeint model=stdeint_fast,precision=auto,mode=bob
-  --vpp-stdeint model=C:\models\stdeint.onnx,mode=normal
   ```
 
 ### --vpp-descale [&lt;param1&gt;=&lt;value1&gt;[,&lt;param2&gt;=&lt;value2&gt;]...]
