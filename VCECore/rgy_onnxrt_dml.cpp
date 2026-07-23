@@ -220,6 +220,101 @@ size_t RGYOnnxRTDML::outElemCount() const {
 tstring RGYOnnxRTDML::deviceFullName() const { return m_impl->adapterName; }
 tstring RGYOnnxRTDML::inferencePrecision() const { return m_impl->precision; }
 
+class RGYOnnxRTDMLMultiIO::Impl {
+public:
+    std::unique_ptr<Ort::Env> env;
+    std::unique_ptr<Ort::AllocatorWithDefaultOptions> alloc;
+    std::unique_ptr<Ort::Session> session{ nullptr };
+    std::vector<std::string> inNames, outNames;
+    std::vector<std::vector<int64_t>> inShapes, outShapes;
+    tstring adapterName;
+    tstring precision = _T("f32");
+};
+
+RGYOnnxRTDMLMultiIO::RGYOnnxRTDMLMultiIO() : m_impl(std::make_unique<Impl>()) {}
+RGYOnnxRTDMLMultiIO::~RGYOnnxRTDMLMultiIO() {}
+
+RGY_ERR RGYOnnxRTDMLMultiIO::init(const tstring &modelPath, const uint32_t luidLow, const int32_t luidHigh, tstring &errMessage) {
+    loadOrtOnce();
+    if (!s_ortReady) { errMessage = s_ortError; return RGY_ERR_UNSUPPORTED; }
+    try {
+        auto &I = *m_impl;
+        I.env = std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "vceenc-onnx-multiio");
+        I.alloc = std::make_unique<Ort::AllocatorWithDefaultOptions>();
+        Ort::SessionOptions opts;
+        opts.DisableMemPattern();
+        opts.SetExecutionMode(ORT_SEQUENTIAL);
+        opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+        const int deviceId = dxgiIndexForLuid(luidLow, luidHigh, I.adapterName);
+        OrtStatus *st = onnxRuntime().p_OrtSessionOptionsAppendExecutionProviderDML()(static_cast<OrtSessionOptions*>(opts), deviceId);
+        if (st != nullptr) {
+            errMessage = tstring(_T("AppendExecutionProvider_DML failed: ")) + char_to_tstring(Ort::GetApi().GetErrorMessage(st));
+            Ort::GetApi().ReleaseStatus(st);
+            return RGY_ERR_UNSUPPORTED;
+        }
+        I.session = std::make_unique<Ort::Session>(*I.env, modelPath.c_str(), opts);
+        const size_t nin = I.session->GetInputCount();
+        const size_t nout = I.session->GetOutputCount();
+        if (nin == 0 || nout == 0) { errMessage = _T("model has no input/output tensor."); return RGY_ERR_UNSUPPORTED; }
+        for (size_t i = 0; i < nin; i++) {
+            auto name = I.session->GetInputNameAllocated(i, *I.alloc);
+            I.inNames.emplace_back(name.get());
+            auto shape = I.session->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape();
+            if (shape.size() != 4) { errMessage = _T("model input is not a 4D NCHW tensor."); return RGY_ERR_UNSUPPORTED; }
+            for (auto &dim : shape) if (dim < 0) dim = 1;
+            I.inShapes.push_back(std::move(shape));
+        }
+        for (size_t i = 0; i < nout; i++) {
+            auto name = I.session->GetOutputNameAllocated(i, *I.alloc);
+            I.outNames.emplace_back(name.get());
+            auto shape = I.session->GetOutputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape();
+            if (shape.size() != 4) { errMessage = _T("model output is not a 4D NCHW tensor."); return RGY_ERR_UNSUPPORTED; }
+            for (auto &dim : shape) if (dim < 0) dim = 1;
+            I.outShapes.push_back(std::move(shape));
+        }
+    } catch (const Ort::Exception &e) {
+        errMessage = char_to_tstring(e.what());
+        return RGY_ERR_UNKNOWN;
+    } catch (const std::exception &e) {
+        errMessage = char_to_tstring(e.what());
+        return RGY_ERR_UNKNOWN;
+    }
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR RGYOnnxRTDMLMultiIO::infer(const std::vector<const float *> &inputs, const std::vector<float *> &outputs, tstring &errMessage) {
+    if (!m_impl->session || inputs.size() != m_impl->inNames.size() || outputs.size() != m_impl->outNames.size()) return RGY_ERR_INVALID_PARAM;
+    try {
+        auto &I = *m_impl;
+        Ort::MemoryInfo memCpu = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+        std::vector<Ort::Value> tensors;
+        std::vector<const char *> inNames, outNames;
+        tensors.reserve(inputs.size());
+        for (size_t i = 0; i < inputs.size(); i++) {
+            size_t count = 1; for (auto dim : I.inShapes[i]) count *= (size_t)dim;
+            tensors.emplace_back(Ort::Value::CreateTensor<float>(memCpu, const_cast<float *>(inputs[i]), count,
+                I.inShapes[i].data(), I.inShapes[i].size()));
+            inNames.push_back(I.inNames[i].c_str());
+        }
+        for (auto &name : I.outNames) outNames.push_back(name.c_str());
+        auto result = I.session->Run(Ort::RunOptions{ nullptr }, inNames.data(), tensors.data(), tensors.size(), outNames.data(), outNames.size());
+        for (size_t i = 0; i < result.size(); i++) {
+            size_t count = 1; for (auto dim : I.outShapes[i]) count *= (size_t)dim;
+            std::memcpy(outputs[i], result[i].GetTensorData<float>(), count * sizeof(float));
+        }
+    } catch (const Ort::Exception &e) {
+        errMessage = char_to_tstring(e.what());
+        return RGY_ERR_UNKNOWN;
+    }
+    return RGY_ERR_NONE;
+}
+const std::vector<std::string>& RGYOnnxRTDMLMultiIO::inputNames() const { return m_impl->inNames; }
+const std::vector<std::string>& RGYOnnxRTDMLMultiIO::outputNames() const { return m_impl->outNames; }
+const std::vector<int64_t>& RGYOnnxRTDMLMultiIO::inputShape(size_t index) const { return m_impl->inShapes.at(index); }
+const std::vector<int64_t>& RGYOnnxRTDMLMultiIO::outputShape(size_t index) const { return m_impl->outShapes.at(index); }
+tstring RGYOnnxRTDMLMultiIO::deviceFullName() const { return m_impl->adapterName; }
+tstring RGYOnnxRTDMLMultiIO::inferencePrecision() const { return m_impl->precision; }
+
 #else // !ENABLE_ONNXRUNTIME
 
 class RGYOnnxRTDML::Impl {};
@@ -239,5 +334,17 @@ int RGYOnnxRTDML::outWidth()    const { return 0; }
 size_t RGYOnnxRTDML::outElemCount() const { return 0; }
 tstring RGYOnnxRTDML::deviceFullName() const { return tstring(); }
 tstring RGYOnnxRTDML::inferencePrecision() const { return tstring(); }
+
+class RGYOnnxRTDMLMultiIO::Impl {};
+RGYOnnxRTDMLMultiIO::RGYOnnxRTDMLMultiIO() : m_impl(nullptr) {}
+RGYOnnxRTDMLMultiIO::~RGYOnnxRTDMLMultiIO() {}
+RGY_ERR RGYOnnxRTDMLMultiIO::init(const tstring &, const uint32_t, const int32_t, tstring &errMessage) { errMessage = _T("this build of VCEEnc has no ONNX Runtime DirectML support."); return RGY_ERR_UNSUPPORTED; }
+RGY_ERR RGYOnnxRTDMLMultiIO::infer(const std::vector<const float *> &, const std::vector<float *> &, tstring &) { return RGY_ERR_UNSUPPORTED; }
+const std::vector<std::string>& RGYOnnxRTDMLMultiIO::inputNames() const { static const std::vector<std::string> v; return v; }
+const std::vector<std::string>& RGYOnnxRTDMLMultiIO::outputNames() const { static const std::vector<std::string> v; return v; }
+const std::vector<int64_t>& RGYOnnxRTDMLMultiIO::inputShape(size_t) const { static const std::vector<int64_t> v; return v; }
+const std::vector<int64_t>& RGYOnnxRTDMLMultiIO::outputShape(size_t) const { static const std::vector<int64_t> v; return v; }
+tstring RGYOnnxRTDMLMultiIO::deviceFullName() const { return tstring(); }
+tstring RGYOnnxRTDMLMultiIO::inferencePrecision() const { return tstring(); }
 
 #endif // ENABLE_ONNXRUNTIME

@@ -31,6 +31,8 @@
 
 #include <memory>
 #include <cstdint>
+#include <vector>
+#include <string>
 #include "rgy_err.h"
 
 // Set to 1 by the build (preprocessor define) when VCEEnc is built with the
@@ -90,6 +92,25 @@ private:
     RGYOnnxRTDML(const RGYOnnxRTDML &) = delete;
     void operator=(const RGYOnnxRTDML &) = delete;
 
+    class Impl;
+    std::unique_ptr<Impl> m_impl;
+};
+
+// Multi-input/output counterpart used by inpainting models (RGB image + mask).
+class RGYOnnxRTDMLMultiIO {
+public:
+    RGYOnnxRTDMLMultiIO();
+    ~RGYOnnxRTDMLMultiIO();
+    RGY_ERR init(const tstring &modelPath, const uint32_t luidLow, const int32_t luidHigh, tstring &errMessage);
+    RGY_ERR infer(const std::vector<const float *> &inputs, const std::vector<float *> &outputs, tstring &errMessage);
+    const std::vector<std::string>& inputNames() const;
+    const std::vector<std::string>& outputNames() const;
+    const std::vector<int64_t>& inputShape(size_t index) const;
+    const std::vector<int64_t>& outputShape(size_t index) const;
+    tstring deviceFullName() const;
+    tstring inferencePrecision() const;
+    static bool available() { return ENABLE_ONNXRUNTIME != 0; }
+private:
     class Impl;
     std::unique_ptr<Impl> m_impl;
 };

@@ -106,6 +106,11 @@ protected:
     RGY_ERR emitTemporalOutput(int64_t outIdx, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
         RGYOpenCLQueue &queue, RGYOpenCLEvent *event);
 
+    // --- two-input inpainting mode (mask=) -----------------------------------
+    RGY_ERR initMask(std::shared_ptr<RGYFilterParamOnnx> prm, const int inW, const int inH, const RGY_CSP inCsp);
+    RGY_ERR runMask(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
+        RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+
     std::unique_ptr<RGYOnnxRTDML> m_ov;
     OnnxIO m_io;                          // I/O convention inferred from channel counts
     int   m_inC, m_outC;                        // model input / output channel counts
@@ -140,6 +145,18 @@ protected:
     int64_t m_ringBaseIdx;
     int64_t m_recvCount;
     int64_t m_emitCount;
+
+    // --- two-input inpainting mode state (only used when mask= is set) --------
+    std::unique_ptr<RGYOnnxRTDMLMultiIO> m_ovm;
+    int m_maskModelW, m_maskModelH;
+    int m_maskFrameW, m_maskFrameH;
+    int m_imgPortIdx, m_mskPortIdx;
+    float m_outScale;
+    std::vector<float> m_maskFrame;
+    std::vector<float> m_maskModel;
+    std::vector<float> m_frameRGB;
+    std::vector<float> m_modelIn;
+    std::vector<float> m_modelOut;
 
     // opt-in end-of-chain resize (out_res=): runs after the network core, fitting
     // the integer-scaled output to the requested final resolution. Reuses the
