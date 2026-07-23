@@ -2742,6 +2742,9 @@ ONNX Runtime DirectML を使用し、指定したONNXモデルをGPUで実行す
   - noise=&lt;int&gt;
     ノイズモデルに渡すsigma値。(0 - 255)
 
+  - frames=&lt;int&gt; (デフォルト: 1)
+    時系列モデルへ渡すフレームウィンドウのサイズ。3ch RGB フレームをチャンネル軸に連結した `T*3` 入力・3ch 出力モデルで使用します。中央フレームを出力するため、1 以上の奇数を指定してください。
+
   - out_res=&lt;int&gt;x&lt;int&gt;, resize=&lt;string&gt;
     ネットワーク処理後に任意解像度へリサイズする。片方の値を負数にするとアスペクト比を維持する。
 
