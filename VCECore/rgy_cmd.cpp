@@ -5955,8 +5955,8 @@ int parse_one_vpp_option(const TCHAR *option_name, const TCHAR *strInput[], int 
                         print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val);
                         return 1;
                     }
-                    if (vpp->onnx.frames < 1) {
-                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("frames must be >= 1"));
+                    if (vpp->onnx.frames < 1 || (vpp->onnx.frames % 2) == 0) {
+                        print_cmd_error_invalid_value(tstring(option_name) + _T(" ") + param_arg + _T("="), param_val, _T("frames must be a positive odd number"));
                         return 1;
                     }
                     continue;
