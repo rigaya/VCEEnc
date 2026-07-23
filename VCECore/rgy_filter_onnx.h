@@ -34,6 +34,7 @@
 #include "rgy_onnxrt_dml.h"
 #include <vector>
 #include <memory>
+#include <deque>
 
 class RGYFilterResize; // opt-in end-of-chain resize sub-filter (out_res=/resize=)
 
@@ -94,6 +95,17 @@ protected:
     // compute the YUV<->RGB matrix + range coefficients.
     void setupColorCoeffs(int matrixSelIn, int matrixSelOut, bool rangeTV, int pixMax);
 
+    // --- multi-frame temporal window (frames= > 1) ---------------------------
+    // Pack one mapped input frame's YUV as planar RGB [0,1] CHW
+    // (3*inW*inH floats) into dst.
+    void packFrameRGB(const RGYFrameInfo &hin, float *dst);
+    // Temporal run path: buffer the last T RGB frames and emit a centred window
+    // with edge replication (1-in-1-out with (T-1)/2 delay); flush drains the tail.
+    RGY_ERR runTemporal(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
+        RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+    RGY_ERR emitTemporalOutput(int64_t outIdx, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
+        RGYOpenCLQueue &queue, RGYOpenCLEvent *event);
+
     std::unique_ptr<RGYOnnxRTDML> m_ov;
     OnnxIO m_io;                          // I/O convention inferred from channel counts
     int   m_inC, m_outC;                        // model input / output channel counts
@@ -113,6 +125,21 @@ protected:
     std::vector<float>           m_inBuf;       // network input tensor  (inC*inW*inH, CHW)
     std::vector<float>           m_outBuf;      // network output tensor (outC*outW*outH, CHW)
     std::vector<float>           m_u444, m_v444;// normalised chroma at output luma res (for 4:2:0 downsample)
+
+    // --- multi-frame temporal window state (only used when m_temporalT > 1) ---
+    int m_temporalT;
+    struct RingFrame {
+        std::vector<float> rgb;
+        int64_t         timestamp;
+        int64_t         duration;
+        RGY_PICSTRUCT   picstruct;
+        RGY_FRAME_FLAGS flags;
+        int             inputFrameId;
+    };
+    std::deque<RingFrame> m_ring;
+    int64_t m_ringBaseIdx;
+    int64_t m_recvCount;
+    int64_t m_emitCount;
 
     // opt-in end-of-chain resize (out_res=): runs after the network core, fitting
     // the integer-scaled output to the requested final resolution. Reuses the

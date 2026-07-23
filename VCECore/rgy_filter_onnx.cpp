@@ -44,7 +44,8 @@ RGYFilterOnnx::RGYFilterOnnx(shared_ptr<RGYOpenCLContext> context) :
     m_yOff(0.0f), m_yScale(1.0f), m_yRange(255.0f), m_cOff(128.0f), m_cScale(1.0f), m_cRange(255.0f),
     m_matVR(0), m_matUG(0), m_matVG(0), m_matUB(0),
     m_matRY(0), m_matGY(0), m_matBY(0), m_matRU(0), m_matGU(0), m_matBU(0), m_matRV(0), m_matGV(0), m_matBV(0),
-    m_inStaging(), m_outStaging(), m_inBuf(), m_outBuf(), m_u444(), m_v444() {
+    m_inStaging(), m_outStaging(), m_inBuf(), m_outBuf(), m_u444(), m_v444(),
+    m_temporalT(1), m_ringBaseIdx(0), m_recvCount(0), m_emitCount(0) {
     m_name = _T("onnx");
 }
 
@@ -304,7 +305,18 @@ RGY_ERR RGYFilterOnnx::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog
     // Infer the I/O convention from the compiled model's channel counts.
     m_inC  = m_ov->inChannels();
     m_outC = m_ov->outChannels();
-    if      (m_inC == 1 && m_outC == 1) m_io = OnnxIO::LumaSR;
+    m_temporalT = std::max(1, prm->onnx.frames);
+    if (m_temporalT > 1) {
+        if (m_inC != m_temporalT * 3 || m_outC != 3) {
+            AddMessage(RGY_LOG_ERROR, _T("onnx: frames=%d needs a model with %dch in (T*3 RGB) and 3ch out, but this model is %dch in / %dch out.\n"),
+                m_temporalT, m_temporalT * 3, m_inC, m_outC);
+            return RGY_ERR_UNSUPPORTED;
+        }
+        m_io = OnnxIO::RGB;
+        m_pathThrough = (FILTER_PATHTHROUGH_FRAMEINFO)(m_pathThrough &
+            (~(uint32_t)(FILTER_PATHTHROUGH_TIMESTAMP | FILTER_PATHTHROUGH_PICSTRUCT | FILTER_PATHTHROUGH_FLAGS)));
+    }
+    else if (m_inC == 1 && m_outC == 1) m_io = OnnxIO::LumaSR;
     else if (m_inC == 2 && m_outC == 1) m_io = OnnxIO::GrayNoise;
     else if (m_inC == 3 && m_outC == 2) m_io = OnnxIO::Chroma;
     else if (m_inC == 3 && m_outC == 3) m_io = OnnxIO::RGB;
@@ -451,6 +463,9 @@ RGY_ERR RGYFilterOnnx::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog
 
 RGY_ERR RGYFilterOnnx::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
     RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+    if (m_temporalT > 1) {
+        return runTemporal(pInputFrame, ppOutputFrames, pOutputFrameNum, queue, wait_events, event);
+    }
     if (pInputFrame->ptr[0] == nullptr) {
         *pOutputFrameNum = 0;
         return RGY_ERR_NONE;
@@ -486,6 +501,142 @@ RGY_ERR RGYFilterOnnx::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo 
         AddMessage(RGY_LOG_ERROR, _T("onnx: end-of-chain resize failed: %s.\n"), get_err_mes(rerr));
         return rerr;
     }
+    ppOutputFrames[0] = resizeOut[0];
+    *pOutputFrameNum = 1;
+    return RGY_ERR_NONE;
+}
+
+// -------------------- multi-frame temporal window (frames= > 1) --------------------
+void RGYFilterOnnx::packFrameRGB(const RGYFrameInfo &hin, float *dst) {
+    const int inW = hin.width;
+    const int inH = hin.height;
+    const size_t chSize = (size_t)inW * inH;
+    const bool nv12 = (hin.csp == RGY_CSP_NV12);
+    const int cw = inW / 2, ch = inH / 2;
+    const uint8_t *pU = hin.ptr[1];
+    const uint8_t *pV = nv12 ? (hin.ptr[1] + 1) : hin.ptr[2];
+    const int cStride = nv12 ? 2 : 1;
+    const int cPitchU = hin.pitch[1];
+    const int cPitchV = nv12 ? hin.pitch[1] : hin.pitch[2];
+    if (m_ycbcr) {
+        for (int y = 0; y < inH; y++) {
+            const uint8_t *yrow = hin.ptr[0] + (size_t)y * hin.pitch[0];
+            float *c0 = dst + (size_t)y * inW;
+            float *c1 = dst + chSize + (size_t)y * inW;
+            float *c2 = dst + 2 * chSize + (size_t)y * inW;
+            for (int x = 0; x < inW; x++) {
+                c0[x] = (float)yrow[x] / m_maxval;
+                c1[x] = sample_chroma_up2(pU, cPitchU, cStride, cw, ch, x, y) / m_maxval;
+                c2[x] = sample_chroma_up2(pV, cPitchV, cStride, cw, ch, x, y) / m_maxval;
+            }
+        }
+    } else {
+        for (int y = 0; y < inH; y++) {
+            const uint8_t *yrow = hin.ptr[0] + (size_t)y * hin.pitch[0];
+            float *rd = dst + (size_t)y * inW;
+            float *gd = dst + chSize + (size_t)y * inW;
+            float *bd = dst + 2 * chSize + (size_t)y * inW;
+            for (int x = 0; x < inW; x++) {
+                const float yn = ((float)yrow[x] - m_yOff) * m_yScale;
+                const float un = (sample_chroma_up2(pU, cPitchU, cStride, cw, ch, x, y) - m_cOff) * m_cScale;
+                const float vn = (sample_chroma_up2(pV, cPitchV, cStride, cw, ch, x, y) - m_cOff) * m_cScale;
+                rd[x] = clampf(yn + m_matVR * vn, 0.0f, 1.0f);
+                gd[x] = clampf(yn + m_matUG * un + m_matVG * vn, 0.0f, 1.0f);
+                bd[x] = clampf(yn + m_matUB * un, 0.0f, 1.0f);
+            }
+        }
+    }
+}
+
+RGY_ERR RGYFilterOnnx::runTemporal(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
+    RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+    const int T = m_temporalT;
+    const int k = (T - 1) / 2;
+    const size_t chSize = (size_t)m_inStaging->frame.width * m_inStaging->frame.height;
+
+    if (pInputFrame->ptr[0] != nullptr) {
+        auto err = m_cl->copyFrame(&m_inStaging->frame, pInputFrame, nullptr, queue, wait_events, nullptr);
+        if (err != RGY_ERR_NONE) { AddMessage(RGY_LOG_ERROR, _T("onnx: copy input to staging failed: %s.\n"), get_err_mes(err)); return err; }
+        err = m_inStaging->queueMapBuffer(queue, CL_MAP_READ, {}, RGY_CL_MAP_BLOCK_ALL);
+        if (err != RGY_ERR_NONE) { AddMessage(RGY_LOG_ERROR, _T("onnx: map input staging failed: %s.\n"), get_err_mes(err)); return err; }
+        const RGYFrameInfo &hin = m_inStaging->mappedHost()->host();
+
+        RingFrame rf;
+        rf.rgb.resize(3 * chSize);
+        packFrameRGB(hin, rf.rgb.data());
+        rf.timestamp    = pInputFrame->timestamp;
+        rf.duration     = pInputFrame->duration;
+        rf.picstruct    = pInputFrame->picstruct;
+        rf.flags        = pInputFrame->flags;
+        rf.inputFrameId = pInputFrame->inputFrameId;
+
+        err = m_inStaging->unmapBuffer(queue);
+        if (err != RGY_ERR_NONE) { AddMessage(RGY_LOG_ERROR, _T("onnx: unmap input staging failed: %s.\n"), get_err_mes(err)); return err; }
+
+        m_ring.push_back(std::move(rf));
+        m_recvCount++;
+        while ((int)m_ring.size() > T) { m_ring.pop_front(); m_ringBaseIdx++; }
+        if (m_recvCount - 1 >= m_emitCount + (int64_t)k) {
+            return emitTemporalOutput(m_emitCount++, ppOutputFrames, pOutputFrameNum, queue, event);
+        }
+        *pOutputFrameNum = 0;
+        return RGY_ERR_NONE;
+    }
+    if (m_emitCount < m_recvCount) {
+        return emitTemporalOutput(m_emitCount++, ppOutputFrames, pOutputFrameNum, queue, event);
+    }
+    *pOutputFrameNum = 0;
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR RGYFilterOnnx::emitTemporalOutput(int64_t outIdx, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
+    RGYOpenCLQueue &queue, RGYOpenCLEvent *event) {
+    const int T = m_temporalT;
+    const int k = (T - 1) / 2;
+    const size_t chSize = (size_t)m_inStaging->frame.width * m_inStaging->frame.height;
+    const int ringN = (int)m_ring.size();
+    if (ringN <= 0) { *pOutputFrameNum = 0; return RGY_ERR_NONE; }
+    for (int j = 0; j < T; j++) {
+        int64_t g = outIdx - k + j;
+        int64_t r = g - m_ringBaseIdx;
+        if (r < 0) r = 0; else if (r >= ringN) r = ringN - 1;
+        const std::vector<float> &src = m_ring[(size_t)r].rgb;
+        std::copy(src.begin(), src.end(), m_inBuf.begin() + (size_t)j * 3 * chSize);
+    }
+
+    auto pOutFrame = m_frameBuf[0].get();
+    RGYFrameInfo *coreFrame = &pOutFrame->frame;
+    auto err = m_outStaging->queueMapBuffer(queue, CL_MAP_WRITE, {}, RGY_CL_MAP_BLOCK_ALL);
+    if (err != RGY_ERR_NONE) { AddMessage(RGY_LOG_ERROR, _T("onnx: map output staging failed: %s.\n"), get_err_mes(err)); return err; }
+    const RGYFrameInfo &hout = m_outStaging->mappedHost()->host();
+    err = m_ov->infer(m_inBuf.data(), m_outBuf.data());
+    if (err != RGY_ERR_NONE) { AddMessage(RGY_LOG_ERROR, _T("onnx: inference failed.\n")); m_outStaging->unmapBuffer(queue); return err; }
+    writeOutputHost(hout, hout);
+    err = m_outStaging->unmapBuffer(queue);
+    if (err != RGY_ERR_NONE) { AddMessage(RGY_LOG_ERROR, _T("onnx: unmap output staging failed: %s.\n"), get_err_mes(err)); return err; }
+
+    RGYOpenCLEvent *coreEvent = m_postResize ? nullptr : event;
+    err = m_cl->copyFrame(coreFrame, &m_outStaging->frame, nullptr, queue, {}, coreEvent);
+    if (err != RGY_ERR_NONE) { AddMessage(RGY_LOG_ERROR, _T("onnx: copy staging to output failed: %s.\n"), get_err_mes(err)); return err; }
+
+    int64_t cr = outIdx - m_ringBaseIdx;
+    if (cr < 0) cr = 0; else if (cr >= ringN) cr = ringN - 1;
+    const RingFrame &centre = m_ring[(size_t)cr];
+    coreFrame->picstruct    = centre.picstruct;
+    coreFrame->timestamp    = centre.timestamp;
+    coreFrame->duration     = centre.duration;
+    coreFrame->flags        = centre.flags;
+    coreFrame->inputFrameId = centre.inputFrameId;
+
+    if (!m_postResize) {
+        ppOutputFrames[0] = coreFrame;
+        *pOutputFrameNum = 1;
+        return RGY_ERR_NONE;
+    }
+    RGYFrameInfo *resizeOut[1] = { nullptr };
+    int resizeNum = 0;
+    auto rerr = m_postResize->filter(coreFrame, resizeOut, &resizeNum, queue, {}, event);
+    if (rerr != RGY_ERR_NONE) { AddMessage(RGY_LOG_ERROR, _T("onnx: end-of-chain resize failed: %s.\n"), get_err_mes(rerr)); return rerr; }
     ppOutputFrames[0] = resizeOut[0];
     *pOutputFrameNum = 1;
     return RGY_ERR_NONE;
@@ -709,5 +860,10 @@ void RGYFilterOnnx::close() {
     m_outBuf.clear();
     m_u444.clear();
     m_v444.clear();
+    m_ring.clear();
+    m_ringBaseIdx = 0;
+    m_recvCount = 0;
+    m_emitCount = 0;
+    m_temporalT = 1;
     m_frameBuf.clear();
 }
