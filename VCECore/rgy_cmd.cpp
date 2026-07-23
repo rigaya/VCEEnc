@@ -16534,6 +16534,12 @@ tstring gen_cmd_help_vpp() {
         FILTER_DEFAULT_ANIME4K_SCALE, FILTER_DEFAULT_ANIME4K_STRENGTH,
         FILTER_ANIME4K_STRENGTH_MIN, FILTER_ANIME4K_STRENGTH_MAX);
 #endif
+    str += strsprintf(_T("\n")
+        _T("   --vpp-lenscorrection [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("      k1=<float>, k2=<float>     radial distortion coefficients\n")
+        _T("      cx=<float>, cy=<float>     correction centre (default=0.5,0.5)\n")
+        _T("   --vpp-v360 [<param1>=<value>][,<param2>=<value>][...]\n")
+        _T("      in/out=equirect|flat|cubemap, yaw/pitch/roll=<float>, h_fov=<float>, w/h=<int>\n"));
 #if ENABLE_VPP_FILTER_ONNX
     str += strsprintf(_T("\n")
         _T("   --vpp-onnx [<param1>=<value>][,<param2>=<value>][...]\n")
