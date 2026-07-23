@@ -576,6 +576,8 @@ vcecore_sources = files(
   'VCECore/rgy_filter_overlay.cpp',
   'VCECore/rgy_filter_pad.cpp',
   'VCECore/rgy_filter_resize.cpp',
+  'VCECore/rgy_filter_lenscorrection.cpp',
+  'VCECore/rgy_filter_v360.cpp',
   'VCECore/rgy_filter_rff.cpp',
   'VCECore/rgy_filter_smooth.cpp',
   'VCECore/rgy_filter_ssim.cpp',

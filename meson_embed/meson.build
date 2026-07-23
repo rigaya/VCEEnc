@@ -83,6 +83,8 @@ resource_specs = [
   ['rgy_filter_stdeint_cl', '../VCECore/rgy_filter_stdeint.cl', 'VCECore_rgy_filter_stdeint_cl'],
   ['rgy_filter_pad_cl', '../VCECore/rgy_filter_pad.cl', 'VCECore_rgy_filter_pad_cl'],
   ['rgy_filter_resize_cl', '../VCECore/rgy_filter_resize.cl', 'VCECore_rgy_filter_resize_cl'],
+  ['rgy_filter_lenscorrection_cl', '../VCECore/rgy_filter_lenscorrection.cl', 'VCECore_rgy_filter_lenscorrection_cl'],
+  ['rgy_filter_v360_cl', '../VCECore/rgy_filter_v360.cl', 'VCECore_rgy_filter_v360_cl'],
   ['rgy_filter_ssim_cl', '../VCECore/rgy_filter_ssim.cl', 'VCECore_rgy_filter_ssim_cl'],
   ['rgy_filter_smooth_cl', '../VCECore/rgy_filter_smooth.cl', 'VCECore_rgy_filter_smooth_cl'],
   ['rgy_filter_subburn_cl', '../VCECore/rgy_filter_subburn.cl', 'VCECore_rgy_filter_subburn_cl'],
