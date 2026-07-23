@@ -112,6 +112,8 @@
 #include "rgy_filter_softlight.h"
 #include "rgy_filter_tweak.h"
 #include "rgy_filter_transform.h"
+#include "rgy_filter_lenscorrection.h"
+#include "rgy_filter_v360.h"
 #include "rgy_filter_overlay.h"
 #include "rgy_filter_deband.h"
 #include "rgy_filter_libplacebo.h"
@@ -1459,6 +1461,8 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.maa.enable)        filterPipeline.push_back(VppType::CL_MAA);
     if (inputParam->vppamf.enhancer.enable)  filterPipeline.push_back(VppType::AMF_VQENHANCE);
     if (inputParam->vpp.transform.enable)  filterPipeline.push_back(VppType::CL_TRANSFORM);
+    if (inputParam->vpp.lenscorrection.enable) filterPipeline.push_back(VppType::CL_LENSCORRECTION);
+    if (inputParam->vpp.v360.enable)       filterPipeline.push_back(VppType::CL_V360);
     if (inputParam->vpp.softlight.enable)  filterPipeline.push_back(VppType::CL_SOFTLIGHT);
     if (inputParam->vpp.curves.enable)     filterPipeline.push_back(VppType::CL_CURVES);
     if (inputParam->vpp.tweak.enable)      filterPipeline.push_back(VppType::CL_TWEAK);
@@ -2102,6 +2106,40 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         //パラメータ情報を更新
         m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
         //入力フレーム情報を更新
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    if (vppType == VppType::CL_LENSCORRECTION) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterLensCorrection(m_dev->cl()));
+        shared_ptr<RGYFilterParamLensCorrection> param(new RGYFilterParamLensCorrection());
+        param->lenscorrection = inputParam->vpp.lenscorrection;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) return sts;
+        clfilters.push_back(std::move(filter));
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    if (vppType == VppType::CL_V360) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterV360(m_dev->cl()));
+        shared_ptr<RGYFilterParamV360> param(new RGYFilterParamV360());
+        param->v360 = inputParam->vpp.v360;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) return sts;
+        clfilters.push_back(std::move(filter));
+        m_pLastFilterParam = std::dynamic_pointer_cast<RGYFilterParam>(param);
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
         return RGY_ERR_NONE;
