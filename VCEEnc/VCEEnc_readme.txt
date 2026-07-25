@@ -188,6 +188,31 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2026.07.25 (9.09)
+[VCEEncC]
+- VPPフィルタを追加。(--vpp-fft3d, --vpp-rife-ov, --vpp-lenscorrection, --vpp-v360)
+- --vpp-onnxにマルチフレーム(frames)とマスク入力対応を追加。
+- --vpp-libplacebo-shaderにcustom指定を追加。
+- 各種VPPフィルタのオプションを拡張。
+  - --vpp-knnに時間方向半径
+  - --vpp-nnediにplanes
+  - --vpp-mpdecimateにkeep
+  - --vpp-tweakにcoringとhue範囲
+  - --vpp-curvesに補間方式
+  - --vpp-hqderingに詳細パラメータ
+  - --vpp-casにchroma
+  - --vpp-descaleに有効ソースサイズ
+  - --vpp-ivtcにパラメータ
+- Windowsの名前付きパイプに対応。
+- --vpp-rtgmc, --vpp-kfm, --vpp-degrainの高速化
+- 各種VPPフィルタ・色変換の不具合を修正。
+  --vpp-rtgmc, --vpp-kfm, --vpp-vinverse, --vpp-deband, --vpp-yadif, --vpp-mpdecimate, --vpp-msharpen, --vpp-msmooth, --vpp-afs, --vpp-decomb, --vpp-decimate, --vpp-colorspace, --vpp-anime4k-shader など。
+- チャプター解析や映像なし入力などでのクラッシュ・無限ループを修正。
+
+[VCEEnc.auo]
+- --vpp-degrain設定を追加。
+- 内部音声のデフォルトエンコーダ選択やWAV出力関連の不具合を修正。
+
 2026.07.04 (9.08)
 [VCEEncC]
 - VPPフィルタを追加。(--vpp-anime4k-shader, --vpp-onnx)

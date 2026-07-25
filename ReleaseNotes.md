@@ -1,5 +1,31 @@
 # VCEEnc Release Notes
 
+## 9.09
+
+- Add VPP filters.
+  - [--vpp-fft3d](./VCEEncC_Options.en.md#--vpp-fft3d-param1value1param2value2)
+  - [--vpp-rife-ov](./VCEEncC_Options.en.md#--vpp-rife-ov-param1value1param2value2)
+  - [--vpp-lenscorrection](./VCEEncC_Options.en.md#--vpp-lenscorrection-param1value1param2value2)
+  - [--vpp-v360](./VCEEncC_Options.en.md#--vpp-v360-param1value1param2value2)
+- Extend [--vpp-onnx](./VCEEncC_Options.en.md#--vpp-onnx-param1value1param2value2) with multi-frame (`frames`) and mask input support.
+- Add `custom` parameter support to [--vpp-libplacebo-shader](./VCEEncC_Options.en.md#--vpp-libplacebo-shader-param1value1param2value2).
+- Extend options for various VPP filters.
+  - [--vpp-knn](./VCEEncC_Options.en.md#--vpp-knn-param1value1param2value2): temporal radius
+  - [--vpp-nnedi](./VCEEncC_Options.en.md#--vpp-nnedi-param1value1param2value2): planes
+  - [--vpp-mpdecimate](./VCEEncC_Options.en.md#--vpp-mpdecimate-param1value1param2value2): keep
+  - [--vpp-tweak](./VCEEncC_Options.en.md#--vpp-tweak-param1value1param2value2): coring and hue range
+  - [--vpp-curves](./VCEEncC_Options.en.md#--vpp-curves-param1value1param2value2): interpolation method
+  - [--vpp-hqdering](./VCEEncC_Options.en.md#--vpp-hqdering-param1value1param2value2): detailed parameters
+  - [--vpp-cas](./VCEEncC_Options.en.md#--vpp-cas-param1value1param2value2): chroma
+  - [--vpp-descale](./VCEEncC_Options.en.md#--vpp-descale-param1value1param2value2): effective source size
+  - [--vpp-ivtc](./VCEEncC_Options.en.md#--vpp-ivtc-param1value1param2value2): additional parameters
+- Support Windows named pipes.
+- Speed up [--vpp-rtgmc](./VCEEncC_Options.en.md#--vpp-rtgmc-param1value1), [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2), and [--vpp-degrain](./VCEEncC_Options.en.md#--vpp-degrain-param1value1).
+- Fix various VPP filter and color conversion issues.
+  [--vpp-rtgmc](./VCEEncC_Options.en.md#--vpp-rtgmc-param1value1), [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2), [--vpp-vinverse](./VCEEncC_Options.en.md#--vpp-vinverse-param1value1param2value2), [--vpp-deband](./VCEEncC_Options.en.md#--vpp-deband-param1value1param2value2), [--vpp-yadif](./VCEEncC_Options.en.md#--vpp-yadif-param1value1), [--vpp-mpdecimate](./VCEEncC_Options.en.md#--vpp-mpdecimate-param1value1param2value2), [--vpp-msharpen](./VCEEncC_Options.en.md#--vpp-msharpen-param1value1param2value2), [--vpp-msmooth](./VCEEncC_Options.en.md#--vpp-msmooth-param1value1param2value2), [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2), [--vpp-decomb](./VCEEncC_Options.en.md#--vpp-decomb-param1value1param2value2), [--vpp-decimate](./VCEEncC_Options.en.md#--vpp-decimate-param1value1param2value2), [--vpp-colorspace](./VCEEncC_Options.en.md#--vpp-colorspace-param1value1param2value2), [--vpp-anime4k-shader](./VCEEncC_Options.en.md#--vpp-anime4k-shader-param1value1param2value2), and others.
+- Fix crashes and infinite loops in chapter parsing, video-less input, etc.
+- VCEEnc.auo: Add [--vpp-degrain](./VCEEncC_Options.en.md#--vpp-degrain-param1value1) settings; fix internal audio encoder selection and WAV output issues.
+
 ## 9.08
 
 - Add VPP filters.
