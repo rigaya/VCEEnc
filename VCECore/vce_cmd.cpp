@@ -1938,12 +1938,12 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm, RGYDisableGenCm
             if (pParams->pa.sc) {
                 ADD_LST(_T("sc"), pa.scSensitivity, list_pa_sc_sensitivity);
             } else if (pParams->pa.sc != encPrmDefault.pa.sc || save_disabled_prm) {
-                tmp << _T("sc=") << get_chr_from_value(list_pa_sc_sensitivity, AMF_PA_SCENE_CHANGE_DETECTION_NONE);
+                tmp << _T(",sc=") << get_chr_from_value(list_pa_sc_sensitivity, AMF_PA_SCENE_CHANGE_DETECTION_NONE);
             }
             if (pParams->pa.ss) {
                 ADD_LST(_T("ss"), pa.ssSensitivity, list_pa_ss_sensitivity);
             } else if (pParams->pa.ss != encPrmDefault.pa.ss || save_disabled_prm) {
-                tmp << _T("ss=") << get_chr_from_value(list_pa_ss_sensitivity, AMF_PA_STATIC_SCENE_DETECTION_NONE);
+                tmp << _T(",ss=") << get_chr_from_value(list_pa_ss_sensitivity, AMF_PA_STATIC_SCENE_DETECTION_NONE);
             }
             ADD_LST(_T("activity-type"), pa.activityType, list_pa_activity);
             ADD_LST(_T("caq-strength"), pa.CAQStrength, list_pa_caq_strength);
