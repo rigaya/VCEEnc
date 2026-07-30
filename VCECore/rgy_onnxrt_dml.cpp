@@ -124,22 +124,45 @@ RGY_ERR RGYOnnxRTDML::init(const tstring &modelPath, const uint32_t luidLow, con
         if (!I.env)   I.env   = std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "vceenc-onnx");
         if (!I.alloc) I.alloc = std::make_unique<Ort::AllocatorWithDefaultOptions>();
 
-        Ort::SessionOptions opts;
-        // DirectML requires sequential execution and disabled memory pattern.
-        opts.DisableMemPattern();
-        opts.SetExecutionMode(ORT_SEQUENTIAL);
-        opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
-
         const int deviceId = dxgiIndexForLuid(luidLow, luidHigh, I.adapterName);
-        OrtStatus *st = onnxRuntime().p_OrtSessionOptionsAppendExecutionProviderDML()(static_cast<OrtSessionOptions*>(opts), deviceId);
-        if (st != nullptr) {
-            errMessage = tstring(_T("AppendExecutionProvider_DML failed: "))
-                       + char_to_tstring(Ort::GetApi().GetErrorMessage(st));
-            Ort::GetApi().ReleaseStatus(st);
+        auto buildDmlOptions = [&](const GraphOptimizationLevel level, Ort::SessionOptions& opts) {
+            // DirectMLでは逐次実行とメモリパターンの無効化が必要。
+            opts.DisableMemPattern();
+            opts.SetExecutionMode(ORT_SEQUENTIAL);
+            opts.SetGraphOptimizationLevel(level);
+            auto status = onnxRuntime().p_OrtSessionOptionsAppendExecutionProviderDML()(static_cast<OrtSessionOptions*>(opts), deviceId);
+            if (status != nullptr) {
+                errMessage = tstring(_T("AppendExecutionProvider_DML failed: "))
+                           + char_to_tstring(Ort::GetApi().GetErrorMessage(status));
+                Ort::GetApi().ReleaseStatus(status);
+                return false;
+            }
+            return true;
+        };
+
+        Ort::SessionOptions opts;
+        if (!buildDmlOptions(GraphOptimizationLevel::ORT_ENABLE_ALL, opts)) {
             return RGY_ERR_UNSUPPORTED;
         }
-
-        I.session = std::make_unique<Ort::Session>(*I.env, modelPath.c_str(), opts);
+        try {
+            I.session = std::make_unique<Ort::Session>(*I.env, modelPath.c_str(), opts);
+        } catch (const Ort::Exception& allError) {
+            // DirectMLの拡張グラフ最適化が一部のINT8 QDQモデルを壊す場合は、
+            // 基本最適化へ下げてセッション生成を一度だけ再試行する。
+            Ort::SessionOptions basicOpts;
+            if (!buildDmlOptions(GraphOptimizationLevel::ORT_ENABLE_BASIC, basicOpts)) {
+                return RGY_ERR_UNSUPPORTED;
+            }
+            try {
+                I.session = std::make_unique<Ort::Session>(*I.env, modelPath.c_str(), basicOpts);
+            } catch (const Ort::Exception& basicError) {
+                errMessage = tstring(_T("DirectML session creation failed with all optimizations: "))
+                    + char_to_tstring(allError.what())
+                    + _T("; retry with basic optimizations failed: ")
+                    + char_to_tstring(basicError.what());
+                return RGY_ERR_UNKNOWN;
+            }
+        }
 
         if (I.session->GetInputCount() < 1 || I.session->GetOutputCount() < 1) {
             errMessage = _T("model has no input/output tensor.");
@@ -241,18 +264,41 @@ RGY_ERR RGYOnnxRTDMLMultiIO::init(const tstring &modelPath, const uint32_t luidL
         auto &I = *m_impl;
         I.env = std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "vceenc-onnx-multiio");
         I.alloc = std::make_unique<Ort::AllocatorWithDefaultOptions>();
-        Ort::SessionOptions opts;
-        opts.DisableMemPattern();
-        opts.SetExecutionMode(ORT_SEQUENTIAL);
-        opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
         const int deviceId = dxgiIndexForLuid(luidLow, luidHigh, I.adapterName);
-        OrtStatus *st = onnxRuntime().p_OrtSessionOptionsAppendExecutionProviderDML()(static_cast<OrtSessionOptions*>(opts), deviceId);
-        if (st != nullptr) {
-            errMessage = tstring(_T("AppendExecutionProvider_DML failed: ")) + char_to_tstring(Ort::GetApi().GetErrorMessage(st));
-            Ort::GetApi().ReleaseStatus(st);
+        auto buildDmlOptions = [&](const GraphOptimizationLevel level, Ort::SessionOptions& opts) {
+            opts.DisableMemPattern();
+            opts.SetExecutionMode(ORT_SEQUENTIAL);
+            opts.SetGraphOptimizationLevel(level);
+            auto status = onnxRuntime().p_OrtSessionOptionsAppendExecutionProviderDML()(static_cast<OrtSessionOptions*>(opts), deviceId);
+            if (status != nullptr) {
+                errMessage = tstring(_T("AppendExecutionProvider_DML failed: ")) + char_to_tstring(Ort::GetApi().GetErrorMessage(status));
+                Ort::GetApi().ReleaseStatus(status);
+                return false;
+            }
+            return true;
+        };
+        Ort::SessionOptions opts;
+        if (!buildDmlOptions(GraphOptimizationLevel::ORT_ENABLE_ALL, opts)) {
             return RGY_ERR_UNSUPPORTED;
         }
-        I.session = std::make_unique<Ort::Session>(*I.env, modelPath.c_str(), opts);
+        try {
+            I.session = std::make_unique<Ort::Session>(*I.env, modelPath.c_str(), opts);
+        } catch (const Ort::Exception& allError) {
+            // 複数入出力モデルでも同じ条件で基本最適化へフォールバックする。
+            Ort::SessionOptions basicOpts;
+            if (!buildDmlOptions(GraphOptimizationLevel::ORT_ENABLE_BASIC, basicOpts)) {
+                return RGY_ERR_UNSUPPORTED;
+            }
+            try {
+                I.session = std::make_unique<Ort::Session>(*I.env, modelPath.c_str(), basicOpts);
+            } catch (const Ort::Exception& basicError) {
+                errMessage = tstring(_T("DirectML session creation failed with all optimizations: "))
+                    + char_to_tstring(allError.what())
+                    + _T("; retry with basic optimizations failed: ")
+                    + char_to_tstring(basicError.what());
+                return RGY_ERR_UNKNOWN;
+            }
+        }
         const size_t nin = I.session->GetInputCount();
         const size_t nout = I.session->GetOutputCount();
         if (nin == 0 || nout == 0) { errMessage = _T("model has no input/output tensor."); return RGY_ERR_UNSUPPORTED; }
