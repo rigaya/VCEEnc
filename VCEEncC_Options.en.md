@@ -2772,6 +2772,7 @@ Experimental CNN filter that runs the specified ONNX model on GPU through ONNX R
     Sigma value passed to noise models. (0 - 255)
   - frames=&lt;int&gt; (default: 1)  
     Temporal window size for models with `T*3` RGB input channels and 3 output channels. Specify a positive odd number so that the output corresponds to the centre frame.
+    For registered models with `frames` set in `models.json`, the registry value takes precedence.
   - mask=&lt;string&gt;  
     Grayscale mask image for a two-input ONNX model. White pixels are processed and black pixels are retained. This is intended for static masks such as logo or watermark removal.
   - out_res=&lt;int&gt;x&lt;int&gt;, resize=&lt;string&gt;  

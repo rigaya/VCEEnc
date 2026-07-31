@@ -266,6 +266,9 @@ RGY_ERR RGYFilterOnnx::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLog
         if (prm->onnx.noise == 15) {
             prm->onnx.noise = entry->noise;
         }
+        if (prm->onnx.frames == 1 && entry->frames > 1) {
+            prm->onnx.frames = entry->frames;
+        }
         if (prm->onnx.colormatrixOut == RGY_MATRIX_AUTO && entry->colormatrixOut != RGY_MATRIX_UNSPECIFIED) {
             prm->onnx.colormatrixOut = entry->colormatrixOut;
         }
