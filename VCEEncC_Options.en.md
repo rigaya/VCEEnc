@@ -565,7 +565,7 @@ Generally, it is recommended to set the QP value to be I &lt; P &lt; B.
 ### --vbr &lt;int&gt;
 ### --vbrhq &lt;int&gt; [H.264/AV1]
 ### --qvbr &lt;int&gt; [H.264/AV1]
-Set bitrate in kbps.
+Set quality level (0-51) for QVBR mode (Quality based VBR).
 
 ```--qvbr <x>``` is short of ```--vbr 0 --qvbr-quality <x>```.
 

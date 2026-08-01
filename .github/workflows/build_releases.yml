@@ -113,8 +113,15 @@ jobs:
 
       - name: Check dll
         run: |
-          if ("${{ matrix.platform }}" == "x64")   "VCEEncC_Release\VCEEncC64.exe" --check-avcodec-dll
-          if ("${{ matrix.platform }}" == "Win32") "VCEEncC_Release\VCEEncC.exe" --check-avcodec-dll
+          set VCEENCC_EXE=VCEEncC_Release\VCEEncC64.exe
+          if "${{ matrix.platform }}" == "Win32" set VCEENCC_EXE=VCEEncC_Release\VCEEncC.exe
+          "%VCEENCC_EXE%" --check-avcodec-dll
+
+      - name: Check cmd parse
+        run: |
+          set VCEENCC_EXE=VCEEncC_Release\VCEEncC64.exe
+          if "${{ matrix.platform }}" == "Win32" set VCEENCC_EXE=VCEEncC_Release\VCEEncC.exe
+          "%VCEENCC_EXE%" --check-cmd-parse
 
       - name: Check Version
         if: startsWith(github.ref, 'refs/tags/')

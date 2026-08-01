@@ -40,6 +40,7 @@
 #include "vce_param.h"
 #include "vce_core.h"
 #include "vce_cmd.h"
+#include "rgy_cmd_selftest.h"
 #include "rgy_util.h"
 #include "rgy_filesystem.h"
 #include "rgy_avutil.h"
@@ -235,6 +236,16 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1, const RGYPa
     if (IS_OPTION("check-environment")) {
         show_environment_info();
         return 1;
+    }
+    if (IS_OPTION("check-cmd-parse")) {
+        // コマンドラインのパーサと生成の対応関係を自己診断する
+        RGYCmdSelfTest<VCEParam> selftest(
+            [](VCEParam *prm, const std::vector<tstring>& args) {
+                auto argv = rgy_cmd_selftest_argv(args);
+                return parse_cmd(prm, (int)argv.size() - 1, argv.data());
+            },
+            [](const VCEParam *prm) { return gen_cmd(prm, false); });
+        return selftest.run((arg1[0] != _T('-')) ? arg1 : _T(""));
     }
     if (IS_OPTION("check-features")) {
         int deviceid = -1;

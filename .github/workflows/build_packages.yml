@@ -88,6 +88,7 @@ jobs:
           docker exec build_pkg ldd ./build/vceencc
           docker exec build_pkg ./build/vceencc --version
           docker exec build_pkg ./check_options.py -exe ./build/vceencc
+          docker exec build_pkg ./build/vceencc --check-cmd-parse
           docker exec build_pkg cp ./build/vceencc ./vceencc
           docker exec build_pkg ./build_${{ env.PKG_TYPE }}.sh
           docker exec build_pkg bash -lc "cp -v ./*.${{ env.PKG_TYPE }} /output/"

@@ -203,7 +203,7 @@ tstring encoder_help() {
         _T("   --vbr <int>                  set bitrate in VBR mode (kbps)\n")
         _T("   --cbrhq <int>                set bitrate in High Quality CBR mode (kbps)\n")
         _T("   --vbrhq <int>                set bitrate in High Quality VBR mode (kbps)\n")
-        _T("   --qvbr <int>                 set bitrate in QVBR mode (kbps)\n")
+        _T("   --qvbr <int>                 encode in QVBR mode, set QVBR level (0 - 51)\n")
         _T("   --output-depth <int>         set output bit depth\n")
         _T("   --qp-max <int>               set max qp\n")
         _T("   --qp-min <int>               set min qp\n")
@@ -1468,7 +1468,7 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
     if (argsData.cachedlevel.length() > 0) {
         const auto desc = get_level_list(pParams->codec);
         if (is_list_empty(desc)) {
-            _ftprintf(stderr, _T("--level unsupported for %s encoding!\n"), CodecToStr(pParams->codec).c_str());
+            print_cmd_error_msg(strsprintf(_T("--level unsupported for %s encoding!"), CodecToStr(pParams->codec).c_str()).c_str());
             return 1;
         }
         int value = 0;
@@ -1508,7 +1508,7 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
     if (argsData.cachedprofile.length() > 0) {
         const auto desc = get_profile_list(pParams->codec);
         if (is_list_empty(desc)) {
-            _ftprintf(stderr, _T("--profile unsupported for %s encoding!\n"), CodecToStr(pParams->codec).c_str());
+            print_cmd_error_msg(strsprintf(_T("--profile unsupported for %s encoding!"), CodecToStr(pParams->codec).c_str()).c_str());
             return 1;
         }
         int value = 0;
@@ -1526,7 +1526,7 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
     if (argsData.cachedtier.length() > 0) {
         const auto desc = get_tier_list(pParams->codec);
         if (is_list_empty(desc)) {
-            _ftprintf(stderr, _T("--tier unsupported for %s encoding!\n"), CodecToStr(pParams->codec).c_str());
+            print_cmd_error_msg(strsprintf(_T("--tier unsupported for %s encoding!"), CodecToStr(pParams->codec).c_str()).c_str());
             return 1;
         }
         int value = 0;
@@ -1624,14 +1624,14 @@ int parse_cmd(VCEParam *pParams, int nArgNum, const TCHAR **strInput, bool ignor
     } else if (pParams->codec == RGY_CODEC_RAW || pParams->codec == RGY_CODEC_AVCODEC) {
         ; // 何もしない
     } else {
-        _ftprintf(stderr, _T("Unsupported codec!\n"));
+        print_cmd_error_msg(_T("Unsupported codec!"));
         return 1;
     }
 
 #if ENABLE_VPP_FILTER_ONNX
     if (pParams->vpp.onnxListModels) {
         if (pParams->vpp.onnxModelDir.empty()) {
-            _ftprintf(stderr, _T("Error: --vpp-onnx-model-dir must be specified with --vpp-onnx list.\n"));
+            print_cmd_error_msg(_T("Error: --vpp-onnx-model-dir must be specified with --vpp-onnx list."));
             return 1;
         }
         const auto jsonPath = PathCombineS(pParams->vpp.onnxModelDir, _T("models.json"));
@@ -1728,7 +1728,7 @@ tstring gen_cmd(const VCEFilterParam *param, const VCEFilterParam *defaultPrm, b
         }
         if (param->enhancer.enable || save_disabled_prm) {
             ADD_FLOAT(_T("attenuation"), enhancer.attenuation, 2);
-            ADD_NUM(_T("radius"), enhancer.fcrRadius);
+            ADD_NUM(_T("fcr-radius"), enhancer.fcrRadius);
         }
         if (!tmp.str().empty()) {
             cmd << _T(" --vpp-enhance ") << tmp.str().substr(1);
@@ -1857,8 +1857,14 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm, RGYDisableGenCm
     } else if (pParams->rateControl == get_codec_cqp(pParams->codec)) {
         OPT_QP(_T("--cqp"), qp.qpI, qp.qpP, qp.qpB, true, true);
     } else if (pParams->rateControl == get_codec_qvbr(pParams->codec)) {
-        cmd << _T(" --qvbr ") << pParams->nBitrate;
-        cmd << _T(" --qvbr-quality ") << pParams->qvbrLevel;
+        // --qvbr は品質値の指定で、同時にビットレート指定を無効化(nBitrate = 0)する
+        // ビットレートが指定されている場合は、それを保持できる --vbr + --qvbr-quality の形で出力する
+        if (pParams->nBitrate != 0) {
+            cmd << _T(" --vbr ") << pParams->nBitrate;
+            cmd << _T(" --qvbr-quality ") << pParams->qvbrLevel;
+        } else {
+            cmd << _T(" --qvbr ") << pParams->qvbrLevel;
+        }
     }
     OPT_NUM(_T("--output-depth"), outputDepth);
     if (pParams->rateControl != get_codec_cqp(pParams->codec) || save_disabled_prm) {
@@ -1963,7 +1969,7 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm, RGYDisableGenCm
     }
 
     OPT_BOOL(_T("--smart-access-video"), _T("--no-smart-access-video"), smartAccessVideo);
-    OPT_BOOL(_T("--multi-instance"), _T("--no-multi-instance"), smartAccessVideo);
+    OPT_BOOL(_T("--multi-instance"), _T("--no-multi-instance"), multiInstance);
 
     cmd << gen_cmd(&pParams->common, &encPrmDefault.common, save_disabled_prm, disable_flags);
 
