@@ -1,6 +1,17 @@
 # VCEEnc Release Notes
 
+## 9.10
+
+- Support frame count specification for registered models in [--vpp-onnx](./VCEEncC_Options.en.md#--vpp-onnx-param1value1param2value2).
+- Speed up [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2), [--vpp-rtgmc](./VCEEncC_Options.en.md#--vpp-rtgmc-param1value1), and [--vpp-degrain](./VCEEncC_Options.en.md#--vpp-degrain-param1value1).
+- Improve mixed RFF source handling in [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2).
+- Fix [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) mode=24 output stall and timestamps.
+- Fix chroma Degrain analysis in [--vpp-rtgmc](./VCEEncC_Options.en.md#--vpp-rtgmc-param1value1).
+- VCEEnc.auo: Support saving/restoring per-project output settings in AviUtl2.
+- VCEEnc.auo: Fix command generation when [--pa](./VCEEncC_Options.en.md#--pa--param1value1param2value2) is set to none.
+
 ## 9.09
+
 
 - Add VPP filters.
   - [--vpp-fft3d](./VCEEncC_Options.en.md#--vpp-fft3d-param1value1param2value2)

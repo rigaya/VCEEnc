@@ -188,6 +188,18 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2026.08.01 (9.10)
+[VCEEncC]
+- --vpp-onnxの登録モデルでフレーム数指定に対応。
+- --vpp-kfm, --vpp-rtgmc, --vpp-degrainの高速化。
+- --vpp-kfmで混合RFF素材の処理を改善。
+- --vpp-kfm mode=24の出力停止とタイムスタンプを修正。
+- --vpp-rtgmcの色差Degrain解析を修正。
+
+[VCEEnc.auo]
+- AviUtl2でプロジェクト単位の出力設定の保存・復元に対応。
+- Pre Analysis(--pa)のnone設定時のコマンド生成を修正。
+
 2026.07.25 (9.09)
 [VCEEncC]
 - VPPフィルタを追加。(--vpp-fft3d, --vpp-rife-ov, --vpp-lenscorrection, --vpp-v360)
