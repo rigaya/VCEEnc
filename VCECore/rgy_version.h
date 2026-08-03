@@ -52,6 +52,8 @@ const char *get_encoder_version();
 #define ENCODER_MPP    0
 #define CLFILTERS_AUF  0
 
+#define ENABLE_INPUT_RESOLUTION_CHANGE 1
+
 #define AV1_TIMESTAMP_OVERRIDE 1
 
 #define DONOTSHOW_AMF_POINT_FSR11 1
