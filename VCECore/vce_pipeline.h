@@ -789,6 +789,8 @@ protected:
     int64_t m_firstKeyPts;
     int64_t m_endPts; // 並列処理時用の終了時刻 (この時刻は含まないようにする) -1の場合は制限なし(最後まで)
     int m_decOutFrames;
+    int m_prevOutputWidth;   // デコーダ出力解像度の変化検出用 (0: 未取得)
+    int m_prevOutputHeight;
 #if THREAD_DEC_USE_FUTURE
     std::future m_thDecoder;
 #else
@@ -798,7 +800,7 @@ public:
     PipelineTaskAMFDecode(amf::AMFComponentPtr dec, amf::AMFContextPtr context, int64_t endPts, int outMaxQueueSize, RGYInput *input, std::shared_ptr<RGYLog> log)
         : PipelineTask(PipelineTaskType::AMFDEC, context, outMaxQueueSize, log), m_dec(dec), m_input(input),
         m_queueHDR10plusMetadata(), m_dataFlag(),
-        m_state(RGY_STATE_STOPPED), m_gotFrameFirstKeyPts(false), m_reachedEndPts(false), m_firstKeyPts(AV_NOPTS_VALUE), m_endPts(endPts), m_decOutFrames(0), m_thDecoder() {
+        m_state(RGY_STATE_STOPPED), m_gotFrameFirstKeyPts(false), m_reachedEndPts(false), m_firstKeyPts(AV_NOPTS_VALUE), m_endPts(endPts), m_decOutFrames(0), m_prevOutputWidth(0), m_prevOutputHeight(0), m_thDecoder() {
         m_queueHDR10plusMetadata.init(256);
         m_dataFlag.init();
     };
@@ -1003,6 +1005,27 @@ protected:
             return RGY_ERR_MORE_BITSTREAM; //入力ビットストリームは終了
         }
         if (surfDecOut != nullptr) {
+            // デコーダ出力の解像度変化を検出する (追従は未対応なので明示エラーとする)
+            if (auto plane0 = surfDecOut->GetPlaneAt(0); plane0 != nullptr) {
+                const int outputWidth = plane0->GetWidth();
+                const int outputHeight = plane0->GetHeight();
+                if (m_prevOutputWidth == 0) {
+                    PrintMes(RGY_LOG_DEBUG, _T("decoder output resolution: %dx%d, planes=%d, plane0: hpitch=%d, vpitch=%d, frame=%d.\n"),
+                        outputWidth, outputHeight, (int)surfDecOut->GetPlanesCount(),
+                        plane0->GetHPitch(), plane0->GetVPitch(), m_decOutFrames);
+                    m_prevOutputWidth = outputWidth;
+                    m_prevOutputHeight = outputHeight;
+                } else if (outputWidth != m_prevOutputWidth || outputHeight != m_prevOutputHeight) {
+                    PrintMes(RGY_LOG_DEBUG, _T("decoder output surface changed: planes=%d, plane0: width=%d, height=%d, hpitch=%d, vpitch=%d, frame=%d.\n"),
+                        (int)surfDecOut->GetPlanesCount(), outputWidth, outputHeight,
+                        plane0->GetHPitch(), plane0->GetVPitch(), m_decOutFrames);
+                    PrintMes(RGY_LOG_ERROR, _T("decoder output resolution changed: %dx%d -> %dx%d.\n"),
+                        m_prevOutputWidth, m_prevOutputHeight, outputWidth, outputHeight);
+                    PrintMes(RGY_LOG_ERROR, _T("  --avhw does not support resolution change in the middle of the input. Please use --avsw.\n"));
+                    m_state = RGY_STATE_ERROR;
+                    return RGY_ERR_UNSUPPORTED;
+                }
+            }
             // pre-analysis使用時などに発生するSubmitInput時のAMF_DECODER_NO_FREE_SURFACESを回避するため、
             // 明示的にsurface->Duplicateを行ってコピーを下流に渡していく
             // デコーダのオプションのAMF_VIDEO_DECODER_SURFACE_COPYでも同様になるはずだが、
