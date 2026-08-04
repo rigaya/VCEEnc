@@ -506,8 +506,9 @@ protected:
     int m_outMaxQueueSize;
     std::shared_ptr<RGYLog> m_log;
     std::unique_ptr<PipelineTaskStopWatch> m_stopwatch;
-    // ワークサーフェス確保時の解像度
-    // 入力途中の解像度変更でサーフェスの解像度を書き換えるため、確保時のサイズを別に覚えておく必要がある
+    // ワークサーフェス確保時の解像度。入力途中の解像度変更でサーフェスの解像度(frame.width/height)を書き換えるため、確保時のサイズを別に覚えておく必要がある
+    // 注意: PipelineTaskInput::requiredSurfOut()はcrop適用前のサイズで要求するので、この値は「crop適用後の初期解像度」とは一致しない(cropの分だけ大きい)
+    //       確保サイズと論理解像度は必ず別管理すること。混同するとmap範囲外書き込み(LoadNextFrameCL()のコメント参照)を招く
     int m_workSurfAllocWidth;
     int m_workSurfAllocHeight;
 public:
@@ -627,7 +628,7 @@ public:
             frames[i] = cl->createFrameBuffer(frame, CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR);
         }
         m_workSurfs.setSurfaces(frames);
-        m_workSurfAllocWidth = frame.width;
+        m_workSurfAllocWidth = frame.width;   // 実際に確保したサイズを記録する。requiredSurfOut()の戻り値ではなく必ずここの実引数から取ること
         m_workSurfAllocHeight = frame.height;
         return RGY_ERR_NONE;
     }
@@ -676,10 +677,9 @@ public:
         m_lastInputWidth(0), m_lastInputHeight(0) {
 
     };
-    // リーダーが出力するフレームの解像度を得る
-    // GetInputFrameInfo()のsrcWidth/srcHeightはcrop適用前の値だが、
-    // このタスクは getInputCodec() == RGY_CODEC_UNKNOWN のときのみ生成される = リーダー側でcrop適用済みなので、
-    // cropを差し引いた値がサーフェスに載る解像度となる
+    // リーダーが出力するフレームの解像度を得る (avsw入力の解像度変更追従で使用)
+    // GetInputFrameInfo()のsrcWidth/srcHeightはcrop適用前の値だが、このタスクは getInputCodec() == RGY_CODEC_UNKNOWN のときのみ生成される
+    // = リーダー側でcrop適用済みなので、cropを差し引いた値がサーフェスに載る解像度となる (initFilters()のcropRequiredがfalseになるのと同じ条件)
     std::pair<int, int> getReaderOutputResolution() {
         const auto inputFrameInfo = m_input->GetInputFrameInfo();
         return std::make_pair(
@@ -720,9 +720,10 @@ public:
         auto clframe = surfWork.cl();
         const int surfaceWidth = clframe->frame.width;
         const int surfaceHeight = clframe->frame.height;
-        // mapするサイズは frame.height から計算されるため(RGYCLFrameMap::map)、
-        // 解像度変更で縮めたままの解像度でmapすると、その後解像度が元に戻ったときに
-        // reader がmap範囲外へ書き込むことになる。map前に確保時の解像度へ戻しておく。
+        // 【重要】mapするサイズは pitch * frame.height から計算されるため(RGYCLFrameMap::map)、解像度変更で縮めたままの解像度でmapすると、
+        // その後解像度が元に戻ったときにreaderがmap範囲外へ書き込むことになる。map前に確保時の解像度へ戻しておく。
+        // 厄介なのはCL_MEM_ALLOC_HOST_PTRでバッファ自体は初期解像度で確保されているため、範囲外書き込みでもクラッシュせず静かにデータが壊れること。
+        // 根本原因はgetWorkSurf()に解像度チェックが無いことだが、ここでは対症療法を採っている(NVEnc/QSVEncも同様)
         if (m_workSurfAllocHeight > 0
             && (clframe->frame.width != m_workSurfAllocWidth || clframe->frame.height != m_workSurfAllocHeight)) {
             clframe->frame.width = m_workSurfAllocWidth;
@@ -756,14 +757,15 @@ public:
                 err = clerr;
             }
         }
-        // 解像度の反映はunmap後に行う。map/unmapを確保時の解像度で揃えるため。
+        // 新解像度の反映はunmapの「後」に行う。map/unmapを確保時の解像度で揃えるため、この順序は動かしてはいけない
+        // 下流(PipelineTaskOpenCL)はここで書いたframe.width/heightを見て解像度変更を検出するので、m_endPtsによる早期returnより手前に置く必要もある
         if (err == RGY_ERR_NONE) {
             const auto [readerWidth, readerHeight] = getReaderOutputResolution();
             printInputResolutionChange(readerWidth, readerHeight);
             clframe->frame.width = readerWidth;
             clframe->frame.height = readerHeight;
         } else {
-            clframe->frame.width = surfaceWidth;
+            clframe->frame.width = surfaceWidth;  // エラー時はmap前の値へ戻す(次回のmap時にどのみち確保時解像度へ戻される)
             clframe->frame.height = surfaceHeight;
         }
         if (m_endPts >= 0
@@ -795,6 +797,8 @@ public:
             PrintMes(RGY_LOG_ERROR, _T("Failed to allocate surface: %s.\n"), get_err_mes(err_to_rgy(ar)));
             return err_to_rgy(ar);
         }
+        // AMF経路は毎フレームGetInputFrameInfo()の現在値でAllocSurface()するため、解像度変更には素で追従する(CL経路のようなプール使い回しの補正は不要)
+        // ここではログを出すだけ。なお確保するのはAMF_MEMORY_HOSTなので、下流のOpenCLフィルタへ渡すにはConvertが必要(PipelineTaskOpenCL::sendFrame()参照)
         const auto [readerWidth, readerHeight] = getReaderOutputResolution();
         printInputResolutionChange(readerWidth, readerHeight);
         if (m_stopwatch) m_stopwatch->add(0, 0);
@@ -1061,7 +1065,10 @@ protected:
             return RGY_ERR_MORE_BITSTREAM; //入力ビットストリームは終了
         }
         if (surfDecOut != nullptr) {
-            // デコーダ出力の解像度変化を検出する (追従は未対応なので明示エラーとする)
+            // --avhw の安全網: デコーダ出力の解像度変化を検出して明示エラーで止める
+            // avsw経路(PipelineTaskInput)と違いこちらは追従未対応で、無検査で流すと下流が旧解像度のまま処理して無言で壊れる(左上に原寸貼り付き)ため
+            // なおDEBUGログの各値はAMFデコーダが解像度変更時にどう振る舞うかの実測用(この挙動が分かれば追従対応の設計が起こせる)
+            // 解像度はAMFSurfaceに直接のGetWidth()が無いのでplane0経由で取る(RGYFrameAMF::getInfo()と同じ取り方)
             if (auto plane0 = surfDecOut->GetPlaneAt(0); plane0 != nullptr) {
                 const int outputWidth = plane0->GetWidth();
                 const int outputHeight = plane0->GetHeight();
@@ -2432,11 +2439,20 @@ protected:
     std::vector<std::unique_ptr<RGYFilter>>& m_vpFilters;
     std::deque<std::unique_ptr<PipelineTaskOutput>> m_prevInputFrame; //前回投入されたフレーム、完了通知を待ってから解放するため、参照を保持する
     RGYFilterSsim *m_videoMetric;
-    RGYFrameInfo m_normalizeTargetFrame;                        // 戻すべき解像度(初期の先頭フィルタの出力)
-    std::shared_ptr<RGYFilterParamResize> m_normalizeResizeParam;
-    int m_normalizeResizeIdx;                                   // 正規化resizeのm_vpFilters内index (-1: 未挿入)
-    bool m_bypassForResChange;                                  // 解像度変更対応のために常設されたCL_CROPブロックである(不変)
-    bool m_bypassActive;                                        // 現在バイパス中(解像度変更を検出したらfalseになる)
+    // --- 入力途中の解像度変更への追従 ---
+    // 方針: 解像度変更を下流へ伝播させない。入力が変わったら先頭CspCropを新解像度で再initし、その直後に元の解像度へ戻す正規化resizeを挟む
+    //       これによりエンコーダ・出力・タイムスタンプ・音声同期はいずれも影響を受けない
+    //   [変更前] input(1440x1080) → CspCrop → ... → CspCrop → encode(1440x1080)
+    //   [変更後] input( 720x480 ) → CspCrop' → Resize(→1440x1080) → ... → CspCrop → encode(1440x1080)
+    RGYFrameInfo m_normalizeTargetFrame;                        // 戻すべき解像度(初期の先頭フィルタの出力)。コンストラクタで控える
+    std::shared_ptr<RGYFilterParamResize> m_normalizeResizeParam; // 正規化resizeの生成元パラメータ。initPipeline()からsetNormalizeResizeParam()で渡される
+    int m_normalizeResizeIdx;                                   // 正規化resizeのm_vpFilters内index (-1: 未挿入)。2回目以降はここをupdateする(毎回insertするとresizeが積み上がる)
+    // 以下2つはフィルタゼロ構成(vce_core.cppでCL_CROPを常設した構成)専用。「構成そのものの判定」と「今バイパス中か」は別物なので分けてある
+    bool m_bypassForResChange;                                  // 解像度変更対応のために常設されたCL_CROPブロックである(不変)。AMF HOST入力のConvert要否判定に使う
+    bool m_bypassActive;                                        // 現在バイパス中(解像度変更を検出したらfalseになる)。素通し判定に使う
+    // 新しい入力解像度に合わせてOpenCLフィルタチェーンを組み直す。呼び出し前にチェーンのdrainと保留イベントのクリアを済ませておくこと
+    // 想定するチェーン形状は「先頭CspCrop → (任意のフィルタ) → 末尾CspCrop」。initFilters()のaddOpenCLCopyFilter()が必ず前後にCspCropを置くため成立する
+    // 以下の事前条件チェックはその形状が崩れていないことの確認で、1つでも外れたら黙って壊すより明示エラーで止める
     RGY_ERR reconstructFilterChain(const RGYFrameInfo& newInputFrame) {
         if (m_vpFilters.empty()) {
             PrintMes(RGY_LOG_ERROR, _T("resolution change is not supported for an empty OpenCL filter configuration.\n"));
@@ -2479,6 +2495,8 @@ protected:
             return RGY_ERR_INVALID_OPERATION;
         }
 
+        // 先頭CspCropのframeInだけを新解像度で作り直す。frameOutは元のまま = 先頭の出力は「新解像度・変換後csp」になる
+        // mem_typeは意図的にコピーしない。newInputFrameはConvert前の値(AMF HOST入力ならCPU)を持つが、実際にフィルタへ渡るのはConvert後のGPUメモリのため
         auto newCropParam = std::make_shared<RGYFilterParamCrop>(*oldCropParam);
         newCropParam->frameIn.width = newInputFrame.width;
         newCropParam->frameIn.height = newInputFrame.height;
@@ -2504,6 +2522,8 @@ protected:
             cropParam->frameIn.width, cropParam->frameIn.height, RGY_CSP_NAMES[cropParam->frameIn.csp],
             cropParam->frameOut.width, cropParam->frameOut.height, RGY_CSP_NAMES[cropParam->frameOut.csp]);
 
+        // 正規化resize: 再init後の先頭CspCropの出力(新解像度)を受け取り、初期解像度へ戻す。これ以降のフィルタは解像度が変わったことに気づかない
+        // 解像度が初期値へ戻った場合はここが等倍resizeになる(無駄ではあるが、チェーンから外すと以降の変更でindexがずれるため残している)
         auto resizeParam = std::make_shared<RGYFilterParamResize>(*m_normalizeResizeParam);
         resizeParam->frameIn = cropParam->frameOut;
         resizeParam->frameOut = m_normalizeTargetFrame;
@@ -2511,7 +2531,7 @@ protected:
         resizeParam->frameOut.bitdepth = RGY_CSP_BIT_DEPTH[resizeParam->frameOut.csp];
         resizeParam->frameOut.picstruct = resizeParam->frameIn.picstruct;
         resizeParam->baseFps = m_normalizeResizeParam->baseFps;
-        const bool insertResize = m_normalizeResizeIdx < 0;
+        const bool insertResize = m_normalizeResizeIdx < 0;   // 初回のみinsert、2回目以降は同じindexをinit()でupdateする
         if (insertResize) {
             auto resizeFilter = std::make_unique<RGYFilterResize>(m_cl);
             sts = resizeFilter->init(resizeParam, m_log);
@@ -2539,6 +2559,8 @@ protected:
             resizeParam->frameIn.width, resizeParam->frameIn.height, RGY_CSP_NAMES[resizeParam->frameIn.csp],
             resizeParam->frameOut.width, resizeParam->frameOut.height, RGY_CSP_NAMES[resizeParam->frameOut.csp]);
 
+        // 時間方向に前フレームを参照するフィルタ(afs/nnedi/degrain/kfm等)は、解像度の違うフレームを跨いで参照すると破綻するのでリセットする
+        // 先頭CspCropと正規化resizeは今作り直したばかりなので除外する
         int temporalStateResetCount = 0;
         for (int i = 0; i < (int)m_vpFilters.size(); i++) {
             if (i != 0 && i != m_normalizeResizeIdx) {
@@ -2553,6 +2575,7 @@ protected:
 public:
     PipelineTaskOpenCL(amf::AMFContextPtr context, std::vector<std::unique_ptr<RGYFilter>>& vppfilters, RGYFilterSsim *videoMetric, std::shared_ptr<RGYOpenCLContext> cl, int outMaxQueueSize, bool dx11interlop, std::shared_ptr<RGYLog> log) :
         PipelineTask(PipelineTaskType::OPENCL, context, outMaxQueueSize, log), m_cl(cl), m_dx11interlop(dx11interlop), m_vpFilters(vppfilters), m_prevInputFrame(), m_videoMetric(videoMetric), m_normalizeTargetFrame(), m_normalizeResizeParam(), m_normalizeResizeIdx(-1), m_bypassForResChange(false), m_bypassActive(false) {
+        // 解像度変更時に「戻すべき解像度」= 初期状態の先頭フィルタの出力。チェーンを組み直す前に控えておく必要がある
         if (!m_vpFilters.empty() && m_vpFilters.front()->GetFilterParam() != nullptr) {
             m_normalizeTargetFrame = m_vpFilters.front()->GetFilterParam()->frameOut;
         }
@@ -2572,6 +2595,8 @@ public:
     void setVideoQualityMetricFilter(RGYFilterSsim *videoMetric) {
         m_videoMetric = videoMetric;
     }
+    // フィルタゼロ構成で常設したCL_CROPブロックであることを伝える。解像度が変わるまでフィルタを通さず素通しし、V4以前と同じ性能・同じ出力を保つ
+    // このブロックはOpenCLフレームを確保しない(allocatePiplelineFrames()参照)ため、入力はPipelineTaskInputが作るAMF HOSTサーフェスのまま流れてくる
     void setBypassUntilResolutionChange() {
         m_bypassForResChange = true;
         m_bypassActive = true;
@@ -2582,6 +2607,7 @@ public:
             return;
         }
         m_normalizeResizeParam = std::make_shared<RGYFilterParamResize>(*resizeParam);
+        // baseFpsはこのブロックの実際の値へ合わせる(initPipeline()が渡してくるのは全体のm_encFpsで、fpsを変えるフィルタの後ろだと食い違うため)
         if (!m_vpFilters.empty() && m_vpFilters.front()->GetFilterParam() != nullptr) {
             m_normalizeResizeParam->baseFps = m_vpFilters.front()->GetFilterParam()->baseFps;
         }
@@ -2608,10 +2634,14 @@ public:
         }
         if (m_stopwatch) m_stopwatch->add(0, 0);
 
+        // バイパス中はフィルタに何も溜まっていないので、drain要求(frame==nullptr)は即座に完了扱いにする
+        // ここを通さず通常のdrain経路へ流すとフィルタが呼ばれてしまう
         if (!frame && m_bypassActive) {
             return RGY_ERR_MORE_DATA;
         }
 
+        // --- 入力解像度の変化を検出してフィルタチェーンを組み直す ---
+        // 検出位置がここなのは、入力フレームをm_prevInputFrameへ積む前でなければならないため(積んだ後だとdrain中に新フレームが巻き込まれる)
         if (frame && !m_vpFilters.empty()) {
             auto taskSurf = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
             const auto filterParam = m_vpFilters.front()->GetFilterParam();
@@ -2624,9 +2654,9 @@ public:
                     PrintMes(RGY_LOG_DEBUG, _T("input resolution change detected in OpenCL filter input: %dx%d -> %dx%d, mem_type: %d, flushing filter chain.\n"),
                         oldInputWidth, oldInputHeight, newInputFrame.width, newInputFrame.height, (int)newInputFrame.mem_type);
 
-                    // チェーンをdrainする
-                    // VCEEncにはacquire/releaseワーカーが無いため、単純な反復上限で足りる。
-                    // ただし前進判定も併用して、想定外の空回りを検出できるようにしておく。
+                    // 旧解像度のフレームをチェーンから吐き出しきる。ここで残すと再init後のフィルタが旧解像度のフレームを処理してしまう
+                    // 出力はm_outQeueueに積まれたままにして順序を保つ(このフレームより前の絵が後に出ることはない)
+                    // VCEEncにはacquire/releaseワーカーが無いため単純な反復で足りるが、前進判定も併用して想定外の空回りを検出できるようにしておく
                     const size_t queueSizeBefore = m_outQeueue.size();
                     size_t queueSizeLast = queueSizeBefore;
                     int drainLoop = 0;
@@ -2654,7 +2684,7 @@ public:
                     PrintMes(RGY_LOG_DEBUG, _T("resolution change: OpenCL filter chain drained (loops: %d, frames queued: %d).\n"),
                         drainLoop, (int)(m_outQeueue.size() - queueSizeBefore));
 
-                    // 出力のOpenCLイベントを完了させてから、フィルタが保持するバッファを再構築する
+                    // フィルタが内部に持つバッファを作り直す前に、それらを参照している未完了のOpenCLイベントを全て完了させる
                     for (auto& output : m_outQeueue) {
                         output->depend_clear();
                     }
@@ -2668,9 +2698,11 @@ public:
                     if (sts != RGY_ERR_NONE) {
                         return sts;
                     }
-                    m_bypassActive = false;
+                    m_bypassActive = false;   // 以降はフィルタを通す。バイパス構成でもここから先は通常構成と同じ経路になる
                     PrintMes(RGY_LOG_DEBUG, _T("resolution change: OpenCL filter processing resumed (bypass disabled).\n"));
                 } else if (m_bypassActive) {
+                    // 解像度が変わっていない間はフィルタを通さず素通しする。入力サーフェス(AMF HOST)がそのまま下流のエンコーダへ渡り、V4以前と同一の出力になる
+                    // 参照を保持する必要が無い(OpenCL処理をしていない)ので m_prevInputFrame へは積まない
                     m_outQeueue.push_back(std::move(frame));
                     return RGY_ERR_NONE;
                 }
@@ -2688,10 +2720,10 @@ public:
                 return RGY_ERR_NULL_PTR;
             }
             if (auto surfVppInAMF = taskSurf->surf().amf(); surfVppInAMF != nullptr) {
-                // 常設ブロックの場合、PipelineTaskInputがAMF_MEMORY_HOSTのサーフェスを渡してくる。
-                // HOSTのままではCspCropのcsp変換がmemcpyKind != D2Dで拒否されるため、
-                // この構成に限りCPUメモリでもOpenCLへConvertする。
-                // PipelineTaskAMFPreProcessにも同じ理由のConvertがある。
+                // 通常はデコーダ出力(GPUメモリ)が来るのでmem_type != CPUの判定で足りるが、バイパス構成ではPipelineTaskInputが
+                // AMF_MEMORY_HOSTのサーフェスを渡してくる(RGYFrameAMF::getInfo()はHOSTならmem_type=CPUを返す)。
+                // HOSTのままだと先頭CspCropのcsp変換がmemcpyKind != D2Dで拒否されるため、この構成に限りCPUメモリでもConvertする
+                // (PipelineTaskAMFPreProcessにも同じ理由のConvertがある)。バイパス解除後も入力はHOSTのままなのでm_bypassActiveではなく構成フラグで判定すること
                 if ((taskSurf->surf().frame()->mem_type() != RGY_MEM_TYPE_CPU || m_bypassForResChange)
                     && surfVppInAMF->amf()->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
                     amf::AMFContext::AMFOpenCLLocker locker(m_context);

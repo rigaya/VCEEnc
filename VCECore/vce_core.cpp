@@ -1138,8 +1138,10 @@ RGY_ERR VCECore::createOpenCLCopyFilterForPreVideoMetric(const VCEParam *prm) {
 }
 
 RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
-    m_clFilterBypassForResChange = false;
+    m_clFilterBypassForResChange = false;   // 再入時に前回の判定を持ち越さないようここでリセットする(実際に立てるのはInitFiltersCreateVppList())
     //hwデコーダの場合、cropを入力時に行っていない
+    // 逆にavsw(getInputCodec() == RGY_CODEC_UNKNOWN)ではリーダー側でcrop済みのため、以降のinputFrameはcrop適用後のサイズになる
+    // PipelineTaskInput::getReaderOutputResolution()がcropを差し引いた値を返すのはこれと対になっている
     const bool cropRequired = cropEnabled(inputParam->input.crop)
         && m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN;
 
@@ -1477,14 +1479,17 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
 
     if (filterPipeline.size() == 0) {
 #if ENABLE_INPUT_RESOLUTION_CHANGE
-        // フィルタが1つも無い構成では解像度変更を吸収する場所が無いため、
-        // 等倍のCL_CROPを1つ常設してOpenCLブロックを作る
+        // フィルタが1つも無い構成ではOpenCLブロック自体が無く、解像度変更を吸収する場所が無い(AMFエンコーダがAMF_INVALID_RESOLUTIONで停止する)
+        // このため等倍のCL_CROPを1つ常設してOpenCLブロックを作る。これはInitFilters()で先頭・末尾のCspCrop2つに展開され、
+        // reconstructFilterChain()が要求する「先頭と末尾がCspCrop」の形になる
+        // m_dev->cl()の判定は必須。このreturnはOpenCL無効時のフィルタ削除処理(下方)より手前にあるため、
+        // 判定を省くとOpenCL無効環境でOpenCLフィルタが残ってしまい、InitFilters()の先頭で全エンコードがエラー終了する
         if (m_dev->cl()) {
             filterPipeline.push_back(VppType::CL_CROP);
-            // 品質指標計算が有効な場合、metricは常設CL_CROPブロックのPipelineTaskOpenCLへ
-            // attachされる(initPipelineのmetric分岐、prevtask == OPENCL経路)。
-            // バイパスするとm_videoMetric->filter()が呼ばれず指標計算が飛ぶため、
-            // この構成ではバイパスしない。
+            // 品質指標計算が有効な場合、metricはこの常設ブロックのPipelineTaskOpenCLへattachされる(initPipelineのmetric分岐、prevtask == OPENCL経路)。
+            // バイパスするとsendFrame()が素通しして m_videoMetric->filter() を呼ばないため指標計算が飛ぶ。よってこの構成ではバイパスしない
+            // (常設自体は行うので解像度変更への追従機能は落ちない。落とすのは性能最適化だけ)
+            // なおここではm_videoQualityMetricがまだ生成されていない(生成はinitFilters()より後)ので、パラメータ側で判定する
             m_clFilterBypassForResChange = !inputParam->common.metric.enabled();
         }
 #endif
@@ -4403,6 +4408,8 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskCheckPTS>(m_dev->context(), srcTimebase, srcTimebase, m_outputTimebase, outFrameDuration, m_nAVSyncMode, m_timestampPassThrough, VppAfsRffAware() && m_pFileReader->rffAware(), (pReader) ? pReader->GetFramePosList() : nullptr, m_pLog));
     }
 
+    // 入力途中で解像度が変化したときに、元の解像度へ戻すための正規化resizeのパラメータを用意する(実際の生成は
+    // PipelineTaskOpenCL::reconstructFilterChain()が解像度変更を検出した時点で行う)。全OpenCL taskで同じものを共有するので生成は1度だけ
     std::shared_ptr<RGYFilterParamResize> normalizeResizeParam;
     auto getNormalizeResizeParam = [&]() {
         if (normalizeResizeParam != nullptr) {
@@ -4410,6 +4417,8 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
         }
         normalizeResizeParam = std::make_shared<RGYFilterParamResize>();
         const auto resizeAlgo = prm->vpp.resize_algo;
+        // 正規化resizeはOpenCL実装でなければならない(チェーンの途中に差し込むため)。またFSR1/NISは縮小を扱えない等、正規化用途に向かないので除外する
+        // VCEEncはAMF_RESIZE(HQScaler)やlibplaceboが選ばれる構成があるぶん、QSVEncよりこのfallbackが効く頻度が高い
         if (resizeAlgo == RGY_VPP_RESIZE_AUTO) {
             normalizeResizeParam->interp = RGY_VPP_RESIZE_SPLINE36;
             PrintMes(RGY_LOG_DEBUG, _T("resolution change: OpenCL normalization resize uses spline36 for auto resize mode.\n"));
@@ -4441,7 +4450,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
             }
             auto taskOpenCL = std::make_unique<PipelineTaskOpenCL>(m_dev->context(), filterBlock.vppcl, nullptr, m_dev->cl(), 1, m_dev->dx11interlop(), m_pLog);
             taskOpenCL->setNormalizeResizeParam(getNormalizeResizeParam());
-            if (m_clFilterBypassForResChange) {
+            if (m_clFilterBypassForResChange) { // フィルタゼロ構成のために常設したブロック = 解像度が変わるまで素通しさせる
                 taskOpenCL->setBypassUntilResolutionChange();
             }
             m_pipelineTasks.push_back(std::move(taskOpenCL));
@@ -4470,6 +4479,8 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
                 PrintMes(RGY_LOG_ERROR, _T("m_vpFilters.size() != 1.\n"));
                 return RGY_ERR_UNDEFINED_BEHAVIOR;
             }
+            // metric用に作ったこのブロックはバイパスさせない(素通しするとm_videoMetric->filter()が呼ばれず指標計算が飛ぶ)
+            // なおここへ来る構成ではInitFiltersCreateVppList()側でm_clFilterBypassForResChangeがそもそもfalseになっている(二重の防御)
             auto taskOpenCL = std::make_unique<PipelineTaskOpenCL>(m_dev->context(), m_vpFilters.front().vppcl, m_videoQualityMetric.get(), m_dev->cl(), 1, m_dev->dx11interlop(), m_pLog);
             taskOpenCL->setNormalizeResizeParam(getNormalizeResizeParam());
             m_pipelineTasks.push_back(std::move(taskOpenCL));
@@ -4562,10 +4573,11 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
                 PrintMes(RGY_LOG_ERROR, _T("AllocFrames: OpenCL filter not enabled.\n"));
                 return RGY_ERR_UNSUPPORTED;
             }
-            // 解像度変更対応のために常設したCL_CROPブロックは、解像度が変わるまでバイパスする。
-            // OpenCLフレームを確保するとPipelineTaskInputがCL経路(LoadNextFrameCL)になり、
-            // フィルタゼロ構成でも常にOpenCLの往復コストがかかってしまうため、確保しない。
-            // 解像度変更後はAMFサーフェス入力のままOpenCLフィルタを通す。
+            // 解像度変更対応のために常設したCL_CROPブロックでは、ここでOpenCLフレームを確保しない
+            // 確保するとPipelineTaskInputのworkSurfaceTypeがCLになりLoadNextFrameCL()経路に入るため、フィルタゼロ構成でも
+            // 常にmap/unmapとcsp往復(nv12->yv12->nv12)のコストがかかってしまう(実測で約29%の速度低下)
+            // 確保しなければPipelineTaskInputはLoadNextFrameAMF()のままとなり、常設ブロック導入前と同じデータフロー・同じ性能になる
+            // 解像度変更後はAMF HOSTサーフェス入力のままOpenCLフィルタを通す(PipelineTaskOpenCL::sendFrame()がConvertする)
             if (!m_clFilterBypassForResChange) {
                 allocateOpenCLFrame = true;
             }

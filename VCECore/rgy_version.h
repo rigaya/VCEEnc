@@ -52,6 +52,8 @@ const char *get_encoder_version();
 #define ENCODER_MPP    0
 #define CLFILTERS_AUF  0
 
+// 入力途中の解像度変更への追従 (avsw + OpenCLフィルタ経路のみ。--avhwは PipelineTaskAMFDecode が明示エラーで停止する)
+// 0にするとリーダー側(rgy_input_avcodec.cpp)が解像度変更を検出した時点で「未対応」エラーとなる従来動作に戻る
 #define ENABLE_INPUT_RESOLUTION_CHANGE 1
 
 #define AV1_TIMESTAMP_OVERRIDE 1
