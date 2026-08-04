@@ -1474,6 +1474,13 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.overlay.size() > 0)  filterPipeline.push_back(VppType::CL_OVERLAY);
 
     if (filterPipeline.size() == 0) {
+#if ENABLE_INPUT_RESOLUTION_CHANGE
+        // フィルタが1つも無い構成では解像度変更を吸収する場所が無いため、
+        // 等倍のCL_CROPを1つ常設してOpenCLブロックを作る
+        if (m_dev->cl()) {
+            filterPipeline.push_back(VppType::CL_CROP);
+        }
+#endif
         return filterPipeline;
     }
     // HQScalerが使用できない場合
