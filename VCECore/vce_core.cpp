@@ -223,6 +223,7 @@ VCECore::VCECore() :
     m_vpFilters(),
     m_pLastFilterParam(),
     m_videoQualityMetric(),
+    m_clFilterBypassForResChange(false),
     m_state(RGY_STATE_STOPPED),
     m_pTrimParam(nullptr),
     m_pDecoder(),
@@ -1137,6 +1138,7 @@ RGY_ERR VCECore::createOpenCLCopyFilterForPreVideoMetric(const VCEParam *prm) {
 }
 
 RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
+    m_clFilterBypassForResChange = false;
     //hwデコーダの場合、cropを入力時に行っていない
     const bool cropRequired = cropEnabled(inputParam->input.crop)
         && m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN;
@@ -1479,6 +1481,11 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
         // 等倍のCL_CROPを1つ常設してOpenCLブロックを作る
         if (m_dev->cl()) {
             filterPipeline.push_back(VppType::CL_CROP);
+            // 品質指標計算が有効な場合、metricは常設CL_CROPブロックのPipelineTaskOpenCLへ
+            // attachされる(initPipelineのmetric分岐、prevtask == OPENCL経路)。
+            // バイパスするとm_videoMetric->filter()が呼ばれず指標計算が飛ぶため、
+            // この構成ではバイパスしない。
+            m_clFilterBypassForResChange = !inputParam->common.metric.enabled();
         }
 #endif
         return filterPipeline;
@@ -4434,6 +4441,9 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
             }
             auto taskOpenCL = std::make_unique<PipelineTaskOpenCL>(m_dev->context(), filterBlock.vppcl, nullptr, m_dev->cl(), 1, m_dev->dx11interlop(), m_pLog);
             taskOpenCL->setNormalizeResizeParam(getNormalizeResizeParam());
+            if (m_clFilterBypassForResChange) {
+                taskOpenCL->setBypassUntilResolutionChange();
+            }
             m_pipelineTasks.push_back(std::move(taskOpenCL));
         } else {
             PrintMes(RGY_LOG_ERROR, _T("Unknown filter type.\n"));
@@ -4552,7 +4562,13 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
                 PrintMes(RGY_LOG_ERROR, _T("AllocFrames: OpenCL filter not enabled.\n"));
                 return RGY_ERR_UNSUPPORTED;
             }
-            allocateOpenCLFrame = true; // inputとopenclがつながっているような場合
+            // 解像度変更対応のために常設したCL_CROPブロックは、解像度が変わるまでバイパスする。
+            // OpenCLフレームを確保するとPipelineTaskInputがCL経路(LoadNextFrameCL)になり、
+            // フィルタゼロ構成でも常にOpenCLの往復コストがかかってしまうため、確保しない。
+            // 解像度変更後はAMFサーフェス入力のままOpenCLフィルタを通す。
+            if (!m_clFilterBypassForResChange) {
+                allocateOpenCLFrame = true;
+            }
         }
         if (t0->taskType() == PipelineTaskType::OPENCL) {
             t0RequestNumFrame += 4; // 内部でフレームが増える場合に備えて

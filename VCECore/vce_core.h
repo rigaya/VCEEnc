@@ -184,6 +184,9 @@ protected:
     vector<VppVilterBlock>        m_vpFilters;
     shared_ptr<RGYFilterParam>    m_pLastFilterParam;
     unique_ptr<RGYFilterSsim>     m_videoQualityMetric;
+    // フィルタゼロ構成のために常設したCL_CROPブロックかどうか
+    // 解像度が変わるまでバイパスするため、OpenCLフレームを確保しない
+    bool                          m_clFilterBypassForResChange;
 
     RGYRunState m_state;
 

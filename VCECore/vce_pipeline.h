@@ -2435,6 +2435,8 @@ protected:
     RGYFrameInfo m_normalizeTargetFrame;                        // 戻すべき解像度(初期の先頭フィルタの出力)
     std::shared_ptr<RGYFilterParamResize> m_normalizeResizeParam;
     int m_normalizeResizeIdx;                                   // 正規化resizeのm_vpFilters内index (-1: 未挿入)
+    bool m_bypassForResChange;                                  // 解像度変更対応のために常設されたCL_CROPブロックである(不変)
+    bool m_bypassActive;                                        // 現在バイパス中(解像度変更を検出したらfalseになる)
     RGY_ERR reconstructFilterChain(const RGYFrameInfo& newInputFrame) {
         if (m_vpFilters.empty()) {
             PrintMes(RGY_LOG_ERROR, _T("resolution change is not supported for an empty OpenCL filter configuration.\n"));
@@ -2550,7 +2552,7 @@ protected:
     }
 public:
     PipelineTaskOpenCL(amf::AMFContextPtr context, std::vector<std::unique_ptr<RGYFilter>>& vppfilters, RGYFilterSsim *videoMetric, std::shared_ptr<RGYOpenCLContext> cl, int outMaxQueueSize, bool dx11interlop, std::shared_ptr<RGYLog> log) :
-        PipelineTask(PipelineTaskType::OPENCL, context, outMaxQueueSize, log), m_cl(cl), m_dx11interlop(dx11interlop), m_vpFilters(vppfilters), m_prevInputFrame(), m_videoMetric(videoMetric), m_normalizeTargetFrame(), m_normalizeResizeParam(), m_normalizeResizeIdx(-1) {
+        PipelineTask(PipelineTaskType::OPENCL, context, outMaxQueueSize, log), m_cl(cl), m_dx11interlop(dx11interlop), m_vpFilters(vppfilters), m_prevInputFrame(), m_videoMetric(videoMetric), m_normalizeTargetFrame(), m_normalizeResizeParam(), m_normalizeResizeIdx(-1), m_bypassForResChange(false), m_bypassActive(false) {
         if (!m_vpFilters.empty() && m_vpFilters.front()->GetFilterParam() != nullptr) {
             m_normalizeTargetFrame = m_vpFilters.front()->GetFilterParam()->frameOut;
         }
@@ -2569,6 +2571,10 @@ public:
 
     void setVideoQualityMetricFilter(RGYFilterSsim *videoMetric) {
         m_videoMetric = videoMetric;
+    }
+    void setBypassUntilResolutionChange() {
+        m_bypassForResChange = true;
+        m_bypassActive = true;
     }
     void setNormalizeResizeParam(const std::shared_ptr<RGYFilterParamResize>& resizeParam) {
         if (resizeParam == nullptr) {
@@ -2602,6 +2608,10 @@ public:
         }
         if (m_stopwatch) m_stopwatch->add(0, 0);
 
+        if (!frame && m_bypassActive) {
+            return RGY_ERR_MORE_DATA;
+        }
+
         if (frame && !m_vpFilters.empty()) {
             auto taskSurf = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
             const auto filterParam = m_vpFilters.front()->GetFilterParam();
@@ -2611,8 +2621,8 @@ public:
                     const auto newInputFrame = inputFrame->frameInfo();
                     const int oldInputWidth = filterParam->frameIn.width;
                     const int oldInputHeight = filterParam->frameIn.height;
-                    PrintMes(RGY_LOG_DEBUG, _T("input resolution change detected in OpenCL filter input: %dx%d -> %dx%d, flushing filter chain.\n"),
-                        oldInputWidth, oldInputHeight, newInputFrame.width, newInputFrame.height);
+                    PrintMes(RGY_LOG_DEBUG, _T("input resolution change detected in OpenCL filter input: %dx%d -> %dx%d, mem_type: %d, flushing filter chain.\n"),
+                        oldInputWidth, oldInputHeight, newInputFrame.width, newInputFrame.height, (int)newInputFrame.mem_type);
 
                     // チェーンをdrainする
                     // VCEEncにはacquire/releaseワーカーが無いため、単純な反復上限で足りる。
@@ -2658,7 +2668,11 @@ public:
                     if (sts != RGY_ERR_NONE) {
                         return sts;
                     }
-                    PrintMes(RGY_LOG_DEBUG, _T("resolution change: OpenCL filter processing resumed.\n"));
+                    m_bypassActive = false;
+                    PrintMes(RGY_LOG_DEBUG, _T("resolution change: OpenCL filter processing resumed (bypass disabled).\n"));
+                } else if (m_bypassActive) {
+                    m_outQeueue.push_back(std::move(frame));
+                    return RGY_ERR_NONE;
                 }
             }
         }
@@ -2674,7 +2688,11 @@ public:
                 return RGY_ERR_NULL_PTR;
             }
             if (auto surfVppInAMF = taskSurf->surf().amf(); surfVppInAMF != nullptr) {
-                if (taskSurf->surf().frame()->mem_type() != RGY_MEM_TYPE_CPU
+                // 常設ブロックの場合、PipelineTaskInputがAMF_MEMORY_HOSTのサーフェスを渡してくる。
+                // HOSTのままではCspCropのcsp変換がmemcpyKind != D2Dで拒否されるため、
+                // この構成に限りCPUメモリでもOpenCLへConvertする。
+                // PipelineTaskAMFPreProcessにも同じ理由のConvertがある。
+                if ((taskSurf->surf().frame()->mem_type() != RGY_MEM_TYPE_CPU || m_bypassForResChange)
                     && surfVppInAMF->amf()->GetMemoryType() != amf::AMF_MEMORY_OPENCL) {
                     amf::AMFContext::AMFOpenCLLocker locker(m_context);
 #if 0
