@@ -53,6 +53,7 @@
 #include "rgy_output_avcodec.h"
 #include "rgy_opencl.h"
 #include "rgy_filter.h"
+#include "rgy_filter_resize.h"
 #include "rgy_filter_ssim.h"
 #include "rgy_thread.h"
 #include "rgy_timecode.h"
@@ -2431,9 +2432,128 @@ protected:
     std::vector<std::unique_ptr<RGYFilter>>& m_vpFilters;
     std::deque<std::unique_ptr<PipelineTaskOutput>> m_prevInputFrame; //前回投入されたフレーム、完了通知を待ってから解放するため、参照を保持する
     RGYFilterSsim *m_videoMetric;
+    RGYFrameInfo m_normalizeTargetFrame;                        // 戻すべき解像度(初期の先頭フィルタの出力)
+    std::shared_ptr<RGYFilterParamResize> m_normalizeResizeParam;
+    int m_normalizeResizeIdx;                                   // 正規化resizeのm_vpFilters内index (-1: 未挿入)
+    RGY_ERR reconstructFilterChain(const RGYFrameInfo& newInputFrame) {
+        if (m_vpFilters.empty()) {
+            PrintMes(RGY_LOG_ERROR, _T("resolution change is not supported for an empty OpenCL filter configuration.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        for (const auto& filter : m_vpFilters) {
+            if (filter == nullptr) {
+                PrintMes(RGY_LOG_ERROR, _T("resolution change is not supported because the OpenCL filter configuration contains a null filter.\n"));
+                return RGY_ERR_UNSUPPORTED;
+            }
+        }
+        const auto firstFilterParam = m_vpFilters.front()->GetFilterParam();
+        if (firstFilterParam == nullptr) {
+            PrintMes(RGY_LOG_ERROR, _T("resolution change is not supported because the first OpenCL filter has no parameters.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        if (newInputFrame.csp != firstFilterParam->frameIn.csp) {
+            PrintMes(RGY_LOG_ERROR, _T("resolution change with colorspace change is not supported: %s -> %s.\n"),
+                RGY_CSP_NAMES[firstFilterParam->frameIn.csp], RGY_CSP_NAMES[newInputFrame.csp]);
+            return RGY_ERR_UNSUPPORTED;
+        }
+        if (m_vpFilters.size() < 2
+            || typeid(*m_vpFilters.front()) != typeid(RGYFilterCspCrop)
+            || typeid(*m_vpFilters.back()) != typeid(RGYFilterCspCrop)
+            || RGY_CSP_PLANES[firstFilterParam->frameOut.csp] < 3) {
+            PrintMes(RGY_LOG_ERROR, _T("resolution change is not supported for this OpenCL filter configuration (filters: %d, first frameOut csp: %s).\n"),
+                (int)m_vpFilters.size(), RGY_CSP_NAMES[firstFilterParam->frameOut.csp]);
+            return RGY_ERR_UNSUPPORTED;
+        }
+        const auto oldCropParam = dynamic_cast<const RGYFilterParamCrop *>(firstFilterParam);
+        if (oldCropParam == nullptr) {
+            PrintMes(RGY_LOG_ERROR, _T("resolution change is not supported because the first OpenCL filter is not CspCrop.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        if (m_normalizeResizeParam == nullptr
+            || m_normalizeTargetFrame.width <= 0
+            || m_normalizeTargetFrame.height <= 0
+            || m_normalizeTargetFrame.csp == RGY_CSP_NA) {
+            PrintMes(RGY_LOG_ERROR, _T("resolution change is not supported because the OpenCL normalization resize parameters are not initialized.\n"));
+            return RGY_ERR_INVALID_OPERATION;
+        }
+
+        auto newCropParam = std::make_shared<RGYFilterParamCrop>(*oldCropParam);
+        newCropParam->frameIn.width = newInputFrame.width;
+        newCropParam->frameIn.height = newInputFrame.height;
+        newCropParam->frameIn.picstruct = newInputFrame.picstruct;
+        for (int i = 0; i < (int)_countof(newCropParam->frameIn.pitch); i++) {
+            newCropParam->frameIn.pitch[i] = newInputFrame.pitch[i];
+        }
+
+        // VCEEncのOpenCLフィルタ初期化はAMF OpenCLコンテキストのロック下で行う。
+        amf::AMFContext::AMFOpenCLLocker locker(m_context);
+        auto sts = m_vpFilters.front()->init(newCropParam, m_log);
+        if (sts != RGY_ERR_NONE) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to reinitialize the first OpenCL CspCrop on resolution change (%dx%d): %s.\n"),
+                newInputFrame.width, newInputFrame.height, get_err_mes(sts));
+            return sts;
+        }
+        const auto cropParam = m_vpFilters.front()->GetFilterParam();
+        if (cropParam == nullptr) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to get the reinitialized first OpenCL CspCrop parameters.\n"));
+            return RGY_ERR_INVALID_OPERATION;
+        }
+        PrintMes(RGY_LOG_DEBUG, _T("resolution change: first OpenCL CspCrop reinitialized (frameIn: %dx%d %s, frameOut: %dx%d %s).\n"),
+            cropParam->frameIn.width, cropParam->frameIn.height, RGY_CSP_NAMES[cropParam->frameIn.csp],
+            cropParam->frameOut.width, cropParam->frameOut.height, RGY_CSP_NAMES[cropParam->frameOut.csp]);
+
+        auto resizeParam = std::make_shared<RGYFilterParamResize>(*m_normalizeResizeParam);
+        resizeParam->frameIn = cropParam->frameOut;
+        resizeParam->frameOut = m_normalizeTargetFrame;
+        resizeParam->frameOut.csp = resizeParam->frameIn.csp;
+        resizeParam->frameOut.bitdepth = RGY_CSP_BIT_DEPTH[resizeParam->frameOut.csp];
+        resizeParam->frameOut.picstruct = resizeParam->frameIn.picstruct;
+        resizeParam->baseFps = m_normalizeResizeParam->baseFps;
+        const bool insertResize = m_normalizeResizeIdx < 0;
+        if (insertResize) {
+            auto resizeFilter = std::make_unique<RGYFilterResize>(m_cl);
+            sts = resizeFilter->init(resizeParam, m_log);
+            if (sts != RGY_ERR_NONE) {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to initialize the OpenCL normalization resize on resolution change: %s.\n"), get_err_mes(sts));
+                return sts;
+            }
+            m_vpFilters.insert(m_vpFilters.begin() + 1, std::move(resizeFilter));
+            m_normalizeResizeIdx = 1;
+        } else {
+            if (m_normalizeResizeIdx >= (int)m_vpFilters.size()
+                || m_vpFilters[m_normalizeResizeIdx] == nullptr
+                || typeid(*m_vpFilters[m_normalizeResizeIdx]) != typeid(RGYFilterResize)) {
+                PrintMes(RGY_LOG_ERROR, _T("Invalid OpenCL normalization resize filter index: %d.\n"), m_normalizeResizeIdx);
+                return RGY_ERR_INVALID_OPERATION;
+            }
+            sts = m_vpFilters[m_normalizeResizeIdx]->init(resizeParam, m_log);
+            if (sts != RGY_ERR_NONE) {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to reinitialize the OpenCL normalization resize on resolution change: %s.\n"), get_err_mes(sts));
+                return sts;
+            }
+        }
+        PrintMes(RGY_LOG_DEBUG, _T("resolution change: OpenCL normalization resize %s (frameIn: %dx%d %s, frameOut: %dx%d %s).\n"),
+            insertResize ? _T("inserted") : _T("updated"),
+            resizeParam->frameIn.width, resizeParam->frameIn.height, RGY_CSP_NAMES[resizeParam->frameIn.csp],
+            resizeParam->frameOut.width, resizeParam->frameOut.height, RGY_CSP_NAMES[resizeParam->frameOut.csp]);
+
+        int temporalStateResetCount = 0;
+        for (int i = 0; i < (int)m_vpFilters.size(); i++) {
+            if (i != 0 && i != m_normalizeResizeIdx) {
+                m_vpFilters[i]->resetTemporalState();
+                temporalStateResetCount++;
+            }
+        }
+        PrintMes(RGY_LOG_DEBUG, _T("resolution change: reset temporal state for %d OpenCL filters.\n"), temporalStateResetCount);
+        PrintMes(RGY_LOG_DEBUG, _T("resolution change: OpenCL filter chain reconstruction completed.\n"));
+        return RGY_ERR_NONE;
+    }
 public:
     PipelineTaskOpenCL(amf::AMFContextPtr context, std::vector<std::unique_ptr<RGYFilter>>& vppfilters, RGYFilterSsim *videoMetric, std::shared_ptr<RGYOpenCLContext> cl, int outMaxQueueSize, bool dx11interlop, std::shared_ptr<RGYLog> log) :
-        PipelineTask(PipelineTaskType::OPENCL, context, outMaxQueueSize, log), m_cl(cl), m_dx11interlop(dx11interlop), m_vpFilters(vppfilters), m_prevInputFrame(), m_videoMetric(videoMetric) {
+        PipelineTask(PipelineTaskType::OPENCL, context, outMaxQueueSize, log), m_cl(cl), m_dx11interlop(dx11interlop), m_vpFilters(vppfilters), m_prevInputFrame(), m_videoMetric(videoMetric), m_normalizeTargetFrame(), m_normalizeResizeParam(), m_normalizeResizeIdx(-1) {
+        if (!m_vpFilters.empty() && m_vpFilters.front()->GetFilterParam() != nullptr) {
+            m_normalizeTargetFrame = m_vpFilters.front()->GetFilterParam()->frameOut;
+        }
 
     };
     virtual ~PipelineTaskOpenCL() {
@@ -2449,6 +2569,16 @@ public:
 
     void setVideoQualityMetricFilter(RGYFilterSsim *videoMetric) {
         m_videoMetric = videoMetric;
+    }
+    void setNormalizeResizeParam(const std::shared_ptr<RGYFilterParamResize>& resizeParam) {
+        if (resizeParam == nullptr) {
+            m_normalizeResizeParam.reset();
+            return;
+        }
+        m_normalizeResizeParam = std::make_shared<RGYFilterParamResize>(*resizeParam);
+        if (!m_vpFilters.empty() && m_vpFilters.front()->GetFilterParam() != nullptr) {
+            m_normalizeResizeParam->baseFps = m_vpFilters.front()->GetFilterParam()->baseFps;
+        }
     }
 
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override { return std::nullopt; };
@@ -2478,10 +2608,57 @@ public:
             if (taskSurf != nullptr && filterParam != nullptr) {
                 const auto inputFrame = taskSurf->surf().frame();
                 if (inputFrame->width() != filterParam->frameIn.width || inputFrame->height() != filterParam->frameIn.height) {
-                    PrintMes(RGY_LOG_ERROR, _T("input resolution changed from %dx%d to %dx%d, which is not supported yet.\n"),
-                        filterParam->frameIn.width, filterParam->frameIn.height, inputFrame->width(), inputFrame->height());
-                    PrintMes(RGY_LOG_ERROR, _T("  Please split the input file at the resolution change point.\n"));
-                    return RGY_ERR_UNSUPPORTED;
+                    const auto newInputFrame = inputFrame->frameInfo();
+                    const int oldInputWidth = filterParam->frameIn.width;
+                    const int oldInputHeight = filterParam->frameIn.height;
+                    PrintMes(RGY_LOG_DEBUG, _T("input resolution change detected in OpenCL filter input: %dx%d -> %dx%d, flushing filter chain.\n"),
+                        oldInputWidth, oldInputHeight, newInputFrame.width, newInputFrame.height);
+
+                    // チェーンをdrainする
+                    // VCEEncにはacquire/releaseワーカーが無いため、単純な反復上限で足りる。
+                    // ただし前進判定も併用して、想定外の空回りを検出できるようにしておく。
+                    const size_t queueSizeBefore = m_outQeueue.size();
+                    size_t queueSizeLast = queueSizeBefore;
+                    int drainLoop = 0;
+                    int drainStall = 0;
+                    for (;;) {
+                        std::unique_ptr<PipelineTaskOutput> nullFrame;
+                        auto sts = sendFrame(nullFrame);
+                        drainLoop++;
+                        if (sts == RGY_ERR_MORE_DATA) {
+                            break;
+                        }
+                        if (sts != RGY_ERR_NONE) {
+                            PrintMes(RGY_LOG_ERROR, _T("Failed to drain the OpenCL filter chain on resolution change %dx%d -> %dx%d: %s.\n"),
+                                oldInputWidth, oldInputHeight, newInputFrame.width, newInputFrame.height, get_err_mes(sts));
+                            return sts;
+                        }
+                        if (m_outQeueue.size() != queueSizeLast) {
+                            queueSizeLast = m_outQeueue.size();
+                            drainStall = 0;
+                        } else if (++drainStall > 4096) {
+                            PrintMes(RGY_LOG_ERROR, _T("Failed to drain the OpenCL filter chain on resolution change: no progress after %d iterations.\n"), drainLoop);
+                            return RGY_ERR_UNKNOWN;
+                        }
+                    }
+                    PrintMes(RGY_LOG_DEBUG, _T("resolution change: OpenCL filter chain drained (loops: %d, frames queued: %d).\n"),
+                        drainLoop, (int)(m_outQeueue.size() - queueSizeBefore));
+
+                    // 出力のOpenCLイベントを完了させてから、フィルタが保持するバッファを再構築する
+                    for (auto& output : m_outQeueue) {
+                        output->depend_clear();
+                    }
+                    while (!m_prevInputFrame.empty()) {
+                        auto prevframe = std::move(m_prevInputFrame.front());
+                        m_prevInputFrame.pop_front();
+                        prevframe->depend_clear();
+                    }
+
+                    auto sts = reconstructFilterChain(newInputFrame);
+                    if (sts != RGY_ERR_NONE) {
+                        return sts;
+                    }
+                    PrintMes(RGY_LOG_DEBUG, _T("resolution change: OpenCL filter processing resumed.\n"));
                 }
             }
         }
