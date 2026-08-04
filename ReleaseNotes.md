@@ -1,5 +1,9 @@
 # VCEEnc Release Notes
 
+## 9.11
+
+- Update for VCEEnc.auo2 only.
+
 ## 9.10
 
 - Support frame count specification for registered models in [--vpp-onnx](./VCEEncC_Options.en.md#--vpp-onnx-param1value1param2value2).
