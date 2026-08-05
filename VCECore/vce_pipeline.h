@@ -671,10 +671,16 @@ class PipelineTaskInput : public PipelineTask {
     // 前回リーダーから受け取ったフレームの解像度(crop適用後)。解像度変更のログを変化時のみ出すために保持する
     int m_lastInputWidth;
     int m_lastInputHeight;
+    // adapt-resolutionの値は「実フレームの論理解像度」ではなく、再利用するOpenCL入力面の確保上限として別管理する。
+    // GetInputFrameInfo()を最大値に書き換えると、初期フィルタ構成やエンコーダ出力解像度まで最大値として初期化されてしまう。
+    int m_adaptResolutionMaxWidth;
+    int m_adaptResolutionMaxHeight;
 public:
-    PipelineTaskInput(amf::AMFContextPtr context, int64_t endPts, int outMaxQueueSize, RGYInput *input, std::shared_ptr<RGYOpenCLContext> cl, std::shared_ptr<RGYLog> log)
+    PipelineTaskInput(amf::AMFContextPtr context, int64_t endPts, int outMaxQueueSize, RGYInput *input, std::shared_ptr<RGYOpenCLContext> cl,
+        int adaptResolutionMaxWidth, int adaptResolutionMaxHeight, std::shared_ptr<RGYLog> log)
         : PipelineTask(PipelineTaskType::INPUT, context, outMaxQueueSize, log), m_input(input), m_cl(cl), m_endPts(endPts),
-        m_lastInputWidth(0), m_lastInputHeight(0) {
+        m_lastInputWidth(0), m_lastInputHeight(0),
+        m_adaptResolutionMaxWidth(adaptResolutionMaxWidth), m_adaptResolutionMaxHeight(adaptResolutionMaxHeight) {
 
     };
     // リーダーが出力するフレームの解像度を得る (avsw入力の解像度変更追従で使用)
@@ -708,6 +714,11 @@ public:
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override {
         const auto inputFrameInfo = m_input->GetInputFrameInfo();
         RGYFrameInfo info(inputFrameInfo.srcWidth, inputFrameInfo.srcHeight, inputFrameInfo.csp, inputFrameInfo.bitdepth, inputFrameInfo.picstruct, RGY_MEM_TYPE_GPU);
+        // requiredSurfOut()の戻り値はallocatePiplelineFrames()でのみ確保寸法として使われる。ここだけを最大値へ広げ、
+        // LoadNextFrameCL()がunmap後に設定するframe.width/heightは各フレームの実解像度のまま下流へ伝える。
+        // この分離を崩すと、先頭から最大解像度の映像として処理されるか、拡大時にmap範囲外書き込みになる。
+        info.width = std::max(info.width, m_adaptResolutionMaxWidth);
+        info.height = std::max(info.height, m_adaptResolutionMaxHeight);
         return std::make_pair(info, m_outMaxQueueSize);
     };
     RGY_ERR LoadNextFrameCL() {

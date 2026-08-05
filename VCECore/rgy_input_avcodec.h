@@ -869,6 +869,8 @@ public:
     RGYListRef<RGYFrameDataQP> *qpTableListRef; //qp tableを格納するときのベース構造体
     RGYOptList     inputOpt;                //入力オプション
     RGYHEVCBsf     hevcbsf;
+    int            adaptResolutionMaxWidth; //入力途中の解像度変更で許可する最大幅 (0: 初期幅)
+    int            adaptResolutionMaxHeight;//入力途中の解像度変更で許可する最大高さ (0: 初期高さ)
     tstring        avswDecoder;             //avswデコーダの指定
 
     RGYInputAvcodecPrm(RGYInputPrm base);
@@ -1069,8 +1071,8 @@ protected:
     tstring          m_logFramePosList;           //FramePosListの内容を入力終了時に出力する (デバッグ用)
     std::unique_ptr<FILE, fp_deleter> m_fpPacketList; // 読み取ったパケット情報を出力するファイル
     vector<uint8_t>  m_hevcMp42AnnexbBuffer;       //HEVCのmp4->AnnexB簡易変換用バッファ
-    int              m_initialSrcWidth;             //入力初期解像度（途中の拡大可否判定用）
-    int              m_initialSrcHeight;
+    int              m_maxSrcWidth;                 //入力途中の解像度変更で許可する最大幅
+    int              m_maxSrcHeight;
     bool             m_suppressPulldownDetect;     // true: skip avgDuration *= 1.25 after bPulldown is detected. bPulldown itself is still set so log/diagnostic paths see it. Mirrors RGYInputAvcodecPrm::suppressPulldownMutation.
     bool             m_pulldownDetected;           // true when getFirstFramePosAndFrameRate detected soft pulldown.
 

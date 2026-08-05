@@ -279,6 +279,8 @@ RGYInputAvcodecPrm::RGYInputAvcodecPrm(RGYInputPrm base) :
     qpTableListRef(nullptr),
     inputOpt(),
     hevcbsf(RGYHEVCBsf::INTERNAL),
+    adaptResolutionMaxWidth(0),
+    adaptResolutionMaxHeight(0),
     avswDecoder() {
 
 }
@@ -288,8 +290,8 @@ RGYInputAvcodec::RGYInputAvcodec() :
     m_logFramePosList(),
     m_fpPacketList(),
     m_hevcMp42AnnexbBuffer(),
-    m_initialSrcWidth(0),
-    m_initialSrcHeight(0),
+    m_maxSrcWidth(0),
+    m_maxSrcHeight(0),
     m_suppressPulldownDetect(false),
     m_pulldownDetected(false) {
     m_readerName = _T("av" DECODER_NAME "/avsw");
@@ -2292,8 +2294,19 @@ RGY_ERR RGYInputAvcodec::Init(const TCHAR *strFileName, VideoInfo *inputInfo, co
         //情報を格納
         m_inputVideoInfo.srcWidth    = m_Demux.video.stream->codecpar->width;
         m_inputVideoInfo.srcHeight   = m_Demux.video.stream->codecpar->height;
-        m_initialSrcWidth            = m_inputVideoInfo.srcWidth;
-        m_initialSrcHeight           = m_inputVideoInfo.srcHeight;
+        // adapt-resolutionは「途中で到達し得る最大値」であって、初期フレームを縮小する指定ではない。
+        // 片方でも初期値より小さい指定を受理すると、後段がその値で確保したサーフェスへ初期フレームを書けないため、初期化時点で止める。
+        if ((input_prm->adaptResolutionMaxWidth > 0 && input_prm->adaptResolutionMaxWidth < m_inputVideoInfo.srcWidth)
+            || (input_prm->adaptResolutionMaxHeight > 0 && input_prm->adaptResolutionMaxHeight < m_inputVideoInfo.srcHeight)) {
+            AddMessage(RGY_LOG_ERROR, _T("adapt-resolution %dx%d is smaller than the initial input resolution %dx%d.\n"),
+                input_prm->adaptResolutionMaxWidth, input_prm->adaptResolutionMaxHeight,
+                m_inputVideoInfo.srcWidth, m_inputVideoInfo.srcHeight);
+            return RGY_ERR_INVALID_PARAM;
+        }
+        // 未指定(0)は初期解像度へ解決しておく。以降の変更検出側を同一の上限判定にまとめることで、
+        // オプション未指定時には「初期解像度を超える拡大を拒否する」という従来動作をそのまま維持する。
+        m_maxSrcWidth               = (input_prm->adaptResolutionMaxWidth > 0) ? input_prm->adaptResolutionMaxWidth : m_inputVideoInfo.srcWidth;
+        m_maxSrcHeight              = (input_prm->adaptResolutionMaxHeight > 0) ? input_prm->adaptResolutionMaxHeight : m_inputVideoInfo.srcHeight;
         m_inputVideoInfo.sar[0]      = (bAspectRatioUnknown) ? 0 : m_Demux.video.stream->codecpar->sample_aspect_ratio.num;
         m_inputVideoInfo.sar[1]      = (bAspectRatioUnknown) ? 0 : m_Demux.video.stream->codecpar->sample_aspect_ratio.den;
         m_inputVideoInfo.frames      = 0;
@@ -3586,10 +3599,12 @@ RGY_ERR RGYInputAvcodec::LoadNextFrameInternal(RGYFrame *pSurface) {
 #if ENABLE_INPUT_RESOLUTION_CHANGE
             const int newWidth = m_Demux.video.frame->width;
             const int newHeight = m_Demux.video.frame->height;
-            if (newWidth > m_initialSrcWidth || newHeight > m_initialSrcHeight) {
-                AddMessage(RGY_LOG_ERROR, _T("input resolution changed from %dx%d to %dx%d, exceeding the initial resolution %dx%d, which is not supported.\n"),
+            // この検査は下のconvertが呼ばれる前に行う必要がある。指定上限はPipelineTaskInputのOpenCLサーフェス確保寸法にも使われるため、
+            // 上限超過フレームをconvertへ渡すと、エラーを返す前に確保領域外へ書き込む危険がある。
+            if (newWidth > m_maxSrcWidth || newHeight > m_maxSrcHeight) {
+                AddMessage(RGY_LOG_ERROR, _T("input resolution changed from %dx%d to %dx%d, exceeding the maximum resolution %dx%d.\n"),
                     m_inputVideoInfo.srcWidth, m_inputVideoInfo.srcHeight, newWidth, newHeight,
-                    m_initialSrcWidth, m_initialSrcHeight);
+                    m_maxSrcWidth, m_maxSrcHeight);
                 AddMessage(RGY_LOG_ERROR, _T("  Please split the input file at the resolution change point.\n"));
                 return RGY_ERR_UNSUPPORTED;
             }

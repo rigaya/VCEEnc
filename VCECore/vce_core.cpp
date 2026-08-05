@@ -1490,7 +1490,14 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
             // バイパスするとsendFrame()が素通しして m_videoMetric->filter() を呼ばないため指標計算が飛ぶ。よってこの構成ではバイパスしない
             // (常設自体は行うので解像度変更への追従機能は落ちない。落とすのは性能最適化だけ)
             // なおここではm_videoQualityMetricがまだ生成されていない(生成はinitFilters()より後)ので、パラメータ側で判定する
-            m_clFilterBypassForResChange = !inputParam->common.metric.enabled();
+            // adapt-resolution指定時はバイパスを禁止し、最初から最大寸法のOpenCLサーフェスを使用する。
+            // バイパス中のLoadNextFrameAMF()は、readerが次のフレームをデコードして新解像度を知る「前」に現在解像度でAMF面を確保する。
+            // そのため最初の拡大フレームだけ旧サイズの面へ書こうとしてしまい、reader側の上限判定を緩めるだけではメモリ安全にならない。
+            // OpenCL経路ならPipelineTaskInput::requiredSurfOut()が指定最大値でプールを事前確保するため、この確保順序の問題を避けられる。
+            // map/unmapとcsp往復の性能コストがあるので、未指定時まで一律にバイパスを外さずオプトイン時だけに限定する。
+            m_clFilterBypassForResChange = !inputParam->common.metric.enabled()
+                && inputParam->common.adaptResolutionMaxWidth == 0
+                && inputParam->common.adaptResolutionMaxHeight == 0;
         }
 #endif
         return filterPipeline;
@@ -4391,7 +4398,8 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
     if (m_pDecoder) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskAMFDecode>(m_pDecoder, m_dev->context(), parallelEncEndPts, 1, m_pFileReader.get(), m_pLog));
     } else {
-        m_pipelineTasks.push_back(std::make_unique<PipelineTaskInput>(m_dev->context(), parallelEncEndPts, 0, m_pFileReader.get(), m_dev->cl(), m_pLog));
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskInput>(m_dev->context(), parallelEncEndPts, 0, m_pFileReader.get(), m_dev->cl(),
+            prm->common.adaptResolutionMaxWidth, prm->common.adaptResolutionMaxHeight, m_pLog));
     }
     if (m_pFileWriterListAudio.size() > 0 || hasFilterForStreams(m_vpFilters)) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskAudio>(m_dev->context(), m_pFileReader.get(), m_AudioReaders, m_pFileWriterListAudio, m_vpFilters, 0, m_pLog));

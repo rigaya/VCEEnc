@@ -168,6 +168,7 @@
   - [--tcfile-in \<string\>](#--tcfile-in-string)
   - [--timebase \<int\>/\<int\>](#--timebase-intint)
   - [--input-hevc-bsf \<string\>](#--input-hevc-bsf-string)
+  - [--adapt-resolution \<maxw\>x\<maxh\>](#--adapt-resolution-maxwxmaxh)
   - [--input-pixel-format \<string\>](#--input-pixel-format-string)
   - [--offset-video-dts-advance](#--offset-video-dts-advance)
   - [--allow-other-negative-pts](#--allow-other-negative-pts)
@@ -1561,6 +1562,11 @@ switch hevc bitstream filter used for hw decoder input. (for debug purpose)
 
   - libavcodec  
     use hevc_mp4toannexb bitstream filter.
+
+### --adapt-resolution &lt;maxw&gt;x&lt;maxh&gt;
+Set the maximum input resolution allowed when the resolution changes in the middle of the input.
+This option is supported with the avsw reader. When omitted, expansion beyond the initial resolution is not allowed.
+Both values must be positive multiples of 2 and must not be smaller than the initial input resolution.
 
 ### --input-pixel-format &lt;string&gt;
 Set "pixel_format" for input avdevice. (not intended on other situations)

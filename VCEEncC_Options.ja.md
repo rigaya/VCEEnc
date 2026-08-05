@@ -1455,6 +1455,11 @@ switch hevc bitstream filter used for hw decoder input. (for debug purpose)
   - libavcodec  
     libavcodec の hevc_mp4toannexb bitstream filter を使用する。
 
+### --adapt-resolution &lt;maxw&gt;x&lt;maxh&gt;
+入力途中で解像度が変化するときに許可する最大入力解像度を指定する。avswリーダーでのみ使用できる。
+省略時は従来どおり、初期解像度を超える拡大を許可しない。
+幅と高さには、初期入力解像度以上の正の2の倍数を指定する。
+
 ### --input-pixel-format &lt;string&gt;
 avdeviceで使用する "pixel_format" の設定。(それ以外での用途での使用は想定していません)
 
