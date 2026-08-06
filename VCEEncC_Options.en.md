@@ -1013,6 +1013,7 @@ Copy audio track into output file. Available only when avhw / avsw reader is use
 If it does not work well, try encoding with [--audio-codec](#--audio-codec-intstring), which is more stable.
 
 You can also specify the audio track (1, 2, ...) to extract with [&lt;int&gt;], or select audio track to copy by language with [&lt;string&gt;].
+Prefix languages with `!` to select all tracks except those languages (for example, `!eng,!jpn`).
 
 - Examples
   ```
@@ -1030,6 +1031,7 @@ You can also specify the audio track (1, 2, ...) to extract with [&lt;int&gt;], 
 Encode audio track with the codec specified. If codec is not set, most suitable codec will be selected automatically. Codecs available could be checked with [--check-encoders](#--check-codecs---check-decoders---check-encoders).
 
 You can select audio track (1, 2, ...) to encode with [&lt;int&gt;], or select audio track to encode by language with [&lt;string&gt;].
+Prefix languages with `!` to select all tracks except those languages (for example, `--audio-codec !eng,!jpn?copy`).
 
 Also, after ":" you can specify params for audio encoder,  after "#" you can specify params for audio decoder.
 
@@ -1413,6 +1415,7 @@ Read subtitle from the specified file and mux into the output file.
 ### --sub-copy [&lt;int/string&gt;;[,&lt;int/string&gt;]...]
 Copy subtitle tracks from input file. Available only when avhw / avsw reader is used.
 It is also possible to specify subtitle tracks (1, 2, ...) to extract with [&lt;int&gt;], or select subtitle tracks to copy by language with [&lt;string&gt;].
+Prefix languages with `!` to select all tracks except those languages (for example, `!eng,!jpn`).
 
 Supported subtitles are PGS / srt / txt / ttxt.
 

@@ -3993,6 +3993,7 @@ static const TCHAR *RGY_METADATA_COPY = _T("copy");
 
 static const int TRACK_SELECT_BY_LANG  = -1;
 static const int TRACK_SELECT_BY_CODEC = -2;
+static const int TRACK_SELECT_BY_LANG_EXCLUDE = -3;
 
 struct AudioBitrate {
     std::string channel;
@@ -4013,6 +4014,7 @@ struct AudioSelect {
                               // 0 ... 全指定
                               // TRACK_SELECT_BY_LANG  ... langによる選択
                               // TRACK_SELECT_BY_CODEC ... selectCodecによる選択
+                              // TRACK_SELECT_BY_LANG_EXCLUDE ... langによる除外
     tstring  decCodecPrm;     //音声エンコードのデコーダのパラメータ
     tstring  encCodec;        //音声エンコードのコーデック
     tstring  encCodecPrm;     //音声エンコードのコーデックのパラメータ
@@ -4052,6 +4054,7 @@ struct SubtitleSelect {
                          //  0 ... 全指定
                          //  TRACK_SELECT_BY_LANG ... langによる選択
                          //  TRACK_SELECT_BY_CODEC ... selectCodecによる選択
+                         //  TRACK_SELECT_BY_LANG_EXCLUDE ... langによる除外
     tstring encCodec;
     tstring encCodecPrm;
     tstring decCodecPrm;
