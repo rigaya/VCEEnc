@@ -1,5 +1,13 @@
 # VCEEnc Release Notes
 
+## 9.12
+
+- Follow mid-stream input resolution changes with [--avsw](./VCEEncC_Options.en.md#--avsw-string).
+- Add [--adapt-resolution](./VCEEncC_Options.en.md#--adapt-resolution-maxwxmaxh) to set the maximum input resolution for variable-resolution sources.
+- Support language exclusion for audio/subtitle track selection ([--audio-copy](./VCEEncC_Options.en.md#--audio-copy-intstringintstring), [--audio-codec](./VCEEncC_Options.en.md#--audio-codec-intstringstringstringstringstringstring), [--sub-copy](./VCEEncC_Options.en.md#--sub-copy-intstringintstring)).
+- Fix GPU memory growth with [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) mode=24 on long encodes.
+- Improve memory retention in [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2).
+
 ## 9.11
 
 - Update for VCEEnc.auo2 only.
