@@ -147,6 +147,17 @@ static inline float sample_chroma_up2(const uint8_t *plane, const int pitch, con
 
 // 2x2 box-downsample a full-res normalised channel to a half-res 8-bit chroma
 // plane, encoding each averaged value as v*encScale + encOff (rounded, clamped).
+//
+// この関数は厳密なfloat32で丸める必要がある。/fp:fastでビルドすると、MSVCは
+// `avg * encScale + encOff`をより広い精度の中間値として保持する。そのため、
+// float32値がちょうど0.5の境界に乗る場合に中間値が境界をわずかに下回り、
+// 切り捨てる(int)キャストで値が1段小さくなる。発生頻度は低く(約100万サンプルに1回)、
+// 常に1だけずれるが、この関数自身の記述や対応するOpenCLカーネルと結果が一致しなくなる。
+// 関数全体をpreciseにする以外の方法では解決できない。中間値への(float)キャスト、
+// volatileな一時変数、precise専用の丸めヘルパーも試したが、いずれも誤った値になった。
+#if defined(_MSC_VER)
+#pragma float_control(precise, on, push)
+#endif
 static void downsample420_encode(uint8_t *dst, const int dstPitch, const int dstStride,
                                  const float *srcFull, const int fullW, const int fullH,
                                  const float encScale, const float encOff, const int pixMax) {
@@ -164,6 +175,9 @@ static void downsample420_encode(uint8_t *dst, const int dstPitch, const int dst
         }
     }
 }
+#if defined(_MSC_VER)
+#pragma float_control(pop)
+#endif
 
 // Copy one 8-bit plane (row-by-row, honouring pitches). width is in samples,
 // srcStride/dstStride 1 for planar, 2 for nv12-interleaved.
