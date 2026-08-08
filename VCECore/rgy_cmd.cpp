@@ -12121,18 +12121,20 @@ int parse_one_common_option(const TCHAR *option_name, const TCHAR *strInput[], i
         return 0;
     }
     if (IS_OPTION("adapt-resolution")) {
-        i++;
-        int width = 0;
-        int height = 0;
-        // VCEの入力面とOpenCLフレームはいずれもmod2を前提とする。ここで丸めるとユーザーが指定した上限と
-        // 実際の許可範囲が食い違うため、不正値は補正せずコマンドラインエラーとする。
-        if (2 != _stscanf_s(strInput[i], _T("%dx%d"), &width, &height)
-            || width <= 0 || height <= 0 || width % 2 != 0 || height % 2 != 0) {
-            print_cmd_error_invalid_value(option_name, strInput[i], _T("adapt-resolution requires positive mod2 values in <maxw>x<maxh> format."));
+        if (i + 1 >= nArgNum) {
+            print_cmd_error_invalid_value(option_name, _T(""));
             return 1;
         }
-        common->adaptResolutionMaxWidth = width;
-        common->adaptResolutionMaxHeight = height;
+        i++;
+        int resolution[2] = { 0, 0 };
+        // 共通パーサでは形式と正数であることだけを確認する。サーフェス型の上限や初期入力との大小関係は、
+        // encoderとヘッダ解析結果に依存するため、reader初期化後のpipeline側で検証する。
+        if (2 != _stscanf_s(strInput[i], _T("%dx%d"), &resolution[0], &resolution[1])
+            || resolution[0] <= 0 || resolution[1] <= 0) {
+            print_cmd_error_invalid_value(option_name, strInput[i]);
+            return 1;
+        }
+        common->adaptResolution = std::make_pair(resolution[0], resolution[1]);
         return 0;
     }
 #if !ENCODER_MPP
@@ -15538,9 +15540,8 @@ tstring gen_cmd(const RGYParamCommon *param, const RGYParamCommon *defaultPrm, b
     }
 
     OPT_LST(_T("--input-hevc-bsf"), hevcbsf, list_hevc_bsf_mode);
-    if (param->adaptResolutionMaxWidth != defaultPrm->adaptResolutionMaxWidth
-        || param->adaptResolutionMaxHeight != defaultPrm->adaptResolutionMaxHeight) {
-        cmd << _T(" --adapt-resolution ") << param->adaptResolutionMaxWidth << _T("x") << param->adaptResolutionMaxHeight;
+    if (param->adaptResolution != defaultPrm->adaptResolution) {
+        cmd << _T(" --adapt-resolution ") << param->adaptResolution.first << _T("x") << param->adaptResolution.second;
     }
     OPT_STR_PATH(_T("--tcfile-in"), tcfileIn);
     if (param->timebase != defaultPrm->timebase) {

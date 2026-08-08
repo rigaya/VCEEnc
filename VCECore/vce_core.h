@@ -184,7 +184,7 @@ protected:
     vector<VppVilterBlock>        m_vpFilters;
     shared_ptr<RGYFilterParam>    m_pLastFilterParam;
     unique_ptr<RGYFilterSsim>     m_videoQualityMetric;
-    // m_vpFiltersが「フィルタゼロ構成のために常設したCL_CROPブロック1つだけ」かどうか (解像度変更対応、ENABLE_INPUT_RESOLUTION_CHANGE時のみtrueになりうる)
+    // m_vpFiltersが「フィルタゼロ構成のために常設したCL_CROPブロック1つだけ」かどうか (解像度変更対応)
     // trueのとき allocatePiplelineFrames() はOpenCLフレームを確保せず、PipelineTaskOpenCLは解像度が変わるまでフィルタを素通しする
     // 品質指標計算が有効な場合は常設ブロックへmetricがattachされる関係でバイパスできないため、常設していてもfalseになる
     bool                          m_clFilterBypassForResChange;

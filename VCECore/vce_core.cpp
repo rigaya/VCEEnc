@@ -1478,7 +1478,6 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.overlay.size() > 0)  filterPipeline.push_back(VppType::CL_OVERLAY);
 
     if (filterPipeline.size() == 0) {
-#if ENABLE_INPUT_RESOLUTION_CHANGE
         // フィルタが1つも無い構成ではOpenCLブロック自体が無く、解像度変更を吸収する場所が無い(AMFエンコーダがAMF_INVALID_RESOLUTIONで停止する)
         // このため等倍のCL_CROPを1つ常設してOpenCLブロックを作る。これはInitFilters()で先頭・末尾のCspCrop2つに展開され、
         // reconstructFilterChain()が要求する「先頭と末尾がCspCrop」の形になる
@@ -1499,7 +1498,6 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
                 && inputParam->common.adaptResolutionMaxWidth == 0
                 && inputParam->common.adaptResolutionMaxHeight == 0;
         }
-#endif
         return filterPipeline;
     }
     // HQScalerが使用できない場合

@@ -4254,8 +4254,7 @@ struct RGYParamCommon {
     tstring tcfileIn;
     rgy_rational<int> timebase;
     RGYHEVCBsf hevcbsf;
-    int adaptResolutionMaxWidth;  //入力途中の解像度変更で許可する最大幅 (0: 初期幅を上限とする従来動作)
-    int adaptResolutionMaxHeight; //入力途中の解像度変更で許可する最大高さ (0: 初期高さを上限とする従来動作)
+    std::pair<int, int> adaptResolution;
 
     RGYVideoQualityMetric metric;
 
