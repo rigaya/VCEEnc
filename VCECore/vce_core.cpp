@@ -1495,8 +1495,8 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
             // OpenCL経路ならPipelineTaskInput::requiredSurfOut()が指定最大値でプールを事前確保するため、この確保順序の問題を避けられる。
             // map/unmapとcsp往復の性能コストがあるので、未指定時まで一律にバイパスを外さずオプトイン時だけに限定する。
             m_clFilterBypassForResChange = !inputParam->common.metric.enabled()
-                && inputParam->common.adaptResolutionMaxWidth == 0
-                && inputParam->common.adaptResolutionMaxHeight == 0;
+                && inputParam->common.adaptResolution.first == 0
+                && inputParam->common.adaptResolution.second == 0;
         }
         return filterPipeline;
     }
@@ -4397,7 +4397,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskAMFDecode>(m_pDecoder, m_dev->context(), parallelEncEndPts, 1, m_pFileReader.get(), m_pLog));
     } else {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskInput>(m_dev->context(), parallelEncEndPts, 0, m_pFileReader.get(), m_dev->cl(),
-            prm->common.adaptResolutionMaxWidth, prm->common.adaptResolutionMaxHeight, m_pLog));
+            prm->common.adaptResolution.first, prm->common.adaptResolution.second, m_pLog));
     }
     if (m_pFileWriterListAudio.size() > 0 || hasFilterForStreams(m_vpFilters)) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskAudio>(m_dev->context(), m_pFileReader.get(), m_AudioReaders, m_pFileWriterListAudio, m_vpFilters, 0, m_pLog));
