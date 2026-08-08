@@ -1516,6 +1516,7 @@ vppフィルタの適用順は固定で、コマンドラインの順序によ�
   - [--vpp-hqdn3d](#--vpp-hqdn3d-param1value1param2value2)
   - [--vpp-anime4k-shader](#--vpp-anime4k-shader-param1value1param2value2)
   - [--vpp-onnx](#--vpp-onnx-param1value1param2value2)
+  - [--vpp-onnx-deint](#--vpp-onnx-deint-param1value1param2value2)
   - [--vpp-rife-ov](#--vpp-rife-ov-param1value1param2value2)
   - [--vpp-descale](#--vpp-descale-param1value1param2value2)
   - [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
@@ -2768,7 +2769,7 @@ ONNX Runtime DirectML を使用し、指定したONNXモデルをGPUで実行す
     使用するONNXモデルファイル。または、[`--vpp-onnx-model-dir`](#--vpp-onnx-model-dir-string) 指定時は models.json に登録済みのモデル名。
     登録モデルの models.json に `"fp32": true` があり、`prec=auto` の場合は、VCEEnc が自動的に `prec=fp32` を使用する。
 
-  - device=&lt;string&gt;, interop=&lt;string&gt;
+  - device=&lt;string&gt;
     DirectMLではエンコーダと同じGPUに紐づけるため、現在は互換用パラメータ。
 
   - colormatrix=&lt;string&gt;
@@ -2805,6 +2806,34 @@ ONNX Runtime DirectML を使用し、指定したONNXモデルをGPUで実行す
   ```
   --vpp-onnx model=hdrtvnetpp_agcm_dynamic,colormatrix=bt709 --output-depth 10 --colormatrix bt2020nc --colorprim bt2020 --transfer smpte2084
   ```
+
+### --vpp-onnx-deint [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+ONNX Runtime DirectMLでONNXモデルを実行するデインターレースフィルタ。モデルは`onnx_deint_models.json`に登録された名前で選択し、ONNXファイルの直接パスは受け付けない。マニフェストの`architecture`でST-DeIntまたはDDDの入力形式を決定する。
+
+`mode=bob`は入力1フレームから2枚のプログレッシブフレームを出力してフレームレートを2倍にし、`mode=normal`は表示順で先のフィールドを基準に1枚出力する。TFF/BFFのフィールド順を維持し、プログレッシブ入力はニューラル推論せずパススルーする。入力は8bit YUV420のみで、高さは偶数（4以上）である必要がある。
+
+- **パラメータ**
+  - model=&lt;string&gt; (必須)
+    [`--vpp-onnx-model-dir`](#--vpp-onnx-model-dir-string)配下の`onnx_deint_models.json`に登録された名前。
+  - device=&lt;string&gt; (デフォルト: GPU.0)
+    互換用パラメータ。DirectMLではエンコーダと同じGPUを使用する。
+  - precision=&lt;string&gt; (デフォルト: fp32)
+    fp32 / auto。DirectMLではどちらもモデル定義のfp32を使用する。
+  - mode=&lt;string&gt; (デフォルト: bob)
+    bob / normal。
+  - colormatrix=&lt;string&gt; (デフォルト: auto)
+    auto / auto_res / bt709 / smpte170m / bt470bg / bt2020nc。
+  - colorrange=&lt;string&gt; (デフォルト: auto)
+    auto / limited (tv) / full (pc)。
+
+ST-DeIntとDDDのモデルはリリースアーカイブに含まれない。利用者が権利条件・ライセンスを確認し、[HWEnc-onnx-models](https://github.com/rigaya/HWEnc-onnx-models)の`run_all.py`で`onnx_deint_models.json`を生成してから使用すること。
+
+```
+--vpp-onnx-model-dir C:\models\HWEnc-onnx-models
+--vpp-onnx-deint model=stdeint,mode=bob,precision=fp32
+--vpp-onnx-deint model=DDD,mode=normal,precision=auto
+```
 
 ### --vpp-onnx-model-dir &lt;string&gt;
 登録済みONNXモデルのmodels.jsonおよびモデルファイルが格納されたディレクトリを指定する。

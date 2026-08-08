@@ -89,7 +89,7 @@ Debian/Ubuntu系 (x64)
 
   | カテゴリ | フィルタ |
   |:--|:--|
-  | インタレ解除 | afs, bwdif, yadif, nnedi, rtgmc, kfm, decomb, stdeint |
+  | インタレ解除 | afs, bwdif, yadif, nnedi, rtgmc, kfm, decomb, onnx-deint |
   | 逆テレシネ・間引き | rff, ivtc, decimate, mpdecimate |
   | ノイズ除去 | knn, pmd, nlmeans, hqdn3d, smooth, denoise-dct, fft3d, msmooth, degrain, convolution3d |
   | リサイズ | resize (様々なアルゴリズム), descale, preprocess |

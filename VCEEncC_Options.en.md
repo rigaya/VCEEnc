@@ -1623,6 +1623,7 @@ Vpp filters will be applied in fixed order, regardless of the order in the comma
   - [--vpp-hqdn3d](#--vpp-hqdn3d-param1value1param2value2)
   - [--vpp-anime4k-shader](#--vpp-anime4k-shader-param1value1param2value2)
   - [--vpp-onnx](#--vpp-onnx-param1value1param2value2)
+  - [--vpp-onnx-deint](#--vpp-onnx-deint-param1value1param2value2)
   - [--vpp-rife-ov](#--vpp-rife-ov-param1value1param2value2)
   - [--vpp-descale](#--vpp-descale-param1value1param2value2)
   - [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
@@ -2771,8 +2772,8 @@ Experimental CNN filter that runs the specified ONNX model on GPU through ONNX R
   - model=&lt;string&gt; / modelfile=&lt;string&gt;  
     ONNX model file path, or registered model name in models.json when [`--vpp-onnx-model-dir`](#--vpp-onnx-model-dir-string) is specified.
     If a registered model has `"fp32": true` in models.json and `prec=auto`, VCEEnc automatically uses `prec=fp32`.
-  - device=&lt;string&gt;, interop=&lt;string&gt;  
-    Compatibility parameters. DirectML currently binds inference to the same GPU as the encoder.
+  - device=&lt;string&gt;  
+    Compatibility parameter. DirectML binds inference to the same GPU as the encoder.
   - colormatrix=&lt;string&gt;  
     Accepts the same names as [`--colormatrix`](#--colormatrix-string). `--vpp-onnx` supports `auto`, `auto_res`, `smpte170m`, `bt470bg`, `bt709`, `bt2020nc`.
   - colormatrix_out=&lt;string&gt;  
@@ -2799,6 +2800,34 @@ Experimental CNN filter that runs the specified ONNX model on GPU through ONNX R
   ```
   --vpp-onnx model=hdrtvnetpp_agcm_dynamic,colormatrix=bt709 --output-depth 10 --colormatrix bt2020nc --colorprim bt2020 --transfer smpte2084
   ```
+
+### --vpp-onnx-deint [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+
+ONNX model based deinterlacing through ONNX Runtime DirectML. Select a registered model from `onnx_deint_models.json`; direct model paths are not accepted. The manifest `architecture` selects the ST-DeInt or DDD tensor layout.
+
+`mode=bob` emits two progressive frames and doubles the frame rate, while `mode=normal` emits the first field in display order. TFF/BFF order is preserved. Progressive input bypasses neural inference. Input must be 8-bit YUV420 with an even height of at least four.
+
+- **parameters**
+  - model=&lt;string&gt; (required)  
+    Registered name in `onnx_deint_models.json` under [`--vpp-onnx-model-dir`](#--vpp-onnx-model-dir-string).
+  - device=&lt;string&gt; (default: GPU.0)  
+    Compatibility parameter. DirectML uses the same GPU as the encoder.
+  - precision=&lt;string&gt; (default: fp32)  
+    fp32 / auto. DirectML uses the model-authored fp32 precision for both values.
+  - mode=&lt;string&gt; (default: bob)  
+    bob / normal.
+  - colormatrix=&lt;string&gt; (default: auto)  
+    auto / auto_res / bt709 / smpte170m / bt470bg / bt2020nc.
+  - colorrange=&lt;string&gt; (default: auto)  
+    auto / limited (tv) / full (pc).
+
+ST-DeInt and DDD models are not included in release archives. Verify their rights and licenses, then generate `onnx_deint_models.json` with `run_all.py` from [HWEnc-onnx-models](https://github.com/rigaya/HWEnc-onnx-models).
+
+```
+--vpp-onnx-model-dir C:\models\HWEnc-onnx-models
+--vpp-onnx-deint model=stdeint,mode=bob,precision=fp32
+--vpp-onnx-deint model=DDD,mode=normal,precision=auto
+```
 
 ### --vpp-onnx-model-dir &lt;string&gt;
 Directory containing models.json and the model files for registered ONNX models.

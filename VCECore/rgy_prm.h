@@ -89,7 +89,7 @@ static const int RGY_AUDIO_QUALITY_DEFAULT = 0;
 #define ENABLE_VPP_FILTER_ANIME4K      (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP)
 #define ENABLE_VPP_FILTER_ONNX         ((ENABLE_OPENVINO && ENCODER_QSV) || (ENABLE_ONNXRUNTIME && (ENCODER_NVENC || ENCODER_VCEENC)))
 #define ENABLE_VPP_FILTER_RIFE_OV      ((ENABLE_OPENVINO && ENCODER_QSV) || (ENABLE_ONNXRUNTIME && (ENCODER_NVENC || ENCODER_VCEENC)))
-#define ENABLE_VPP_FILTER_STDEINT      (0) // DISABLED
+#define ENABLE_VPP_FILTER_ONNX_DEINT      ((ENABLE_OPENVINO && ENCODER_QSV) || (ENABLE_ONNXRUNTIME && ENCODER_VCEENC))
 #define ENABLE_VPP_FILTER_DENOISE_DCT  (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP || CLFILTERS_AUF)
 #define ENABLE_VPP_FILTER_SMOOTH       (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP || CLFILTERS_AUF)
 #define ENABLE_VPP_FILTER_FFT3D        (ENCODER_QSV   || ENCODER_NVENC || ENCODER_VCEENC || ENCODER_MPP)
@@ -190,7 +190,7 @@ enum class VppType : int {
     CL_KFM,
     CL_YADIF,
     CL_DECOMB,
-    CL_STDEINT,
+    CL_ONNX_DEINT,
     CL_IVTC,
     CL_DECIMATE,
     CL_MPDECIMATE,
@@ -3545,7 +3545,6 @@ struct VppOnnx {
     bool    enable;
     tstring modelFile;   // path to the ONNX (or OpenVINO IR .xml) model
     tstring device;      // OpenVINO device: "GPU.0" (default), "GPU", "CPU", "AUTO", "NPU"
-    tstring interop;     // "auto" (default), "ocl" (zero-copy shared context), "host" (readback)
     tstring provider;
     tstring precision;   // "auto" (default), "fp16", "fp32"
     tstring cacheDir;    // OpenVINOのCACHE_DIR (コンパイル済みモデルのキャッシュ先, ""=無効=従来動作)
@@ -3581,26 +3580,32 @@ struct VppRifeOV {
     tstring print() const;
 };
 
-enum class VppStDeintMode {
+enum class VppOnnxDeintMode {
     Bob,
     Normal,
 };
 
-extern const CX_DESC list_vpp_stdeint_mode[];
+// モデルごとのフィールドの与え方。チャンネル数からは判別できない
+// (DDDとDeFはどちらも9ch入力/3ch出力だが、DDDは転置したフィールド、DeFは行補間した
+//  フレームを受け取る)ため、明示的に指定する。
+enum class VppOnnxDeintArchitecture {
+    StDeint,
+    DDD,
+};
 
-struct VppStDeint {
+extern const CX_DESC list_vpp_onnx_deint_mode[];
+struct VppOnnxDeint {
     bool    enable;
     tstring modelFile;
     tstring device;
-    tstring provider;
     tstring precision;
-    VppStDeintMode mode;
+    VppOnnxDeintMode mode;
     CspMatrix colormatrix;
     CspColorRange colorrange;
 
-    VppStDeint();
-    bool operator==(const VppStDeint& x) const;
-    bool operator!=(const VppStDeint& x) const;
+    VppOnnxDeint();
+    bool operator==(const VppOnnxDeint& x) const;
+    bool operator!=(const VppOnnxDeint& x) const;
     tstring print() const;
 };
 
@@ -3918,7 +3923,7 @@ struct RGYParamVpp {
     VppKfm kfm;
     VppYadif yadif;
     VppDecomb decomb;
-    VppStDeint stdeint;
+    VppOnnxDeint onnxDeint;
     VppIvtc ivtc;
     VppRff rff;
     VppSelectEvery selectevery;
