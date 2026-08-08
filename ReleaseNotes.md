@@ -8,6 +8,7 @@
 - Support language exclusion for audio/subtitle track selection ([--audio-copy](./VCEEncC_Options.en.md#--audio-copy-intstringintstring), [--audio-codec](./VCEEncC_Options.en.md#--audio-codec-intstringstringstringstringstringstring), [--sub-copy](./VCEEncC_Options.en.md#--sub-copy-intstringintstring)).
 - Fix GPU memory growth with [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) mode=24 on long encodes.
 - Improve memory retention in [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2).
+- Output mp4 trailer even if error has occurred.
 
 ## 9.11
 
