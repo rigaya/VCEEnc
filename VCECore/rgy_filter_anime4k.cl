@@ -32,7 +32,7 @@
 //   * apply                  cite Anime4K_Upscale_Original_x2.glsl v3.2 (pass 6)
 //   * polynomial P5..P0      cite same file, "Polynomial fit obtained by
 //                            minimizing MSE error on image"
-// No shader source was copied verbatim.
+// No shader source was copied verbatim. See ACKNOWLEDGMENTS.md.
 //
 // Build-time defines:
 //   Type        = uchar / ushort   (host plane data type)

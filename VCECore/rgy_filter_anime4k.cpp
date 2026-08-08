@@ -42,7 +42,6 @@ RGYFilterAnime4k::RGYFilterAnime4k(shared_ptr<RGYOpenCLContext> context) :
     m_scratchPitchFloats(0), m_outW(0), m_outH(0),
     m_srcImagePool(), m_frameIdx(0),
     m_fp16Scratch(false),
-    m_kernelWgQueried(false),
     m_dtdSrcLuma(), m_dtdSrcLumaPitch(0), m_dtdSrcW(0), m_dtdSrcH(0),
     m_chromaLumaLowres(), m_chromaLowresPitch(0), m_chromaLowresW(0), m_chromaLowresH(0),
     m_prefilterPlane(), m_prefilterPlanePitch(0),
@@ -699,6 +698,774 @@ RGY_ERR RGYFilterAnime4k::runPrefilterDenoise(
     return RGY_ERR_NONE;
 }
 
+RGY_ERR RGYFilterAnime4k::runModeOriginal(const Anime4kDispatchCtx &ctx, RGYFrameInfo *pOutputPlaneY,
+                                          const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+    // Base shader chain: Sobel partial + polynomial-refinement
+    // edge-blend at the 2x output resolution. Cite
+    // Anime4K_Upscale_Original_x2.glsl v3.2.
+    {
+        const char *kname = "kernel_anime4k_sobel_x";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_x_pass, ctx.global, wait_events, nullptr).launch(
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            ctx.srcImageMem,
+            ctx.srcW, ctx.srcH, ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_sobel_y";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_y_pass, ctx.global, {}, nullptr).launch(
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_refine_x";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_x_pass, ctx.global, {}, nullptr).launch(
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_refine_y";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_y_pass, ctx.global, {}, nullptr).launch(
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_apply";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, ctx.global, {}, event).launch(
+            (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+            ctx.srcImageMem,
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR RGYFilterAnime4k::runModeDogSharpen(const Anime4kDispatchCtx &ctx, RGYFrameInfo *pOutputPlaneY, const RGYFrameInfo *pInputPlaneY,
+                                             const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+    // 1x DoG sharpener: outW == srcW, outH == srcH because init()
+    // promoted scale to 1. Cite Anime4K_Deblur_DoG.glsl v3.2.
+    {
+        const char *kname = "kernel_anime4k_dog_kernel_x";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_x_pass, ctx.global, wait_events, nullptr).launch(
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            (cl_mem)pInputPlaneY->ptr[0], pInputPlaneY->pitch[0],
+            ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_dog_kernel_y";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_y_pass, ctx.global, {}, nullptr).launch(
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_dog_apply_soft";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, ctx.global, {}, event).launch(
+            (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+            (cl_mem)pInputPlaneY->ptr[0], pInputPlaneY->pitch[0],
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR RGYFilterAnime4k::runModeDog(const Anime4kDispatchCtx &ctx, RGYFrameInfo *pOutputPlaneY, const RGYFrameInfo *pInputPlaneY,
+                                      const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+    // 2x DoG upscale: DoG kernels at 1x source res (using the
+    // top-left srcW x srcH region of the float4 ping-pong scratches),
+    // then a 2x apply that bilinear-upsamples both luma and the
+    // gauss / minmax scratch. Cite Anime4K_Upscale_DoG_x2.glsl v3.2.
+    const RGYWorkSize global_1x(ctx.srcW, ctx.srcH);
+    {
+        const char *kname = "kernel_anime4k_dog_kernel_x";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_x_pass, global_1x, wait_events, nullptr).launch(
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            (cl_mem)pInputPlaneY->ptr[0], pInputPlaneY->pitch[0],
+            ctx.srcW, ctx.srcH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_dog_kernel_y";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_y_pass, global_1x, {}, nullptr).launch(
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            ctx.srcW, ctx.srcH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_dog_apply_upscale";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, ctx.global, {}, event).launch(
+            (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+            ctx.srcImageMem,
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            ctx.srcW, ctx.srcH, ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR RGYFilterAnime4k::runModeDtd(const Anime4kDispatchCtx &ctx, RGYFrameInfo *pOutputPlaneY, const RGYFrameInfo *pInputPlaneY,
+                                      const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
+    // 2x composite: Darken -> Thin -> Deblur fused chain. Cite
+    // Anime4K_Upscale_DTD_x2.glsl v3.2.
+    // Stage A: darken at 1x source res with strength=1.8 baked.
+    // Stage B: thin (Sobel/Gauss/Sobel) at 1x, then a 1x->2x warp.
+    // Stage C: DoG sharpen at 2x with strength=0.5 baked.
+    const RGYWorkSize global_1x(ctx.srcW, ctx.srcH);
+    {
+        const char *kname = "kernel_anime4k_copy_y_to_y";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, global_1x, wait_events, nullptr).launch(
+            m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
+            (cl_mem)pInputPlaneY->ptr[0], pInputPlaneY->pitch[0],
+            ctx.srcW, ctx.srcH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    // Stage A: darken chain at 1x, in-place on m_dtdSrcLuma.
+    {
+        const char *kname = "kernel_anime4k_darken_gauss1_x";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_x_pass, global_1x, {}, nullptr).launch(
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
+            ctx.srcW, ctx.srcH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_darken_dog_y";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_y_pass, global_1x, {}, nullptr).launch(
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
+            ctx.srcW, ctx.srcH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_darken_gauss2_x";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_x_pass, global_1x, {}, nullptr).launch(
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            ctx.srcW, ctx.srcH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_darken_apply_y";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_y_pass, global_1x, {}, nullptr).launch(
+            m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            ctx.srcW, ctx.srcH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    // Stage B: thin chain at 1x, then upsample warp to 2x.
+    // Fused Sobel-X + Sobel-Y in one kernel; reads m_dtdSrcLuma at
+    // a 3x3 stencil and writes shaped magnitude into m_scratchB.x.
+    {
+        const char *kname = "kernel_anime4k_thin_sobel_xy";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, global_1x, {}, nullptr).launch(
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
+            ctx.srcW, ctx.srcH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_thin_gauss_x";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_x_pass, global_1x, {}, nullptr).launch(
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            ctx.srcW, ctx.srcH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_thin_gauss_y";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_y_pass, global_1x, {}, nullptr).launch(
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            ctx.srcW, ctx.srcH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    // Fused Kernel-X + Kernel-Y in one kernel; reads smoothed
+    // magnitude from m_scratchB and writes the signed flow field
+    // into m_scratchA.xy. Note: the un-fused chain ended with the
+    // flow in m_scratchB; the fused chain ends in A, so the warp
+    // below reads its pSrcFlow from m_scratchA.
+    {
+        const char *kname = "kernel_anime4k_thin_kernel_xy";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, global_1x, {}, nullptr).launch(
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            ctx.srcW, ctx.srcH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_dtd_warp";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, ctx.global, {}, nullptr).launch(
+            (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+            m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            ctx.srcW, ctx.srcH, ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    // Stage C: DoG sharpen on the post-warp pDstY at 2x, in place.
+    {
+        const char *kname = "kernel_anime4k_dog_kernel_x";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_x_pass, ctx.global, {}, nullptr).launch(
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+            ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_dog_kernel_y";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_y_pass, ctx.global, {}, nullptr).launch(
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_dog_apply_soft";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, ctx.global, {}, event).launch(
+            (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+            (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+            m_scratchB->mem(), m_scratchPitchFloats / 4,
+            ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR RGYFilterAnime4k::runDarkenChain(const Anime4kDispatchCtx &ctx, RGYFrameInfo *pOutputPlaneY,
+                                          VppAnime4kDarken tier, RGYOpenCLEvent *event) {
+    // Darken chain. The HQ tier runs at full output resolution and
+    // reuses the base chain's m_scratchA / m_scratchB float4 buffers;
+    // its final pass fuses the vertical smoothing Gauss with the apply
+    // step that adds STRENGTH * smoothed to pDstY in place. The Fast
+    // and VeryFast tiers run at half / quarter output resolution
+    // against m_darkenWork.{A, B, luma}; the smoothing and apply steps
+    // are split because the final apply must hit the full-resolution Y
+    // plane via bilinear upsample of the work-res mask.
+    // Chain shape (HQ):
+    //   gauss1_x      : pDstY -> A.x  (horiz Gauss of luma)
+    //   dog_y         : A.x, pDstY -> B.x  (vert Gauss; min(Y - blur, 0))
+    //   gauss2_x      : B.x -> A.x  (horiz Gauss of dark-edge mask)
+    //   apply_y       : A.x, pDstY -> pDstY  (vert Gauss + add * STRENGTH)
+    // Chain shape (Fast / VeryFast):
+    //   downsample_y     : pDstY -> luma   (box=2 or 4)
+    //   gauss1_x         : luma  -> A.x
+    //   dog_y            : A.x, luma -> B.x
+    //   gauss2_x         : B.x   -> A.x
+    //   smooth_y         : A.x   -> B.x    (no apply)
+    //   upsample_apply   : B.x   -> pDstY  (bilinear upsample + add)
+    if (tier == VppAnime4kDarken::HQ) {
+        // FP16 path uses the dedicated m_darkenWorkF16 buffers
+        // (half4 storage; kernels read/write via vload_half4 /
+        // vstore_half4 because the program was built with
+        // -D ANIME4K_SCRATCH_FP16=1). The base chain's FP32
+        // m_scratchA / m_scratchB are not aliased here so the
+        // polynomial intermediates from runPlaneY remain available
+        // for downstream stages.
+        // FP32 path keeps the legacy behaviour: HQ darken reuses
+        // m_scratchA / m_scratchB at full output res.
+        cl_mem darkenA = m_fp16Scratch ? m_darkenWorkF16.A->mem() : m_scratchA->mem();
+        cl_mem darkenB = m_fp16Scratch ? m_darkenWorkF16.B->mem() : m_scratchB->mem();
+        const int darkenPitchF4 = m_fp16Scratch
+            ? (m_darkenWorkF16.pitchFloats / 4)
+            : (m_scratchPitchFloats / 4);
+        {
+            const char *kname = "kernel_anime4k_darken_gauss1_x";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_x_pass, ctx.global, {}, nullptr).launch(
+                darkenA, darkenPitchF4,
+                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+                ctx.outW, ctx.outH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        {
+            const char *kname = "kernel_anime4k_darken_dog_y";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_y_pass, ctx.global, {}, nullptr).launch(
+                darkenB, darkenPitchF4,
+                darkenA, darkenPitchF4,
+                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+                ctx.outW, ctx.outH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        {
+            const char *kname = "kernel_anime4k_darken_gauss2_x";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_x_pass, ctx.global, {}, nullptr).launch(
+                darkenA, darkenPitchF4,
+                darkenB, darkenPitchF4,
+                ctx.outW, ctx.outH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        {
+            const char *kname = "kernel_anime4k_darken_apply_y";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_y_pass, ctx.global, {}, event).launch(
+                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+                darkenA, darkenPitchF4,
+                ctx.outW, ctx.outH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+    } else {
+        const int wW = m_darkenWork.workW;
+        const int wH = m_darkenWork.workH;
+        const int wPitchF4 = m_darkenWork.pitchFloats / 4;
+        const int box = (tier == VppAnime4kDarken::Fast) ? 2 : 4;
+        const RGYWorkSize work_global(wW, wH);
+        {
+            const char *kname = "kernel_anime4k_downsample_y";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, work_global, {}, nullptr).launch(
+                m_darkenWork.luma->mem(), m_darkenWork.lumaPitch,
+                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+                wW, wH, ctx.outW, ctx.outH, box);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        {
+            const char *kname = "kernel_anime4k_darken_gauss1_x";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_x_pass, work_global, {}, nullptr).launch(
+                m_darkenWork.A->mem(), wPitchF4,
+                m_darkenWork.luma->mem(), m_darkenWork.lumaPitch,
+                wW, wH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        {
+            const char *kname = "kernel_anime4k_darken_dog_y";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_y_pass, work_global, {}, nullptr).launch(
+                m_darkenWork.B->mem(), wPitchF4,
+                m_darkenWork.A->mem(), wPitchF4,
+                m_darkenWork.luma->mem(), m_darkenWork.lumaPitch,
+                wW, wH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        {
+            const char *kname = "kernel_anime4k_darken_gauss2_x";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_x_pass, work_global, {}, nullptr).launch(
+                m_darkenWork.A->mem(), wPitchF4,
+                m_darkenWork.B->mem(), wPitchF4,
+                wW, wH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        {
+            const char *kname = "kernel_anime4k_darken_smooth_y";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_y_pass, work_global, {}, nullptr).launch(
+                m_darkenWork.B->mem(), wPitchF4,
+                m_darkenWork.A->mem(), wPitchF4,
+                wW, wH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        {
+            const char *kname = "kernel_anime4k_darken_upsample_apply";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, ctx.global, {}, event).launch(
+                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+                m_darkenWork.B->mem(), wPitchF4,
+                ctx.outW, ctx.outH, wW, wH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+    }
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR RGYFilterAnime4k::runThinChain(const Anime4kDispatchCtx &ctx, RGYFrameInfo *pOutputPlaneY,
+                                        VppAnime4kThin tier, RGYOpenCLEvent *event) {
+    // Thin chain. The HQ tier runs the entire Sobel-Gauss-Sobel-warp
+    // chain at full output resolution against m_scratchA / m_scratchB.
+    // The Fast and VeryFast tiers run the Sobel/Gauss/kernel passes at
+    // half / quarter resolution against m_thinWork.{A, B, luma}; the
+    // final copy-to-reference + warp pair stays at full output res so
+    // the warp output keeps the upscale's full sharpness. The warp
+    // bilinear-samples the (now lower-res) flow field via the
+    // flowW / flowH parameters.
+    // The flow buffer that the warp will read at the end. For HQ it
+    // is m_scratchB at full res; for Fast/VeryFast it is
+    // m_thinWork.B at work res.
+    cl_mem flowBuf      = nullptr;
+    int    flowPitchF4  = 0;
+    int    flowW        = 0;
+    int    flowH        = 0;
+    // For the HQ tier we resolve a (thinA, thinB) cl_mem pair up
+    // front. FP16: dedicated half4 buffers m_thinWorkF16.A / .B.
+    // FP32: legacy alias to m_scratchA / m_scratchB at full output
+    // res. The fused chain ends with the flow field in thinA (one
+    // ping-pong less than the original four-pass form), so the
+    // copy_y_to_ref below writes the yref into thinB and the warp
+    // call passes pSrcA = thinB (yref), pSrcB = thinA (flow).
+    // yrefBuf / yrefPitchF4 carry that yref destination (and the
+    // pitch the warp uses to read it back). For Fast / VeryFast,
+    // the yref buffer is m_scratchA at full output res -- distinct
+    // from m_thinWork.{A,B} which only hold the work-res chain.
+    cl_mem thinA = nullptr;
+    cl_mem thinB = nullptr;
+    int    thinPitchF4 = 0;
+    cl_mem yrefBuf = nullptr;
+    int    yrefPitchF4 = 0;
+    if (tier == VppAnime4kThin::HQ) {
+        thinA = m_fp16Scratch ? m_thinWorkF16.A->mem() : m_scratchA->mem();
+        thinB = m_fp16Scratch ? m_thinWorkF16.B->mem() : m_scratchB->mem();
+        thinPitchF4 = m_fp16Scratch
+            ? (m_thinWorkF16.pitchFloats / 4)
+            : (m_scratchPitchFloats / 4);
+        // Fused Sobel-X + Sobel-Y in one kernel; pDstY -> thinB.
+        // Replaces two kernels and one intermediate scratch round
+        // trip from the original chain.
+        {
+            const char *kname = "kernel_anime4k_thin_sobel_xy";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, ctx.global, {}, nullptr).launch(
+                thinB, thinPitchF4,
+                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+                ctx.outW, ctx.outH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        {
+            const char *kname = "kernel_anime4k_thin_gauss_x";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_x_pass, ctx.global, {}, nullptr).launch(
+                thinA, thinPitchF4,
+                thinB, thinPitchF4,
+                ctx.outW, ctx.outH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        {
+            const char *kname = "kernel_anime4k_thin_gauss_y";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_y_pass, ctx.global, {}, nullptr).launch(
+                thinB, thinPitchF4,
+                thinA, thinPitchF4,
+                ctx.outW, ctx.outH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        // Fused Kernel-X + Kernel-Y in one kernel; thinB -> thinA.
+        // Note the swap from the original chain: flow lives in
+        // thinA at the end of this pass (the original two-pass
+        // form ended in thinB).
+        {
+            const char *kname = "kernel_anime4k_thin_kernel_xy";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, ctx.global, {}, nullptr).launch(
+                thinA, thinPitchF4,
+                thinB, thinPitchF4,
+                ctx.outW, ctx.outH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        flowBuf     = thinA;
+        flowPitchF4 = thinPitchF4;
+        flowW       = ctx.outW;
+        flowH       = ctx.outH;
+        yrefBuf     = thinB;
+        yrefPitchF4 = thinPitchF4;
+    } else {
+        const int wW = m_thinWork.workW;
+        const int wH = m_thinWork.workH;
+        const int wPitchF4 = m_thinWork.pitchFloats / 4;
+        const int box = (tier == VppAnime4kThin::Fast) ? 2 : 4;
+        const RGYWorkSize work_global(wW, wH);
+        {
+            const char *kname = "kernel_anime4k_downsample_y";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, work_global, {}, nullptr).launch(
+                m_thinWork.luma->mem(), m_thinWork.lumaPitch,
+                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+                wW, wH, ctx.outW, ctx.outH, box);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        // Fused Sobel-X + Sobel-Y in one kernel; luma -> B.
+        {
+            const char *kname = "kernel_anime4k_thin_sobel_xy";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, work_global, {}, nullptr).launch(
+                m_thinWork.B->mem(), wPitchF4,
+                m_thinWork.luma->mem(), m_thinWork.lumaPitch,
+                wW, wH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        {
+            const char *kname = "kernel_anime4k_thin_gauss_x";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_x_pass, work_global, {}, nullptr).launch(
+                m_thinWork.A->mem(), wPitchF4,
+                m_thinWork.B->mem(), wPitchF4,
+                wW, wH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        {
+            const char *kname = "kernel_anime4k_thin_gauss_y";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_y_pass, work_global, {}, nullptr).launch(
+                m_thinWork.B->mem(), wPitchF4,
+                m_thinWork.A->mem(), wPitchF4,
+                wW, wH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        // Fused Kernel-X + Kernel-Y in one kernel; B -> A (flow now
+        // lives in m_thinWork.A; the original chain ended in B).
+        {
+            const char *kname = "kernel_anime4k_thin_kernel_xy";
+            auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, work_global, {}, nullptr).launch(
+                m_thinWork.A->mem(), wPitchF4,
+                m_thinWork.B->mem(), wPitchF4,
+                wW, wH);
+            if (err != RGY_ERR_NONE) {
+                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                    char_to_tstring(kname).c_str(), get_err_mes(err));
+                return err;
+            }
+        }
+        flowBuf     = m_thinWork.A->mem();
+        flowPitchF4 = wPitchF4;
+        flowW       = wW;
+        flowH       = wH;
+        // Fast / VeryFast: yref goes into m_scratchA at full output
+        // res (separate from m_thinWork.* which is at work res).
+        yrefBuf     = m_scratchA->mem();
+        yrefPitchF4 = m_scratchPitchFloats / 4;
+    }
+    // Copy the current Y plane (post-apply, optionally post-darken)
+    // into yrefBuf at full output resolution. The destination
+    // differs by tier:
+    //   HQ:          thinB (= m_thinWorkF16.B in FP16 mode, or
+    //                m_scratchB in FP32 mode). After the fused
+    //                kernel_xy pass the flow lives in thinA, so
+    //                thinB is the free slot for the yref.
+    //   Fast/VeryFast: m_scratchA at full output res, distinct from
+    //                  the work-res m_thinWork.{A,B} buffers.
+    // The warp pass reads pSrcA = yref via manual bilinear and
+    // writes pDstY in place; without this copy the read and write
+    // would race.
+    {
+        const char *kname = "kernel_anime4k_thin_copy_y_to_ref";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, ctx.global, {}, nullptr).launch(
+            yrefBuf, yrefPitchF4,
+            (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+            ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    {
+        const char *kname = "kernel_anime4k_thin_warp";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, ctx.global, {}, event).launch(
+            (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+            yrefBuf, yrefPitchF4,
+            flowBuf, flowPitchF4,
+            ctx.outW, ctx.outH,
+            flowW, flowH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR RGYFilterAnime4k::runDenoiseChain(const Anime4kDispatchCtx &ctx, RGYFrameInfo *pOutputPlaneY,
+                                           VppAnime4kDenoise tier, RGYOpenCLEvent *event) {
+    // Bilateral denoise pass (Mean / Median / Mode). Single OCL kernel
+    // each, all read a float Y reference written into m_scratchA.x by
+    // the same kernel_anime4k_thin_copy_y_to_ref used by the thin warp
+    // path. The chain so far (base apply, optional darken, optional
+    // thin) has already written pDstY in place; the copy step turns
+    // that into the post-chain Y reference for the denoise kernel
+    // to read while it writes back to pDstY without a read-write race.
+    {
+        const char *kname = "kernel_anime4k_thin_copy_y_to_ref";
+        auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, ctx.global, {}, nullptr).launch(
+            m_scratchA->mem(), m_scratchPitchFloats / 4,
+            (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+            ctx.outW, ctx.outH);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+                char_to_tstring(kname).c_str(), get_err_mes(err));
+            return err;
+        }
+    }
+    const char *kname = nullptr;
+    switch (tier) {
+    case VppAnime4kDenoise::Mean:   kname = "kernel_anime4k_denoise_mean";   break;
+    case VppAnime4kDenoise::Median: kname = "kernel_anime4k_denoise_median"; break;
+    case VppAnime4kDenoise::Mode:   kname = "kernel_anime4k_denoise_mode";   break;
+    default: return RGY_ERR_NONE;  // unreachable: runDenoise gated above
+    }
+    auto err = m_anime4k.get()->kernel(kname).config(ctx.queue, ctx.local_2d, ctx.global, {}, event).launch(
+        (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
+        m_scratchA->mem(), m_scratchPitchFloats / 4,
+        ctx.outW, ctx.outH);
+    if (err != RGY_ERR_NONE) {
+        AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
+            char_to_tstring(kname).c_str(), get_err_mes(err));
+        return err;
+    }
+    return RGY_ERR_NONE;
+}
+
 RGY_ERR RGYFilterAnime4k::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameInfo *pInputPlaneY,
                                     RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events,
                                     RGYOpenCLEvent *event) {
@@ -726,61 +1493,6 @@ RGY_ERR RGYFilterAnime4k::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameI
     const RGYWorkSize local_x_pass(32, 8);
     const RGYWorkSize local_y_pass(8, 32);
     const RGYWorkSize global(outW, outH);
-
-    // One-shot probe of clGetKernelWorkGroupInfo for the kernels we
-    // dispatch in this routine. The program build is async (see
-    // m_anime4k.set(m_cl->buildResourceAsync(...))) so the kernel
-    // handles aren't necessarily available at the end of init();
-    // querying here on the first frame is the simplest way to make sure
-    // the kernel objects exist. First codebase use of
-    // clGetKernelWorkGroupInfo (zero precedent confirmed by grep). The
-    // returned preferred multiple is logged at DEBUG only; the
-    // local_x_pass / local_y_pass / local_2d sizes above are hand-tuned
-    // for Arc A770 and not derived from this query.
-    if (!m_kernelWgQueried) {
-        cl_device_id dev_id = m_cl->queue().devid();
-        static const char *const probeKernels[] = {
-            "kernel_anime4k_sobel_x",
-            "kernel_anime4k_sobel_y",
-            "kernel_anime4k_refine_x",
-            "kernel_anime4k_refine_y",
-            "kernel_anime4k_apply",
-            "kernel_anime4k_darken_gauss1_x",
-            "kernel_anime4k_darken_gauss2_x",
-            "kernel_anime4k_darken_dog_y",
-            "kernel_anime4k_darken_apply_y",
-            "kernel_anime4k_darken_smooth_y",
-            "kernel_anime4k_darken_upsample_apply",
-            "kernel_anime4k_thin_sobel_xy",
-            "kernel_anime4k_thin_gauss_x",
-            "kernel_anime4k_thin_gauss_y",
-            "kernel_anime4k_thin_kernel_xy",
-            "kernel_anime4k_thin_copy_y_to_ref",
-            "kernel_anime4k_thin_warp",
-            "kernel_anime4k_dog_kernel_x",
-            "kernel_anime4k_dog_kernel_y",
-            "kernel_anime4k_dog_apply_soft",
-            "kernel_anime4k_dog_apply_upscale",
-            "kernel_anime4k_dtd_warp",
-            "kernel_anime4k_downsample_y",
-            "kernel_anime4k_copy_y_to_y",
-        };
-        for (const char *kname : probeKernels) {
-            auto holder = m_anime4k.get()->kernel(kname);
-            if (!holder.get()) continue;
-            cl_kernel kobj = holder.get()->get();
-            if (!kobj) continue;
-            size_t pref = 0;
-            auto err = clGetKernelWorkGroupInfo(kobj, dev_id,
-                CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,
-                sizeof(pref), &pref, nullptr);
-            if (err == CL_SUCCESS) {
-                AddMessage(RGY_LOG_DEBUG, _T("kernel %s preferred multiple = %zu\n"),
-                    char_to_tstring(kname).c_str(), pref);
-            }
-        }
-        m_kernelWgQueried = true;
-    }
 
     // Wrap the input luma plane as a normalised CL_R image so the
     // kernel can use the hardware bilinear sampler. createImageFromFrameBuffer
@@ -812,760 +1524,33 @@ RGY_ERR RGYFilterAnime4k::runPlaneY(RGYFrameInfo *pOutputPlaneY, const RGYFrameI
     const bool runDenoise = (denoiseTier != VppAnime4kDenoise::Off);
     RGYOpenCLEvent *applyEvent = (runDarken || runThin || runDenoise) ? nullptr : event;
 
+    const Anime4kDispatchCtx ctx{ queue, local_2d, local_x_pass, local_y_pass, global, srcImageMem, srcW, srcH, outW, outH };
+
+    RGY_ERR err = RGY_ERR_NONE;
     if (mode == VppAnime4kMode::Original || mode == VppAnime4kMode::Deblur
      || mode == VppAnime4kMode::DarkenHQ || mode == VppAnime4kMode::ThinHQ) {
-        // Base shader chain: Sobel partial + polynomial-refinement
-        // edge-blend at the 2x output resolution. Cite
-        // Anime4K_Upscale_Original_x2.glsl v3.2.
-        {
-            const char *kname = "kernel_anime4k_sobel_x";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global, wait_events, nullptr).launch(
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                srcImageMem,
-                srcW, srcH, outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_sobel_y";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_refine_x";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_refine_y";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_apply";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, applyEvent).launch(
-                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                srcImageMem,
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
+        err = runModeOriginal(ctx, pOutputPlaneY, wait_events, applyEvent);
     } else if (mode == VppAnime4kMode::DogSharpen) {
-        // 1x DoG sharpener: outW == srcW, outH == srcH because init()
-        // promoted scale to 1. Cite Anime4K_Deblur_DoG.glsl v3.2.
-        {
-            const char *kname = "kernel_anime4k_dog_kernel_x";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global, wait_events, nullptr).launch(
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                (cl_mem)pInputPlaneY->ptr[0], pInputPlaneY->pitch[0],
-                outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_dog_kernel_y";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_dog_apply_soft";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, applyEvent).launch(
-                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                (cl_mem)pInputPlaneY->ptr[0], pInputPlaneY->pitch[0],
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
+        err = runModeDogSharpen(ctx, pOutputPlaneY, pInputPlaneY, wait_events, applyEvent);
     } else if (mode == VppAnime4kMode::Dog) {
-        // 2x DoG upscale: DoG kernels at 1x source res (using the
-        // top-left srcW x srcH region of the float4 ping-pong scratches),
-        // then a 2x apply that bilinear-upsamples both luma and the
-        // gauss / minmax scratch. Cite Anime4K_Upscale_DoG_x2.glsl v3.2.
-        const RGYWorkSize global_1x(srcW, srcH);
-        {
-            const char *kname = "kernel_anime4k_dog_kernel_x";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global_1x, wait_events, nullptr).launch(
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                (cl_mem)pInputPlaneY->ptr[0], pInputPlaneY->pitch[0],
-                srcW, srcH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_dog_kernel_y";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global_1x, {}, nullptr).launch(
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                srcW, srcH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_dog_apply_upscale";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, applyEvent).launch(
-                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                srcImageMem,
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                srcW, srcH, outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
+        err = runModeDog(ctx, pOutputPlaneY, pInputPlaneY, wait_events, applyEvent);
     } else if (mode == VppAnime4kMode::Dtd) {
-        // 2x composite: Darken -> Thin -> Deblur fused chain. Cite
-        // Anime4K_Upscale_DTD_x2.glsl v3.2.
-        // Stage A: darken at 1x source res with strength=1.8 baked.
-        // Stage B: thin (Sobel/Gauss/Sobel) at 1x, then a 1x->2x warp.
-        // Stage C: DoG sharpen at 2x with strength=0.5 baked.
-        const RGYWorkSize global_1x(srcW, srcH);
-        {
-            const char *kname = "kernel_anime4k_copy_y_to_y";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global_1x, wait_events, nullptr).launch(
-                m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
-                (cl_mem)pInputPlaneY->ptr[0], pInputPlaneY->pitch[0],
-                srcW, srcH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        // Stage A: darken chain at 1x, in-place on m_dtdSrcLuma.
-        {
-            const char *kname = "kernel_anime4k_darken_gauss1_x";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global_1x, {}, nullptr).launch(
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
-                srcW, srcH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_darken_dog_y";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global_1x, {}, nullptr).launch(
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
-                srcW, srcH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_darken_gauss2_x";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global_1x, {}, nullptr).launch(
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                srcW, srcH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_darken_apply_y";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global_1x, {}, nullptr).launch(
-                m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                srcW, srcH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        // Stage B: thin chain at 1x, then upsample warp to 2x.
-        // Fused Sobel-X + Sobel-Y in one kernel; reads m_dtdSrcLuma at
-        // a 3x3 stencil and writes shaped magnitude into m_scratchB.x.
-        {
-            const char *kname = "kernel_anime4k_thin_sobel_xy";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global_1x, {}, nullptr).launch(
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
-                srcW, srcH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_thin_gauss_x";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global_1x, {}, nullptr).launch(
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                srcW, srcH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_thin_gauss_y";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global_1x, {}, nullptr).launch(
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                srcW, srcH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        // Fused Kernel-X + Kernel-Y in one kernel; reads smoothed
-        // magnitude from m_scratchB and writes the signed flow field
-        // into m_scratchA.xy. Note: the un-fused chain ended with the
-        // flow in m_scratchB; the fused chain ends in A, so the warp
-        // below reads its pSrcFlow from m_scratchA.
-        {
-            const char *kname = "kernel_anime4k_thin_kernel_xy";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global_1x, {}, nullptr).launch(
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                srcW, srcH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_dtd_warp";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
-                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                m_dtdSrcLuma->mem(), m_dtdSrcLumaPitch,
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                srcW, srcH, outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        // Stage C: DoG sharpen on the post-warp pDstY at 2x, in place.
-        {
-            const char *kname = "kernel_anime4k_dog_kernel_x";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_dog_kernel_y";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            const char *kname = "kernel_anime4k_dog_apply_soft";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, applyEvent).launch(
-                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                m_scratchB->mem(), m_scratchPitchFloats / 4,
-                outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
+        err = runModeDtd(ctx, pOutputPlaneY, pInputPlaneY, wait_events, applyEvent);
     }
+    if (err != RGY_ERR_NONE) return err;
 
-    // Darken chain. The HQ tier runs at full output resolution and
-    // reuses the base chain's m_scratchA / m_scratchB float4 buffers;
-    // its final pass fuses the vertical smoothing Gauss with the apply
-    // step that adds STRENGTH * smoothed to pDstY in place. The Fast
-    // and VeryFast tiers run at half / quarter output resolution
-    // against m_darkenWork.{A, B, luma}; the smoothing and apply steps
-    // are split because the final apply must hit the full-resolution Y
-    // plane via bilinear upsample of the work-res mask.
-    // Chain shape (HQ):
-    //   gauss1_x      : pDstY -> A.x  (horiz Gauss of luma)
-    //   dog_y         : A.x, pDstY -> B.x  (vert Gauss; min(Y - blur, 0))
-    //   gauss2_x      : B.x -> A.x  (horiz Gauss of dark-edge mask)
-    //   apply_y       : A.x, pDstY -> pDstY  (vert Gauss + add * STRENGTH)
-    // Chain shape (Fast / VeryFast):
-    //   downsample_y     : pDstY -> luma   (box=2 or 4)
-    //   gauss1_x         : luma  -> A.x
-    //   dog_y            : A.x, luma -> B.x
-    //   gauss2_x         : B.x   -> A.x
-    //   smooth_y         : A.x   -> B.x    (no apply)
-    //   upsample_apply   : B.x   -> pDstY  (bilinear upsample + add)
     if (runDarken) {
-        RGYOpenCLEvent *darkenEvent = (runThin || runDenoise) ? nullptr : event;
-        if (darkenTier == VppAnime4kDarken::HQ) {
-            // FP16 path uses the dedicated m_darkenWorkF16 buffers
-            // (half4 storage; kernels read/write via vload_half4 /
-            // vstore_half4 because the program was built with
-            // -D ANIME4K_SCRATCH_FP16=1). The base chain's FP32
-            // m_scratchA / m_scratchB are not aliased here so the
-            // polynomial intermediates from runPlaneY remain available
-            // for downstream stages.
-            // FP32 path keeps the legacy behaviour: HQ darken reuses
-            // m_scratchA / m_scratchB at full output res.
-            cl_mem darkenA = m_fp16Scratch ? m_darkenWorkF16.A->mem() : m_scratchA->mem();
-            cl_mem darkenB = m_fp16Scratch ? m_darkenWorkF16.B->mem() : m_scratchB->mem();
-            const int darkenPitchF4 = m_fp16Scratch
-                ? (m_darkenWorkF16.pitchFloats / 4)
-                : (m_scratchPitchFloats / 4);
-            {
-                const char *kname = "kernel_anime4k_darken_gauss1_x";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
-                    darkenA, darkenPitchF4,
-                    (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                    outW, outH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            {
-                const char *kname = "kernel_anime4k_darken_dog_y";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
-                    darkenB, darkenPitchF4,
-                    darkenA, darkenPitchF4,
-                    (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                    outW, outH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            {
-                const char *kname = "kernel_anime4k_darken_gauss2_x";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
-                    darkenA, darkenPitchF4,
-                    darkenB, darkenPitchF4,
-                    outW, outH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            {
-                const char *kname = "kernel_anime4k_darken_apply_y";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global, {}, darkenEvent).launch(
-                    (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                    darkenA, darkenPitchF4,
-                    outW, outH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-        } else {
-            const int wW = m_darkenWork.workW;
-            const int wH = m_darkenWork.workH;
-            const int wPitchF4 = m_darkenWork.pitchFloats / 4;
-            const int box = (darkenTier == VppAnime4kDarken::Fast) ? 2 : 4;
-            const RGYWorkSize work_global(wW, wH);
-            {
-                const char *kname = "kernel_anime4k_downsample_y";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, work_global, {}, nullptr).launch(
-                    m_darkenWork.luma->mem(), m_darkenWork.lumaPitch,
-                    (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                    wW, wH, outW, outH, box);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            {
-                const char *kname = "kernel_anime4k_darken_gauss1_x";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, work_global, {}, nullptr).launch(
-                    m_darkenWork.A->mem(), wPitchF4,
-                    m_darkenWork.luma->mem(), m_darkenWork.lumaPitch,
-                    wW, wH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            {
-                const char *kname = "kernel_anime4k_darken_dog_y";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, work_global, {}, nullptr).launch(
-                    m_darkenWork.B->mem(), wPitchF4,
-                    m_darkenWork.A->mem(), wPitchF4,
-                    m_darkenWork.luma->mem(), m_darkenWork.lumaPitch,
-                    wW, wH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            {
-                const char *kname = "kernel_anime4k_darken_gauss2_x";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, work_global, {}, nullptr).launch(
-                    m_darkenWork.A->mem(), wPitchF4,
-                    m_darkenWork.B->mem(), wPitchF4,
-                    wW, wH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            {
-                const char *kname = "kernel_anime4k_darken_smooth_y";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, work_global, {}, nullptr).launch(
-                    m_darkenWork.B->mem(), wPitchF4,
-                    m_darkenWork.A->mem(), wPitchF4,
-                    wW, wH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            {
-                const char *kname = "kernel_anime4k_darken_upsample_apply";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, darkenEvent).launch(
-                    (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                    m_darkenWork.B->mem(), wPitchF4,
-                    outW, outH, wW, wH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-        }
+        err = runDarkenChain(ctx, pOutputPlaneY, darkenTier, (runThin || runDenoise) ? nullptr : event);
+        if (err != RGY_ERR_NONE) return err;
     }
-
-    // Thin chain. The HQ tier runs the entire Sobel-Gauss-Sobel-warp
-    // chain at full output resolution against m_scratchA / m_scratchB.
-    // The Fast and VeryFast tiers run the Sobel/Gauss/kernel passes at
-    // half / quarter resolution against m_thinWork.{A, B, luma}; the
-    // final copy-to-reference + warp pair stays at full output res so
-    // the warp output keeps the upscale's full sharpness. The warp
-    // bilinear-samples the (now lower-res) flow field via the
-    // flowW / flowH parameters.
     if (runThin) {
-        // The flow buffer that the warp will read at the end. For HQ it
-        // is m_scratchB at full res; for Fast/VeryFast it is
-        // m_thinWork.B at work res.
-        cl_mem flowBuf      = nullptr;
-        int    flowPitchF4  = 0;
-        int    flowW        = 0;
-        int    flowH        = 0;
-        // For the HQ tier we resolve a (thinA, thinB) cl_mem pair up
-        // front. FP16: dedicated half4 buffers m_thinWorkF16.A / .B.
-        // FP32: legacy alias to m_scratchA / m_scratchB at full output
-        // res. The fused chain ends with the flow field in thinA (one
-        // ping-pong less than the original four-pass form), so the
-        // copy_y_to_ref below writes the yref into thinB and the warp
-        // call passes pSrcA = thinB (yref), pSrcB = thinA (flow).
-        // yrefBuf / yrefPitchF4 carry that yref destination (and the
-        // pitch the warp uses to read it back). For Fast / VeryFast,
-        // the yref buffer is m_scratchA at full output res -- distinct
-        // from m_thinWork.{A,B} which only hold the work-res chain.
-        cl_mem thinA = nullptr;
-        cl_mem thinB = nullptr;
-        int    thinPitchF4 = 0;
-        cl_mem yrefBuf = nullptr;
-        int    yrefPitchF4 = 0;
-        if (thinTier == VppAnime4kThin::HQ) {
-            thinA = m_fp16Scratch ? m_thinWorkF16.A->mem() : m_scratchA->mem();
-            thinB = m_fp16Scratch ? m_thinWorkF16.B->mem() : m_scratchB->mem();
-            thinPitchF4 = m_fp16Scratch
-                ? (m_thinWorkF16.pitchFloats / 4)
-                : (m_scratchPitchFloats / 4);
-            // Fused Sobel-X + Sobel-Y in one kernel; pDstY -> thinB.
-            // Replaces two kernels and one intermediate scratch round
-            // trip from the original chain.
-            {
-                const char *kname = "kernel_anime4k_thin_sobel_xy";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
-                    thinB, thinPitchF4,
-                    (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                    outW, outH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            {
-                const char *kname = "kernel_anime4k_thin_gauss_x";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, global, {}, nullptr).launch(
-                    thinA, thinPitchF4,
-                    thinB, thinPitchF4,
-                    outW, outH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            {
-                const char *kname = "kernel_anime4k_thin_gauss_y";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, global, {}, nullptr).launch(
-                    thinB, thinPitchF4,
-                    thinA, thinPitchF4,
-                    outW, outH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            // Fused Kernel-X + Kernel-Y in one kernel; thinB -> thinA.
-            // Note the swap from the original chain: flow lives in
-            // thinA at the end of this pass (the original two-pass
-            // form ended in thinB).
-            {
-                const char *kname = "kernel_anime4k_thin_kernel_xy";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
-                    thinA, thinPitchF4,
-                    thinB, thinPitchF4,
-                    outW, outH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            flowBuf     = thinA;
-            flowPitchF4 = thinPitchF4;
-            flowW       = outW;
-            flowH       = outH;
-            yrefBuf     = thinB;
-            yrefPitchF4 = thinPitchF4;
-        } else {
-            const int wW = m_thinWork.workW;
-            const int wH = m_thinWork.workH;
-            const int wPitchF4 = m_thinWork.pitchFloats / 4;
-            const int box = (thinTier == VppAnime4kThin::Fast) ? 2 : 4;
-            const RGYWorkSize work_global(wW, wH);
-            {
-                const char *kname = "kernel_anime4k_downsample_y";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, work_global, {}, nullptr).launch(
-                    m_thinWork.luma->mem(), m_thinWork.lumaPitch,
-                    (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                    wW, wH, outW, outH, box);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            // Fused Sobel-X + Sobel-Y in one kernel; luma -> B.
-            {
-                const char *kname = "kernel_anime4k_thin_sobel_xy";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, work_global, {}, nullptr).launch(
-                    m_thinWork.B->mem(), wPitchF4,
-                    m_thinWork.luma->mem(), m_thinWork.lumaPitch,
-                    wW, wH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            {
-                const char *kname = "kernel_anime4k_thin_gauss_x";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_x_pass, work_global, {}, nullptr).launch(
-                    m_thinWork.A->mem(), wPitchF4,
-                    m_thinWork.B->mem(), wPitchF4,
-                    wW, wH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            {
-                const char *kname = "kernel_anime4k_thin_gauss_y";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_y_pass, work_global, {}, nullptr).launch(
-                    m_thinWork.B->mem(), wPitchF4,
-                    m_thinWork.A->mem(), wPitchF4,
-                    wW, wH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            // Fused Kernel-X + Kernel-Y in one kernel; B -> A (flow now
-            // lives in m_thinWork.A; the original chain ended in B).
-            {
-                const char *kname = "kernel_anime4k_thin_kernel_xy";
-                auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, work_global, {}, nullptr).launch(
-                    m_thinWork.A->mem(), wPitchF4,
-                    m_thinWork.B->mem(), wPitchF4,
-                    wW, wH);
-                if (err != RGY_ERR_NONE) {
-                    AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                        char_to_tstring(kname).c_str(), get_err_mes(err));
-                    return err;
-                }
-            }
-            flowBuf     = m_thinWork.A->mem();
-            flowPitchF4 = wPitchF4;
-            flowW       = wW;
-            flowH       = wH;
-            // Fast / VeryFast: yref goes into m_scratchA at full output
-            // res (separate from m_thinWork.* which is at work res).
-            yrefBuf     = m_scratchA->mem();
-            yrefPitchF4 = m_scratchPitchFloats / 4;
-        }
-        // Copy the current Y plane (post-apply, optionally post-darken)
-        // into yrefBuf at full output resolution. The destination
-        // differs by tier:
-        //   HQ:          thinB (= m_thinWorkF16.B in FP16 mode, or
-        //                m_scratchB in FP32 mode). After the fused
-        //                kernel_xy pass the flow lives in thinA, so
-        //                thinB is the free slot for the yref.
-        //   Fast/VeryFast: m_scratchA at full output res, distinct from
-        //                  the work-res m_thinWork.{A,B} buffers.
-        // The warp pass reads pSrcA = yref via manual bilinear and
-        // writes pDstY in place; without this copy the read and write
-        // would race.
-        {
-            const char *kname = "kernel_anime4k_thin_copy_y_to_ref";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
-                yrefBuf, yrefPitchF4,
-                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        {
-            RGYOpenCLEvent *thinEvent = runDenoise ? nullptr : event;
-            const char *kname = "kernel_anime4k_thin_warp";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, thinEvent).launch(
-                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                yrefBuf, yrefPitchF4,
-                flowBuf, flowPitchF4,
-                outW, outH,
-                flowW, flowH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
+        err = runThinChain(ctx, pOutputPlaneY, thinTier, runDenoise ? nullptr : event);
+        if (err != RGY_ERR_NONE) return err;
     }
-
-    // Bilateral denoise pass (Mean / Median / Mode). Single OCL kernel
-    // each, all read a float Y reference written into m_scratchA.x by
-    // the same kernel_anime4k_thin_copy_y_to_ref used by the thin warp
-    // path. The chain so far (base apply, optional darken, optional
-    // thin) has already written pDstY in place; the copy step turns
-    // that into the post-chain Y reference for the denoise kernel
-    // to read while it writes back to pDstY without a read-write race.
     if (runDenoise) {
-        {
-            const char *kname = "kernel_anime4k_thin_copy_y_to_ref";
-            auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, nullptr).launch(
-                m_scratchA->mem(), m_scratchPitchFloats / 4,
-                (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-                outW, outH);
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                    char_to_tstring(kname).c_str(), get_err_mes(err));
-                return err;
-            }
-        }
-        const char *kname = nullptr;
-        switch (denoiseTier) {
-        case VppAnime4kDenoise::Mean:   kname = "kernel_anime4k_denoise_mean";   break;
-        case VppAnime4kDenoise::Median: kname = "kernel_anime4k_denoise_median"; break;
-        case VppAnime4kDenoise::Mode:   kname = "kernel_anime4k_denoise_mode";   break;
-        default: return RGY_ERR_NONE;  // unreachable: runDenoise gated above
-        }
-        auto err = m_anime4k.get()->kernel(kname).config(queue, local_2d, global, {}, event).launch(
-            (cl_mem)pOutputPlaneY->ptr[0], pOutputPlaneY->pitch[0],
-            m_scratchA->mem(), m_scratchPitchFloats / 4,
-            outW, outH);
-        if (err != RGY_ERR_NONE) {
-            AddMessage(RGY_LOG_ERROR, _T("%s failed: %s.\n"),
-                char_to_tstring(kname).c_str(), get_err_mes(err));
-            return err;
-        }
+        err = runDenoiseChain(ctx, pOutputPlaneY, denoiseTier, event);
+        if (err != RGY_ERR_NONE) return err;
     }
-
-    // VCEEnc/AMD: drain the luma kernel chain before chroma + downstream handoff.
-    // AMD's OpenCL driver intermittently faults on dog_sharpen/dtd without this.
-    queue.finish();
     return RGY_ERR_NONE;
 }
 
@@ -1824,7 +1809,6 @@ void RGYFilterAnime4k::close() {
     m_thinWorkF16.luma.reset();
     m_thinWorkF16.workW = m_thinWorkF16.workH = m_thinWorkF16.pitchFloats = m_thinWorkF16.lumaPitch = 0;
     m_fp16Scratch = false;
-    m_kernelWgQueried = false;
     m_dtdSrcLuma.reset();
     m_dtdSrcLumaPitch = m_dtdSrcW = m_dtdSrcH = 0;
     m_chromaLumaLowres.reset();

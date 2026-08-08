@@ -26,10 +26,14 @@
 //
 // ------------------------------------------------------------------------------------------
 
-// Anime4K v3.2 hand-tuned luma refinement / 2x upscale chain.
+// Anime4K v3.2 hand-tuned luma refinement / 2x upscale chain,
+// plus ACNet F8B* CNN upscale via oneDNN.
 // Algorithms:
 //   * Anime4K v3.2 shader chain  -- bloc97 (MIT, 2019).
 //     https://github.com/bloc97/Anime4K
+//   * ACNet F8B4/F8B8/F8B18      -- weights from Anime4KCPP
+//     (TianZerL, MIT, 2020-2024); inference via Intel oneDNN
+//     (Apache-2.0). See ACKNOWLEDGMENTS.md for upstream attribution.
 //
 // Implementation status:
 //   * mode=original  -- Upscale_Original_x2.glsl v3.2 (REFINE_STRENGTH 0.5)
@@ -150,17 +154,6 @@ protected:
     Anime4kDownscaledScratches m_thinWorkF16;
     bool m_fp16Scratch;
 
-    // One-shot guard for the clGetKernelWorkGroupInfo
-    // CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE probe. The probe runs
-    // once on the first dispatch (lazy: the async program build behind
-    // m_anime4k may not be ready at end of init()) and logs the per-
-    // kernel preferred multiple at DEBUG. First codebase use of
-    // clGetKernelWorkGroupInfo -- no precedent elsewhere. We do not
-    // override workgroup sizes from the result; the log is informational
-    // for tuning future hand-picked local sizes (32x8 / 8x32 split is
-    // hard-coded based on the perf investigation).
-    bool m_kernelWgQueried;
-
     // Working luma scratch at 1x source resolution, allocated only
     // when mode=Dtd. Stage A (darken with strength 1.8) needs to
     // modify the post-source luma in place before stage B reads it;
@@ -227,6 +220,36 @@ protected:
                         const RGYFrameInfo *pOutputPlaneY,
                         float strength,
                         RGYOpenCLQueue &queue);
+
+    // Shared dispatch context passed to each runMode* / runDarkenChain / runThinChain
+    // / runDenoiseChain helper so the local variables from runPlaneY's setup
+    // block do not appear in every call site.
+    struct Anime4kDispatchCtx {
+        RGYOpenCLQueue &queue;
+        RGYWorkSize local_2d;
+        RGYWorkSize local_x_pass;
+        RGYWorkSize local_y_pass;
+        RGYWorkSize global;      // outW x outH
+        cl_mem srcImageMem;
+        int srcW, srcH, outW, outH;
+    };
+
+    // Upscale/sharpen mode sub-dispatchers. Each holds the kernel-dispatch
+    // block for one VppAnime4kMode value extracted from runPlaneY.
+    RGY_ERR runModeOriginal(const Anime4kDispatchCtx &ctx, RGYFrameInfo *pOutputPlaneY,
+                             const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+    RGY_ERR runModeDogSharpen(const Anime4kDispatchCtx &ctx, RGYFrameInfo *pOutputPlaneY, const RGYFrameInfo *pInputPlaneY,
+                               const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+    RGY_ERR runModeDog(const Anime4kDispatchCtx &ctx, RGYFrameInfo *pOutputPlaneY, const RGYFrameInfo *pInputPlaneY,
+                        const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+    RGY_ERR runModeDtd(const Anime4kDispatchCtx &ctx, RGYFrameInfo *pOutputPlaneY, const RGYFrameInfo *pInputPlaneY,
+                        const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+    RGY_ERR runDarkenChain(const Anime4kDispatchCtx &ctx, RGYFrameInfo *pOutputPlaneY,
+                            VppAnime4kDarken tier, RGYOpenCLEvent *event);
+    RGY_ERR runThinChain(const Anime4kDispatchCtx &ctx, RGYFrameInfo *pOutputPlaneY,
+                          VppAnime4kThin tier, RGYOpenCLEvent *event);
+    RGY_ERR runDenoiseChain(const Anime4kDispatchCtx &ctx, RGYFrameInfo *pOutputPlaneY,
+                             VppAnime4kDenoise tier, RGYOpenCLEvent *event);
 
     // Opt-in end-of-chain resize. Non-null only when anime4k.postResizeW/H > 0.
     // Instantiated and init'd in RGYFilterAnime4k::init() with frameIn = the
