@@ -16056,11 +16056,12 @@ tstring gen_cmd_help_common() {
         _T("\n")
         _T("   --input-hevc-bsf <string>    switch hevc bitstream filter used for hw decoder input\n")
         _T("                                 - internal   ... use internal implementation (default)\n")
-        _T("                                 - libavcodec ... use hevc_mp4toannexb bsf\n")
-        _T("   --adapt-resolution <int>x<int>\n")
-        _T("                                allow input resolution changes up to the specified size\n")
-        _T("                                with avsw reader. (default: initial resolution)\n"),
+        _T("                                 - libavcodec ... use hevc_mp4toannexb bsf\n"),
         DEFAULT_IGNORE_DECODE_ERROR);
+    str += _T("\n")
+        _T("   --adapt-resolution <int>x<int>\n")
+        _T("                                入力途中の解像度変更で許容する最大解像度を指定する。\n")
+        _T("                                avhwではデコーダ、avswでは入力サーフェスを指定値で確保する。\n");
     str += _T("\n")
         _T("   --input-pixel-format <string>  set input pixel format for avdevice\n")
         _T("   --offset-video-dts-advance  offset timestamp to cancel bframe delay\n")
