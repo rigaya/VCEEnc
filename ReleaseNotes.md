@@ -2,6 +2,7 @@
 
 ## 9.12
 
+- Improve driver load when both old Gen and newer Gen GPUs exists. 
 - Follow mid-stream input resolution changes with [--avsw](./VCEEncC_Options.en.md#--avsw-string).
 - Add [--adapt-resolution](./VCEEncC_Options.en.md#--adapt-resolution-maxwxmaxh) to set the maximum input resolution for variable-resolution sources.
 - Add support to track PMT change.
