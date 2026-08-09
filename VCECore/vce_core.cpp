@@ -4642,7 +4642,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     }
 #endif //#if ENABLE_PERF_COUNTER
 
-    ret = initAMFFactory();
+    ret = initAMFFactory(prm->deviceID);
     if (ret != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to initalize VCE factory: %s"), get_err_mes(ret));
         return ret;
@@ -4664,6 +4664,22 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         HWDecCodecCsp = deviceInfoCache->getDeviceDecCodecCsp();
         PrintMes(RGY_LOG_DEBUG, _T("HW dec codec csp support read from cache file.\n"));
     }
+    // デバイス指定時は、そのデバイスのデコード能力のみをリーダーに渡す
+    // (他GPUのHWデコード対応を見てavhwを選ぶと、後で選択デバイスがデコード非対応で失敗するため)
+    if (prm->deviceID >= 0 && HWDecCodecCsp.size() > 0) {
+        DeviceCodecCsp filtered;
+        for (const auto& devCsp : HWDecCodecCsp) {
+            if (devCsp.first == prm->deviceID) {
+                filtered.push_back(devCsp);
+            }
+        }
+        if (filtered.size() > 0) {
+            HWDecCodecCsp = std::move(filtered);
+        } else {
+            // キャッシュに対象デバイスが無い場合は空にしてSWデコードへ
+            HWDecCodecCsp.clear();
+        }
+    }
     std::vector<std::unique_ptr<VCEDevice>> devList;
     auto getDevInfo = [&devList]() {
         auto luid_to_string = [](const LUID& luid) {
@@ -4683,16 +4699,43 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     if (deviceInfoCache
         && (deviceInfoCache->getDeviceIds().size() == 0
             || (prm->deviceID >= 0 && deviceInfoCache->getDeviceIds().size() <= prm->deviceID))) {
-        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, -1, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
-        if (devList.size() == 0) {
+        // キャッシュ更新のため全デバイスを列挙する
+        auto allDevs = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, -1, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
+        if (allDevs.size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
             return ret;
         }
-        HWDecCodecCsp = getHWDecCodecCsp(prm->ctrl.skipHWDecodeCheck, devList);
-        const auto devInfo = getDevInfo();
-        deviceInfoCache->setDeviceInfos(devInfo);
-        deviceInfoCache->setDecCodecCsp(devInfo, HWDecCodecCsp);
-        deviceInfoCache->saveCacheFile();
+        HWDecCodecCsp = getHWDecCodecCsp(prm->ctrl.skipHWDecodeCheck, allDevs);
+        {
+            // getDevInfoはdevListを参照するため一時的に差し替え
+            std::swap(devList, allDevs);
+            const auto devInfo = getDevInfo();
+            deviceInfoCache->setDeviceInfos(devInfo);
+            deviceInfoCache->setDecCodecCsp(devInfo, HWDecCodecCsp);
+            deviceInfoCache->saveCacheFile();
+            std::swap(devList, allDevs);
+        }
+        // 複数GPUのAMF競合を避けるため、指定デバイスがある場合はそれだけを取り直す
+        if (prm->deviceID >= 0) {
+            allDevs.clear();
+            devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, prm->deviceID, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
+            if (devList.size() == 0) {
+                PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
+                return ret;
+            }
+        } else {
+            devList = std::move(allDevs);
+        }
+        // キャッシュ更新後も、指定デバイス向けにデコード能力を絞る
+        if (prm->deviceID >= 0) {
+            DeviceCodecCsp filtered;
+            for (const auto& devCsp : HWDecCodecCsp) {
+                if (devCsp.first == prm->deviceID) {
+                    filtered.push_back(devCsp);
+                }
+            }
+            HWDecCodecCsp = std::move(filtered);
+        }
         PrintMes(RGY_LOG_DEBUG, _T("HW dec codec csp support saved to cache file.\n"));
     }
 
@@ -4705,7 +4748,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     });
 
     if (devList.size() == 0) {
-        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, -1, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
+        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, prm->deviceID, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
         if (devList.size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
             return ret;
@@ -4755,6 +4798,29 @@ RGY_ERR VCECore::init(VCEParam *prm) {
 
         if (RGY_ERR_NONE != (ret = gpuAutoSelect(devList, prm, devUsageLock.get()))) {
             return ret;
+        }
+        // 複数GPU環境で他GPUのAMFコンポーネントが先にロードされていると、
+        // 選択GPUでのエンコーダ作成に失敗することがあるため、選択デバイスのみ再初期化する
+        if (prm->deviceID < 0 && !devList.empty()) {
+            const int selectedId = devList.front()->id();
+            if (m_devNames.size() > 1) {
+                PrintMes(RGY_LOG_DEBUG, _T("Re-initialize selected device #%d alone to avoid multi-GPU AMF conflict.\n"), selectedId);
+                devList.clear();
+                devUsageLock.reset();
+                m_deviceUsage.reset();
+                devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, selectedId, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
+                if (devList.size() == 0) {
+                    PrintMes(RGY_LOG_ERROR, _T("Failed to re-initialize selected device #%d.\n"), selectedId);
+                    return RGY_ERR_DEVICE_LOST;
+                }
+                prm->deviceID = selectedId;
+                if (devList.size() > 1) {
+                    m_deviceUsage = std::make_unique<RGYDeviceUsage>();
+                    devUsageLock = m_deviceUsage->lock();
+                }
+            } else {
+                prm->deviceID = selectedId;
+            }
         }
 
         if (RGY_ERR_NONE != (ret = initDevice(devList, prm->deviceID, devUsageLock.get()))) {
@@ -5681,7 +5747,7 @@ RGY_ERR VCEFeatures::init(int deviceId, const RGYParamLogLevel& loglevel) {
     m_core = std::make_unique<VCECore>();
     auto err = RGY_ERR_NONE;
     if (   (err = m_core->initLogLevel(loglevel)) != RGY_ERR_NONE
-        || (err = m_core->initAMFFactory()) != RGY_ERR_NONE
+        || (err = m_core->initAMFFactory(deviceId)) != RGY_ERR_NONE
         || (err = m_core->initTracer(loglevel.get(RGY_LOGT_AMF))) != RGY_ERR_NONE) {
         return err;
     }
@@ -5693,9 +5759,9 @@ RGY_ERR VCEFeatures::init(int deviceId, const RGYParamLogLevel& loglevel) {
     constexpr bool enableOpenCLForCaps = false;
 #endif
 #if ENABLE_D3D11
-    auto devList = m_core->createDeviceList(false, true, RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0);
+    auto devList = m_core->createDeviceList(false, true, RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0, deviceId);
 #else
-    auto devList = m_core->createDeviceList(false, false, RGYParamInitVulkan::TargetVendor, enableOpenCLForCaps, false, false, 0);
+    auto devList = m_core->createDeviceList(false, false, RGYParamInitVulkan::TargetVendor, enableOpenCLForCaps, false, false, 0, deviceId);
 #endif
     int selectedDeviceId = deviceId;
     if (selectedDeviceId < 0) {
@@ -5711,6 +5777,18 @@ RGY_ERR VCEFeatures::init(int deviceId, const RGYParamLogLevel& loglevel) {
         if (selectedDeviceId < 0 && devList.size() > 0) {
             selectedDeviceId = devList.front()->id();
         }
+    }
+    // 複数GPUがある場合は、選択デバイスのみを再初期化してAMFコンポーネント競合を避ける
+    if (selectedDeviceId >= 0 && (deviceId < 0 || devList.size() > 1)) {
+#if ENABLE_D3D11
+        if (devList.size() != 1 || devList.front()->id() != selectedDeviceId) {
+            devList = m_core->createDeviceList(false, true, RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0, selectedDeviceId);
+        }
+#else
+        if (devList.size() != 1 || (devList.size() > 0 && devList.front()->id() != selectedDeviceId)) {
+            devList = m_core->createDeviceList(false, false, RGYParamInitVulkan::TargetVendor, enableOpenCLForCaps, false, false, 0, selectedDeviceId);
+        }
+#endif
     }
 #if !defined(_WIN32) && !defined(_WIN64)
 #if !ENABLE_D3D11

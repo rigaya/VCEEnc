@@ -244,22 +244,37 @@ RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const 
         std::memcpy(vulkanUUID.data(), m_vk.GetUUID(), std::min<size_t>(vulkanUUID.size(), VK_UUID_SIZE));
     }
 #endif
-    for (auto& platform : platforms) {
+    const bool multiPlatform = platforms.size() > 1;
+    bool usedInteropDeviceList = false;
+    for (size_t ip = 0; ip < platforms.size(); ip++) {
+        auto& platform = platforms[ip];
+        const bool tryNextPlatformOnInteropFail = multiPlatform && (ip + 1 < platforms.size());
         PrintMes(RGY_LOG_DEBUG, _T("Checking platform %s...\n"), char_to_tstring(platform->info().name).c_str());
+        usedInteropDeviceList = false;
 #if ENABLE_D3D9
         if (interopD3d9) {
-            if (platform->createDeviceListD3D9(CL_DEVICE_TYPE_GPU, (void *)m_dx9.GetDevice()) != RGY_ERR_NONE || platform->devs().size() == 0) {
-                PrintMes(loglevelOpenCLError, _T("Failed to find d3d9 device.\n"));
+            // 複数のAMD OpenCL platformがある場合、D3D9デバイスと対応しないplatformでは失敗しうるため次を試す
+            if (platform->createDeviceListD3D9(CL_DEVICE_TYPE_GPU, (void *)m_dx9.GetDevice(), tryNextPlatformOnInteropFail) != RGY_ERR_NONE || platform->devs().size() == 0) {
+                PrintMes(tryNextPlatformOnInteropFail ? RGY_LOG_DEBUG : loglevelOpenCLError, _T("Failed to find d3d9 device on platform %s.\n"), char_to_tstring(platform->info().name).c_str());
+                if (tryNextPlatformOnInteropFail) {
+                    continue;
+                }
                 return RGY_ERR_DEVICE_LOST;
             }
+            usedInteropDeviceList = true;
         } else
 #endif //#if ENABLE_D3D9
 #if ENABLE_D3D11
             if (interopD3d11 || !interopD3d9) {
-                if (platform->createDeviceListD3D11(CL_DEVICE_TYPE_GPU, (void *)m_dx11.GetDevice()) != RGY_ERR_NONE || platform->devs().size() == 0) {
-                    PrintMes(loglevelOpenCLError, _T("Failed to find d3d11 device.\n"));
+                // 複数のAMD OpenCL platformがある場合、D3D11デバイスと対応しないplatformでは失敗しうるため次を試す
+                if (platform->createDeviceListD3D11(CL_DEVICE_TYPE_GPU, (void *)m_dx11.GetDevice(), tryNextPlatformOnInteropFail) != RGY_ERR_NONE || platform->devs().size() == 0) {
+                    PrintMes(tryNextPlatformOnInteropFail ? RGY_LOG_DEBUG : loglevelOpenCLError, _T("Failed to find d3d11 device on platform %s.\n"), char_to_tstring(platform->info().name).c_str());
+                    if (tryNextPlatformOnInteropFail) {
+                        continue;
+                    }
                     return RGY_ERR_DEVICE_LOST;
                 }
+                usedInteropDeviceList = true;
             } else
 #endif //#if ENABLE_D3D11
             {
@@ -288,9 +303,12 @@ RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const 
                 if (selectedPlatform) {
                     break;
                 }
+                continue;
             }
 #endif
-            selectCLDevice = useInteropDeviceForOpenCLSelection(interopD3d9, interopD3d11) ? 0 : deviceId - totalDevices;
+            // D3D11/D3D9 interopで得たデバイスリストは対象GPUのみなので常にindex 0
+            selectCLDevice = (usedInteropDeviceList || useInteropDeviceForOpenCLSelection(interopD3d9, interopD3d11))
+                ? 0 : deviceId - totalDevices;
             totalDevices += (int)devices.size();
             if (selectCLDevice < (int)devices.size()) {
                 selectedPlatform = platform;

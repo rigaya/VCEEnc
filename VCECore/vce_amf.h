@@ -68,7 +68,7 @@ public:
 
     virtual RGY_ERR initLogLevel(RGYLogLevel loglevel);
     virtual RGY_ERR initLogLevel(const RGYParamLogLevel& loglevel);
-    virtual RGY_ERR initAMFFactory();
+    virtual RGY_ERR initAMFFactory(int deviceId = -1);
     virtual RGY_ERR initTracer(int log_level);
     virtual void Terminate();
 

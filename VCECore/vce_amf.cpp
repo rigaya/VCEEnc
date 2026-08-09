@@ -25,10 +25,137 @@
 //
 // ------------------------------------------------------------------------------------------
 
+#include <algorithm>
 #include <cmath>
 #include <numeric>
+#include <vector>
 #include "vce_amf.h"
 #include "vce_util.h"
+#include "rgy_filesystem.h"
+#if defined(_WIN32) || defined(_WIN64)
+#include <atlbase.h>
+#include <dxgi.h>
+#pragma comment(lib, "dxgi.lib")
+#endif
+
+#if defined(_WIN32) || defined(_WIN64)
+// 指定DXGIアダプタ(論理AMDアダプタ番号)に対応するDriverStoreディレクトリを取得する
+static tstring getAMFDriverStoreDirForAdapter(int logicalAdapterId) {
+    const auto& adapterIndexes = DX11AdapterManager::getInstance(nullptr)->getAdapterIndexes();
+    if (logicalAdapterId < 0 || logicalAdapterId >= (int)adapterIndexes.size()) {
+        return tstring();
+    }
+    ATL::CComPtr<IDXGIFactory> pFactory;
+    if (FAILED(CreateDXGIFactory(__uuidof(IDXGIFactory), (void **)&pFactory))) {
+        return tstring();
+    }
+    ATL::CComPtr<IDXGIAdapter> pAdapter;
+    if (pFactory->EnumAdapters(adapterIndexes[logicalAdapterId], &pAdapter) == DXGI_ERROR_NOT_FOUND) {
+        return tstring();
+    }
+    DXGI_ADAPTER_DESC targetDesc = {};
+    if (FAILED(pAdapter->GetDesc(&targetDesc))) {
+        return tstring();
+    }
+
+    const auto deviceIdToken = strsprintf(_T("DEV_%04X"), targetDesc.DeviceId);
+    const TCHAR *kDisplayClass = _T("SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}");
+    HKEY hClassKey = nullptr;
+    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, kDisplayClass, 0, KEY_READ, &hClassKey) != ERROR_SUCCESS) {
+        return tstring();
+    }
+
+    tstring driverStoreDir;
+    for (DWORD idx = 0; ; idx++) {
+        TCHAR subKeyName[256] = {};
+        DWORD subKeyNameLen = _countof(subKeyName);
+        if (RegEnumKeyEx(hClassKey, idx, subKeyName, &subKeyNameLen, nullptr, nullptr, nullptr, nullptr) != ERROR_SUCCESS) {
+            break;
+        }
+        HKEY hAdapterKey = nullptr;
+        if (RegOpenKeyEx(hClassKey, subKeyName, 0, KEY_READ, &hAdapterKey) != ERROR_SUCCESS) {
+            continue;
+        }
+        TCHAR matchingId[256] = {};
+        DWORD matchingIdSize = sizeof(matchingId);
+        DWORD typ = 0;
+        const auto regRet = RegQueryValueEx(hAdapterKey, _T("MatchingDeviceId"), nullptr, &typ, (LPBYTE)matchingId, &matchingIdSize);
+        if (regRet != ERROR_SUCCESS || (typ != REG_SZ && typ != REG_MULTI_SZ)) {
+            RegCloseKey(hAdapterKey);
+            continue;
+        }
+        const tstring matchingIdStr(matchingId);
+        if (matchingIdStr.find(_T("VEN_1002")) == tstring::npos
+            || matchingIdStr.find(deviceIdToken) == tstring::npos) {
+            RegCloseKey(hAdapterKey);
+            continue;
+        }
+
+        // OpenGLDriverName / UserModeDriverName からDriverStoreパスを得る
+        auto tryExtractDir = [](HKEY hKey, const TCHAR *valueName) -> tstring {
+            DWORD typ2 = 0;
+            DWORD size = 0;
+            if (RegQueryValueEx(hKey, valueName, nullptr, &typ2, nullptr, &size) != ERROR_SUCCESS || size == 0) {
+                return tstring();
+            }
+            std::vector<TCHAR> buf(size / sizeof(TCHAR) + 1, _T('\0'));
+            if (RegQueryValueEx(hKey, valueName, nullptr, &typ2, (LPBYTE)buf.data(), &size) != ERROR_SUCCESS) {
+                return tstring();
+            }
+            tstring path = buf.data();
+            // REG_MULTI_SZや "{path}" 形式に対応
+            path = str_replace(path, _T("{"), _T(""));
+            path = str_replace(path, _T("}"), _T(""));
+            // 複数パスがスペース区切りの場合は先頭を使う
+            const auto spacePos = path.find(_T(' '));
+            if (spacePos != tstring::npos) {
+                path = path.substr(0, spacePos);
+            }
+            if (path.empty()) {
+                return tstring();
+            }
+            return PathRemoveFileSpecFixed(path).second;
+        };
+
+        driverStoreDir = tryExtractDir(hAdapterKey, _T("OpenGLDriverName"));
+        if (driverStoreDir.empty()) {
+            driverStoreDir = tryExtractDir(hAdapterKey, _T("UserModeDriverName"));
+        }
+        RegCloseKey(hAdapterKey);
+        if (!driverStoreDir.empty()) {
+            break;
+        }
+    }
+    RegCloseKey(hClassKey);
+    return driverStoreDir;
+}
+
+static tstring resolveAMFRuntimeDllPath(int deviceId) {
+    // 対象アダプタが決まっている場合はそのDriverStoreを優先
+    std::vector<int> adaptersToTry;
+    if (deviceId >= 0) {
+        adaptersToTry.push_back(deviceId);
+    } else {
+        // 自動選択時は全AMDアダプタを新しい順に試し、amfrtがあるものを選ぶ
+        const int count = DeviceDX11::adapterCount(nullptr);
+        for (int i = count - 1; i >= 0; i--) {
+            adaptersToTry.push_back(i);
+        }
+    }
+    for (const int adapterId : adaptersToTry) {
+        const auto dir = getAMFDriverStoreDirForAdapter(adapterId);
+        if (dir.empty()) {
+            continue;
+        }
+        const auto dllPath = dir + _T("\\") + wstring_to_tstring(AMF_DLL_NAME);
+        if (rgy_file_exists(dllPath)) {
+            return dllPath;
+        }
+    }
+    return wstring_to_tstring(AMF_DLL_NAME);
+}
+#endif // Windows
+
 
 void VCEAMF::PrintMes(RGYLogLevel log_level, const TCHAR *format, ...) {
     if (m_pLog.get() == nullptr || log_level < m_pLog->getLogLevel(RGY_LOGT_CORE)) {
@@ -77,8 +204,23 @@ void VCEAMF::Terminate() {
     m_pLog.reset();
 }
 
-RGY_ERR VCEAMF::initAMFFactory() {
+RGY_ERR VCEAMF::initAMFFactory(int deviceId) {
+#if defined(_WIN32) || defined(_WIN64)
+    // 複数世代のAMDドライバが同居していると、System32のamfrt64が
+    // 古い方のamfrtdrv64を掴んでしまい新しいdGPUでエンコーダ作成に失敗する。
+    // 対象GPUのDriverStore上のamfrt64をLOAD_WITH_ALTERED_SEARCH_PATHで読む。
+    const auto amfDllPath = resolveAMFRuntimeDllPath(deviceId);
+    PrintMes(RGY_LOG_DEBUG, _T("Loading AMF runtime: %s (deviceId=%d)\n"), amfDllPath.c_str(), deviceId);
+    m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(
+        LoadLibraryEx(amfDllPath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH));
+    if (!m_dll) {
+        // フォールバック: 通常の検索パス
+        m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(RGY_LOAD_LIBRARY(wstring_to_tstring(AMF_DLL_NAME).c_str()));
+    }
+#else
+    (void)deviceId;
     m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(RGY_LOAD_LIBRARY(wstring_to_tstring(AMF_DLL_NAME).c_str()));
+#endif
     if (!m_dll) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to load %s.\n"), wstring_to_tstring(AMF_DLL_NAME).c_str());
         return RGY_ERR_NOT_FOUND;
@@ -168,18 +310,34 @@ std::vector<std::unique_ptr<VCEDevice>> VCEAMF::createDeviceList(bool interopD3d
 #endif
     PrintMes(RGY_LOG_DEBUG, _T("adapterCount %d.\n"), adapterCount);
 
-    for (int i = 0; i < adapterCount; i++) {
-        auto dev = std::make_unique<VCEDevice>(m_pLog, m_pFactory, m_pTrace);
-        const int adapterIndex =
+    std::vector<int> adaptersToInit;
 #if ENABLE_VULKAN && !ENABLE_D3D11
-            adapterIndices[i];
+    adaptersToInit = adapterIndices;
 #else
-            i;
+    for (int i = 0; i < adapterCount; i++) {
+        if (targetDeviceId >= 0 && i != targetDeviceId) {
+            continue;
+        }
+        adaptersToInit.push_back(i);
+    }
 #endif
+    // 複数GPUを同時に初期化すると、古いiGPUドライバのAMFコンポーネントが先に
+    // ロードされ、新しいdGPUでエンコーダ作成に失敗することがある。
+    // 新しいアダプタから初期化することで、新しいドライバ側を優先する。
+    if (adaptersToInit.size() > 1) {
+        std::reverse(adaptersToInit.begin(), adaptersToInit.end());
+    }
+
+    for (const int adapterIndex : adaptersToInit) {
+        auto dev = std::make_unique<VCEDevice>(m_pLog, m_pFactory, m_pTrace);
         PrintMes(RGY_LOG_DEBUG, _T("Init adaptor #%d.\n"), adapterIndex);
         if (dev->init(adapterIndex, interopD3d9, interopD3d11, interopVulkan, enableOpenCL, enableVppPerfMonitor, enableAV1HWDec, openCLBuildThreads, clPerfDumpDir, clPerfTimelineSec) == RGY_ERR_NONE) {
             devs.push_back(std::move(dev));
         }
     }
+    // デバイスID順に戻す（新しいアダプタから初期化したため）
+    std::sort(devs.begin(), devs.end(), [](const std::unique_ptr<VCEDevice>& a, const std::unique_ptr<VCEDevice>& b) {
+        return a->id() < b->id();
+    });
     return devs;
 }
