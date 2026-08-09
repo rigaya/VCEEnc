@@ -2860,9 +2860,9 @@ public:
                         PrintMes(RGY_LOG_ERROR, _T("Failed to allocate surface: %s.\n"), get_err_mes(err_to_rgy(ar)));
                         return err_to_rgy(ar);
                     }
-                    ar = pSurface->Interop(amf::AMF_MEMORY_OPENCL);
+                    ar = pSurface->Convert(amf::AMF_MEMORY_OPENCL);
                     if (ar != AMF_OK) {
-                        PrintMes(RGY_LOG_ERROR, _T("Failed to get interop of surface: %s.\n"), get_err_mes(err_to_rgy(ar)));
+                        PrintMes(RGY_LOG_ERROR, _T("Failed to convert plane: %s.\n"), get_err_mes(err_to_rgy(ar)));
                         return err_to_rgy(ar);
                     }
                 } else {
