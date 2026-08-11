@@ -200,9 +200,17 @@ int main(void) { return 0; }
   endif
 endif
 if enable_libass
-  libass_dep = dependency('libass', required: true)
+  libass_dep = dependency('libass', required: true, static: get_option('libass_static'))
+  libass_compile_dep = libass_dep.partial_dependency(includes: true, compile_args: true)
+  if get_option('libass_static')
+    libass_link_dep = libass_dep
+  else
+    libass_link_dep = disabler()
+  endif
 else
   libass_dep = disabler()
+  libass_compile_dep = disabler()
+  libass_link_dep = disabler()
 endif
 if enable_vulkan
   vulkan_pkg_dep = dependency('vulkan', required: false)
@@ -405,6 +413,7 @@ conf_data.set10('ENABLE_AVSW_READER', true)
 conf_data.set10('ENABLE_SM_READER', false)
 conf_data.set10('ENABLE_CUSTOM_VPP', true)
 conf_data.set10('ENABLE_LIBASS_SUBBURN', libass_dep.found())
+conf_data.set10('LIBASS_STATIC_LINK', libass_dep.found() and get_option('libass_static'))
 conf_data.set10('ENABLE_OPENCL', true)
 conf_data.set10('ENABLE_AVCODEC_OUT_THREAD', true)
 conf_data.set10('ENABLE_CPP_REGEX', true)
@@ -614,6 +623,7 @@ vcecore_sources = files(
   'VCECore/rgy_input_vpy.cpp',
   'VCECore/rgy_language.cpp',
   'VCECore/rgy_libdovi.cpp',
+  'VCECore/rgy_libass.cpp',
   'VCECore/rgy_libplacebo.cpp',
   'VCECore/rgy_level.cpp',
   'VCECore/rgy_level_av1.cpp',
@@ -741,8 +751,11 @@ endif
 if avisynth_compile_dep.found()
   all_deps += avisynth_compile_dep
 endif
-if libass_dep.found()
-  all_deps += libass_dep
+if libass_compile_dep.found()
+  all_deps += libass_compile_dep
+endif
+if libass_link_dep.found()
+  all_deps += libass_link_dep
 endif
 if enable_vulkan and have_vulkan_headers
   all_deps += vulkan_compile_dep
@@ -777,6 +790,7 @@ summary({
   'VapourSynth': enable_vapoursynth and have_vapoursynth_headers,
   'AviSynth': enable_avisynth and have_avisynth_headers,
   'libass': libass_dep.found(),
+  'libass static': libass_dep.found() and get_option('libass_static'),
   'libplacebo': libplacebo_dep.found(),
   'Vulkan': enable_vulkan and have_vulkan_headers,
   'dtl': enable_dtl,
