@@ -89,6 +89,21 @@ Check if your GPU is properly recognized.
 sudo apt install vulkan-utils clinfo
 ```
 
+If `clinfo` reports `Number of platforms 0`, register the ROCm OpenCL ICD and library search path. Run the following after the `--opencl=rocr` installation has completed.
+
+```Shell
+rocm_icd=$(find /opt/rocm -path '*/etc/OpenCL/vendors/amdocl64.icd' -print -quit)
+rocm_root=$(dirname "$(dirname "$(dirname "$(dirname "$rocm_icd")")")")
+rocm_lib=$(find "$rocm_root" -path '*/lib/opencl/libamdocl64.so' -print -quit)
+
+sudo install -d /etc/OpenCL/vendors
+printf '%s\n' 'libamdocl64.so' |
+    sudo tee /etc/OpenCL/vendors/amdocl64.icd >/dev/null
+printf '%s\n' "$(dirname "$rocm_lib")" |
+    sudo tee /etc/ld.so.conf.d/rocm-opencl.conf >/dev/null
+sudo ldconfig
+```
+
 Check GPU recognition status using ```clinfo``` and ```vulkaninfo```. Especially with ```vulkaninfo```, confirm that your target AMD GPU is recognized as "GPU0".
 
 ```Shell

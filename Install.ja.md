@@ -90,6 +90,21 @@ GPUの認識状況を確認します。
 sudo apt install vulkan-utils clinfo
 ```
 
+`clinfo` で `Number of platforms 0` と表示される場合は、ROCm OpenCL のICDとライブラリ検索パスを登録します。`--opencl=rocr` のインストールが完了していることを確認してから、下記を実行してください。
+
+```Shell
+rocm_icd=$(find /opt/rocm -path '*/etc/OpenCL/vendors/amdocl64.icd' -print -quit)
+rocm_root=$(dirname "$(dirname "$(dirname "$(dirname "$rocm_icd")")")")
+rocm_lib=$(find "$rocm_root" -path '*/lib/opencl/libamdocl64.so' -print -quit)
+
+sudo install -d /etc/OpenCL/vendors
+printf '%s\n' 'libamdocl64.so' |
+    sudo tee /etc/OpenCL/vendors/amdocl64.icd >/dev/null
+printf '%s\n' "$(dirname "$rocm_lib")" |
+    sudo tee /etc/ld.so.conf.d/rocm-opencl.conf >/dev/null
+sudo ldconfig
+```
+
 ```clinfo``` と ```vulkaninfo``` でGPUの認識状況を確認します。特に ```vulkaninfo``` では、対象のAMD GPUが "GPU0" として認識されていることを確認してください。
 
 ```Shell
