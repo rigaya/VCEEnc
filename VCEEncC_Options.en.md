@@ -2737,8 +2737,11 @@ Run an OpenCL implementation of an Anime4K v3.2 GLSL-style luma enhancement / 2x
     Chroma resize method for 2x upscale. `spline36`, `bilinear`, `bicubic`, `lanczos3`, `joint`.
   - chroma=&lt;bool&gt;  
     Resize chroma on 2x upscale.
-  - out_res=&lt;int&gt;x&lt;int&gt;, resize=&lt;string&gt;  
+  - out_res=&lt;int&gt;x&lt;int&gt;  
     Resize to an arbitrary final resolution after Anime4K processing. A negative value on one axis keeps aspect ratio.
+  - resize=&lt;string&gt; (default: spline16)  
+    Resampler for out_res.  
+    lanczos4 / spline16 / spline36 / jinc144 / nis / bicubic / ...
 
 ### --vpp-lenscorrection [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 

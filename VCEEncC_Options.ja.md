@@ -2733,8 +2733,11 @@ Anime4K v3.2 GLSL シェーダ相当の輝度強調・2倍拡大チェーンを�
   - chroma=&lt;bool&gt;
     2倍拡大時に色差もリサイズする。
 
-  - out_res=&lt;int&gt;x&lt;int&gt;, resize=&lt;string&gt;
+  - out_res=&lt;int&gt;x&lt;int&gt;
     Anime4K処理後に任意解像度へリサイズする。片方の値を負数にするとアスペクト比を維持する。
+  - resize=&lt;string&gt; (デフォルト: spline16)
+    out_resで使用するリサンプラー。
+    lanczos4 / spline16 / spline36 / jinc144 / nis / bicubic / ...
 
 ### --vpp-lenscorrection [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
 
