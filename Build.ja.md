@@ -65,7 +65,7 @@ x64 の VCEEncC ビルドでは、`%ONNXRUNTIME_DIR%\lib` の `onnxruntime.dll` 
 ```Batchfile
 git clone https://github.com/rigaya/VCEEnc --recursive
 cd VCEEnc
-curl -s -o ffmpeg_lgpl.7z -L https://github.com/rigaya/ffmpeg_dlls_for_hwenc/releases/download/20250830/ffmpeg_dlls_for_hwenc_20250830.7z
+curl -s -o ffmpeg_lgpl.7z -L https://github.com/rigaya/ffmpeg_dlls_for_hwenc/releases/download/20260812/ffmpeg_lgpl_20260812.7z
 7z x -offmpeg_lgpl -y ffmpeg_lgpl.7z
 ```
 
