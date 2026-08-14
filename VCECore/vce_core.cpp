@@ -1483,7 +1483,8 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vppamf.frc.enable)     filterPipeline.push_back(VppType::AMF_FRC);
     if (inputParam->vpp.overlay.size() > 0)  filterPipeline.push_back(VppType::CL_OVERLAY);
 
-    if (filterPipeline.size() == 0) {
+    // AviUtlの共有メモリ入力は開始時に解像度が固定されるため、待機用OpenCLブロックを追加する必要はない。
+    if (filterPipeline.size() == 0 && inputParam->input.type != RGY_INPUT_FMT_SM) {
         // フィルタが1つも無い構成ではOpenCLブロック自体が無く、解像度変更を吸収する場所が無い(AMFエンコーダがAMF_INVALID_RESOLUTIONで停止する)
         // このため等倍のCL_CROPを1つ常設してOpenCLブロックを作る。これはInitFilters()で先頭・末尾のCspCrop2つに展開され、
         // reconstructFilterChain()が要求する「先頭と末尾がCspCrop」の形になる
