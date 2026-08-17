@@ -5179,24 +5179,6 @@ RGY_ERR VCECore::run2() {
             }
         }
     }
-    // MFXのコンポーネントをm_pipelineTasksの解放(フレームの解放)前に実施する
-    PrintMes(RGY_LOG_DEBUG, _T("Clear vpp filters...\n"));
-    m_vpFilters.clear();
-    PrintMes(RGY_LOG_DEBUG, _T("Closing m_pmfxDEC/ENC/VPP...\n"));
-
-    if (m_pEncoder != nullptr) {
-        PrintMes(RGY_LOG_DEBUG, _T("Closing Encoder...\n"));
-        m_pEncoder->Terminate();
-        m_pEncoder = nullptr;
-        PrintMes(RGY_LOG_DEBUG, _T("Closed Encoder.\n"));
-    }
-
-    if (m_pDecoder != nullptr) {
-        PrintMes(RGY_LOG_DEBUG, _T("Closing Decoder...\n"));
-        m_pDecoder->Terminate();
-        m_pDecoder = nullptr;
-        PrintMes(RGY_LOG_DEBUG, _T("Closed Decoder.\n"));
-    }
     // taskの集計結果を表示
     if (m_taskPerfMonitor) {
         PrintMes(RGY_LOG_INFO, _T("\nTask Performance\n"));
@@ -5229,6 +5211,26 @@ RGY_ERR VCECore::run2() {
         it->reset();
     }
     m_pipelineTasks.clear();
+
+    // デコードスレッドの終了とサーフェス・OpenCLイベントの解放後にAMFコンポーネントを終了する
+    PrintMes(RGY_LOG_DEBUG, _T("Clear vpp filters...\n"));
+    m_vpFilters.clear();
+    PrintMes(RGY_LOG_DEBUG, _T("Closing AMF Decoder/Encoder/VPP...\n"));
+
+    if (m_pEncoder != nullptr) {
+        PrintMes(RGY_LOG_DEBUG, _T("Closing Encoder...\n"));
+        m_pEncoder->Terminate();
+        m_pEncoder = nullptr;
+        PrintMes(RGY_LOG_DEBUG, _T("Closed Encoder.\n"));
+    }
+
+    if (m_pDecoder != nullptr) {
+        PrintMes(RGY_LOG_DEBUG, _T("Closing Decoder...\n"));
+        m_pDecoder->Terminate();
+        m_pDecoder = nullptr;
+        PrintMes(RGY_LOG_DEBUG, _T("Closed Decoder.\n"));
+    }
+
     PrintMes(RGY_LOG_DEBUG, _T("Waiting for writer to finish...\n"));
     m_pFileWriter->WaitFin();
     PrintMes(RGY_LOG_DEBUG, _T("Write results...\n"));

@@ -854,9 +854,9 @@ protected:
     RGYInput *m_input;
     RGYQueueMPMP<RGYFrameDataMetadata*> m_queueHDR10plusMetadata;
     RGYQueueMPMP<FrameFlags> m_dataFlag;
-    RGYRunState m_state;
+    std::atomic<RGYRunState> m_state;
     bool m_gotFrameFirstKeyPts;
-    bool m_reachedEndPts;
+    std::atomic<bool> m_reachedEndPts;
     int64_t m_firstKeyPts;
     int64_t m_endPts; // 並列処理時用の終了時刻 (この時刻は含まないようにする) -1の場合は制限なし(最後まで)
     int m_decOutFrames;
