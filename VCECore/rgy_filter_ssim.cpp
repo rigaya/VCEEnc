@@ -460,9 +460,37 @@ void RGYFilterSsim::close_cl_resources() {
 
 RGY_ERR RGYFilterSsim::addBitstream(const RGYBitstream *bitstream) {
 #if ENCODER_VCEENC
+    auto pumpDecoderOutput = [this]() {
+        // 通常はシングルスレッドで比較する。比較スレッドが有効な場合は、
+        // そちらがQueryOutputするので同じdecoderをここから同時に操作しない。
+        return (!m_thread.joinable()) ? compare_frames() : RGY_ERR_MORE_BITSTREAM;
+    };
     if (bitstream == nullptr) {
-        m_decoder->Drain();
-        return RGY_ERR_NONE;
+        AMF_RESULT ar = AMF_OK;
+        for (;;) {
+            try {
+                ar = m_decoder->Drain();
+            } catch (...) {
+                AddMessage(RGY_LOG_ERROR, _T("ERROR: Unexpected error while draining decoder.\n"));
+                ar = AMF_UNEXPECTED;
+            }
+            if (ar != AMF_INPUT_FULL && ar != AMF_DECODER_NO_FREE_SURFACES) {
+                break;
+            }
+
+            // Drainも出力キューが詰まっていると受理されない。待つだけでは空きが
+            // 生まれないため、SDKの契約どおりQueryOutputしてから再試行する。
+            const auto sts = pumpDecoderOutput();
+            if (sts == RGY_ERR_NONE) {
+                continue;
+            }
+            if (sts == RGY_ERR_MORE_BITSTREAM || sts == RGY_ERR_MORE_SURFACE) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                continue;
+            }
+            return sts;
+        }
+        return (ar == AMF_OK) ? RGY_ERR_NONE : err_to_rgy(ar);
     }
     amf::AMFBufferPtr pictureBuffer;
     auto ar = m_context->AllocBuffer(amf::AMF_MEMORY_HOST, bitstream->size(), &pictureBuffer);
@@ -488,7 +516,18 @@ RGY_ERR RGYFilterSsim::addBitstream(const RGYBitstream *bitstream) {
             AddMessage(RGY_LOG_ERROR, _T("ERROR: Resolution changed during decoding.\n"));
             break;
         } else if (ar == AMF_INPUT_FULL || ar == AMF_DECODER_NO_FREE_SURFACES) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            // 入力キューが満杯のときに待つだけでは、同じスレッドで行う
+            // QueryOutputへ進めず自己デッドロックする。取得可能な出力を処理して
+            // decoder内部の空きを作ってから、同じpictureBufferを再送する。
+            const auto sts = pumpDecoderOutput();
+            if (sts == RGY_ERR_NONE) {
+                continue;
+            }
+            if (sts == RGY_ERR_MORE_BITSTREAM || sts == RGY_ERR_MORE_SURFACE) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                continue;
+            }
+            return sts;
         } else if (ar == AMF_REPEAT) {
             continue; // 46ab4241 を反映、データはまだ使用されていないので、再度呼び出し
         } else {
@@ -573,7 +612,7 @@ RGY_ERR RGYFilterSsim::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo 
             while (sts == RGY_ERR_NONE) {
                 sts = compare_frames();
             }
-            if (sts == RGY_ERR_MORE_BITSTREAM) {
+            if (sts == RGY_ERR_MORE_BITSTREAM || sts == RGY_ERR_MORE_SURFACE) {
                 sts = RGY_ERR_NONE;
             }
         }
@@ -640,7 +679,9 @@ RGY_ERR RGYFilterSsim::thread_func_compare_frames() {
 
     while (!m_abort) {
         res = compare_frames();
-        if (res != RGY_ERR_NONE && res != RGY_ERR_MORE_BITSTREAM) {
+        if (res == RGY_ERR_MORE_SURFACE) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        } else if (res != RGY_ERR_NONE && res != RGY_ERR_MORE_BITSTREAM) {
             break;
         }
     }
@@ -651,6 +692,12 @@ RGY_ERR RGYFilterSsim::compare_frames() {
 #if ENCODER_VCEENC
     if (!m_decoder) {
         return RGY_ERR_MORE_DATA;
+    }
+    std::unique_lock<std::mutex> inputLock(m_mtx);
+    if (m_input.empty()) {
+        // decoder出力と比較する元画像がまだ無い。QueryOutputすると取得済みの
+        // decoder出力を戻せないため、元画像が追加されるまで待つ。
+        return RGY_ERR_MORE_SURFACE;
     }
     amf::AMFSurfacePtr surf;
     auto ar = AMF_REPEAT;
@@ -725,7 +772,6 @@ RGY_ERR RGYFilterSsim::compare_frames() {
         }
 
         //比較用のキューの先頭に積まれているものから順次比較していく
-        std::lock_guard<std::mutex> lock(m_mtx); //ロックを忘れないこと
         auto &originalFrame = m_input.front();
         sts_filter = calc_ssim_psnr(&originalFrame->frame, &m_decFrameCopy->frame);
         if (sts_filter != RGY_ERR_NONE) {
