@@ -1442,10 +1442,16 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vppamf.pp.enable)         filterPipeline.push_back(VppType::AMF_PREPROCESS);
     if (inputParam->vpp.subburn.size()>0)     filterPipeline.push_back(VppType::CL_SUBBURN);
     if (inputParam->vpp.libplacebo_shader.size() > 0)  filterPipeline.push_back(VppType::CL_LIBPLACEBO_SHADER);
+    const bool useOpenCLResizeForAdaptResolution =
+        resizeRequired == RGY_VPP_RESIZE_TYPE_AUTO
+        && inputParam->common.adaptResolution.first > 0
+        && inputParam->common.adaptResolution.second > 0;
     if (     resizeRequired == RGY_VPP_RESIZE_TYPE_OPENCL
 #if ENABLE_LIBPLACEBO
         || resizeRequired == RGY_VPP_RESIZE_TYPE_LIBPLACEBO
 #endif
+        // AMF HQScalerは入力解像度の途中変更に追従できないため、既定リサイズだけ動的再構築可能なOpenCLへ切り替える。
+        || useOpenCLResizeForAdaptResolution
     ) filterPipeline.push_back(VppType::CL_RESIZE);
     else if (resizeRequired != RGY_VPP_RESIZE_TYPE_NONE)   filterPipeline.push_back(VppType::AMF_RESIZE);
     if (inputParam->vpp.unsharp.enable)    filterPipeline.push_back(VppType::CL_UNSHARP);
