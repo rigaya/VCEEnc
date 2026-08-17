@@ -79,6 +79,7 @@ protected:
     AVStream *m_stream;
     RGYFilterOverlayFrame m_frame;
     RGYFilterOverlayFrame m_alpha;
+    bool m_alphaFrameReady;
     RGYOpenCLProgramAsync m_overlay;
 
     bool m_bInterlacedWarn;

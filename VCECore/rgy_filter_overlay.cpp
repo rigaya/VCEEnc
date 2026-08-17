@@ -107,6 +107,7 @@ RGYFilterOverlay::RGYFilterOverlay(std::shared_ptr<RGYOpenCLContext> context) :
     m_stream(nullptr),
     m_frame(),
     m_alpha(),
+    m_alphaFrameReady(false),
     m_overlay(),
     m_bInterlacedWarn(false) {
     m_name = _T("overlay");
@@ -200,6 +201,9 @@ RGY_ERR RGYFilterOverlay::initInput(RGYFilterParamOverlay *prm) {
     AddMessage(RGY_LOG_DEBUG, _T("got stream information.\n"));
     av_dump_format(m_formatCtx.get(), 0, filename_char.c_str(), 0);
     m_inputFrames = 0;
+    // loop再開時も固定alphaを現在のデバイスフレームへ作り直す。
+    m_alphaFrameReady = false;
+    m_alpha.inputPtr = nullptr;
 
     m_stream = nullptr;
     for (uint32_t i = 0; i < m_formatCtx->nb_streams; i++) {
@@ -586,7 +590,19 @@ RGY_ERR RGYFilterOverlay::getFrame(RGYOpenCLQueue& queue) {
             AddMessage(RGY_LOG_DEBUG, _T("Copied frame to device.\n"));
         }
     }
-    {
+    auto prm = std::dynamic_pointer_cast<RGYFilterParamOverlay>(m_param);
+    if (!prm) {
+        AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
+        return RGY_ERR_INVALID_PARAM;
+    }
+    const auto pixfmt = (AVPixelFormat)m_stream->codecpar->format;
+    const bool readAlphaFromPixFmt = pixfmt == AV_PIX_FMT_RGBA
+                                  || pixfmt == AV_PIX_FMT_BGRA;
+    const bool alphaDynamic = readAlphaFromPixFmt
+                           || prm->overlay.alphaMode == VppOverlayAlphaMode::LumaKey;
+    //固定alphaは初回だけ生成し、crop/resize後のデバイスフレームを再利用する。
+    const bool updateAlpha = alphaDynamic || !m_alphaFrameReady;
+    if (updateAlpha) {
         //不透明度データをコピー
         auto ret = m_alpha.dev->queueMapBuffer(queue, CL_MAP_WRITE);
         if (ret != RGY_ERR_NONE) {
@@ -599,21 +615,12 @@ RGY_ERR RGYFilterOverlay::getFrame(RGYOpenCLQueue& queue) {
             return ret;
         }
         const auto frameHostAlpha = m_alpha.dev->mappedHost()->frameInfo();
-        auto prm = std::dynamic_pointer_cast<RGYFilterParamOverlay>(m_param);
-        if (!prm) {
-            AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
-            return RGY_ERR_INVALID_PARAM;
-        }
-
-        const auto pixfmt = (AVPixelFormat)m_stream->codecpar->format;
         uint8_t *dst_array_alpha[3] = {
             getPlane(&frameHostAlpha, RGY_PLANE_Y).ptr[0],
             getPlane(&frameHostAlpha, RGY_PLANE_U).ptr[0],
             getPlane(&frameHostAlpha, RGY_PLANE_V).ptr[0]
         };
 
-        const bool readAlphaFromPixFmt = pixfmt == AV_PIX_FMT_RGBA
-                                      || pixfmt == AV_PIX_FMT_BGRA;
         if (readAlphaFromPixFmt) {
             AddMessage(RGY_LOG_DEBUG, _T("Reading alpha from frame.\n"));
             for (int iplane = 0; iplane < _countof(dst_array_alpha); iplane++) {
@@ -689,9 +696,14 @@ RGY_ERR RGYFilterOverlay::getFrame(RGYOpenCLQueue& queue) {
     if (sts != RGY_ERR_NONE) {
         return sts;
     }
-    sts = prepareFrameDev(m_alpha, queue);
-    if (sts != RGY_ERR_NONE) {
-        return sts;
+    if (updateAlpha) {
+        sts = prepareFrameDev(m_alpha, queue);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        if (!alphaDynamic) {
+            m_alphaFrameReady = true;
+        }
     }
     m_inputFrames++;
     return RGY_ERR_NONE;
