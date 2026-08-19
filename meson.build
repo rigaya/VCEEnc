@@ -36,11 +36,6 @@ dl_dep = cpp.find_library('dl', required: true)
 m_dep = cpp.find_library('m', required: true)
 stdcxxfs_dep = cpp.find_library('stdc++fs', required: false)
 
-libva_dep = dependency('libva', required: true)
-libva_drm_dep = dependency('libva-drm', required: false)
-libva_x11_dep = dependency('libva-x11', required: false)
-libdrm_dep = dependency('libdrm', required: false)
-
 opencl_inc_args = []
 if opencl_headers != ''
   opencl_inc_args += ['-I' + opencl_headers]
@@ -462,22 +457,6 @@ common_cpp_args = [
   '-msse4.1',
 ] + opencl_inc_args
 
-if libva_dep.found()
-  common_cpp_args += ['-DLIBVA_SUPPORT=1']
-else
-  common_cpp_args += ['-DLIBVA_SUPPORT=0']
-endif
-if libva_drm_dep.found()
-  common_cpp_args += ['-DLIBVA_DRM_SUPPORT=1']
-else
-  common_cpp_args += ['-DLIBVA_DRM_SUPPORT=0']
-endif
-if libva_x11_dep.found()
-  common_cpp_args += ['-DLIBVA_X11_SUPPORT=1']
-else
-  common_cpp_args += ['-DLIBVA_X11_SUPPORT=0']
-endif
-
 common_c_args = [
   '-DLINUX',
   '-DUNIX',
@@ -489,7 +468,7 @@ common_c_args = [
   '-Wno-unused',
   '-Wno-missing-braces',
   '-msse4.1',
-]
+] + opencl_inc_args
 
 include_dirs_list = [
   '.',
@@ -733,18 +712,6 @@ all_deps = [
 if stdcxxfs_dep.found()
   all_deps += stdcxxfs_dep
 endif
-if libva_dep.found()
-  all_deps += libva_dep
-endif
-if libva_drm_dep.found()
-  all_deps += libva_drm_dep
-endif
-if libva_x11_dep.found()
-  all_deps += libva_x11_dep
-endif
-if libdrm_dep.found()
-  all_deps += libdrm_dep
-endif
 if vapoursynth_compile_dep.found()
   all_deps += vapoursynth_compile_dep
 endif
@@ -783,10 +750,6 @@ executable('vceencc',
 )
 
 summary({
-  'libva': libva_dep.found(),
-  'libva-drm': libva_drm_dep.found(),
-  'libva-x11': libva_x11_dep.found(),
-  'libdrm': libdrm_dep.found(),
   'VapourSynth': enable_vapoursynth and have_vapoursynth_headers,
   'AviSynth': enable_avisynth and have_avisynth_headers,
   'libass': libass_dep.found(),
