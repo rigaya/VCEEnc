@@ -33,6 +33,7 @@
 #include <future>
 #include <atomic>
 #include <deque>
+#include <mutex>
 #include <set>
 #include <unordered_map>
 #pragma warning(push)
@@ -2013,15 +2014,28 @@ protected:
     RGYListRef<RGYBitstream> m_bitStreamOut;
     const RGYHDR10Plus *m_hdr10plus;
     const DOVIRpu *m_doviRpu;
+    std::thread m_outputThread;
+    std::atomic<bool> m_abortOutput;
+    std::atomic<bool> m_outputFinished;
+    std::atomic<RGY_ERR> m_outputStatus;
+    std::mutex m_outputMutex;
+    std::deque<std::unique_ptr<PipelineTaskOutput>> m_outputQueue;
+    bool m_drainSent;
 public:
     PipelineTaskAMFEncode(
         amf::AMFComponentPtr enc, RGY_CODEC encCodec, AMFParams& encParams, amf::AMFContextPtr context, int outMaxQueueSize,
         RGYTimecode *timecode, RGYTimestamp *encTimestamp, rgy_rational<int> outputTimebase, const RGYHDR10Plus *hdr10plus, const DOVIRpu *doviRpu, std::shared_ptr<RGYLog> log)
         : PipelineTask(PipelineTaskType::AMFENC, context, outMaxQueueSize, log),
-        m_encoder(enc), m_encCodec(encCodec), m_encParams(encParams), m_timecode(timecode), m_encTimestamp(encTimestamp), m_outputTimebase(outputTimebase), m_bitStreamOut(), m_hdr10plus(hdr10plus), m_doviRpu(doviRpu) {
+        m_encoder(enc), m_encCodec(encCodec), m_encParams(encParams), m_timecode(timecode), m_encTimestamp(encTimestamp), m_outputTimebase(outputTimebase), m_bitStreamOut(), m_hdr10plus(hdr10plus), m_doviRpu(doviRpu),
+        m_outputThread(), m_abortOutput(false), m_outputFinished(false), m_outputStatus(RGY_ERR_NONE), m_outputMutex(), m_outputQueue(), m_drainSent(false) {
     };
     virtual ~PipelineTaskAMFEncode() {
+        m_abortOutput = true;
+        if (m_outputThread.joinable()) {
+            m_outputThread.join();
+        }
         m_outQeueue.clear(); // m_bitStreamOutが解放されるよう前にこちらを解放する
+        m_outputQueue.clear();
     };
     void setEnc(amf::AMFComponentPtr encode) { m_encoder = encode; };
     virtual void setStopWatch() override {
@@ -2107,7 +2121,44 @@ public:
         return { RGY_ERR_NONE, output };
     }
 
+    void startOutputThread() {
+        if (m_outputThread.joinable()) {
+            return;
+        }
+        // PA有効時はSubmitInputがエンコーダ出力キューの空きを待つことがあるため、
+        // QueryOutputを別スレッドで継続し、相互待ちを避ける。
+        m_outputThread = std::thread([this]() {
+            while (!m_abortOutput) {
+                auto [sts, bitstream] = getOutputBitstream();
+                if (sts == RGY_ERR_NONE) {
+                    if (bitstream) {
+                        std::lock_guard<std::mutex> lock(m_outputMutex);
+                        m_outputQueue.push_back(std::make_unique<PipelineTaskOutputBitstream>(bitstream));
+                    }
+                } else if (sts == RGY_ERR_MORE_SURFACE) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                } else {
+                    m_outputStatus = sts;
+                    break;
+                }
+            }
+            m_outputFinished = true;
+        });
+    }
+
+    virtual std::vector<std::unique_ptr<PipelineTaskOutput>> getOutput(const bool sync) override {
+        {
+            std::lock_guard<std::mutex> lock(m_outputMutex);
+            while (!m_outputQueue.empty()) {
+                m_outQeueue.push_back(std::move(m_outputQueue.front()));
+                m_outputQueue.pop_front();
+            }
+        }
+        return PipelineTask::getOutput(sync);
+    }
+
     virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        startOutputThread();
         if (m_stopwatch) m_stopwatch->set(0);
         if (frame && frame->type() != PipelineTaskOutputType::SURFACE) {
             PrintMes(RGY_LOG_ERROR, _T("Invalid frame type.\n"));
@@ -2192,66 +2243,55 @@ public:
         }
         if (m_stopwatch) m_stopwatch->add(0, 0);
 
-        auto enc_sts = RGY_ERR_NONE;
-        auto ar = (drain) ? AMF_INPUT_FULL : AMF_OK;
-        for (;;) {
-            if (m_stopwatch) m_stopwatch->set(0);
-            //エンコーダからの取り出し
-            auto outBs = getOutputBitstream();
-            const auto out_ret = outBs.first;
-            if (out_ret == RGY_ERR_MORE_SURFACE) {
-                ; // もっとエンコーダへの投入が必要
-            } else if (out_ret == RGY_ERR_NONE) {
-                if (outBs.second) {
-                    m_outQeueue.push_back(std::make_unique<PipelineTaskOutputBitstream>(outBs.second));
-                }
-            } else if (out_ret == RGY_ERR_MORE_DATA) { //EOF
-                enc_sts = RGY_ERR_MORE_DATA;
-                break;
-            } else {
-                enc_sts = out_ret;
-                break;
-            }
-            if (m_stopwatch) m_stopwatch->add(0, 1);
-
-            if (drain) {
-                if (ar == AMF_INPUT_FULL) {
-                    //エンコーダのflush
-                    try {
-                        ar = m_encoder->Drain();
-                    } catch (...) {
-                        PrintMes(RGY_LOG_ERROR, _T("Fatal error when submitting frame to encoder.\n"));
-                        return RGY_ERR_DEVICE_FAILED;
-                    }
-                    if (ar == AMF_INPUT_FULL) {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    } else {
-                        enc_sts = err_to_rgy(ar);
-                    }
-                }
-                if (m_stopwatch) m_stopwatch->add(0, 3);
-            } else {
-                //エンコードへの投入
+        if (drain) {
+            if (!m_drainSent) {
+                AMF_RESULT ar = AMF_OK;
                 try {
-                    ar = m_encoder->SubmitInput(pSurface);
+                    ar = m_encoder->Drain();
                 } catch (...) {
-                    PrintMes(RGY_LOG_ERROR, _T("Fatal error when submitting frame to encoder.\n"));
+                    PrintMes(RGY_LOG_ERROR, _T("Fatal error when draining encoder.\n"));
                     return RGY_ERR_DEVICE_FAILED;
                 }
-                if (ar == AMF_NEED_MORE_INPUT) {
-                    break;
-                } else if (ar == AMF_INPUT_FULL) {
+                if (ar == AMF_INPUT_FULL) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                } else if (ar == AMF_REPEAT) {
-                    pSurface = nullptr;
-                } else {
-                    enc_sts = err_to_rgy(ar);
-                    break;
+                    return RGY_ERR_MORE_SURFACE;
                 }
-                if (m_stopwatch) m_stopwatch->add(0, 2);
+                if (ar != AMF_OK) {
+                    return err_to_rgy(ar);
+                }
+                m_drainSent = true;
+                if (m_stopwatch) m_stopwatch->add(0, 3);
             }
-        };
-        return enc_sts;
+            if (!m_outputFinished) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                return RGY_ERR_MORE_SURFACE;
+            }
+            return m_outputStatus.load();
+        }
+
+        for (;;) {
+            if (m_outputFinished) {
+                const auto outputStatus = m_outputStatus.load();
+                return (outputStatus == RGY_ERR_MORE_DATA) ? RGY_ERR_UNDEFINED_BEHAVIOR : outputStatus;
+            }
+            AMF_RESULT ar = AMF_OK;
+            try {
+                ar = m_encoder->SubmitInput(pSurface);
+            } catch (...) {
+                PrintMes(RGY_LOG_ERROR, _T("Fatal error when submitting frame to encoder.\n"));
+                return RGY_ERR_DEVICE_FAILED;
+            }
+            if (ar == AMF_NEED_MORE_INPUT) {
+                return RGY_ERR_NONE;
+            } else if (ar == AMF_INPUT_FULL) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            } else if (ar == AMF_REPEAT) {
+                pSurface = nullptr;
+            } else {
+                if (m_stopwatch) m_stopwatch->add(0, 2);
+                return err_to_rgy(ar);
+            }
+        }
     }
 };
 
