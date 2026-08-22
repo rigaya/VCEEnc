@@ -217,12 +217,14 @@ Radeon RX7900XT
   - svt-av1 3.1.0 -> 4.2.0
   - dovi_tool 2.3.1 -> 2.3.3
   - hdr10plus_tool 1.7.1 -> 1.7.2
+- --paを使用するとフリーズしてしまう問題を修正。
 - --vpp-anime4k-shaderのout_res既定リサイズをspline16に変更。
 - --vpp-anime4k-shaderのdeblurのstrength指定順と高速階層のsigma補正を修正。
 - --vpp-anime4k-shaderの処理を高速化。
 - bilinear拡大時の補間を修正。
 - LUT3Dの入力ドメイン処理を修正。
 - --vpp-tweakの彩度係数の二重適用を修正。
+- timecode出力のraw出力への拡張。
 
 2026.08.09 (9.12)
 [VCEEncC]

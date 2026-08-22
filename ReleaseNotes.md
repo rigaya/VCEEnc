@@ -28,12 +28,14 @@
   - vvenc 1.13.1 -> 1.14.0
   - svt-av1 3.1.0 -> 4.2.0
   - dovi_tool 2.3.1 -> 2.3.3
+- Fix application stcuk when using --pa ( #141 ).
 - Change default [--vpp-anime4k-shader](./VCEEncC_Options.en.md#--vpp-anime4k-shader-param1value1param2value2) `out_res` resizer to spline16.
 - Fix [--vpp-anime4k-shader](./VCEEncC_Options.en.md#--vpp-anime4k-shader-param1value1param2value2) deblur `strength` argument order and fast-path sigma.
 - Speed up [--vpp-anime4k-shader](./VCEEncC_Options.en.md#--vpp-anime4k-shader-param1value1param2value2).
 - Fix bilinear upscale interpolation ([--vpp-resize](./VCEEncC_Options.en.md#--vpp-resize-string)).
 - Fix LUT3D input domain handling ([--vpp-colorspace](./VCEEncC_Options.en.md#--vpp-colorspace-param1value1param2value2)).
 - Fix double application of saturation in [--vpp-tweak](./VCEEncC_Options.en.md#--vpp-tweak-param1value1param2value2).
+- Support --timecode with raw output.
 
 ## 9.12
 
