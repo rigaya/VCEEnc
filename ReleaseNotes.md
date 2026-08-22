@@ -43,7 +43,8 @@
 - Follow mid-stream input resolution changes with [--avsw](./VCEEncC_Options.en.md#--avsw-string).
 - Add [--adapt-resolution](./VCEEncC_Options.en.md#--adapt-resolution-maxwxmaxh) to set the maximum input resolution for variable-resolution sources.
 - Add support to track PMT change.
-- Support language exclusion for audio/subtitle track selection ([--audio-copy](./VCEEncC_Options.en.md#--audio-copy-intstringintstring), [--audio-codec](./VCEEncC_Options.en.md#--audio-codec-intstringstringstringstringstringstring), [--sub-copy](./VCEEncC_Options.en.md#--sub-copy-intstringintstring)).
+- Support language exclusion for audio/subtitle/data track selection ([--audio-copy](./VCEEncC_Options.en.md#--audio-copy-intstringintstring), [--audio-codec](./VCEEncC_Options.en.md#--audio-codec-intstringstringstringstringstringstring), [--sub-copy](./VCEEncC_Options.en.md#--sub-copy-intstringintstring), [--sub-codec](./VCEEncC_Options.en.md#--sub-codec-intstringstring), [--data-copy](./VCEEncC_Options.en.md#--data-copy-intstringintstring)).
+- Support track exclusion with `!` for audio/subtitle/data selection.
 - Fix GPU memory growth with [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) mode=24 on long encodes.
 - Improve memory retention in [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2).
 - Output mp4 trailer even if error has occurred.
