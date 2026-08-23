@@ -2,6 +2,7 @@
 
 ## 9.13
 
+- Add frame durations to [--y4m-timestamp](./VCEEncC_Options.en.md#--y4m-timestamp) output and improve the default y4m input timebase.
 - Update ffmpeg libraries. -> [binaries and src](https://github.com/rigaya/ffmpeg_dlls_for_hwenc/releases/tag/20260812), [build_scripts](https://github.com/rigaya/build_scripts)
   - ffmpeg 8.0 -> 9.0.1
   - libvmaf 3.0.0 -> 3.2.0
