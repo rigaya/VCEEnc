@@ -342,7 +342,27 @@ int RGYFilterRifeOV::planSpan(std::vector<float>& tOut) {
 
 RGY_ERR RGYFilterRifeOV::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
     RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
-    if (pInputFrame->ptr[0] == nullptr) { *pOutputFrameNum = 0; return RGY_ERR_NONE; } // flush: drop trailing single frame
+    if (pInputFrame == nullptr || pInputFrame->ptr[0] == nullptr) {
+        *pOutputFrameNum = 0;
+        ppOutputFrames[0] = nullptr;
+        if (m_fpsConv && m_havePrev && m_prevYuv) {
+            // 出力位置が最終入力位置と一致する場合だけ、終端で最終入力をコピーする。
+            if (m_outIdx * m_ratioNum == m_inIdx * m_ratioDen) {
+                auto out = &m_frameBuf[0]->frame;
+                auto err = m_cl->copyFrame(out, &m_prevYuv->frame, nullptr, queue, wait_events, event);
+                if (err != RGY_ERR_NONE) return err;
+                out->timestamp = m_prevTimestamp;
+                out->duration = (int64_t)((double)m_prevDuration * (double)m_ratioNum / (double)m_ratioDen + 0.5);
+                out->picstruct = m_prevYuv->frame.picstruct;
+                out->inputFrameId = m_prevYuv->frame.inputFrameId;
+                ppOutputFrames[0] = out;
+                *pOutputFrameNum = 1;
+                m_outIdx++;
+            }
+            m_havePrev = false;
+        }
+        return RGY_ERR_NONE;
+    }
 
     // copy input -> host-mappable staging, map, convert to currRGB.
     auto err = m_cl->copyFrame(&m_inStaging->frame, pInputFrame, nullptr, queue, wait_events, nullptr);
@@ -369,6 +389,10 @@ RGY_ERR RGYFilterRifeOV::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInf
         if (m_fpsConv && m_prevYuv) {
             err = m_cl->copyFrame(&m_prevYuv->frame, pInputFrame, nullptr, queue, {}, event);
             if (err != RGY_ERR_NONE) return err;
+            m_prevYuv->frame.timestamp = pInputFrame->timestamp;
+            m_prevYuv->frame.duration = pInputFrame->duration;
+            m_prevYuv->frame.picstruct = pInputFrame->picstruct;
+            m_prevYuv->frame.inputFrameId = pInputFrame->inputFrameId;
         }
         m_prevRGB = m_currRGB;
         m_prevTimestamp = pInputFrame->timestamp;
@@ -410,6 +434,10 @@ RGY_ERR RGYFilterRifeOV::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInf
         *pOutputFrameNum = nOut;
         err = m_cl->copyFrame(&m_prevYuv->frame, pInputFrame, nullptr, queue, {}, event);
         if (err != RGY_ERR_NONE) return err;
+        m_prevYuv->frame.timestamp = pInputFrame->timestamp;
+        m_prevYuv->frame.duration = pInputFrame->duration;
+        m_prevYuv->frame.picstruct = pInputFrame->picstruct;
+        m_prevYuv->frame.inputFrameId = pInputFrame->inputFrameId;
         m_prevRGB.swap(m_currRGB);
         m_prevTimestamp = pInputFrame->timestamp;
         m_prevDuration = pInputFrame->duration;
