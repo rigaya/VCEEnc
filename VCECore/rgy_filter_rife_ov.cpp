@@ -36,18 +36,20 @@ static inline float   clampf(float v, float lo, float hi) { return v < lo ? lo :
 
 RGYFilterRifeOV::RGYFilterRifeOV(shared_ptr<RGYOpenCLContext> context) :
     RGYFilter(context), m_ov(), m_W(0), m_H(0), m_multi(2), m_maxval(255.0f),
+    m_fpsConv(false), m_ratioNum(0), m_ratioDen(1), m_inIdx(0), m_outIdx(0), m_poolSize(2),
     m_yOff(0), m_yScale(1), m_yRange(255), m_cOff(128), m_cScale(1), m_cRange(255),
     m_matVR(0), m_matUG(0), m_matVG(0), m_matUB(0),
     m_matRY(0), m_matGY(0), m_matBY(0), m_matRU(0), m_matGU(0), m_matBU(0), m_matRV(0), m_matGV(0), m_matBV(0),
     m_havePrev(false), m_prevTimestamp(0), m_prevDuration(0),
     m_prevRGB(), m_currRGB(), m_inBuf(), m_outBuf(), m_baseGrid(), m_multiplier(),
-    m_inStaging(), m_outStaging() {
+    m_inStaging(), m_outStaging(), m_prevYuv() {
     m_name = _T("rife-ov");
 }
 
 RGYFilterRifeOV::~RGYFilterRifeOV() { close(); }
 
 void RGYFilterRifeOV::close() {
+    m_prevYuv.reset();
     m_ov.reset();
     m_inStaging.reset();
     m_outStaging.reset();
@@ -55,6 +57,10 @@ void RGYFilterRifeOV::close() {
 }
 
 tstring RGYFilterParamRifeOV::print() const {
+    if (fps.is_valid() && fps.n() > 0 && fps.d() > 0) {
+        return strsprintf(_T("rife-ov: %s, to %d/%d fps, device %s"),
+            modelFile.c_str(), fps.n(), fps.d(), device.c_str());
+    }
     return strsprintf(_T("rife-ov: %s, x%d, device %s"), modelFile.c_str(), multi, device.c_str());
 }
 
@@ -185,13 +191,42 @@ RGY_ERR RGYFilterRifeOV::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     m_pathThrough = (FILTER_PATHTHROUGH_FRAMEINFO)(m_pathThrough &
         (~(uint32_t)(FILTER_PATHTHROUGH_TIMESTAMP | FILTER_PATHTHROUGH_PICSTRUCT | FILTER_PATHTHROUGH_FLAGS)));
 
-    prm->baseFps   *= m_multi;   // interpolated output runs at multi x the input rate
+    m_fpsConv = prm->fps.is_valid() && prm->fps.n() > 0 && prm->fps.d() > 0;
+    if (m_fpsConv) {
+        const auto fpsIn = prm->baseFps;
+        if (!fpsIn.is_valid() || fpsIn.n() <= 0 || fpsIn.d() <= 0) {
+            AddMessage(RGY_LOG_ERROR, _T("rife-ov: fps= needs a known input frame rate.\n"));
+            return RGY_ERR_INVALID_PARAM;
+        }
+        m_ratioNum = (int64_t)fpsIn.n() * prm->fps.d();
+        m_ratioDen = (int64_t)fpsIn.d() * prm->fps.n();
+        if (m_ratioNum <= 0 || m_ratioDen <= 0) {
+            AddMessage(RGY_LOG_ERROR, _T("rife-ov: invalid frame rate conversion.\n"));
+            return RGY_ERR_INVALID_PARAM;
+        }
+        m_poolSize = std::max(2, (int)std::ceil((double)m_ratioDen / (double)m_ratioNum) + 1);
+        prm->baseFps = prm->fps;
+        AddMessage(RGY_LOG_DEBUG, _T("rife-ov: %d/%d -> %d/%d fps, pool %d\n"),
+            fpsIn.n(), fpsIn.d(), prm->fps.n(), prm->fps.d(), m_poolSize);
+    } else {
+        m_poolSize = m_multi;
+        prm->baseFps *= m_multi;
+    }
+    m_inIdx = 0;
+    m_outIdx = 0;
 
     // pool: up to `multi` output frames per input frame.
-    err = AllocFrameBuf(prm->frameOut, m_multi);
+    err = AllocFrameBuf(prm->frameOut, m_fpsConv ? m_poolSize : m_multi);
     if (err != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("rife-ov: failed to allocate output frame buffer: %s.\n"), get_err_mes(err));
         return err;
+    }
+    if (m_fpsConv) {
+        m_prevYuv = m_cl->createFrameBuffer(prm->frameOut);
+        if (!m_prevYuv) {
+            AddMessage(RGY_LOG_ERROR, _T("rife-ov: failed to allocate the previous frame.\n"));
+            return RGY_ERR_MEMORY_ALLOC;
+        }
     }
     for (int i = 0; i < RGY_CSP_PLANES[m_frameBuf[0]->frame.csp]; i++) {
         prm->frameOut.pitch[i] = m_frameBuf[0]->frame.pitch[i];
@@ -291,6 +326,20 @@ RGY_ERR RGYFilterRifeOV::interpolate(float t) {
     return m_ov->infer(m_inBuf.data(), m_outBuf.data());
 }
 
+int RGYFilterRifeOV::planSpan(std::vector<float>& tOut) {
+    tOut.clear();
+    while ((int)tOut.size() < m_poolSize) {
+        if (m_outIdx * m_ratioNum >= m_inIdx * m_ratioDen) {
+            break;
+        }
+        const double pos = (double)(m_outIdx * m_ratioNum) / (double)m_ratioDen;
+        const float t = (float)clamp(pos - (double)(m_inIdx - 1), 0.0, 1.0);
+        tOut.push_back(t);
+        m_outIdx++;
+    }
+    return (int)tOut.size();
+}
+
 RGY_ERR RGYFilterRifeOV::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
     RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) {
     if (pInputFrame->ptr[0] == nullptr) { *pOutputFrameNum = 0; return RGY_ERR_NONE; } // flush: drop trailing single frame
@@ -306,13 +355,21 @@ RGY_ERR RGYFilterRifeOV::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInf
     if (!m_havePrev) {
         // first frame: emit it unchanged; it becomes the previous frame.
         ppOutputFrames[0] = &m_frameBuf[0]->frame;
-        err = m_cl->copyFrame(ppOutputFrames[0], pInputFrame, nullptr, queue, {}, event);
+        err = m_cl->copyFrame(ppOutputFrames[0], pInputFrame, nullptr, queue, {}, m_fpsConv ? nullptr : event);
         if (err != RGY_ERR_NONE) return err;
         ppOutputFrames[0]->timestamp = pInputFrame->timestamp;
-        ppOutputFrames[0]->duration  = pInputFrame->duration;
+        ppOutputFrames[0]->duration = m_fpsConv
+            ? (int64_t)((double)pInputFrame->duration * (double)m_ratioNum / (double)m_ratioDen + 0.5)
+            : pInputFrame->duration;
         ppOutputFrames[0]->picstruct = pInputFrame->picstruct;
         ppOutputFrames[0]->inputFrameId = pInputFrame->inputFrameId;
         *pOutputFrameNum = 1;
+        m_inIdx = 0;
+        m_outIdx = 1;
+        if (m_fpsConv && m_prevYuv) {
+            err = m_cl->copyFrame(&m_prevYuv->frame, pInputFrame, nullptr, queue, {}, event);
+            if (err != RGY_ERR_NONE) return err;
+        }
         m_prevRGB = m_currRGB;
         m_prevTimestamp = pInputFrame->timestamp;
         m_prevDuration  = pInputFrame->duration;
@@ -321,6 +378,43 @@ RGY_ERR RGYFilterRifeOV::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInf
     }
 
     const int64_t spanDur = pInputFrame->timestamp - m_prevTimestamp;
+    if (m_fpsConv) {
+        m_inIdx++;
+        std::vector<float> tList;
+        const int nOut = planSpan(tList);
+        const int64_t outDur = (spanDur > 0)
+            ? (int64_t)((double)spanDur * (double)m_ratioNum / (double)m_ratioDen + 0.5)
+            : pInputFrame->duration;
+        for (int k = 0; k < nOut; k++) {
+            const float t = tList[k];
+            RGYFrameInfo *out = &m_frameBuf[k]->frame;
+            if (t == 0.0f && m_prevYuv) {
+                err = m_cl->copyFrame(out, &m_prevYuv->frame, nullptr, queue, {}, nullptr);
+                if (err != RGY_ERR_NONE) return err;
+            } else {
+                err = interpolate(t);
+                if (err != RGY_ERR_NONE) return err;
+                err = m_outStaging->queueMapBuffer(queue, CL_MAP_WRITE, {}, RGY_CL_MAP_BLOCK_ALL);
+                if (err != RGY_ERR_NONE) return err;
+                rgbToYUV(m_outStaging->mappedHost()->host(), m_outBuf.data());
+                m_outStaging->unmapBuffer(queue);
+                err = m_cl->copyFrame(out, &m_outStaging->frame, nullptr, queue, {}, nullptr);
+                if (err != RGY_ERR_NONE) return err;
+            }
+            out->timestamp = m_prevTimestamp + (int64_t)((double)spanDur * (double)t + 0.5);
+            out->duration = outDur;
+            out->picstruct = pInputFrame->picstruct;
+            out->inputFrameId = pInputFrame->inputFrameId;
+            ppOutputFrames[k] = out;
+        }
+        *pOutputFrameNum = nOut;
+        err = m_cl->copyFrame(&m_prevYuv->frame, pInputFrame, nullptr, queue, {}, event);
+        if (err != RGY_ERR_NONE) return err;
+        m_prevRGB.swap(m_currRGB);
+        m_prevTimestamp = pInputFrame->timestamp;
+        m_prevDuration = pInputFrame->duration;
+        return RGY_ERR_NONE;
+    }
     // (multi-1) interpolated frames between prev and curr.
     for (int k = 1; k < m_multi; k++) {
         const float t = (float)k / (float)m_multi;

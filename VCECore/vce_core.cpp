@@ -2355,6 +2355,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         param->modelDir = inputParam->vpp.onnxModelDir;
         param->device = inputParam->vpp.rife_ov.device;
         param->multi = inputParam->vpp.rife_ov.multi;
+        param->fps = inputParam->vpp.rife_ov.fps;
         param->colormatrix = inputParam->vpp.rife_ov.colormatrix;
         param->colorrange = inputParam->vpp.rife_ov.colorrange;
         const LUID devLuid = m_dev->luid();

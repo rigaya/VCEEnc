@@ -56,11 +56,12 @@ public:
     tstring modelDir;
     tstring device;           // OpenVINO device ("GPU.0" default)
     int     multi;            // frame-rate multiplier (>=2; 2 = double the frame rate)
+    rgy_rational<int> fps;
     tstring colormatrix;      // auto / bt601 / bt709 / bt2020
     tstring colorrange;       // auto / tv / pc
     uint32_t adapterLuidLow = 0;
     int32_t adapterLuidHigh = 0;
-    RGYFilterParamRifeOV() : modelFile(), modelDir(), device(_T("GPU.0")), multi(2), colormatrix(_T("auto")), colorrange(_T("auto")) {};
+    RGYFilterParamRifeOV() : modelFile(), modelDir(), device(_T("GPU.0")), multi(2), fps(), colormatrix(_T("auto")), colorrange(_T("auto")) {};
     virtual ~RGYFilterParamRifeOV() {};
     virtual tstring print() const override;
 };
@@ -83,11 +84,21 @@ protected:
     void setupColorCoeffs(int matrixSel, bool rangeTV, int pixMax);
     // emit one interpolated frame at time t in (0,1) into outRGB via the network.
     RGY_ERR interpolate(float t);
+    // 現在の入力区間に含まれる出力位置を列挙する。
+    int planSpan(std::vector<float>& tOut);
 
     std::unique_ptr<RGYOnnxRTDML> m_ov;
     int   m_W, m_H;           // working resolution (frame size; must be /32)
     int   m_multi;            // frame-rate multiplier
     float m_maxval;           // (1<<bitdepth)-1
+
+    // 任意レート変換は入力フレーム数を基準に整数比で管理し、累積誤差を避ける。
+    bool    m_fpsConv;
+    int64_t m_ratioNum;
+    int64_t m_ratioDen;
+    int64_t m_inIdx;
+    int64_t m_outIdx;
+    int     m_poolSize;
 
     // colour coefficients (computed once at init)
     float m_yOff, m_yScale, m_yRange, m_cOff, m_cScale, m_cRange;
@@ -109,6 +120,7 @@ protected:
 
     std::unique_ptr<RGYCLFrame> m_inStaging;   // host-mappable copy of the input frame
     std::unique_ptr<RGYCLFrame> m_outStaging;  // host-mappable scratch for one output frame
+    std::unique_ptr<RGYCLFrame> m_prevYuv;
 };
 
 #endif //__RGY_FILTER_RIFE_OV_H__
