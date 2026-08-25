@@ -32,6 +32,7 @@
 #include <cmath>
 
 static inline uint8_t clamp_u8(int v) { return (uint8_t)(v < 0 ? 0 : (v > 255 ? 255 : v)); }
+static inline uint16_t clamp_u16(int v) { return (uint16_t)(v < 0 ? 0 : (v > 65535 ? 65535 : v)); }
 static inline float   clampf(float v, float lo, float hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
 RGYFilterRifeOV::RGYFilterRifeOV(shared_ptr<RGYOpenCLContext> context) :
@@ -76,11 +77,12 @@ void RGYFilterRifeOV::setupColorCoeffs(int matrixSel, bool rangeTV, int pixMax) 
     m_matRY = Kr;                            m_matGY = Kg;                            m_matBY = Kb;
     m_matRU = -Kr / (2.0f * (1.0f - Kb));    m_matGU = -Kg / (2.0f * (1.0f - Kb));    m_matBU = 0.5f;
     m_matRV = 0.5f;                          m_matGV = -Kg / (2.0f * (1.0f - Kr));    m_matBV = -Kb / (2.0f * (1.0f - Kr));
-    m_yOff   = rangeTV ? (16.0f  * pixMax / 255.0f) : 0.0f;
-    m_yRange = rangeTV ? (219.0f * pixMax / 255.0f) : (float)pixMax;
+    const float limitedScale = (pixMax > 255) ? 256.0f : 1.0f;
+    m_yOff   = rangeTV ? (16.0f  * limitedScale) : 0.0f;
+    m_yRange = rangeTV ? (219.0f * limitedScale) : (float)pixMax;
     m_yScale = 1.0f / m_yRange;
-    m_cOff   = rangeTV ? (128.0f * pixMax / 255.0f) : ((float)pixMax / 2.0f);
-    m_cRange = rangeTV ? (224.0f * pixMax / 255.0f) : (float)pixMax;
+    m_cOff   = rangeTV ? (128.0f * limitedScale) : ((float)pixMax / 2.0f);
+    m_cRange = rangeTV ? (224.0f * limitedScale) : (float)pixMax;
     m_cScale = 1.0f / m_cRange;
 }
 
@@ -152,7 +154,7 @@ RGY_ERR RGYFilterRifeOV::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     else if (prm->colormatrix == _T("bt709"))  matrixSel = 709;
     else                                       matrixSel = (m_H <= 576) ? 601 : 709;
     const bool rangeTV = (prm->colorrange != _T("pc"));
-    setupColorCoeffs(matrixSel, rangeTV, 255);
+    setupColorCoeffs(matrixSel, rangeTV, (int)m_maxval);
 
     // precompute base_grid (normalised [-1,1] mesh) and multiplier (2/(W-1), 2/(H-1)).
     const size_t plane = (size_t)m_W * m_H;
@@ -246,26 +248,31 @@ RGY_ERR RGYFilterRifeOV::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYL
     return RGY_ERR_NONE;
 }
 
-// YUV (yv12/nv12 8-bit 4:2:0) -> planar RGB [0,1] CHW (3*W*H). Chroma bilinear-upsampled.
+// 8/16bit YUV420をplanar RGB [0,1] CHWへ変換する。色差はバイリニア補間する。
 void RGYFilterRifeOV::yuvToRGB(const RGYFrameInfo &hin, float *dst) {
     const int W = m_W, H = m_H;
     const size_t plane = (size_t)W * H;
-    const bool nv12 = (hin.csp == RGY_CSP_NV12);
+    const bool highBitDepth = RGY_CSP_BIT_DEPTH[hin.csp] > 8;
+    const bool semiplanar = (hin.csp == RGY_CSP_NV12 || hin.csp == RGY_CSP_P010);
+    const int elemBytes = highBitDepth ? 2 : 1;
     const int cw = W / 2, ch = H / 2;
     const uint8_t *pU = hin.ptr[1];
-    const uint8_t *pV = nv12 ? (hin.ptr[1] + 1) : hin.ptr[2];
-    const int cStride = nv12 ? 2 : 1;
+    const uint8_t *pV = semiplanar ? (hin.ptr[1] + elemBytes) : hin.ptr[2];
+    const int cStride = semiplanar ? 2 : 1;
     const int cPitchU = hin.pitch[1];
-    const int cPitchV = nv12 ? hin.pitch[1] : hin.pitch[2];
+    const int cPitchV = semiplanar ? hin.pitch[1] : hin.pitch[2];
     float *R = dst, *G = dst + plane, *B = dst + 2 * plane;
+    const auto loadPixel = [highBitDepth](const uint8_t *ptr) {
+        return highBitDepth ? (float)*(const uint16_t *)ptr : (float)*ptr;
+    };
     for (int y = 0; y < H; y++) {
         const uint8_t *yrow = hin.ptr[0] + (size_t)y * hin.pitch[0];
         const int cy = std::min(y / 2, ch - 1);
         for (int x = 0; x < W; x++) {
             const int cx = std::min(x / 2, cw - 1);
-            const float yn = ((float)yrow[x] - m_yOff) * m_yScale;
-            const float un = ((float)pU[(size_t)cy * cPitchU + (size_t)cx * cStride] - m_cOff) * m_cScale;
-            const float vn = ((float)pV[(size_t)cy * cPitchV + (size_t)cx * cStride] - m_cOff) * m_cScale;
+            const float yn = (loadPixel(yrow + (size_t)x * elemBytes) - m_yOff) * m_yScale;
+            const float un = (loadPixel(pU + (size_t)cy * cPitchU + (size_t)cx * cStride * elemBytes) - m_cOff) * m_cScale;
+            const float vn = (loadPixel(pV + (size_t)cy * cPitchV + (size_t)cx * cStride * elemBytes) - m_cOff) * m_cScale;
             const size_t i = (size_t)y * W + x;
             R[i] = clampf(yn + m_matVR * vn, 0.0f, 1.0f);
             G[i] = clampf(yn + m_matUG * un + m_matVG * vn, 0.0f, 1.0f);
@@ -274,18 +281,27 @@ void RGYFilterRifeOV::yuvToRGB(const RGYFrameInfo &hin, float *dst) {
     }
 }
 
-// planar RGB [0,1] CHW (3*W*H) -> yv12/nv12 8-bit into the mapped output frame.
+// planar RGB [0,1] CHWを8/16bit YUV420へ変換する。
 void RGYFilterRifeOV::rgbToYUV(const RGYFrameInfo &hout, const float *src) {
     const int W = m_W, H = m_H;
     const size_t plane = (size_t)W * H;
-    const bool nv12 = (hout.csp == RGY_CSP_NV12);
+    const bool highBitDepth = RGY_CSP_BIT_DEPTH[hout.csp] > 8;
+    const bool semiplanar = (hout.csp == RGY_CSP_NV12 || hout.csp == RGY_CSP_P010);
+    const int elemBytes = highBitDepth ? 2 : 1;
     const int cw = W / 2, chh = H / 2;
     const float *R = src, *G = src + plane, *B = src + 2 * plane;
     uint8_t *oU = hout.ptr[1];
-    uint8_t *oV = nv12 ? (hout.ptr[1] + 1) : hout.ptr[2];
-    const int oStride = nv12 ? 2 : 1;
+    uint8_t *oV = semiplanar ? (hout.ptr[1] + elemBytes) : hout.ptr[2];
+    const int oStride = semiplanar ? 2 : 1;
     const int oPitchU = hout.pitch[1];
-    const int oPitchV = nv12 ? hout.pitch[1] : hout.pitch[2];
+    const int oPitchV = semiplanar ? hout.pitch[1] : hout.pitch[2];
+    const auto storePixel = [highBitDepth](uint8_t *ptr, int value) {
+        if (highBitDepth) {
+            *(uint16_t *)ptr = clamp_u16(value);
+        } else {
+            *ptr = clamp_u8(value);
+        }
+    };
     // luma + accumulate chroma at full res, then 4:2:0 box-average.
     for (int y = 0; y < H; y++) {
         uint8_t *yd = hout.ptr[0] + (size_t)y * hout.pitch[0];
@@ -293,7 +309,7 @@ void RGYFilterRifeOV::rgbToYUV(const RGYFrameInfo &hout, const float *src) {
             const size_t i = (size_t)y * W + x;
             const float r = R[i], g = G[i], b = B[i];
             const float Yn = m_matRY * r + m_matGY * g + m_matBY * b;
-            yd[x] = clamp_u8((int)(Yn * m_yRange + m_yOff + 0.5f));
+            storePixel(yd + (size_t)x * elemBytes, (int)(Yn * m_yRange + m_yOff + 0.5f));
         }
     }
     for (int cy = 0; cy < chh; cy++) {
@@ -308,8 +324,8 @@ void RGYFilterRifeOV::rgbToYUV(const RGYFrameInfo &hout, const float *src) {
                 }
             }
             u *= 0.25f; v *= 0.25f;
-            oU[(size_t)cy * oPitchU + (size_t)cx * oStride] = clamp_u8((int)(u * m_cRange + m_cOff + 0.5f));
-            oV[(size_t)cy * oPitchV + (size_t)cx * oStride] = clamp_u8((int)(v * m_cRange + m_cOff + 0.5f));
+            storePixel(oU + (size_t)cy * oPitchU + (size_t)cx * oStride * elemBytes, (int)(u * m_cRange + m_cOff + 0.5f));
+            storePixel(oV + (size_t)cy * oPitchV + (size_t)cx * oStride * elemBytes, (int)(v * m_cRange + m_cOff + 0.5f));
         }
     }
 }
