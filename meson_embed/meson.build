@@ -25,6 +25,7 @@ resource_specs = [
   ['rgy_filter_decimate_cl', '../VCECore/rgy_filter_decimate.cl', 'VCECore_rgy_filter_decimate_cl'],
   ['rgy_filter_decomb_cl', '../VCECore/rgy_filter_decomb.cl', 'VCECore_rgy_filter_decomb_cl'],
   ['rgy_filter_delogo_cl', '../VCECore/rgy_filter_delogo.cl', 'VCECore_rgy_filter_delogo_cl'],
+  ['rgy_filter_denoise_bm3d_cl', '../VCECore/rgy_filter_denoise_bm3d.cl', 'VCECore_rgy_filter_denoise_bm3d_cl'],
   ['rgy_filter_denoise_dct_cl', '../VCECore/rgy_filter_denoise_dct.cl', 'VCECore_rgy_filter_denoise_dct_cl'],
   ['rgy_filter_denoise_fft3d_cl', '../VCECore/rgy_filter_denoise_fft3d.cl', 'VCECore_rgy_filter_denoise_fft3d_cl'],
   ['rgy_filter_denoise_hqdn3d_cl', '../VCECore/rgy_filter_denoise_hqdn3d.cl', 'VCECore_rgy_filter_denoise_hqdn3d_cl'],

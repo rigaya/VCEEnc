@@ -423,6 +423,9 @@
     <ClCompile Include="rgy_filter_denoise_dct.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="rgy_filter_denoise_bm3d.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClCompile Include="rgy_filter_denoise_nlmeans.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -908,6 +911,9 @@
     <ClInclude Include="rgy_filter_denoise_dct.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="rgy_filter_denoise_bm3d.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="rgy_filter_denoise_nlmeans.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -1271,6 +1277,9 @@
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="rgy_filter_denoise_dct.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
+    <None Include="rgy_filter_denoise_bm3d.cl">
       <Filter>ソース ファイル</Filter>
     </None>
     <None Include="rgy_filter_denoise_nlmeans.cl">

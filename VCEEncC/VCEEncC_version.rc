@@ -52,6 +52,7 @@ RGY_FILTER_RTGMC_MMASK_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_rtgmc_mm
 RGY_FILTER_CAS_CL         EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_cas.cl"
 RGY_FILTER_ANIME4K_CL      EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_anime4k.cl"
 RGY_FILTER_DENOISE_DCT_CL   EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_denoise_dct.cl"
+RGY_FILTER_DENOISE_BM3D_CL  EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_denoise_bm3d.cl"
 RGY_FILTER_DENOISE_FFT3D_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_denoise_fft3d.cl"
 RGY_FILTER_DENOISE_HQDN3D_CL EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_denoise_hqdn3d.cl"
 RGY_FILTER_DESCALE_CL       EXE_DATA DISCARDABLE "..\\VCECore\\rgy_filter_descale.cl"

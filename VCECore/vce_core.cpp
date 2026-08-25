@@ -64,6 +64,7 @@
 #include "rgy_filter_rff.h"
 #include "rgy_filter_delogo.h"
 #include "rgy_filter_denoise_dct.h"
+#include "rgy_filter_denoise_bm3d.h"
 #include "rgy_filter_denoise_fft3d.h"
 #include "rgy_filter_denoise_knn.h"
 #include "rgy_filter_denoise_nlmeans.h"
@@ -1434,6 +1435,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.nlmeans.enable)       filterPipeline.push_back(VppType::CL_DENOISE_NLMEANS);
     if (inputParam->vpp.pmd.enable)           filterPipeline.push_back(VppType::CL_DENOISE_PMD);
     if (inputParam->vpp.hqdn3d.enable)        filterPipeline.push_back(VppType::CL_DENOISE_HQDN3D);
+    if (inputParam->vpp.bm3d.enable)          filterPipeline.push_back(VppType::CL_DENOISE_BM3D);
     if (inputParam->vpp.descale.enable)       filterPipeline.push_back(VppType::CL_DESCALE);
     if (inputParam->vpp.anime4k.enable)       filterPipeline.push_back(VppType::CL_ANIME4K);
     if (inputParam->vpp.onnx.enable)          filterPipeline.push_back(VppType::CL_ONNX);
@@ -2492,6 +2494,25 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         //入力フレーム情報を更新
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    // bm3d
+    if (vppType == VppType::CL_DENOISE_BM3D) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterDenoiseBm3d(m_dev->cl()));
+        shared_ptr<RGYFilterParamDenoiseBm3d> param(new RGYFilterParamDenoiseBm3d());
+        param->bm3d = inputParam->vpp.bm3d;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
         return RGY_ERR_NONE;
     }
     //descale

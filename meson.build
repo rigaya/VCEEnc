@@ -527,6 +527,7 @@ vcecore_sources = files(
   'VCECore/rgy_filter_decimate.cpp',
   'VCECore/rgy_filter_decomb.cpp',
   'VCECore/rgy_filter_delogo.cpp',
+  'VCECore/rgy_filter_denoise_bm3d.cpp',
   'VCECore/rgy_filter_denoise_dct.cpp',
   'VCECore/rgy_filter_denoise_fft3d.cpp',
   'VCECore/rgy_filter_denoise_hqdn3d.cpp',
