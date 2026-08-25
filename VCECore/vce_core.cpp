@@ -49,6 +49,7 @@
 #include "rgy_filter_colorspace.h"
 #include "rgy_filter_afs.h"
 #include "rgy_filter_nnedi.h"
+#include "rgy_filter_nnedi_upscale.h"
 #include "rgy_filter_bwdif.h"
 #include "rgy_filter_maa.h"
 #include "rgy_filter_rtgmc.h"
@@ -1397,6 +1398,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.delogo.enable)        filterPipeline.push_back(VppType::CL_DELOGO);
     if (inputParam->vpp.afs.enable)           filterPipeline.push_back(VppType::CL_AFS);
     if (inputParam->vpp.nnedi.enable)         filterPipeline.push_back(VppType::CL_NNEDI);
+    if (inputParam->vpp.nnediUpscale.enable)  filterPipeline.push_back(VppType::CL_NNEDI_UPSCALE);
     if (inputParam->vpp.rtgmc.enable)         filterPipeline.push_back(VppType::CL_RTGMC);
     if (inputParam->vpp.kfm.enable)           filterPipeline.push_back(VppType::CL_KFM);
     const bool degrainLegacy = inputParam->vpp.degrain.enable;
@@ -1812,6 +1814,26 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         //入力フレーム情報を更新
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    // NNEDIの縦2倍処理を2軸へ順に適用する。
+    if (vppType == VppType::CL_NNEDI_UPSCALE) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterNnediUpscale(m_dev->cl()));
+        shared_ptr<RGYFilterParamNnediUpscale> param(new RGYFilterParamNnediUpscale());
+        param->nnediUpscale = inputParam->vpp.nnediUpscale;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->timebase = m_outputTimebase;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
         return RGY_ERR_NONE;
     }
     //rtgmc

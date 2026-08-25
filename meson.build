@@ -572,6 +572,7 @@ vcecore_sources = files(
   'VCECore/rgy_filter_libplacebo.cpp',
   'VCECore/rgy_filter_mpdecimate.cpp',
   'VCECore/rgy_filter_nnedi.cpp',
+  'VCECore/rgy_filter_nnedi_upscale.cpp',
   'VCECore/rgy_filter_nnedi_field.cpp',
   'VCECore/rgy_filter_nnedi_weights.cpp',
   'VCECore/rgy_filter_overlay.cpp',
