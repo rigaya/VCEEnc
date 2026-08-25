@@ -562,6 +562,7 @@ vcecore_sources = files(
   'VCECore/rgy_filter_finedehalo.cpp',
   'VCECore/rgy_filter_hqdering.cpp',
   'VCECore/rgy_filter_guidedfilter.cpp',
+  'VCECore/rgy_filter_clahe.cpp',
   'VCECore/rgy_filter_deflicker.cpp',
   'VCECore/rgy_filter_stab.cpp',
   'VCECore/rgy_filter_colorfix.cpp',
