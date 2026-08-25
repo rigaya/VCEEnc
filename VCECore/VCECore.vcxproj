@@ -719,6 +719,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="rgy_filter_guidedfilter.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="rgy_filter_msharpen.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -997,6 +1003,7 @@
     <ClInclude Include="rgy_filter_dehalo.h" />
     <ClInclude Include="rgy_filter_finedehalo.h" />
     <ClInclude Include="rgy_filter_hqdering.h" />
+    <ClInclude Include="rgy_filter_guidedfilter.h" />
     <ClInclude Include="rgy_filter_msharpen.h" />
     <ClInclude Include="rgy_filter_msmooth.h" />
     <ClInclude Include="rgy_filter_nnedi.h" />
@@ -1077,6 +1084,7 @@
     <None Include="rgy_filter_dehalo.cl" />
     <None Include="rgy_filter_finedehalo.cl" />
     <None Include="rgy_filter_hqdering.cl" />
+    <None Include="rgy_filter_guidedfilter.cl" />
     <None Include="rgy_filter_ivtc.cl" />
     <None Include="rgy_filter_msharpen.cl" />
     <None Include="rgy_filter_msmooth.cl" />

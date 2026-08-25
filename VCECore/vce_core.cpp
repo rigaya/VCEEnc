@@ -105,6 +105,7 @@
 #include "rgy_filter_dehalo.h"
 #include "rgy_filter_finedehalo.h"
 #include "rgy_filter_hqdering.h"
+#include "rgy_filter_guidedfilter.h"
 #include "rgy_filter_edgelevel.h"
 #include "rgy_filter_msharpen.h"
 #include "rgy_filter_cas.h"
@@ -1469,6 +1470,7 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.dehalo.enable)     filterPipeline.push_back(VppType::CL_DEHALO);
     if (inputParam->vpp.finedehalo.enable) filterPipeline.push_back(VppType::CL_FINEDEHALO);
     if (inputParam->vpp.dering.enable)     filterPipeline.push_back(VppType::CL_HQDERING);
+    if (inputParam->vpp.guidedfilter.enable) filterPipeline.push_back(VppType::CL_GUIDEDFILTER);
     if (inputParam->vpp.edgelevel.enable)  filterPipeline.push_back(VppType::CL_EDGELEVEL);
     if (inputParam->vpp.msharpen.enable)   filterPipeline.push_back(VppType::CL_MSHARPEN);
     if (inputParam->vpp.cas.enable)        filterPipeline.push_back(VppType::CL_CAS);
@@ -3070,6 +3072,25 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         //入力フレーム情報を更新
         inputFrame = param->frameOut;
         m_encFps = param->baseFps;
+        return RGY_ERR_NONE;
+    }
+    // guidedfilterを追加
+    if (vppType == VppType::CL_GUIDEDFILTER) {
+        amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
+        unique_ptr<RGYFilter> filter(new RGYFilterGuidedfilter(m_dev->cl()));
+        shared_ptr<RGYFilterParamGuidedfilter> param(new RGYFilterParamGuidedfilter());
+        param->guidedfilter = inputParam->vpp.guidedfilter;
+        param->frameIn = inputFrame;
+        param->frameOut = inputFrame;
+        param->baseFps = m_encFps;
+        param->bOutOverwrite = false;
+        auto sts = filter->init(param, m_pLog);
+        if (sts != RGY_ERR_NONE) {
+            return sts;
+        }
+        inputFrame = param->frameOut;
+        m_encFps = param->baseFps;
+        clfilters.push_back(std::move(filter));
         return RGY_ERR_NONE;
     }
     //msharpen
