@@ -2724,6 +2724,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         param->frameOut.width = resize.first;
         param->frameOut.height = resize.second;
         param->fsr1 = inputParam->vpp.resize_fsr1;
+        param->dpid = inputParam->vpp.resize_dpid;
         param->nis = inputParam->vpp.resize_nis;
         param->bicubic = inputParam->vpp.resize_bicubic;
         param->vui = vuiInfo;
@@ -4449,6 +4450,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
             normalizeResizeParam->interp = resizeAlgo;
         }
         normalizeResizeParam->fsr1 = prm->vpp.resize_fsr1;
+        normalizeResizeParam->dpid = prm->vpp.resize_dpid;
         normalizeResizeParam->nis = prm->vpp.resize_nis;
         normalizeResizeParam->bicubic = prm->vpp.resize_bicubic;
         normalizeResizeParam->vui = prm->input.vui;
