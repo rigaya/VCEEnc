@@ -570,7 +570,7 @@ protected:
         KfmProfileStats() : enabled(false), cleanSuperCacheHits(0), cleanSuperCacheMisses(0), cleanSuperCacheAvoidedFields(0), fullCombeMaskGenerated(0), fullCombeMaskAvoided(0) {};
     };
 
-    std::array<RGYOpenCLProgramAsync, 8> m_programs;
+    std::array<RGYOpenCLProgramAsync, 7> m_programs;
     std::unique_ptr<RGYFilterRtgmc> m_rtgmc;
     std::unique_ptr<RGYFilterRtgmc> m_deint60Rtgmc;
     std::unique_ptr<RGYFilterRtgmc> m_before60Rtgmc;

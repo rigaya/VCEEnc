@@ -38,8 +38,7 @@
 #include <exception>
 #include <limits>
 
-static const std::array<const TCHAR *, 8> KFM_RESOURCE_NAMES = {
-    _T("RGY_FILTER_KFM_COMMON_CL"),
+static const std::array<const TCHAR *, 7> KFM_RESOURCE_NAMES = {
     _T("RGY_FILTER_KFM_PAD_CL"),
     _T("RGY_FILTER_KFM_STATIC_CL"),
     _T("RGY_FILTER_KFM_ANALYZE_CL"),
@@ -50,8 +49,7 @@ static const std::array<const TCHAR *, 8> KFM_RESOURCE_NAMES = {
 };
 
 enum KfmProgramIndex {
-    KFM_PROG_COMMON = 0,
-    KFM_PROG_PAD,
+    KFM_PROG_PAD = 0,
     KFM_PROG_STATIC,
     KFM_PROG_ANALYZE,
     KFM_PROG_RENDER,
