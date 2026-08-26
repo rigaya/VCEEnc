@@ -877,6 +877,7 @@ std::pair<RGY_ERR, VideoInfo> VCECore::GetOutputVideoInfo() {
         adjust_sar(&info.sar[0], &info.sar[1], info.dstWidth, info.dstHeight);
         info.picstruct = frameOut.picstruct;
         info.csp = frameOut.csp;
+        info.bitdepth = frameOut.bitdepth;
         info.vui = m_encVUI;
         return { RGY_ERR_NONE, info };
     }
