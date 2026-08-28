@@ -82,7 +82,7 @@ jobs:
           docker exec build_pkg bash -lc '
             FFPKG="${{ env.FFMPEG_PREFIX }}/lib/pkgconfig:${{ env.FFMPEG_PREFIX }}/lib/x86_64-linux-gnu/pkgconfig"
             export PKG_CONFIG_PATH="${FFPKG}${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
-            meson setup ./build . --buildtype=release -Db_lto=true -Dcpp_args="['\''-I/work/AviSynthPlus/avs_core/include'\'','\''-I/work/vapoursynth/include'\'']"
+            meson setup ./build . --buildtype=release -Db_lto=true -Dlibass_static=true -Dcpp_args="['\''-I/work/AviSynthPlus/avs_core/include'\'','\''-I/work/vapoursynth/include'\'']"
           '
           docker exec build_pkg bash -lc "meson compile -C ./build -j${{ steps.prep.outputs.nproc }}"
           docker exec build_pkg ldd ./build/vceencc
