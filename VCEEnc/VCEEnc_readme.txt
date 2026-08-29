@@ -188,6 +188,27 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2026.08.29 (9.14)
+[VCEEncC]
+- VPPフィルタを追加。(--vpp-bm3d, --vpp-dehaze, --vpp-clahe, --vpp-guidedfilter, --vpp-nnedi-upscale)
+- --vpp-resizeにdpid (detail preserving downscaling)とarea補間を追加。
+- --vpp-rife-ovに任意フレームレート変換を追加。
+- --vpp-rife-ovの10bit入力に対応。
+- --vpp-colorfixに光源色温度の指定temperature=を追加。
+- --vpp-tweakにvibrance調整を追加。
+- --vpp-lenscorrectionに周辺減光補正を追加。
+- --vpp-deblockにブロック境界間隔指定を追加。
+- y4m入出力にタイムスタンプ拡張とフレーム時間情報を追加。
+- 音声・字幕・データトラックの除外指定に対応。
+- OpenCLプログラムを初期化時に並列ビルドするように。
+- raw Y4Mの10bitパイプ出力を修正。
+- --vpp-deint-csp inputで入力深度を維持するよう修正。
+- --vpp-rife-ovの16bit YUV入出力変換を修正。
+- --vpp-rife-ov変換時の末尾フレーム欠落を修正。
+- --vpp-ivtcの末尾フレーム欠落を修正。
+- --vpp-resizeのサブパラメータ解析がOpenCLのみの構成で効かないのを修正。
+- システム全体のハンドル数が非常に多い環境でのエラー回避。
+
 2026.08.15 (9.13)
 [VCEEncC]
 - 使用するffmpegのライブラリを更新。

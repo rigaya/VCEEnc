@@ -1,8 +1,33 @@
 # VCEEnc Release Notes
 
+## 9.14
+
+- Add VPP filters and some feature extenstion.
+  - [--vpp-bm3d](./VCEEncC_Options.en.md#--vpp-bm3d-param1value1param2value2)
+  - [--vpp-dehaze](./VCEEncC_Options.en.md#--vpp-dehaze-param1value1param2value2)
+  - [--vpp-clahe](./VCEEncC_Options.en.md#--vpp-clahe-param1value1param2value2)
+  - [--vpp-guidedfilter](./VCEEncC_Options.en.md#--vpp-guidedfilter-param1value1param2value2)
+  - [--vpp-nnedi-upscale](./VCEEncC_Options.en.md#--vpp-nnedi-upscale-param1value1param2value2)
+  - Add `dpid` (detail preserving downscaling) and `area` interpolation to [--vpp-resize](./VCEEncC_Options.en.md#--vpp-resize-string).
+  - Add arbitrary frame-rate conversion to [--vpp-rife-ov](./VCEEncC_Options.en.md#--vpp-rife-ov-param1value1param2value2).
+  - Support 10bit input in [--vpp-rife-ov](./VCEEncC_Options.en.md#--vpp-rife-ov-param1value1param2value2).
+  - Add `temperature=` light-source color temperature to [--vpp-colorfix](./VCEEncC_Options.en.md#--vpp-colorfix-param1value1param2value2).
+  - Add `vibrance` adjustment to [--vpp-tweak](./VCEEncC_Options.en.md#--vpp-tweak-param1value1param2value2).
+  - Add vignette (peripheral light falloff) correction to [--vpp-lenscorrection](./VCEEncC_Options.en.md#--vpp-lenscorrection-param1value1param2value2).
+  - Add block-boundary spacing (`grid`) to [--vpp-deblock](./VCEEncC_Options.en.md#--vpp-deblock-param1value1param2value2).
+- VPP filter fixes.
+  - Fix 16bit YUV conversion in [--vpp-rife-ov](./VCEEncC_Options.en.md#--vpp-rife-ov-param1value1param2value2).
+  - Fix missing last frames in [--vpp-rife-ov](./VCEEncC_Options.en.md#--vpp-rife-ov-param1value1param2value2) conversion.
+  - Fix missing last frames in [--vpp-ivtc](./VCEEncC_Options.en.md#--vpp-ivtc-param1value1param2value2).
+  - Fix [--vpp-resize](./VCEEncC_Options.en.md#--vpp-resize-string) sub-parameter parsing on OpenCL-only builds.
+- Add y4m timestamp extension and frame duration support ([--y4m-timestamp](./VCEEncC_Options.en.md#--y4m-timestamp)).
+- Support track exclusion with `!` for audio/subtitle/data selection ([--audio-copy](./VCEEncC_Options.en.md#--audio-copy-intstringintstring), [--audio-codec](./VCEEncC_Options.en.md#--audio-codec-intstringstringstringstringstringstring), [--sub-copy](./VCEEncC_Options.en.md#--sub-copy-intstringintstring), [--sub-codec](./VCEEncC_Options.en.md#--sub-codec-intstringstring), [--data-copy](./VCEEncC_Options.en.md#--data-copy-intstringintstring)).
+- Build OpenCL programs in parallel at initialization.
+- Fix 10bit raw Y4M pipe output.
+- Keep input bit depth when `--vpp-deint-csp` is `input`.
+
 ## 9.13
 
-- Add frame durations to [--y4m-timestamp](./VCEEncC_Options.en.md#--y4m-timestamp) output and improve the default y4m input timebase.
 - Update ffmpeg libraries. -> [binaries and src](https://github.com/rigaya/ffmpeg_dlls_for_hwenc/releases/tag/20260812), [build_scripts](https://github.com/rigaya/build_scripts)
   - ffmpeg 8.0 -> 9.0.1
   - libvmaf 3.0.0 -> 3.2.0
@@ -44,8 +69,7 @@
 - Follow mid-stream input resolution changes with [--avsw](./VCEEncC_Options.en.md#--avsw-string).
 - Add [--adapt-resolution](./VCEEncC_Options.en.md#--adapt-resolution-maxwxmaxh) to set the maximum input resolution for variable-resolution sources.
 - Add support to track PMT change.
-- Support language exclusion for audio/subtitle/data track selection ([--audio-copy](./VCEEncC_Options.en.md#--audio-copy-intstringintstring), [--audio-codec](./VCEEncC_Options.en.md#--audio-codec-intstringstringstringstringstringstring), [--sub-copy](./VCEEncC_Options.en.md#--sub-copy-intstringintstring), [--sub-codec](./VCEEncC_Options.en.md#--sub-codec-intstringstring), [--data-copy](./VCEEncC_Options.en.md#--data-copy-intstringintstring)).
-- Support track exclusion with `!` for audio/subtitle/data selection.
+- Support language exclusion for audio/subtitle track selection ([--audio-copy](./VCEEncC_Options.en.md#--audio-copy-intstringintstring), [--audio-codec](./VCEEncC_Options.en.md#--audio-codec-intstringstringstringstringstringstring), [--sub-copy](./VCEEncC_Options.en.md#--sub-copy-intstringintstring)).
 - Fix GPU memory growth with [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) mode=24 on long encodes.
 - Improve memory retention in [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2).
 - Output mp4 trailer even if error has occurred.

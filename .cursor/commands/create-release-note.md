@@ -28,6 +28,8 @@
     - オプション名(--xxx)が出るときは、VCEEncC_Options.en.mdへのリンクを作成する。
       オプションのリストとリンクは、VCEEncC_Options.en.md 上部の (## Command line exampleまで)に記載がある
   　　例: [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2)
+    - githubのissue (#xxx)が含まれる変更は下記のように記載する
+      例: Fix ~ error in [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2). ( #xxx )
   
   - この変更のトピックとなる変更を1～2つピックアップし、100文字程度でまとめた文章例を(日本語で)作成する。
     - git logのメッセージの文体に近い形としつつ、ですます調で過去形にすること。
@@ -39,7 +41,21 @@
         - OK: `<strong>- XXXという機能を追加。</strong>(--option-name)`
         - OK: `<strong>- --option-nameの機能を修正。</strong>`
         - NG: `<strong>- --option-nameの機能を修正。</strong>(--option-name)`
+
+    - githubのissue (#xxx)が含まれる変更は下記のように記載する
+      例1
+      ```
+      <strong>- --vpp-afsの～を修正。</strong>
+      <a class=blue href="https://github.com/rigaya/VCEEnc/issues/xxx" target="_blank" title="ご指摘いただいた問題">ご指摘いただいた問題</a>の修正。
+      ```
+      例2
+      ```
+      <strong>- --vpp-afsに～を追加。</strong>
+      <a class=blue href="https://github.com/rigaya/VCEEnc/issues/xxx" target="_blank" title="ご要望いただいた機能">ご要望いただいた機能</a>の追加。
+      ```
+
     - ```<br>```は不要。(かわりに通常の改行を用いる)
+
     - 最後に下記を記載する。
       ```
       <hr size="1" />
