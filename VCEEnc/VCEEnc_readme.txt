@@ -188,6 +188,11 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2026.09.01 (9.15)
+[VCEEncC]
+- -c rawで高ビット深度出力を最適化。
+- --disable-opencl使用時の動作を修正。
+
 2026.08.29 (9.14)
 [VCEEncC]
 - VPPフィルタを追加。(--vpp-bm3d, --vpp-dehaze, --vpp-clahe, --vpp-guidedfilter, --vpp-nnedi-upscale)

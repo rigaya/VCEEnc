@@ -1,5 +1,10 @@
 # VCEEnc Release Notes
 
+## 9.15
+
+- Optimize high bit depth output with [-c raw](./VCEEncC_Options.en.md#-c---codec-string).
+- Fix behavior when `--disable-opencl` is used.
+
 ## 9.14
 
 - Add VPP filters and some feature extenstion.
