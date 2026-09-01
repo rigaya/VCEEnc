@@ -376,6 +376,26 @@ public:
         m_clevents.push_back(clevent);
     }
 
+    // raw出力用のDtoHを先行投入する。実際にCPUから参照するまで待たないことで、
+    // 後続フレームのOpenCL処理と転送をオーバーラップさせる。
+    RGY_ERR queueMapCL(RGYOpenCLQueue *clqueue) {
+        if (clqueue == nullptr) {
+            return RGY_ERR_NULL_PTR;
+        }
+        auto clframe = m_surf.cl();
+        if (clframe == nullptr) {
+            return RGY_ERR_INVALID_OPERATION;
+        }
+        if (clframe->isMapped()) {
+            return RGY_ERR_NONE;
+        }
+        auto err = clframe->queueMapBuffer(*clqueue, CL_MAP_READ, m_clevents);
+        if (err != RGY_ERR_NONE) {
+            return err;
+        }
+        return clqueue->flush();
+    }
+
     virtual void depend_clear() override {
         RGYOpenCLEvent::wait(m_clevents);
         m_clevents.clear();
@@ -390,19 +410,22 @@ public:
     }
 
     RGY_ERR writeCL(RGYOutput *writer, RGYOpenCLQueue *clqueue) {
-        if (clqueue == nullptr) {
-            return RGY_ERR_NULL_PTR;
-        }
         auto clframe = m_surf.cl();
-        auto err = clframe->queueMapBuffer(*clqueue, CL_MAP_READ); // CPUが読み込むためにmapする
+        auto err = queueMapCL(clqueue);
         if (err != RGY_ERR_NONE) {
             return err;
         }
-        clframe->mapWait();
+        err = clframe->mapWait();
+        if (err != RGY_ERR_NONE) {
+            return err;
+        }
         auto mappedframe = clframe->mappedHost();
         err = writer->WriteNextFrame(mappedframe);
-        clframe->unmapBuffer();
-        return err;
+        const auto unmapErr = clframe->unmapBuffer();
+        // unmapBuffer()はmapオブジェクト自体を保持するため、そのままだとサーフェス再利用時に
+        // isMapped()がtrueのままとなり、unmap済みのnullポインタを出力してしまう。
+        clframe->resetMappedFrame();
+        return (err != RGY_ERR_NONE) ? err : unmapErr;
     }
 
     virtual RGY_ERR write([[maybe_unused]] RGYOutput *writer, [[maybe_unused]] RGYOpenCLQueue *clqueue, [[maybe_unused]] RGYFilterSsim *videoQualityMetric) override {
@@ -3021,9 +3044,20 @@ class PipelineTaskOutputRaw : public PipelineTask {
     RGYOutput *m_writer;
     RGYTimecode *m_timecode;
     rgy_rational<int> m_outputTimebase;
+    std::shared_ptr<RGYOpenCLContext> m_cl;
+    RGYOpenCLQueue m_queueDownload;
 public:
-    PipelineTaskOutputRaw(amf::AMFContextPtr context, RGYOutput *writer, RGYTimecode *timecode, rgy_rational<int> outputTimebase, int outMaxQueueSize, std::shared_ptr<RGYLog> log) :
-        PipelineTask(PipelineTaskType::OUTPUTRAW, context, outMaxQueueSize, log), m_writer(writer), m_timecode(timecode), m_outputTimebase(outputTimebase) {};
+    PipelineTaskOutputRaw(amf::AMFContextPtr context, RGYOutput *writer, RGYTimecode *timecode, rgy_rational<int> outputTimebase, std::shared_ptr<RGYOpenCLContext> cl, int outMaxQueueSize, std::shared_ptr<RGYLog> log) :
+        PipelineTask(PipelineTaskType::OUTPUTRAW, context, outMaxQueueSize, log), m_writer(writer), m_timecode(timecode), m_outputTimebase(outputTimebase), m_cl(cl), m_queueDownload() {
+        // NVEncのdownload streamと同様、DtoHをVPP用キューから分離する。
+        // 転送中もメインキューで次フレームのOpenCL処理を進められる。
+        if (m_cl != nullptr) {
+            m_queueDownload = m_cl->createQueue(m_cl->queue().devid(), 0);
+            if (m_queueDownload.get() == nullptr) {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to create OpenCL queue for async DtoH.\n"));
+            }
+        }
+    };
     virtual ~PipelineTaskOutputRaw() {
         if (m_writer) {
             m_writer->WriteNextFrame((RGYFrame *)nullptr);
@@ -3038,11 +3072,21 @@ public:
             return RGY_ERR_MORE_DATA;
         }
         m_inFrames++;
-        if (m_timecode) {
-            auto surf = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
-            if (surf == nullptr || surf->surf().frame() == nullptr) {
-                return RGY_ERR_INVALID_OPERATION;
+        auto surf = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
+        if (surf == nullptr || surf->surf().frame() == nullptr) {
+            return RGY_ERR_INVALID_OPERATION;
+        }
+        // OpenCLサーフェスでは、出力キューに保持している間に非同期DtoHを進める。
+        if (surf->surf().cl() != nullptr) {
+            if (m_cl == nullptr || m_queueDownload.get() == nullptr) {
+                return RGY_ERR_NULL_PTR;
             }
+            const auto err = surf->queueMapCL(&m_queueDownload);
+            if (err != RGY_ERR_NONE) {
+                return err;
+            }
+        }
+        if (m_timecode) {
             m_timecode->write(surf->surf().frame()->timestamp(), m_outputTimebase);
         }
         m_outQeueue.push_back(std::move(frame));

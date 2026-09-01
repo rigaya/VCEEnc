@@ -168,7 +168,13 @@ bool hasVppDeinterlacer(const VCEParam *inputParam, const bool includeIvtc) {
 RGY_CSP getOpenCLFilterCsp(const RGY_CSP csp) {
     switch (csp) {
     case RGY_CSP_NV12: return RGY_CSP_YV12;
-    case RGY_CSP_P010: return RGY_CSP_YV12_16;
+    // 高bit depthのplanar raw出力でも、OpenCLフィルタ内部は従来どおり16bit精度を使用する。
+    // 最終段のCspCropでのみ指定bit depthへ縮小し、フィルタの値域・精度を変えない。
+    case RGY_CSP_P010:
+    case RGY_CSP_YV12_09:
+    case RGY_CSP_YV12_10:
+    case RGY_CSP_YV12_12:
+    case RGY_CSP_YV12_14: return RGY_CSP_YV12_16;
     case RGY_CSP_VUYA: return RGY_CSP_YUV444;
     case RGY_CSP_Y410: return RGY_CSP_YUV444_16;
     case RGY_CSP_Y416: return RGY_CSP_YUV444_16;
@@ -899,6 +905,7 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
         return err;
     }
     if (inputParams->codec == RGY_CODEC_RAW || inputParams->codec == RGY_CODEC_AVCODEC) {
+        outputVideoInfo.bitdepth = GetEncoderBitdepth(inputParams);
         inputParams->common.AVMuxTarget &= ~RGY_MUX_VIDEO;
     }
 
@@ -1178,7 +1185,24 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     }
     m_encFps = rgy_rational<int>(inputParam->input.fpsN, inputParam->input.fpsD);
 
-    const bool cspConvRequired = inputFrame.csp != GetEncoderCSP(inputParam);
+    // raw出力はAMFエンコーダへ渡さないため、最終段だけ指定bit depthのplanar形式へ変換する。
+    // 入力・AMF処理用のGetEncoderCSP()はNV12/P010のまま維持し、AMFが扱えないplanar形式を渡さない。
+    const int outputBitdepth = GetEncoderBitdepth(inputParam);
+    auto filterOutputCsp = GetEncoderCSP(inputParam);
+    if (inputParam->codec == RGY_CODEC_RAW) {
+        switch (outputBitdepth) {
+        case 8:  break; // そのまま
+        case 9:  filterOutputCsp = RGY_CSP_YV12_09; break;
+        case 10: filterOutputCsp = RGY_CSP_YV12_10; break;
+        case 12: filterOutputCsp = RGY_CSP_YV12_12; break;
+        case 14: filterOutputCsp = RGY_CSP_YV12_14; break;
+        case 16: filterOutputCsp = RGY_CSP_YV12_16; break;
+        default:
+            PrintMes(RGY_LOG_ERROR, _T("Unsupported raw output bit depth: %d.\n"), outputBitdepth);
+            return RGY_ERR_UNSUPPORTED;
+        }
+    }
+    const bool cspConvRequired = inputFrame.csp != filterOutputCsp;
 
     m_encWidth = croppedWidth;
     m_encHeight = croppedHeight;
@@ -1275,7 +1299,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     const bool delayCspConvForDeint = useInputCspForDeint && cspConvRequired;
     bool outputCspConverted = !delayCspConvForDeint;
     auto targetSurfaceCsp = [&]() {
-        return outputCspConverted ? GetEncoderCSP(inputParam) : inputSurfaceCsp;
+        return outputCspConverted ? filterOutputCsp : inputSurfaceCsp;
     };
     auto targetSurfaceBitdepth = [&]() {
         return outputCspConverted ? GetEncoderBitdepth(inputParam) : inputSurfaceBitdepth;
@@ -4636,7 +4660,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
     if (m_pEncoder) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskAMFEncode>(m_pEncoder, m_encCodec, m_params, m_dev->context(), 1, m_timecode.get(), m_encTimestamp.get(), m_outputTimebase, m_hdr10plus.get(), m_dovirpu.get(), m_pLog));
     } else {
-        m_pipelineTasks.push_back(std::make_unique<PipelineTaskOutputRaw>(m_dev->context(), m_pFileWriter.get(), m_timecode.get(), m_outputTimebase, 1, m_pLog));
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskOutputRaw>(m_dev->context(), m_pFileWriter.get(), m_timecode.get(), m_outputTimebase, m_dev->cl(), 1, m_pLog));
     }
 
     if (m_pipelineTasks.size() == 0) {
