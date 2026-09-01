@@ -1246,6 +1246,10 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
         PrintMes(RGY_LOG_ERROR, _T("Cannot continue as OpenCL is disabled, but csp conversion required!\n"));
         return RGY_ERR_UNSUPPORTED;
     }
+    if (!m_dev->cl() && resizeRequired == RGY_VPP_RESIZE_TYPE_OPENCL) {
+        PrintMes(RGY_LOG_ERROR, _T("Cannot continue as OpenCL is disabled, but OpenCL resize requested!\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
     if (resizeRequired != RGY_VPP_RESIZE_TYPE_NONE
         && !m_dev->cl() && !m_dev->getFilterCaps(AMFHQScaler)) {
         PrintMes(RGY_LOG_WARN, _T("HQScaler and OpenCL both unavailable, cannot enable resize!\n"));

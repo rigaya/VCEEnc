@@ -2390,10 +2390,22 @@ public:
             pSurface->SetProperty(RGY_PROP_INPUT_FRAMEID, inputFrameId);
             m_vppFilter->setFrameParam(pSurface);
 
-            // これをやらないと(pSurfaceがhostメモリの場合に)、
-            // m_vppFilter->filter()->QueryOutput(&data)が返答を返さなくなる(関数内でフリーズしてしまう)
+            // HOSTのままAMF VPPへ渡すとQueryOutputが返らなくなるため、利用中のGPU backendへ変換する。
+            // --disable-opencl時にOPENCLへ変換するとConvert自体が停止する場合があるので、
+            // WindowsではDX11、LinuxではVulkanを使用する。
             if (pSurface->GetMemoryType() == amf::AMF_MEMORY_HOST) {
-                pSurface->Convert(amf::AMF_MEMORY_OPENCL);
+                const auto targetMemoryType = (m_cl)
+                    ? amf::AMF_MEMORY_OPENCL
+#if ENABLE_D3D11
+                    : amf::AMF_MEMORY_DX11;
+#else
+                    : amf::AMF_MEMORY_VULKAN;
+#endif
+                const auto ar = pSurface->Convert(targetMemoryType);
+                if (ar != AMF_OK) {
+                    PrintMes(RGY_LOG_ERROR, _T("Failed to convert AMF VPP input surface: %s.\n"), AMFRetString(ar));
+                    return err_to_rgy(ar);
+                }
             }
 
             m_inFrames++;
