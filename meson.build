@@ -1,5 +1,5 @@
 project('vceencc', ['c', 'cpp'],
-  version: run_command('git', 'describe', '--tags', '--abbrev=0', check: true).stdout().strip(),
+  version: run_command('sh', '-c', 'cd "$1" && ./scripts/get-version.sh', 'sh', meson.current_source_dir(), check: true).stdout().strip(),
   license: 'MIT',
   meson_version: '>=0.61.0',
   default_options: [

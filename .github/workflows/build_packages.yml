@@ -3,10 +3,20 @@ name: Build Linux Packages
 on:
   push:
     branches:
-      - master
       - linux
-    tags:
-      - '*'
+  workflow_call:
+    inputs:
+      release_sha:
+        required: false
+        default: ''
+        type: string
+      package_version:
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -22,63 +32,66 @@ jobs:
     env:
       DOCKER_IMAGE: ${{ matrix.dockerimg }}
       PKG_TYPE: ${{ matrix.pkgtype }}
+      PACKAGE_VERSION: ${{ inputs.package_version }}
       BASE_IMAGE_REPO: ghcr.io/${{ github.repository_owner }}/vceenc-build
       FFMPEG_PREFIX: /opt/build_scripts/ffmpeg_dll/build_dll/x64/build
 
-    name: Upload Release Asset
+    name: Upload Linux Package
     runs-on: ubuntu-latest
     steps:
-      - name: Prepare
-        id: prep
-        run: |
-          REPOSITORY=$(echo ${{ github.repository }} | sed -e "s#.*/##")
-          VERSION=$(echo ${{ github.ref }} | sed -e "s#refs/tags/##g")
-          NPROC=$(grep 'processor' /proc/cpuinfo | wc -l)
-          OUTPUT_DIR=`pwd`/output
-          LOCAL_USER_ID=$(id -u)
-          LOCAL_GROUP_ID=$(id -g)
-          BASE_IMAGE="${{ env.BASE_IMAGE_REPO }}:${{ env.DOCKER_IMAGE }}"
-          echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
-          echo "nproc=${NPROC}" >> $GITHUB_OUTPUT
-          echo "output_dir=${OUTPUT_DIR}" >> $GITHUB_OUTPUT
-          echo "local_user_id=${LOCAL_USER_ID}" >> $GITHUB_OUTPUT
-          echo "local_group_id=${LOCAL_GROUP_ID}" >> $GITHUB_OUTPUT
-
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.release_sha || github.sha }}
           submodules: true
           fetch-depth: 0
 
-      - name: Verify tag matches VER_STR_FILEVERSION
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Verify checkout commit
+        env:
+          EXPECTED_SHA: ${{ inputs.release_sha || github.sha }}
         run: |
-          cd ${{ github.workspace }}
-          TAG=$(echo ${{ github.ref }} | sed -e "s#refs/tags/##g")
-          VER=$(sed -n 's/^#define VER_STR_FILEVERSION[ \t]*"\([^"]*\)".*$/\1/p' VCECore/rgy_version.h | tr -d '\r\n')
-          if [ "$TAG" = "$VER" ] || [ "${TAG#v}" = "$VER" ]; then
-            echo "Version OK: tag=${TAG}, header=${VER}"
-          else
-            echo "ERROR: Tag version (${TAG}) does not match VER_STR_FILEVERSION (${VER})" >&2
+          set -euo pipefail
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+            echo "ERROR: checkoutしたcommit ($ACTUAL_SHA) が対象commit ($EXPECTED_SHA) と一致しません。" >&2
             exit 1
           fi
+
+      - name: Prepare
+        id: prep
+        shell: bash
+        run: |
+          set -euo pipefail
+          PACKAGE_VERSION="${{ inputs.package_version }}"
+          if [ -z "$PACKAGE_VERSION" ]; then
+            PACKAGE_VERSION=$(./scripts/get-version.sh)
+          fi
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> "$GITHUB_ENV"
+          NPROC=$(grep -c processor /proc/cpuinfo)
+          OUTPUT_DIR="$PWD/output"
+          BASE_IMAGE="${BASE_IMAGE_REPO}:${DOCKER_IMAGE}"
+          echo "base_image=${BASE_IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "nproc=${NPROC}" >> "$GITHUB_OUTPUT"
+          echo "output_dir=${OUTPUT_DIR}" >> "$GITHUB_OUTPUT"
 
       - name: Pull base image
         run: docker pull ${{ steps.prep.outputs.base_image }}
 
       - name: Create Output Dir
-        run: |
-          mkdir -p ${{ steps.prep.outputs.output_dir }}
+        run: mkdir -p "${{ steps.prep.outputs.output_dir }}"
 
       - name: Build Exec
         id: build_exec
+        shell: bash
         run: |
+          set -euo pipefail
           docker run -dit --rm \
-            -v ${{ github.workspace }}:/work \
-            -v ${{ steps.prep.outputs.output_dir }}:/output \
+            -v "${{ github.workspace }}:/work" \
+            -v "${{ steps.prep.outputs.output_dir }}:/output" \
+            -e "PACKAGE_VERSION=${PACKAGE_VERSION}" \
             -u "$(id -u):$(id -g)" \
             --workdir /work \
-            --name build_pkg ${{ steps.prep.outputs.base_image }}
+            --name build_pkg "${{ steps.prep.outputs.base_image }}"
           docker exec build_pkg bash -lc '
             FFPKG="${{ env.FFMPEG_PREFIX }}/lib/pkgconfig:${{ env.FFMPEG_PREFIX }}/lib/x86_64-linux-gnu/pkgconfig"
             export PKG_CONFIG_PATH="${FFPKG}${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
@@ -90,28 +103,18 @@ jobs:
           docker exec build_pkg ./check_options.py -exe ./build/vceencc
           docker exec build_pkg ./build/vceencc --check-cmd-parse
           docker exec build_pkg cp ./build/vceencc ./vceencc
-          docker exec build_pkg ./build_${{ env.PKG_TYPE }}.sh
-          docker exec build_pkg bash -lc "cp -v ./*.${{ env.PKG_TYPE }} /output/"
-          PKGFILE=`ls ${{ steps.prep.outputs.output_dir }}/*.${{ env.PKG_TYPE }}`
-          echo ${PKGFILE}
-          echo "pkgfile=${PKGFILE}" >> $GITHUB_OUTPUT
+          docker exec build_pkg ./build_${PKG_TYPE}.sh
+          docker exec build_pkg bash -lc "cp -v ./*.${PKG_TYPE} /output/"
+          PKGFILE=$(find "${{ steps.prep.outputs.output_dir }}" -maxdepth 1 -type f -name "*.${PKG_TYPE}" -print -quit)
+          test -n "$PKGFILE"
+          echo "pkgfile=${PKGFILE}" >> "$GITHUB_OUTPUT"
 
       - name: Calc hash
-        id: calc_hash
-        run: |
-          7z h -scrc* ${{ steps.build_exec.outputs.pkgfile }}
-
-      - name: Upload Release Asset
-        id: upload-release-asset 
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: ${{ steps.build_exec.outputs.pkgfile }}
+        run: 7z h -scrc* "${{ steps.build_exec.outputs.pkgfile }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: vceencc_${{ matrix.dockerimg }}_${{ matrix.pkgtype }}
           path: ${{ steps.build_exec.outputs.pkgfile }}
+          retention-days: 30
