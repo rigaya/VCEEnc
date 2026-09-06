@@ -60,7 +60,7 @@ static void show_hw(int deviceid, const RGYParamLogLevel& loglevel) {
     auto core = std::make_unique<VCEAMF>();
     auto err = RGY_ERR_NONE;
     if ((err = core->initLogLevel(loglevel)) == RGY_ERR_NONE
-        && (err = core->initAMFFactory()) == RGY_ERR_NONE
+        && (err = core->initAMFFactory(deviceid)) == RGY_ERR_NONE
         && (err = core->initTracer(loglevel.get(RGY_LOGT_AMF))) == RGY_ERR_NONE) {
 #if defined(_WIN32) || defined(_WIN64)
         constexpr bool enableOpenCLForCaps = true;
@@ -69,9 +69,9 @@ static void show_hw(int deviceid, const RGYParamLogLevel& loglevel) {
         constexpr bool enableOpenCLForCaps = false;
 #endif
 #if ENABLE_D3D11
-        const auto devList = core->createDeviceList(false, true, RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0);
+        const auto devList = core->createDeviceList(false, true, RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0, deviceid);
 #else
-        const auto devList = core->createDeviceList(false, false, ENABLE_VULKAN ? RGYParamInitVulkan::TargetVendor : RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0);
+        const auto devList = core->createDeviceList(false, false, ENABLE_VULKAN ? RGYParamInitVulkan::TargetVendor : RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0, deviceid);
 #endif
         if (devList.size() > 0) {
             _ftprintf(stdout, _T("VCE available\n"));
@@ -135,7 +135,7 @@ static void show_device(int deviceid, const RGYParamLogLevel& loglevel) {
     auto core = std::make_unique<VCEAMF>();
     auto err = RGY_ERR_NONE;
     if ((err = core->initLogLevel(loglevel)) == RGY_ERR_NONE
-        && (err = core->initAMFFactory()) == RGY_ERR_NONE
+        && (err = core->initAMFFactory(deviceid)) == RGY_ERR_NONE
         && (err = core->initTracer(loglevel.get(RGY_LOGT_AMF))) == RGY_ERR_NONE) {
 #if defined(_WIN32) || defined(_WIN64)
         constexpr bool enableOpenCLForCaps = true;
@@ -143,9 +143,9 @@ static void show_device(int deviceid, const RGYParamLogLevel& loglevel) {
         constexpr bool enableOpenCLForCaps = false;
 #endif
 #if ENABLE_D3D11
-        const auto devList = core->createDeviceList(false, true, RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0);
+        const auto devList = core->createDeviceList(false, true, RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0, deviceid);
 #else
-        const auto devList = core->createDeviceList(false, false, ENABLE_VULKAN ? RGYParamInitVulkan::TargetVendor : RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0);
+        const auto devList = core->createDeviceList(false, false, ENABLE_VULKAN ? RGYParamInitVulkan::TargetVendor : RGYParamInitVulkan::Disable, enableOpenCLForCaps, false, false, 0, deviceid);
 #endif
         if (devList.size() > 0) {
             _ftprintf(stdout, _T("VCE available\n"));
@@ -188,7 +188,7 @@ static void show_option_list() {
     }
 }
 
-int parse_print_options(const TCHAR *option_name, const TCHAR *arg1, const RGYParamLogLevel& loglevel) {
+int parse_print_options(const TCHAR *option_name, const TCHAR *arg1, const RGYParamLogLevel& loglevel, const int deviceidFromOption) {
 
 #define IS_OPTION(x) (0 == _tcscmp(option_name, _T(x)))
 
@@ -212,7 +212,7 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1, const RGYPa
     }
 #endif
     if (IS_OPTION("check-hw")) {
-        int deviceid = -1;
+        int deviceid = deviceidFromOption;
         if (arg1 && arg1[0] != '-') {
             int value = 0;
             if (1 == _stscanf_s(arg1, _T("%d"), &value)) {
@@ -223,7 +223,7 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1, const RGYPa
         return 1;
     }
     if (IS_OPTION("check-device")) {
-        int deviceid = -1;
+        int deviceid = deviceidFromOption;
         if (arg1 && arg1[0] != '-') {
             int value = 0;
             if (1 == _stscanf_s(arg1, _T("%d"), &value)) {
@@ -248,7 +248,7 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1, const RGYPa
         return selftest.run((arg1[0] != _T('-')) ? arg1 : _T(""));
     }
     if (IS_OPTION("check-features")) {
-        int deviceid = -1;
+        int deviceid = deviceidFromOption;
         if (arg1 && arg1[0] != '-') {
             int value = 0;
             if (1 == _stscanf_s(arg1, _T("%d"), &value)) {
@@ -529,10 +529,15 @@ int _tmain(int argc, TCHAR **argv) {
 #endif //#if defined(_WIN32) || defined(_WIN64)
 
     RGYParamLogLevel loglevelPrint(RGY_LOG_ERROR);
+    int deviceidPrint = -1;
     for (int iarg = 1; iarg < argc-1; iarg++) {
         if (tstring(argv[iarg]) == _T("--log-level")) {
             parse_log_level_param(argv[iarg], argv[iarg+1], loglevelPrint);
-            break;
+        } else if (tstring(argv[iarg]) == _T("-d") || tstring(argv[iarg]) == _T("--device")) {
+            int value = 0;
+            if (1 == _stscanf_s(argv[iarg+1], _T("%d"), &value)) {
+                deviceidPrint = value;
+            }
         }
     }
 
@@ -550,7 +555,7 @@ int _tmain(int argc, TCHAR **argv) {
             }
         }
         if (option_name != nullptr) {
-            int ret = parse_print_options(option_name, (iarg+1 < argc) ? argv[iarg+1] : _T(""), loglevelPrint);
+            int ret = parse_print_options(option_name, (iarg+1 < argc) ? argv[iarg+1] : _T(""), loglevelPrint, deviceidPrint);
             if (ret != 0) {
                 return ret == 1 ? 0 : 1;
             }
