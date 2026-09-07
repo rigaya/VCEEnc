@@ -1,5 +1,11 @@
 # VCEEnc Release Notes
 
+## 9.16
+
+- Support device selection in [--check-hw](./VCEEncC_Options.en.md#--check-hw-int).
+- Speed up [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) `mode=24`.
+- Fix issues with timestamp when using y4m reader.
+
 ## 9.15
 
 - Optimize high bit depth output with [-c raw](./VCEEncC_Options.en.md#-c---codec-string).
