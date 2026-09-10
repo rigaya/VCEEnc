@@ -593,16 +593,9 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, DeviceCodecCsp& HWDecCodecCsp) 
     const bool vpp_kfm_rff_aware =
         (ENABLE_VPP_FILTER_KFM && inputParam->vpp.kfm.enable && inputParam->vpp.kfm.rff);
 
-    // VCEではhwデコーダ使用時はrffの処理に対応していない
-    // 特に指定の場合、自動的にavhwを無効化する
-    if (inputParam->input.type == RGY_INPUT_FMT_AVANY
-        && (inputParam->vpp.rff.enable || inputParam->vpp.afs.rff || vpp_kfm_rff_aware)) {
-        inputParam->input.type = RGY_INPUT_FMT_AVSW;
-    }
-
     auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, &inputParam->inprm, inputCspOfRawReader,
         m_pStatus, &inputParam->common, &inputParam->ctrl, HWDecCodecCsp, subburnTrackId,
-        inputParam->vpp.afs.enable, inputParam->vpp.rff.enable || vpp_kfm_rff_aware, inputParam->vpp.libplacebo_tonemapping.enable, inputParam->vpp.ivtc.expand != 0,
+        inputParam->vpp.afs.enable, inputParam->vpp.rff.enable || inputParam->vpp.afs.rff || vpp_kfm_rff_aware, inputParam->vpp.libplacebo_tonemapping.enable, inputParam->vpp.ivtc.expand != 0,
         m_poolPkt.get(), m_poolFrame.get(), nullptr, m_pPerfMonitor.get(), m_pLog);
     if (err != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("failed to initialize file reader(s).\n"));
