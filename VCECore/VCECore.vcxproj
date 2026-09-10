@@ -1553,23 +1553,15 @@ if not %errorlevel% == 0 move /y rgy_rev.h.%PID%.tmp rgy_rev.h  &gt; nul 2&gt;&a
 if exist rgy_rev.h.%PID%.tmp del rgy_rev.h.%PID%.tmp &gt; nul 2&gt;&amp;1</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Platform)'=='x64' and ('$(Configuration)'=='Debug' or '$(Configuration)'=='Release' or '$(Configuration)'=='DebugStatic' or '$(Configuration)'=='RelStatic') and '$(VCEEncVmafIncludeDir)'!='' and Exists('$(VCEEncVmafIncludeDir)\libvmaf\libvmaf.h')">
+  <ItemDefinitionGroup Condition="'$(Platform)'=='x64' and ('$(Configuration)'=='DebugStatic' or '$(Configuration)'=='RelStatic')">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VCEEncVmafIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>VCEENC_ENABLE_VMAF=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(VSHIP_DIR)\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>VCEENC_ENABLE_VMAF=1;VCEENC_ENABLE_LIBVSHIP=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Platform)'=='x64' and ('$(Configuration)'=='Debug' or '$(Configuration)'=='Release' or '$(Configuration)'=='DebugStatic' or '$(Configuration)'=='RelStatic') and '$(VCEEncVshipIncludeDir)'!='' and Exists('$(VCEEncVshipIncludeDir)\VshipAPI.h')">
-    <ClCompile>
-      <AdditionalIncludeDirectories>$(VCEEncVshipIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>VCEENC_ENABLE_LIBVSHIP=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <Target Name="ValidateVCECoreMetricHeaders" BeforeTargets="ClCompile" Condition="'$(VCEEncVmafIncludeDir)'!='' and !Exists('$(VCEEncVmafIncludeDir)\libvmaf\libvmaf.h')">
-    <Error Text="VCEEncVmafIncludeDir に libvmaf/libvmaf.h がありません: $(VCEEncVmafIncludeDir)" />
-  </Target>
-  <Target Name="ValidateVCECoreMetricHeadersVship" BeforeTargets="ClCompile" Condition="'$(VCEEncVshipIncludeDir)'!='' and !Exists('$(VCEEncVshipIncludeDir)\VshipAPI.h')">
-    <Error Text="VCEEncVshipIncludeDir に VshipAPI.h がありません: $(VCEEncVshipIncludeDir)" />
+  <Target Name="ValidateVCECoreMetricHeaders" BeforeTargets="ClCompile" Condition="'$(Platform)'=='x64' and ('$(Configuration)'=='DebugStatic' or '$(Configuration)'=='RelStatic')">
+    <Error Condition="!Exists('$(SolutionDir)ffmpeg_lgpl\include\libvmaf\libvmaf.h')" Text="ffmpeg_lgpl/include に libvmaf/libvmaf.h がありません。" />
+    <Error Condition="!Exists('$(VSHIP_DIR)\src\VshipAPI.h')" Text="VSHIP_DIR/src に VshipAPI.h がありません: $(VSHIP_DIR)" />
   </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

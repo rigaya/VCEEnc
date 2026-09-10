@@ -60,19 +60,17 @@ setx ONNXRUNTIME_DIR "%ONNXRUNTIME_DIR%"
 x64 の VCEEncC ビルドでは、`%ONNXRUNTIME_DIR%\lib` の `onnxruntime.dll` と `onnxruntime_providers_shared.dll` が出力先にコピーされます。
 配布パッケージにもこの2つの DLL が同梱されるため、実行時に別途 `PATH` を設定する必要はありません。
 
-VMAFまたはlibvshipの評価を有効にする64bit版VCEEncCのビルドでは、それぞれのAPIヘッダを用意します。VMAFは[Netflix/vmaf](https://github.com/Netflix/vmaf)のリリースに含まれる`libvmaf/include`、libvshipは[Line-fr/Vship](https://codeberg.org/Line-fr/Vship)の`src`を使用します。VCEEncはどちらのライブラリも静的リンクしません。
-
-ヘッダの場所は、環境変数またはMSBuildプロパティで指定します。VCEEnc.auo向けWin32構成では評価機能を有効にしません。
+64bit版VCEEncCのDebugStatic/RelStatic構成ではVMAFとlibvshipの評価が常に有効です。VMAFのAPIヘッダと`libvmaf.dll`は`ffmpeg_lgpl` archiveに含まれるものを使用します。libvshipは[Line-fr/Vship](https://codeberg.org/Line-fr/Vship)の`src`を用意し、環境変数`VSHIP_DIR`にはその親ディレクトリを指定します。必要なヘッダがない場合はビルドエラーになります。VCEEnc.auo向け構成とWin32構成では評価機能を有効にしません。
 
 ```Batchfile
-setx VCEEncVmafIncludeDir "C:\path\to\vmaf\libvmaf\include"
-setx VCEEncVshipIncludeDir "C:\path\to\Vship\src"
+setx VSHIP_DIR "C:\path\to\Vship"
 ```
 
-コマンドラインから指定する場合は、例えば次のようにします。
+コマンドラインから指定する場合は、例えば次のようにします。ビルド後、`libvmaf.dll`はVCEEncC64.exeの出力先へ自動的にコピーされます。
 
 ```Batchfile
-msbuild VCEEnc.sln /p:Configuration=RelStatic /p:Platform=x64 /p:VCEEncVmafIncludeDir=C:\path\to\vmaf\libvmaf\include /p:VCEEncVshipIncludeDir=C:\path\to\Vship\src
+set VSHIP_DIR=C:\path\to\Vship
+msbuild VCEEnc.sln /p:Configuration=RelStatic /p:Platform=x64
 ```
 
 ### 1. ソースのダウンロード
@@ -110,13 +108,19 @@ VCEEnc.slnを開きます。
   - libass9
   - [Optional] VapourSynth
 
-VMAFまたはlibvshipの評価をビルドする場合は、対応するAPIヘッダも必要です。VMAFは`libvmaf/include`、libvshipは`VshipAPI.h`を含む`src`を指定します。どちらも実行時に動的ロードするため、ビルド時には本体ライブラリをリンクしません。
+VMAFまたはlibvshipの評価をビルドする場合は、対応するAPIヘッダも必要です。VMAFは`libvmaf/include`、libvshipは`VshipAPI.h`を含む`src`を指定します。通常ビルドではどちらも実行時に動的ロードします。配布用ビルドなどでVMAFを静的リンクする場合は、ヘッダと`libvmaf.a`を含む同じprefixの`libvmaf.pc`を`PKG_CONFIG_PATH`から検出できるようにします。
 
 Mesonでは、ヘッダを検出できれば既定の`auto`で有効になります。明示的に切り替えるには以下を指定します。
 
 ```Shell
 meson setup build -Denable_vmaf=enabled -Dvmaf_include_dir=/path/to/vmaf/libvmaf/include
 meson setup build -Denable_libvship=enabled -Dlibvship_include_dir=/path/to/Vship/src
+```
+
+VMAFを静的リンクする場合は次のように指定します。この場合、`vmaf_include_dir`よりpkg-configで検出した同一prefixのヘッダを優先します。
+
+```Shell
+PKG_CONFIG_PATH=/path/to/vmaf-prefix/lib/pkgconfig meson setup build -Denable_vmaf=enabled -Dlibvmaf_static=true
 ```
 
 ヘッダを指定しない通常ビルドでは`-Denable_vmaf=disabled -Denable_libvship=disabled`を指定できます。`enabled`でヘッダを見つけられない場合、Mesonは構成時にエラーにします。
