@@ -76,12 +76,12 @@ const char *get_encoder_version();
 #define ENABLE_LIBDOVI 1
 #define ENABLE_LIBHDR10PLUS 1
 #define ENABLE_LIBPLACEBO 1
-#if defined(_M_X64) && !defined(VCE_AUO) && defined(VCEENC_ENABLE_VMAF)
+#if defined(_M_X64) && !defined(VCE_AUO)
 #define ENABLE_VMAF 1
 #else
 #define ENABLE_VMAF 0
 #endif
-#if defined(_M_X64) && !defined(VCE_AUO) && defined(VCEENC_ENABLE_LIBVSHIP)
+#if defined(_M_X64) && !defined(VCE_AUO)
 #define ENABLE_LIBVSHIP 1
 #else
 #define ENABLE_LIBVSHIP 0
