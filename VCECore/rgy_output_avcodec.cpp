@@ -2436,11 +2436,7 @@ RGY_ERR RGYOutputAvcodec::Init(const TCHAR *strFileName, const VideoInfo *videoO
     }
     AddMessage(RGY_LOG_DEBUG, _T("output filename: \"%s\"\n"), strFileName);
     m_Mux.format.filename = strFileName;
-    auto outputFormat = (prm->outputFormat.length() > 0) ? tchar_to_string(prm->outputFormat) : std::string();
-    if (_stricmp(outputFormat.c_str(), "y4m") == 0) {
-        outputFormat = "yuv4mpegpipe";
-    }
-    if (NULL == (m_Mux.format.outputFmt = av_guess_format((outputFormat.length() > 0) ? outputFormat.c_str() : NULL, filename.c_str(), NULL))) {
+    if (NULL == (m_Mux.format.outputFmt = av_guess_format((prm->outputFormat.length() > 0) ? tchar_to_string(prm->outputFormat).c_str() : NULL, filename.c_str(), NULL))) {
         AddMessage(RGY_LOG_ERROR,
             _T("failed to assume format from output filename.\n")
             _T("please set proper extension for output file, or specify format using option %s.\n"), (videoOutputInfo) ? _T("--format") : _T("--audio-file <format>:<filename>"));
