@@ -573,6 +573,24 @@ if exist "$(ONNXRUNTIME_DIR)\lib\DirectML.dll" copy /y "$(ONNXRUNTIME_DIR)\lib\D
       <AdditionalManifestFiles>VCEEncC.manifest</AdditionalManifestFiles>
     </Manifest>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='x64' and ('$(Configuration)'=='Debug' or '$(Configuration)'=='Release' or '$(Configuration)'=='DebugStatic' or '$(Configuration)'=='RelStatic') and '$(VCEEncVmafIncludeDir)'!='' and Exists('$(VCEEncVmafIncludeDir)\libvmaf\libvmaf.h')">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(VCEEncVmafIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>VCEENC_ENABLE_VMAF=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='x64' and ('$(Configuration)'=='Debug' or '$(Configuration)'=='Release' or '$(Configuration)'=='DebugStatic' or '$(Configuration)'=='RelStatic') and '$(VCEEncVshipIncludeDir)'!='' and Exists('$(VCEEncVshipIncludeDir)\VshipAPI.h')">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(VCEEncVshipIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>VCEENC_ENABLE_LIBVSHIP=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <Target Name="ValidateVCEEncCMetricHeaders" BeforeTargets="ClCompile" Condition="'$(VCEEncVmafIncludeDir)'!='' and !Exists('$(VCEEncVmafIncludeDir)\libvmaf\libvmaf.h')">
+    <Error Text="VCEEncVmafIncludeDir に libvmaf/libvmaf.h がありません: $(VCEEncVmafIncludeDir)" />
+  </Target>
+  <Target Name="ValidateVCEEncCMetricHeadersVship" BeforeTargets="ClCompile" Condition="'$(VCEEncVshipIncludeDir)'!='' and !Exists('$(VCEEncVshipIncludeDir)\VshipAPI.h')">
+    <Error Text="VCEEncVshipIncludeDir に VshipAPI.h がありません: $(VCEEncVshipIncludeDir)" />
+  </Target>
   <ItemGroup>
     <ProjectReference Include="..\clRNG.vcxproj">
       <Project>{391c0e63-2abd-4f61-8f32-ac6cd8321d34}</Project>

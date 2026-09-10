@@ -4497,6 +4497,8 @@ RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
             m_picStruct,
             m_encVUI
         );
+        // VideoSignal未出力時も、エンコーダで解決済みのVUIを評価器へ渡す。
+        param->input.vui = m_encVUI;
         param->factory = m_pFactory;
         param->trace = m_pTrace;
         param->context = m_dev->context();
@@ -5318,10 +5320,25 @@ RGY_ERR VCECore::run2() {
     // エラー終了の場合も含めキューをすべて開放する (m_pipelineTasksを解放する前に行う)
     dataqueue.clear();
 
+    auto isNormalPipelineStatus = [](const RGY_ERR status) {
+        return status == RGY_ERR_NONE || status == RGY_ERR_MORE_DATA || status == RGY_ERR_MORE_SURFACE || status == RGY_ERR_MORE_BITSTREAM || status > RGY_ERR_NONE;
+    };
+    RGY_ERR metricErr = RGY_ERR_NONE;
     if (m_videoQualityMetric) {
         PrintMes(RGY_LOG_DEBUG, _T("Flushing video quality metric calc.\n"));
-        m_videoQualityMetric->addBitstream(nullptr);
+        metricErr = m_videoQualityMetric->addBitstream(nullptr);
+        const auto finishErr = m_videoQualityMetric->finish();
+        if (metricErr == RGY_ERR_NONE) {
+            metricErr = finishErr;
+        }
+        if (metricErr != RGY_ERR_NONE) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to finish video quality metric calculation: %s.\n"), get_err_mes(metricErr));
+            if (isNormalPipelineStatus(err)) {
+                err = metricErr;
+            }
+        }
     }
+    const auto metricSucceeded = metricErr == RGY_ERR_NONE && isNormalPipelineStatus(err);
 
     //vpp-perf-monitor
     std::vector<std::pair<tstring, double>> filter_result;
@@ -5390,7 +5407,7 @@ RGY_ERR VCECore::run2() {
     PrintMes(RGY_LOG_DEBUG, _T("Waiting for writer to finish...\n"));
     m_pFileWriter->WaitFin();
     PrintMes(RGY_LOG_DEBUG, _T("Write results...\n"));
-    if (m_videoQualityMetric) {
+    if (m_videoQualityMetric && metricSucceeded) {
         PrintMes(RGY_LOG_DEBUG, _T("Write video quality metric results...\n"));
         m_videoQualityMetric->showResult();
     }

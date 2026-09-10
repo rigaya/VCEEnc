@@ -458,9 +458,23 @@ public:
         }
         if (videoQualityMetric) {
             if (!videoQualityMetric->decodeStarted()) {
-                videoQualityMetric->initDecode(m_bs.get());
+                const auto err = videoQualityMetric->initDecode(m_bs.get());
+                if (err != RGY_ERR_NONE) {
+                    return err;
+                }
             }
-            videoQualityMetric->addBitstream(m_bs.get());
+            {
+                const auto err = videoQualityMetric->addBitstream(m_bs.get());
+                if (err != RGY_ERR_NONE) {
+                    return err;
+                }
+            }
+            {
+                const auto err = videoQualityMetric->metricStatus();
+                if (err != RGY_ERR_NONE) {
+                    return err;
+                }
+            }
         }
         return writer->WriteNextFrame(m_bs.get());
     }

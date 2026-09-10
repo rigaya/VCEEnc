@@ -15,8 +15,12 @@
 実行ファイルは[こちら](https://github.com/rigaya/VCEEnc/releases)からダウンロードできます。VCEEncC_x.xx_Win32.7z が 32bit版、VCEEncC_x.xx_x64.7z が 64bit版です。通常は、64bit版を使用します。
 
 実行時は展開したフォルダからそのまま実行できます。
-  
+
+VMAFまたはlibvship評価を使用する場合は、VCEEncC64.exeと同じフォルダに、それぞれ`libvmaf.dll`または`libvship.dll`を配置してください。libvshipを使用する場合は、選択したlibvship backendが要求する追加DLLも同じ環境で利用可能にします。評価を使用しない通常のエンコードにはこれらのDLLは不要です。
+
 ## Linux (Ubuntu 24.04)
+
+VMAFまたはlibvship評価を使用する場合は、実行時ローダーが`libvmaf.so`または`libvship.so`と、libvship backendが必要とする共有ライブラリを検索できる場所へ配置します（システムのライブラリ検索パス、または`LD_LIBRARY_PATH`）。ビルド時のSDKヘッダ指定は評価機能を有効にするためだけのもので、実行時ライブラリはコピーされません。評価機能を使用しない通常のエンコードには、これらのライブラリは不要です。
 
   > [!WARNING]
   > Ubuntu 24.04 + RADV環境では、AMFの最新userspaceを入れると `Pal::IPlatform::EnumerateDevices()` や `luid not found in devices returned by Pal::IPlatform::EnumerateDevices()` といったエラーでエンコーダ初期化に失敗することがあります。  

@@ -76,8 +76,16 @@ const char *get_encoder_version();
 #define ENABLE_LIBDOVI 1
 #define ENABLE_LIBHDR10PLUS 1
 #define ENABLE_LIBPLACEBO 1
+#if defined(_M_X64) && defined(VCEENC_ENABLE_VMAF)
+#define ENABLE_VMAF 1
+#else
 #define ENABLE_VMAF 0
+#endif
+#if defined(_M_X64) && defined(VCEENC_ENABLE_LIBVSHIP)
+#define ENABLE_LIBVSHIP 1
+#else
 #define ENABLE_LIBVSHIP 0
+#endif
 
 #define AV_CHANNEL_LAYOUT_STRUCT_AVAIL 1
 #define AV_FRAME_DURATION_AVAIL 1

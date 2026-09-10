@@ -60,6 +60,21 @@ setx ONNXRUNTIME_DIR "%ONNXRUNTIME_DIR%"
 x64 の VCEEncC ビルドでは、`%ONNXRUNTIME_DIR%\lib` の `onnxruntime.dll` と `onnxruntime_providers_shared.dll` が出力先にコピーされます。
 配布パッケージにもこの2つの DLL が同梱されるため、実行時に別途 `PATH` を設定する必要はありません。
 
+VMAFまたはlibvshipの評価を有効にする64bit版VCEEncCのビルドでは、それぞれのAPIヘッダを用意します。VMAFは[Netflix/vmaf](https://github.com/Netflix/vmaf)のリリースに含まれる`libvmaf/include`、libvshipは[Line-fr/Vship](https://codeberg.org/Line-fr/Vship)の`src`を使用します。VCEEncはどちらのライブラリも静的リンクしません。
+
+ヘッダの場所は、環境変数またはMSBuildプロパティで指定します。VCEEnc.auo向けWin32構成では評価機能を有効にしません。
+
+```Batchfile
+setx VCEEncVmafIncludeDir "C:\path\to\vmaf\libvmaf\include"
+setx VCEEncVshipIncludeDir "C:\path\to\Vship\src"
+```
+
+コマンドラインから指定する場合は、例えば次のようにします。
+
+```Batchfile
+msbuild VCEEnc.sln /p:Configuration=RelStatic /p:Platform=x64 /p:VCEEncVmafIncludeDir=C:\path\to\vmaf\libvmaf\include /p:VCEEncVshipIncludeDir=C:\path\to\Vship\src
+```
+
 ### 1. ソースのダウンロード
 
 ```Batchfile
@@ -94,6 +109,17 @@ VCEEnc.slnを開きます。
   - ffmpeg libs (libavcodec*, libavformat*, libavfilter*, libavutil*, libswresample*, libavdevice*)
   - libass9
   - [Optional] VapourSynth
+
+VMAFまたはlibvshipの評価をビルドする場合は、対応するAPIヘッダも必要です。VMAFは`libvmaf/include`、libvshipは`VshipAPI.h`を含む`src`を指定します。どちらも実行時に動的ロードするため、ビルド時には本体ライブラリをリンクしません。
+
+Mesonでは、ヘッダを検出できれば既定の`auto`で有効になります。明示的に切り替えるには以下を指定します。
+
+```Shell
+meson setup build -Denable_vmaf=enabled -Dvmaf_include_dir=/path/to/vmaf/libvmaf/include
+meson setup build -Denable_libvship=enabled -Dlibvship_include_dir=/path/to/Vship/src
+```
+
+ヘッダを指定しない通常ビルドでは`-Denable_vmaf=disabled -Denable_libvship=disabled`を指定できます。`enabled`でヘッダを見つけられない場合、Mesonは構成時にエラーにします。
 
 ### 1. コンパイラ等のインストール
 
