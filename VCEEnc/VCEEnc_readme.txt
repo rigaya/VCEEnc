@@ -188,6 +188,19 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2026.09.11 (9.17)
+[VCEEncC]
+- VMAFによる画質評価を追加。
+- MPEG2デコードのデフォルトをavswに。
+- rff=true時のswデコードへの切り替えが正常に動作しない問題を修正。
+- --vpp-kfmのmode=24/60のRFF対応。
+- --vpp-afsのsubgroup集計で共有領域の読み書き競合を修正。
+- --vpp-onnxのout_resのresizeにOpenCL系以外を指定できてしまう不具合を修正。
+- --vpp-descaleを高速化。
+- --vpp-maaを高速化。
+- --vpp-softlightを高速化。
+- --vpp-hqdn3dを高速化。
+
 2026.09.07 (9.16)
 [VCEEncC]
 - --check-hwをdevice選択に対応。

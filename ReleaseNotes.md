@@ -1,5 +1,18 @@
 # VCEEnc Release Notes
 
+## 9.17
+
+- Add VMAF quality evaluation ([--vmaf](./VCEEncC_Options.en.md#--vmaf-param1value1param2value2)).
+- Change default MPEG-2 decoding to [--avsw](./VCEEncC_Options.en.md#--avsw-string).
+- Fix switching to software decoding when `rff=true`.
+- Support RFF in [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) `mode=24/60`.
+- Fix a race in [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2) subgroup aggregation.
+- Fix [--vpp-onnx](./VCEEncC_Options.en.md#--vpp-onnx-param1value1param2value2) `out_res` allowing non-OpenCL resizers.
+- Speed up [--vpp-descale](./VCEEncC_Options.en.md#--vpp-descale-param1value1param2value2).
+- Speed up [--vpp-maa](./VCEEncC_Options.en.md#--vpp-maa-param1value1param2value2).
+- Speed up [--vpp-softlight](./VCEEncC_Options.en.md#--vpp-softlight-param1value1param2value2).
+- Speed up [--vpp-hqdn3d](./VCEEncC_Options.en.md#--vpp-hqdn3d-param1value1param2value2).
+
 ## 9.16
 
 - Support device selection in [--check-hw](./VCEEncC_Options.en.md#--check-hw-int).
