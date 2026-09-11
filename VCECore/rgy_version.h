@@ -81,11 +81,7 @@ const char *get_encoder_version();
 #else
 #define ENABLE_VMAF 0
 #endif
-#if defined(_M_X64) && !defined(VCE_AUO)
-#define ENABLE_LIBVSHIP 1
-#else
 #define ENABLE_LIBVSHIP 0
-#endif
 
 #define AV_CHANNEL_LAYOUT_STRUCT_AVAIL 1
 #define AV_FRAME_DURATION_AVAIL 1

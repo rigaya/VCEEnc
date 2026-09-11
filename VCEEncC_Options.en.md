@@ -899,6 +899,8 @@ Calculate ssim of the encoded video.
 ### --psnr
 Calculate psnr of the encoded video.
 
+The libvship-based quality metric options are experimental and currently disabled in official builds.
+
 ### --smart-access-video  
 Enables smart access video feature.
 
