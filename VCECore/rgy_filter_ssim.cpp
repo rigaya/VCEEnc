@@ -897,15 +897,13 @@ RGY_ERR RGYFilterSsim::compare_frames() {
         //比較用のキューの先頭に積まれているものから順次比較していく
         RGYCLFrame *originalFrame = nullptr;
         RGYOpenCLEvent originalReady;
-        {
-            std::lock_guard<std::mutex> lock(m_mtx);
-            if (m_input.empty() || m_inputReady.empty()) {
-                AddMessage(RGY_LOG_ERROR, _T("Original frame to be compared is missing.\n"));
-                return RGY_ERR_UNKNOWN;
-            }
-            originalFrame = m_input.front().get();
-            originalReady = m_inputReady.front();
+        // inputLock が m_mtx を保持しているため、ここで再取得しない。
+        if (m_input.empty() || m_inputReady.empty()) {
+            AddMessage(RGY_LOG_ERROR, _T("Original frame to be compared is missing.\n"));
+            return RGY_ERR_UNKNOWN;
         }
+        originalFrame = m_input.front().get();
+        originalReady = m_inputReady.front();
         if (prm->metric.ssim || prm->metric.psnr) {
             if ((sts_filter = originalReady.wait()) != RGY_ERR_NONE) {
                 AddMessage(RGY_LOG_ERROR, _T("Failed to wait for original frame: %s.\n"), get_err_mes(sts_filter));
@@ -922,12 +920,9 @@ RGY_ERR RGYFilterSsim::compare_frames() {
             }
         }
         //フレームをm_inputからm_unusedに移す
-        {
-            std::lock_guard<std::mutex> lock(m_mtx);
-            m_unused.push_back(std::move(m_input.front()));
-            m_input.pop_front();
-            m_inputReady.pop_front();
-        }
+        m_unused.push_back(std::move(m_input.front()));
+        m_input.pop_front();
+        m_inputReady.pop_front();
         m_frames++;
     }
 #endif //#if ENCODER_VCEENC
@@ -1944,6 +1939,12 @@ RGY_ERR RGYFilterSsim::finish() {
     }
     if (result == RGY_ERR_NONE && m_decodeStarted && !compareThreadJoined) {
         for (;;) {
+#if ENCODER_VCEENC
+            // 元フレームをすべて比較した後は、次の元フレーム待ちに入らない。
+            if (m_input.empty()) {
+                break;
+            }
+#endif
             const auto sts = compare_frames();
             if (sts == RGY_ERR_NONE) {
                 continue;
