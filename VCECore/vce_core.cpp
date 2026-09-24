@@ -1573,12 +1573,8 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.overlay.size() > 0)  filterPipeline.push_back(VppType::CL_OVERLAY);
 
     // AviUtlの共有メモリ入力は開始時に解像度が固定されるため、待機用OpenCLブロックを追加する必要はない。
-    if (filterPipeline.size() == 0 && inputParam->input.type != RGY_INPUT_FMT_SM
-#if ENABLE_VAAPI
-        && m_backend != VCEBackend::VAAPI
-#endif
-    ) {
-        // フィルタが1つも無い構成ではOpenCLブロック自体が無く、解像度変更を吸収する場所が無い(AMFエンコーダがAMF_INVALID_RESOLUTIONで停止する)
+    if (filterPipeline.size() == 0 && inputParam->input.type != RGY_INPUT_FMT_SM) {
+        // フィルタが1つも無い構成ではOpenCLブロック自体が無く、解像度変更を吸収する場所がない。
         // このため等倍のCL_CROPを1つ常設してOpenCLブロックを作る。これはInitFilters()で先頭・末尾のCspCrop2つに展開され、
         // reconstructFilterChain()が要求する「先頭と末尾がCspCrop」の形になる
         // m_dev->cl()の判定は必須。このreturnはOpenCL無効時のフィルタ削除処理(下方)より手前にあるため、
@@ -3475,10 +3471,6 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
 #if ENABLE_VAAPI
     if (m_backend == VCEBackend::VAAPI) {
-        if (prm->common.adaptResolution.first > 0 || prm->common.adaptResolution.second > 0) {
-            PrintMes(RGY_LOG_ERROR, _T("--adapt-resolution is not supported with --backend vaapi.\n"));
-            return RGY_ERR_UNSUPPORTED;
-        }
         if (getVppResizeType(prm->vpp.resize_algo) == RGY_VPP_RESIZE_TYPE_AMF) {
             PrintMes(RGY_LOG_ERROR, _T("AMF resize filters are not supported with --backend vaapi.\n"));
             return RGY_ERR_UNSUPPORTED;
@@ -4725,7 +4717,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
                 PrintMes(RGY_LOG_ERROR, _T("OpenCL not enabled, OpenCL filters cannot be used.\n"));
                 return RGY_ERR_UNSUPPORTED;
             }
-            auto taskOpenCL = std::make_unique<PipelineTaskOpenCL>(m_dev->context(), filterBlock.vppcl, nullptr, m_dev->cl(), 1, m_dev->dx11interlop(), m_pLog, m_backend == VCEBackend::VAAPI);
+            auto taskOpenCL = std::make_unique<PipelineTaskOpenCL>(m_dev->context(), filterBlock.vppcl, nullptr, m_dev->cl(), 1, m_dev->dx11interlop(), m_pLog);
             taskOpenCL->setNormalizeResizeParam(getNormalizeResizeParam());
             if (m_clFilterBypassForResChange) { // フィルタゼロ構成のために常設したブロック = 解像度が変わるまで素通しさせる
                 taskOpenCL->setBypassUntilResolutionChange();
@@ -4758,7 +4750,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
             }
             // metric用に作ったこのブロックはバイパスさせない(素通しするとm_videoMetric->filter()が呼ばれず指標計算が飛ぶ)
             // なおここへ来る構成ではInitFiltersCreateVppList()側でm_clFilterBypassForResChangeがそもそもfalseになっている(二重の防御)
-            auto taskOpenCL = std::make_unique<PipelineTaskOpenCL>(m_dev->context(), m_vpFilters.front().vppcl, m_videoQualityMetric.get(), m_dev->cl(), 1, m_dev->dx11interlop(), m_pLog, m_backend == VCEBackend::VAAPI);
+            auto taskOpenCL = std::make_unique<PipelineTaskOpenCL>(m_dev->context(), m_vpFilters.front().vppcl, m_videoQualityMetric.get(), m_dev->cl(), 1, m_dev->dx11interlop(), m_pLog);
             taskOpenCL->setNormalizeResizeParam(getNormalizeResizeParam());
             m_pipelineTasks.push_back(std::move(taskOpenCL));
         } else if (m_pipelineTasks[prevtask]->taskType() == PipelineTaskType::OPENCL) {
@@ -4861,8 +4853,8 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
             // 解像度変更対応のために常設したCL_CROPブロックでは、ここでOpenCLフレームを確保しない
             // 確保するとPipelineTaskInputのworkSurfaceTypeがCLになりLoadNextFrameCL()経路に入るため、フィルタゼロ構成でも
             // 常にmap/unmapとcsp往復(nv12->yv12->nv12)のコストがかかってしまう(実測で約29%の速度低下)
-            // 確保しなければPipelineTaskInputはLoadNextFrameAMF()のままとなり、常設ブロック導入前と同じデータフロー・同じ性能になる
-            // 解像度変更後はAMF HOSTサーフェス入力のままOpenCLフィルタを通す(PipelineTaskOpenCL::sendFrame()がConvertする)
+            // 確保しなければAMFはHOSTサーフェス、VA-APIはSYSフレームのまま入力から渡るため、常設ブロック導入前の転送コストを維持できる
+            // 解像度変更後もAMFはHOSTサーフェスをConvertし、VA-APIはSYSフレームを先頭CspCropでH2D転送してOpenCLフィルタを通す
             if (!m_clFilterBypassForResChange && t1->taskType() != PipelineTaskType::VAAPIENC) {
                 allocateOpenCLFrame = true;
             }
@@ -4870,7 +4862,8 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
         if (t0->taskType() == PipelineTaskType::OPENCL) {
             t0RequestNumFrame += 4; // 内部でフレームが増える場合に備えて
         }
-        if (t1->taskType() == PipelineTaskType::VAAPIENC && (t0->taskType() == PipelineTaskType::INPUT || t0->taskType() == PipelineTaskType::OPENCL)) {
+        if ((t1->taskType() == PipelineTaskType::VAAPIENC && (t0->taskType() == PipelineTaskType::INPUT || t0->taskType() == PipelineTaskType::OPENCL))
+            || (m_backend == VCEBackend::VAAPI && m_clFilterBypassForResChange && t1->taskType() == PipelineTaskType::OPENCL && t0->taskType() == PipelineTaskType::INPUT)) {
             allocateSysFrame = true;
         }
         if (allocateOpenCLFrame) {

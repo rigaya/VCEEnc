@@ -572,6 +572,8 @@ public:
         m_type(type), m_context(conetxt), m_outQeueue(), m_workSurfs(), m_inFrames(0), m_outFrames(0), m_outMaxQueueSize(outMaxQueueSize), m_log(log), m_stopwatch(), m_workSurfAllocWidth(0), m_workSurfAllocHeight(0) {
     };
     virtual ~PipelineTask() {
+        // 出力キューはワークサーフェスへの参照を持つため、プールより先に解放する。
+        m_outQeueue.clear();
         m_workSurfs.clear();
     }
     virtual void setStopWatch() {};
@@ -913,11 +915,16 @@ public:
         }
         const auto [readerWidth, readerHeight] = getReaderOutputResolution();
         if (m_lastInputWidth > 0 && (readerWidth != m_lastInputWidth || readerHeight != m_lastInputHeight)) {
-            PrintMes(RGY_LOG_ERROR, _T("Input resolution changed from %dx%d to %dx%d; VA-API encode does not support resolution changes.\n"),
-                m_lastInputWidth, m_lastInputHeight, readerWidth, readerHeight);
-            return RGY_ERR_UNSUPPORTED;
+            if (!m_cl) {
+                PrintMes(RGY_LOG_ERROR, _T("Input resolution changed from %dx%d to %dx%d, but OpenCL is unavailable for VA-API resolution normalization.\n"),
+                    m_lastInputWidth, m_lastInputHeight, readerWidth, readerHeight);
+                return RGY_ERR_UNSUPPORTED;
+            }
         }
         printInputResolutionChange(readerWidth, readerHeight);
+        // reader は最大確保面の pitch を使って現在解像度の画素だけを書き込む。
+        // 下流へは実際の幅・高さを伝え、プレーンポインタと pitch は割り当て時のまま保つ。
+        sys->setResolution(readerWidth, readerHeight);
         if (m_endPts >= 0 && sys->timestamp() != AV_NOPTS_VALUE && sys->timestamp() >= m_endPts) return RGY_ERR_MORE_BITSTREAM;
         sys->setInputFrameId(m_inFrames);
         m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(surfWork));
@@ -2688,7 +2695,6 @@ protected:
     // 以下2つはフィルタゼロ構成(vce_core.cppでCL_CROPを常設した構成)専用。「構成そのものの判定」と「今バイパス中か」は別物なので分けてある
     bool m_bypassForResChange;                                  // 解像度変更対応のために常設されたCL_CROPブロックである(不変)。AMF HOST入力のConvert要否判定に使う
     bool m_bypassActive;                                        // 現在バイパス中(解像度変更を検出したらfalseになる)。素通し判定に使う
-    bool m_rejectResolutionChange;
     // 新しい入力解像度に合わせてOpenCLフィルタチェーンを組み直す。呼び出し前にチェーンのdrainと保留イベントのクリアを済ませておくこと
     // 想定するチェーン形状は「先頭CspCrop → (任意のフィルタ) → 末尾CspCrop」。initFilters()のaddOpenCLCopyFilter()が必ず前後にCspCropを置くため成立する
     // 以下の事前条件チェックはその形状が崩れていないことの確認で、1つでも外れたら黙って壊すより明示エラーで止める
@@ -2812,8 +2818,8 @@ protected:
         return RGY_ERR_NONE;
     }
 public:
-    PipelineTaskOpenCL(amf::AMFContextPtr context, std::vector<std::unique_ptr<RGYFilter>>& vppfilters, RGYFilterSsim *videoMetric, std::shared_ptr<RGYOpenCLContext> cl, int outMaxQueueSize, bool dx11interlop, std::shared_ptr<RGYLog> log, bool rejectResolutionChange = false) :
-        PipelineTask(PipelineTaskType::OPENCL, context, outMaxQueueSize, log), m_cl(cl), m_dx11interlop(dx11interlop), m_vpFilters(vppfilters), m_prevInputFrame(), m_videoMetric(videoMetric), m_normalizeTargetFrame(), m_normalizeResizeParam(), m_normalizeResizeIdx(-1), m_bypassForResChange(false), m_bypassActive(false), m_rejectResolutionChange(rejectResolutionChange) {
+    PipelineTaskOpenCL(amf::AMFContextPtr context, std::vector<std::unique_ptr<RGYFilter>>& vppfilters, RGYFilterSsim *videoMetric, std::shared_ptr<RGYOpenCLContext> cl, int outMaxQueueSize, bool dx11interlop, std::shared_ptr<RGYLog> log) :
+        PipelineTask(PipelineTaskType::OPENCL, context, outMaxQueueSize, log), m_cl(cl), m_dx11interlop(dx11interlop), m_vpFilters(vppfilters), m_prevInputFrame(), m_videoMetric(videoMetric), m_normalizeTargetFrame(), m_normalizeResizeParam(), m_normalizeResizeIdx(-1), m_bypassForResChange(false), m_bypassActive(false) {
         // 解像度変更時に「戻すべき解像度」= 初期状態の先頭フィルタの出力。チェーンを組み直す前に控えておく必要がある
         if (!m_vpFilters.empty() && m_vpFilters.front()->GetFilterParam() != nullptr) {
             m_normalizeTargetFrame = m_vpFilters.front()->GetFilterParam()->frameOut;
@@ -2887,11 +2893,6 @@ public:
             if (taskSurf != nullptr && filterParam != nullptr) {
                 const auto inputFrame = taskSurf->surf().frame();
                 if (inputFrame->width() != filterParam->frameIn.width || inputFrame->height() != filterParam->frameIn.height) {
-                    if (m_rejectResolutionChange) {
-                        PrintMes(RGY_LOG_ERROR, _T("Input resolution change is not supported with --backend vaapi (%dx%d -> %dx%d).\n"),
-                            filterParam->frameIn.width, filterParam->frameIn.height, inputFrame->width(), inputFrame->height());
-                        return RGY_ERR_UNSUPPORTED;
-                    }
                     const auto newInputFrame = inputFrame->frameInfo();
                     const int oldInputWidth = filterParam->frameIn.width;
                     const int oldInputHeight = filterParam->frameIn.height;
