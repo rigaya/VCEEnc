@@ -3490,10 +3490,7 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         m_encCodec = prm->codec;
         m_encCSP = prm->outputDepth > 8 ? RGY_CSP_P010 : RGY_CSP_NV12;
         m_encVA = std::make_unique<VCEEncoderVA>();
-        const AVRational fps{ m_encFps.n(), m_encFps.d() };
-        const AVRational timebase{ m_outputTimebase.n(), m_outputTimebase.d() };
-        const AVRational sar{ m_sar.n(), m_sar.d() };
-        auto err = m_encVA->init(m_dev->va(), prm, m_encWidth, m_encHeight, sar, fps, timebase, m_pLog);
+        auto err = m_encVA->init(m_dev->va(), prm, m_encWidth, m_encHeight, m_sar, m_encFps, m_outputTimebase, m_pLog);
         if (err != RGY_ERR_NONE) return err;
         PrintMes(RGY_LOG_INFO, _T("%s\n"), m_encVA->paramString().c_str());
         return RGY_ERR_NONE;

@@ -91,7 +91,7 @@ public:
     VCEEncoderVA();
     ~VCEEncoderVA();
     RGY_ERR init(VCEDeviceVA *dev, const VCEParam *prm, int width, int height,
-        AVRational sar, AVRational fps, AVRational timebase, std::shared_ptr<RGYLog> log);
+        rgy_rational<int> sar, rgy_rational<int> fps, rgy_rational<int> timebase, std::shared_ptr<RGYLog> log);
     RGY_ERR submit(RGYFrame *frame);
     RGY_ERR receive(std::shared_ptr<RGYBitstream>& bs);
     tstring paramString() const;
@@ -113,7 +113,6 @@ protected:
     int m_bframes;
     int m_refs;
     int m_preset;
-    AVRational m_timebase;
 };
 
 #endif // ENABLE_VAAPI

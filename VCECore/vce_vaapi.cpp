@@ -51,6 +51,58 @@ extern "C" {
 
 namespace {
 
+// VA-APIのcompression_levelは値が大きいほど高速側のため、fast=7、balanced=4、slow=2、slower=1に対応させる。
+constexpr int VA_PRESET_COMPRESSION_FAST = 7;
+constexpr int VA_PRESET_COMPRESSION_BALANCED = 4;
+constexpr int VA_PRESET_COMPRESSION_SLOW = 2;
+constexpr int VA_PRESET_COMPRESSION_SLOWER = 1;
+constexpr int VA_DEFAULT_FRAME_RATE = 30;
+constexpr int VA_DEFAULT_BIT_DEPTH = 8;
+constexpr int VA_DEFAULT_GOP_LENGTH = 30;
+constexpr int VA_DEFAULT_GOP_SECONDS = 2;
+constexpr int VA_DEFAULT_BITRATE = 1000000;
+constexpr int VA_PROBE_WIDTH = 640;
+constexpr int VA_PROBE_HEIGHT = 360;
+constexpr int VA_PROBE_FRAME_POOL_SIZE = 2;
+constexpr int VA_ENCODER_FRAME_POOL_SIZE = 8;
+
+int va_compression_level(const RGY_CODEC codec, const int preset) {
+    switch (codec) {
+    case RGY_CODEC_H264:
+        switch (preset) {
+        case AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED: return VA_PRESET_COMPRESSION_FAST;
+        case AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY: return VA_PRESET_COMPRESSION_SLOW;
+        case AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY: return VA_PRESET_COMPRESSION_SLOWER;
+        default: return VA_PRESET_COMPRESSION_BALANCED;
+        }
+    case RGY_CODEC_HEVC:
+        switch (preset) {
+        case AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_SPEED: return VA_PRESET_COMPRESSION_FAST;
+        case AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_QUALITY: return VA_PRESET_COMPRESSION_SLOW;
+        case AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_HIGH_QUALITY: return VA_PRESET_COMPRESSION_SLOWER;
+        default: return VA_PRESET_COMPRESSION_BALANCED;
+        }
+    case RGY_CODEC_AV1:
+        switch (preset) {
+        case AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_SPEED: return VA_PRESET_COMPRESSION_FAST;
+        case AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_QUALITY: return VA_PRESET_COMPRESSION_SLOW;
+        case AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_HIGH_QUALITY: return VA_PRESET_COMPRESSION_SLOWER;
+        default: return VA_PRESET_COMPRESSION_BALANCED;
+        }
+    default:
+        return VA_PRESET_COMPRESSION_BALANCED;
+    }
+}
+
+const TCHAR *va_preset_name(const int preset) {
+    switch (preset) {
+    case VA_PRESET_COMPRESSION_FAST: return _T("fast");
+    case VA_PRESET_COMPRESSION_SLOW: return _T("slow");
+    case VA_PRESET_COMPRESSION_SLOWER: return _T("slower");
+    default: return _T("balanced");
+    }
+}
+
 const char *codec_name(const RGY_CODEC codec) {
     switch (codec) {
     case RGY_CODEC_H264: return "h264_vaapi";
@@ -213,9 +265,9 @@ bool test_encoder_open(AVBufferRef *hwdevice, const AVCodec *codec, const bool t
     auto *frames = (AVHWFramesContext *)framesRef->data;
     frames->format = AV_PIX_FMT_VAAPI;
     frames->sw_format = tenBit ? AV_PIX_FMT_P010 : AV_PIX_FMT_NV12;
-    frames->width = 640;
-    frames->height = 360;
-    frames->initial_pool_size = 2;
+    frames->width = VA_PROBE_WIDTH;
+    frames->height = VA_PROBE_HEIGHT;
+    frames->initial_pool_size = VA_PROBE_FRAME_POOL_SIZE;
     if (av_hwframe_ctx_init(framesRef.get()) < 0) return false;
 
     AVCodecContext *contextRaw = avcodec_alloc_context3(codec);
@@ -223,10 +275,10 @@ bool test_encoder_open(AVBufferRef *hwdevice, const AVCodec *codec, const bool t
     std::unique_ptr<AVCodecContext, RGYAVDeleter<AVCodecContext>> context(contextRaw, RGYAVDeleter<AVCodecContext>(avcodec_free_context));
     context->width = frames->width;
     context->height = frames->height;
-    context->time_base = AVRational{ 1, 30 };
-    context->framerate = AVRational{ 30, 1 };
-    context->bit_rate = 1000000;
-    context->gop_size = 30;
+    context->time_base = AVRational{ 1, VA_DEFAULT_FRAME_RATE };
+    context->framerate = AVRational{ VA_DEFAULT_FRAME_RATE, 1 };
+    context->bit_rate = VA_DEFAULT_BITRATE;
+    context->gop_size = VA_DEFAULT_GOP_LENGTH;
     context->max_b_frames = 0;
     context->pix_fmt = AV_PIX_FMT_VAAPI;
     if (tenBit && codec->id == AV_CODEC_ID_HEVC) {
@@ -379,14 +431,14 @@ VCEEncoderVA::VCEEncoderVA() :
     m_frameHW(nullptr, RGYAVDeleter<AVFrame>(av_frame_free)),
     m_frameSW(nullptr, RGYAVDeleter<AVFrame>(av_frame_free)),
     m_pkt(nullptr, RGYAVDeleter<AVPacket>(av_packet_free)),
-    m_log(), m_codec(RGY_CODEC_UNKNOWN), m_width(0), m_height(0), m_bitdepth(8), m_rateControl(VCE_RC_CQP),
-    m_qp(0), m_bframes(0), m_refs(0), m_preset(4), m_timebase{ 1, 30 } {
+    m_log(), m_codec(RGY_CODEC_UNKNOWN), m_width(0), m_height(0), m_bitdepth(VA_DEFAULT_BIT_DEPTH), m_rateControl(VCE_RC_CQP),
+    m_qp(0), m_bframes(0), m_refs(0), m_preset(VA_PRESET_COMPRESSION_BALANCED) {
 }
 
 VCEEncoderVA::~VCEEncoderVA() = default;
 
 RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int height,
-    AVRational sar, AVRational fps, AVRational timebase, std::shared_ptr<RGYLog> log) {
+    rgy_rational<int> sar, rgy_rational<int> fps, rgy_rational<int> timebase, std::shared_ptr<RGYLog> log) {
     if (dev == nullptr || prm == nullptr || dev->hwdevice() == nullptr || width <= 0 || height <= 0) return RGY_ERR_INVALID_PARAM;
     m_log = std::move(log);
     m_codec = prm->codec;
@@ -394,7 +446,9 @@ RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int
     m_height = height;
     m_bitdepth = prm->outputDepth;
     m_rateControl = prm->rateControl;
-    m_timebase = timebase;
+    const AVRational avSar{ sar.n(), sar.d() };
+    const AVRational avFps{ fps.n(), fps.d() };
+    const AVRational avTimebase{ timebase.n(), timebase.d() };
     const bool qvbr = prm->rateControl == get_codec_qvbr(prm->codec);
     const bool hqvbr = prm->rateControl == get_codec_hqvbr(prm->codec);
     const bool hqcbr = prm->rateControl == get_codec_hqcbr(prm->codec);
@@ -470,7 +524,7 @@ RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int
     frames->sw_format = (prm->outputDepth > 8) ? AV_PIX_FMT_P010 : AV_PIX_FMT_NV12;
     frames->width = width;
     frames->height = height;
-    frames->initial_pool_size = 8;
+    frames->initial_pool_size = VA_ENCODER_FRAME_POOL_SIZE;
     int ret = av_hwframe_ctx_init(m_hwframes.get());
     if (ret < 0) return RGY_ERR_DEVICE_FAILED;
 
@@ -483,13 +537,13 @@ RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int
     ctx->bit_rate = (int64_t)(prm->nBitrate > 0 ? prm->nBitrate : (qvbr ? defaultParam.nBitrate : 0)) * 1000;
     ctx->rc_max_rate = (int64_t)prm->nMaxBitrate * 1000;
     ctx->rc_buffer_size = prm->nVBVBufferSize * 1000;
-    ctx->time_base = timebase;
-    ctx->framerate = fps;
+    ctx->time_base = avTimebase;
+    ctx->framerate = avFps;
     ctx->pix_fmt = AV_PIX_FMT_VAAPI;
-    ctx->gop_size = prm->nGOPLen > 0 ? prm->nGOPLen : fps.num * 2 / fps.den;
+    ctx->gop_size = prm->nGOPLen > 0 ? prm->nGOPLen : avFps.num * VA_DEFAULT_GOP_SECONDS / avFps.den;
     ctx->max_b_frames = maxBFrames;
     ctx->refs = m_refs;
-    ctx->sample_aspect_ratio = sar;
+    ctx->sample_aspect_ratio = avSar;
     if (prm->outputDepth > 8 && prm->codec == RGY_CODEC_HEVC) ctx->profile = AV_PROFILE_HEVC_MAIN_10;
     else if (prm->codec == RGY_CODEC_H264 && prm->codecParam[RGY_CODEC_H264].nProfile != defaultParam.codecParam[RGY_CODEC_H264].nProfile) ctx->profile = prm->codecParam[RGY_CODEC_H264].nProfile;
     else if (prm->codec == RGY_CODEC_HEVC) ctx->profile = prm->codecParam[RGY_CODEC_HEVC].nProfile == AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN_10 ? AV_PROFILE_HEVC_MAIN_10 : AV_PROFILE_HEVC_MAIN;
@@ -512,17 +566,7 @@ RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int
     if (hqvbr && m_log) m_log->write(RGY_LOG_WARN, RGY_LOGT_DEV, _T("WARN: --hqvbr is not supported with --backend vaapi, ignored (using VBR).\n"));
     if (hqcbr && m_log) m_log->write(RGY_LOG_WARN, RGY_LOGT_DEV, _T("WARN: --hqcbr is not supported with --backend vaapi, ignored (using CBR).\n"));
     if (prm->qualityPreset != defaultParam.qualityPreset) {
-        const int preset = prm->qualityPreset;
-        // VA-APIのcompression_levelは値が大きいほど高速側のため、fast=7、balanced=4、slow=2、slower=1に対応させる。
-        const int compressionLevel = preset == AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED
-            || preset == AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_SPEED
-            || preset == AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_SPEED ? 7
-            : preset == AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY
-            || preset == AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_QUALITY
-            || preset == AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_QUALITY ? 2
-            : preset == AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY
-            || preset == AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_HIGH_QUALITY
-            || preset == AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_HIGH_QUALITY ? 1 : 4;
+        const int compressionLevel = va_compression_level(prm->codec, prm->qualityPreset);
         ctx->compression_level = compressionLevel;
         m_preset = compressionLevel;
     }
@@ -556,7 +600,7 @@ RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int
     m_frameHW->width = width;
     m_frameHW->height = height;
     if (m_log) m_log->write(RGY_LOG_INFO, RGY_LOGT_DEV, _T("VA-API encoder initialized: %s %dx%d, %dbit, %d/%d fps.\n"),
-        char_to_tstring(name).c_str(), width, height, m_bitdepth, fps.num, fps.den);
+        char_to_tstring(name).c_str(), width, height, m_bitdepth, avFps.num, avFps.den);
     return RGY_ERR_NONE;
 }
 
@@ -630,7 +674,7 @@ RGY_ERR VCEEncoderVA::receive(std::shared_ptr<RGYBitstream>& bs) {
 tstring VCEEncoderVA::paramString() const {
     if (!m_codecCtx) return _T("VA-API encoder is not initialized.");
     const TCHAR *rc = m_rateControl == get_codec_cqp(m_codec) ? _T("CQP") : m_rateControl == get_codec_qvbr(m_codec) ? _T("QVBR") : m_rateControl == get_codec_cbr(m_codec) || m_rateControl == get_codec_hqcbr(m_codec) ? _T("CBR") : _T("VBR");
-    const TCHAR *preset = m_preset == 7 ? _T("fast") : m_preset == 2 ? _T("slow") : m_preset == 1 ? _T("slower") : _T("balanced");
+    const TCHAR *preset = va_preset_name(m_preset);
     const tstring level = m_codecCtx->level == AV_LEVEL_UNKNOWN ? tstring(_T("auto")) : strsprintf(_T("%d"), m_codecCtx->level);
     tstring rcDetails;
     if (m_rateControl == get_codec_cqp(m_codec)) {
