@@ -18,6 +18,8 @@ VCEEncC could be run directly from the extracted directory.
   
 ## Linux (Ubuntu 24.04)
 
+The VCEEncC package does not depend on AMF. Without AMF, it can use VA-API through `mesa-va-drivers`; `--backend auto` switches to VA-API automatically. To use the AMF backend, follow the AMF installation steps below. Steps 1–2 are unnecessary for VA-API-only use.
+
   > [!WARNING]
   > On some Ubuntu 24.04 + RADV environments, installing the latest AMF userspace causes encoder initialization failures such as `Pal::IPlatform::EnumerateDevices()` or `luid not found in devices returned by Pal::IPlatform::EnumerateDevices()`.  
   > Related information: [AMF issue #575](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/575), [workaround comment](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/issues/575#issuecomment-4042920061)  
@@ -74,6 +76,8 @@ sudo apt-mark hold amdgpu-pro-core libamdenc-amdgpu-pro amf-amdgpu-pro
 ```
 
 ### 3. Add user to proper group to use OpenCL
+OpenCL filters require an OpenCL ICD. Use ROCm OpenCL, or install `mesa-opencl-icd` for Mesa rusticl and set `RUSTICL_ENABLE=radeonsi` when running VCEEncC.
+
 ```Shell
 # OpenCL
 sudo gpasswd -a ${USER} render
@@ -123,7 +127,7 @@ sudo apt install ./VCEEncC_x.xx_Ubuntu24.04_amd64.deb
 
 ### 6. Check VCEEncC hardware support
 
-Verify that the encoder is actually usable from VCEEncC. If `Supported Codecs` lists H.264/HEVC, AMF initialization succeeded.
+Verify that the encoder is actually usable from VCEEncC. If `Supported Codecs` lists H.264/HEVC, AMF initialization succeeded. Without AMF, `--backend auto` switches to VA-API and shows the VA-API device information.
 
 ```Shell
 vceencc --check-hw

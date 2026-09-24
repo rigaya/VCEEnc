@@ -4,7 +4,7 @@ PACKAGE_NAME=vceencc
 PACKAGE_BIN=vceencc
 PACKAGE_OS=
 PACKAGE_MAINTAINER=rigaya
-PACKAGE_DEPENDS="amf-amdgpu-pro,ocl-icd,libva,libva-drm,libva-x11"
+PACKAGE_DEPENDS="ocl-icd,libva,mesa-va-drivers"
 PACKAGE_DESCRIPTION=
 PACKAGE_ROOT=.rpmpkg
 PACKAGE_VERSION=${PACKAGE_VERSION:-`./scripts/get-version.sh`}
@@ -42,7 +42,7 @@ build_pkg/replace.py \
     --pkg-version ${PACKAGE_VERSION} \
     --pkg-arch ${PACKAGE_ARCH} \
     --pkg-maintainer ${PACKAGE_MAINTAINER} \
-    --pkg-depends ${PACKAGE_DEPENDS} \
+    --pkg-depends "${PACKAGE_DEPENDS}" \
     --pkg-desc ${PACKAGE_DESCRIPTION} \
     --pkg-license ${PACKAGE_LICENSE}
 

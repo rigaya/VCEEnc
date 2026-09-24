@@ -2,6 +2,7 @@
 
 PACKAGE_NAME=vceencc
 PACKAGE_BIN=vceencc
+PACKAGE_SOURCE_BIN=${PACKAGE_SOURCE_BIN:-${PACKAGE_BIN}}
 PACKAGE_MAINTAINER=rigaya
 PACKAGE_DESCRIPTION=
 PACKAGE_ROOT=.debpkg
@@ -15,24 +16,21 @@ if [ -e /etc/lsb-release ]; then
     PACKAGE_OS_CODENAME=`cat /etc/lsb-release | grep DISTRIB_CODENAME | cut -f 2 --delim="="`
     if [ "${PACKAGE_OS_CODENAME}" = "focal" ]; then
         PACKAGE_DEPENDS="libc6(>=2.31)"
-        PACKAGE_DEPENDS="${PACKAGE_DEPENDS},amf-amdgpu-pro,ocl-icd-libopencl1"
-        PACKAGE_DEPENDS="${PACKAGE_DEPENDS},libva-drm2,libva-x11-2"
+        PACKAGE_DEPENDS="${PACKAGE_DEPENDS},libva2,libva-drm2,libva-x11-2,mesa-va-drivers | va-driver,ocl-icd-libopencl1"
     elif [ "${PACKAGE_OS_CODENAME}" = "jammy" ]; then
         PACKAGE_DEPENDS="libc6(>=2.31)"
-        PACKAGE_DEPENDS="${PACKAGE_DEPENDS},amf-amdgpu-pro,ocl-icd-libopencl1"
-        PACKAGE_DEPENDS="${PACKAGE_DEPENDS},libva-drm2,libva-x11-2"
+        PACKAGE_DEPENDS="${PACKAGE_DEPENDS},libva2,libva-drm2,libva-x11-2,mesa-va-drivers | va-driver,ocl-icd-libopencl1"
     elif [ "${PACKAGE_OS_CODENAME}" = "noble" ]; then
         PACKAGE_DEPENDS="libc6(>=2.31)"
-        PACKAGE_DEPENDS="${PACKAGE_DEPENDS},amf-amdgpu-pro,ocl-icd-libopencl1"
-        PACKAGE_DEPENDS="${PACKAGE_DEPENDS},libva-drm2,libva-x11-2"
+        PACKAGE_DEPENDS="${PACKAGE_DEPENDS},libva2,libva-drm2,libva-x11-2,mesa-va-drivers | va-driver,ocl-icd-libopencl1"
     else
         echo "${PACKAGE_OS_ID}${PACKAGE_OS_VER} ${PACKAGE_OS_CODENAME} not supported in this script!"
         exit 1
     fi
 fi
 
-if [ ! -e ${PACKAGE_BIN} ]; then
-    echo "${PACKAGE_BIN} does not exist!"
+if [ ! -e "${PACKAGE_SOURCE_BIN}" ]; then
+    echo "${PACKAGE_SOURCE_BIN} does not exist!"
     exit 1
 fi
 
@@ -45,11 +43,11 @@ build_pkg/replace.py \
     --pkg-version ${PACKAGE_VERSION} \
     --pkg-arch ${PACKAGE_ARCH} \
     --pkg-maintainer ${PACKAGE_MAINTAINER} \
-    --pkg-depends ${PACKAGE_DEPENDS} \
+    --pkg-depends "${PACKAGE_DEPENDS}" \
     --pkg-desc ${PACKAGE_DESCRIPTION}
 
 mkdir -p ${PACKAGE_ROOT}/usr/bin
-cp ${PACKAGE_BIN} ${PACKAGE_ROOT}/usr/bin
+cp "${PACKAGE_SOURCE_BIN}" "${PACKAGE_ROOT}/usr/bin/${PACKAGE_BIN}"
 chmod +x ${PACKAGE_ROOT}/usr/bin/${PACKAGE_BIN}
 
 DEB_FILE="${PACKAGE_NAME}_${PACKAGE_VERSION}_${PACKAGE_ARCH}.deb"
