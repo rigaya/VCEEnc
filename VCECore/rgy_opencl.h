@@ -491,6 +491,16 @@ public:
     RGY_ERR wait() const {
         return err_cl_to_rgy(clWaitForEvents(1, event_.get()));
     }
+    RGY_ERR isComplete(bool& complete) const {
+        complete = true;
+        if (event_ == nullptr || *event_ == nullptr) return RGY_ERR_NONE;
+        cl_int status = CL_QUEUED;
+        const auto err = clGetEventInfo(*event_, CL_EVENT_COMMAND_EXECUTION_STATUS, sizeof(status), &status, nullptr);
+        if (err != CL_SUCCESS) return err_cl_to_rgy(err);
+        if (status < 0) return RGY_ERR_DEVICE_FAILED;
+        complete = status == CL_COMPLETE;
+        return RGY_ERR_NONE;
+    }
     void reset() {
         if (*event_ != nullptr) {
             event_ = std::shared_ptr<cl_event>(new cl_event, cl_event_deleter());

@@ -354,6 +354,7 @@ public:
         return RGY_ERR_NONE;
     }
     virtual void depend_clear() {};
+    virtual RGY_ERR isDependReady(bool& ready) const { ready = true; return RGY_ERR_NONE; }
     PipelineTaskOutputType type() const { return m_type; }
     const PipelineTaskOutputDataCustom *customdata() const { return m_customData.get(); }
     virtual RGY_ERR write([[maybe_unused]] RGYOutput *writer, [[maybe_unused]] RGYOpenCLQueue *clqueue, [[maybe_unused]] RGYFilterSsim *videoQualityMetric) {
@@ -414,6 +415,20 @@ public:
         RGYOpenCLEvent::wait(m_clevents);
         m_clevents.clear();
         m_dependencyFrame.reset();
+    }
+    virtual RGY_ERR isDependReady(bool& ready) const override {
+        ready = true;
+        for (const auto& event : m_clevents) {
+            bool complete = false;
+            auto err = event.isComplete(complete);
+            if (err != RGY_ERR_NONE) return err;
+            if (!complete) {
+                ready = false;
+                return RGY_ERR_NONE;
+            }
+        }
+        if (m_dependencyFrame) return m_dependencyFrame->isDependReady(ready);
+        return RGY_ERR_NONE;
     }
 
     RGY_ERR writeAMF(RGYOutput *writer) {
@@ -606,10 +621,11 @@ public:
         while ((int)m_outQeueue.size() > m_outMaxQueueSize) {
             auto out = std::move(m_outQeueue.front());
             m_outQeueue.pop_front();
+            // 非同期のVA経路では、完了イベントと入力フレームの参照を次のタスクへ渡す。
             if (sync) {
                 out->waitsync();
+                out->depend_clear();
             }
-            out->depend_clear();
             m_outFrames++;
             output.push_back(std::move(out));
         }
@@ -2400,12 +2416,19 @@ class PipelineTaskVAAPIEncode : public PipelineTaskEncodeCommon {
     VCEEncoderVA *m_encoder;
     RGY_ERR m_receiveStatus;
     bool m_drainSent;
+    std::deque<std::unique_ptr<PipelineTaskOutput>> m_pendingFrames;
 public:
     PipelineTaskVAAPIEncode(VCEEncoderVA *enc, RGY_CODEC codec, amf::AMFContextPtr context, int outMaxQueueSize,
         RGYTimecode *timecode, RGYTimestamp *encTimestamp, rgy_rational<int> outputTimebase,
         const RGYHDR10Plus *hdr10plus, const DOVIRpu *doviRpu, std::shared_ptr<RGYLog> log)
         : PipelineTaskEncodeCommon(PipelineTaskType::VAAPIENC, context, outMaxQueueSize, codec, timecode, encTimestamp,
-            outputTimebase, hdr10plus, doviRpu, log), m_encoder(enc), m_receiveStatus(RGY_ERR_NONE), m_drainSent(false) {}
+            outputTimebase, hdr10plus, doviRpu, log), m_encoder(enc), m_receiveStatus(RGY_ERR_NONE), m_drainSent(false), m_pendingFrames() {}
+    virtual void setStopWatch() override {
+        m_stopwatch = std::make_unique<PipelineTaskStopWatch>(
+            std::vector<tstring>{ _T("eventReady"), _T("SubmitInput"), _T("Drain") },
+            std::vector<tstring>{ _T("Receive") }
+        );
+    }
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override {
         if (!m_encoder) return std::nullopt;
         const auto csp = m_encoder->bitdepth() > 8 ? RGY_CSP_P010 : RGY_CSP_NV12;
@@ -2413,22 +2436,19 @@ public:
     }
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override { return std::nullopt; }
     virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
-        if (frame) frame->depend_clear();
+        if (m_stopwatch) m_stopwatch->set(0);
+        const bool drain = frame == nullptr;
         if (frame && frame->type() != PipelineTaskOutputType::SURFACE) return RGY_ERR_UNSUPPORTED;
-        RGYFrame *input = nullptr;
-        int64_t pts = 0, duration = 0;
-        int inputFrameId = -1;
         if (frame) {
             auto *surface = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
             if (!surface || !surface->surf().sys()) return RGY_ERR_UNSUPPORTED;
-            input = surface->surf().frame();
-            pts = input->timestamp();
-            duration = input->duration();
-            inputFrameId = input->inputFrameId();
+            m_pendingFrames.push_back(std::move(frame));
         }
         auto submitAndCollect = [&](RGYFrame *submitFrame) {
             for (;;) {
+                if (m_stopwatch) m_stopwatch->set(0);
                 auto err = m_encoder->submit(submitFrame);
+                if (m_stopwatch) m_stopwatch->add(0, 1);
                 if (err != RGY_ERR_MORE_DATA) return err;
                 bool received = false;
                 for (;;) {
@@ -2443,17 +2463,37 @@ public:
                 if (!received) return RGY_ERR_DEVICE_FAILED;
             }
         };
-        if (!frame && !m_drainSent) {
-            auto err = submitAndCollect(nullptr);
+        while (!m_pendingFrames.empty()) {
+            bool ready = false;
+            auto err = m_pendingFrames.front()->isDependReady(ready);
             if (err != RGY_ERR_NONE) return err;
-            m_drainSent = true;
-        }
-        if (frame) {
-            auto err = registerEncodeFrame(input, pts, duration, inputFrameId);
+            if (!ready) {
+                if (!drain) break;
+                std::this_thread::yield();
+                continue;
+            }
+            auto pending = std::move(m_pendingFrames.front());
+            m_pendingFrames.pop_front();
+            pending->depend_clear();
+            auto *surface = dynamic_cast<PipelineTaskOutputSurf *>(pending.get());
+            if (!surface || !surface->surf().sys()) return RGY_ERR_UNSUPPORTED;
+            auto *input = surface->surf().frame();
+            err = registerEncodeFrame(input, input->timestamp(), input->duration(), input->inputFrameId());
             if (err != RGY_ERR_NONE) return err;
+            if (m_stopwatch) m_stopwatch->add(0, 0);
             err = submitAndCollect(input);
             if (err != RGY_ERR_NONE) return err;
         }
+        if (drain && m_pendingFrames.empty() && !m_drainSent) {
+            if (m_stopwatch) m_stopwatch->add(0, 0);
+            if (m_stopwatch) m_stopwatch->set(0);
+            auto err = submitAndCollect(nullptr);
+            if (err != RGY_ERR_NONE) return err;
+            m_drainSent = true;
+            if (m_stopwatch) m_stopwatch->add(0, 2);
+        }
+        if (m_stopwatch) m_stopwatch->add(0, 0);
+        if (m_stopwatch) m_stopwatch->set(1);
         for (;;) {
             std::shared_ptr<RGYBitstream> bs;
             auto err = m_encoder->receive(bs);
@@ -2465,6 +2505,7 @@ public:
             if (err != RGY_ERR_NONE) return err;
             m_outQeueue.push_back(std::make_unique<PipelineTaskOutputBitstream>(std::move(bs)));
         }
+        if (m_stopwatch) m_stopwatch->add(1, 0);
         return (m_drainSent && m_receiveStatus == RGY_ERR_MORE_DATA) ? RGY_ERR_MORE_DATA : RGY_ERR_NONE;
     }
 };
@@ -2529,8 +2570,12 @@ public:
     };
     virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
         if (m_stopwatch) m_stopwatch->set(0);
-        if (m_prevInputFrame.size() > 0) {
-            //前回投入したフレームの処理が完了していることを確認したうえで参照を破棄することでロックを解放する
+        while (!m_prevInputFrame.empty()) {
+            bool ready = false;
+            auto readyErr = m_prevInputFrame.front()->isDependReady(ready);
+            if (readyErr != RGY_ERR_NONE) return readyErr;
+            if (!ready) break;
+            // OpenCLがSYS入力を読み終えたフレームだけ参照を解放する
             auto prevframe = std::move(m_prevInputFrame.front());
             m_prevInputFrame.pop_front();
             prevframe->depend_clear();
@@ -3027,12 +3072,32 @@ public:
 
                 int nOutFrames = 0;
                 RGYFrameInfo *outInfo[16] = { 0 };
-                auto sts_filter = m_vpFilters[ifilter]->filter(&input, (RGYFrameInfo **)&outInfo, &nOutFrames);
+                RGYOpenCLEvent inputReleaseEvent;
+                const bool trackInputRelease = ifilter == 0 && !drainFrame;
+                auto sts_filter = m_vpFilters[ifilter]->filter(&input, (RGYFrameInfo **)&outInfo, &nOutFrames,
+                    m_cl->queue(), trackInputRelease ? &inputReleaseEvent : nullptr);
                 if (sts_filter != RGY_ERR_NONE) {
                     PrintMes(RGY_LOG_ERROR, _T("Error while running filter \"%s\".\n"), m_vpFilters[ifilter]->name().c_str());
                     return sts_filter;
                 }
+                if (trackInputRelease) {
+                    if (m_prevInputFrame.empty()) {
+                        PrintMes(RGY_LOG_ERROR, _T("Failed to retain input frame for OpenCL processing.\n"));
+                        return RGY_ERR_UNDEFINED_BEHAVIOR;
+                    }
+                    auto *surface = dynamic_cast<PipelineTaskOutputSurf *>(m_prevInputFrame.back().get());
+                    if (surface == nullptr) {
+                        PrintMes(RGY_LOG_ERROR, _T("Failed to retain input frame for OpenCL processing.\n"));
+                        return RGY_ERR_UNDEFINED_BEHAVIOR;
+                    }
+                    surface->addClEvent(inputReleaseEvent);
+                }
                 if (nOutFrames == 0) {
+                    if (trackInputRelease && workSurfaceType() == PipelineTaskSurfaceType::SYS) {
+                        // 完了イベントをポーリングするため、出力がない場合もキューを投入しておく。
+                        auto flushErr = m_cl->queue().flush();
+                        if (flushErr != RGY_ERR_NONE) return flushErr;
+                    }
                     if (drainFrame) {
                         filterframes.front().second++;
                         continue;
@@ -3139,6 +3204,11 @@ public:
                     PrintMes(RGY_LOG_ERROR, _T("Failed to send frame for video metric calcualtion: %s.\n"), get_err_mes(err));
                     return err;
                 }
+            }
+            if (workSurfaceType() == PipelineTaskSurfaceType::SYS) {
+                // VAエンコーダはイベントを待たずに確認するため、DtoHを明示的に投入する。
+                auto flushErr = m_cl->queue().flush();
+                if (flushErr != RGY_ERR_NONE) return flushErr;
             }
             filterframes.pop_front();
 

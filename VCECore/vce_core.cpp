@@ -4855,7 +4855,10 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
             // 常にmap/unmapとcsp往復(nv12->yv12->nv12)のコストがかかってしまう(実測で約29%の速度低下)
             // 確保しなければAMFはHOSTサーフェス、VA-APIはSYSフレームのまま入力から渡るため、常設ブロック導入前の転送コストを維持できる
             // 解像度変更後もAMFはHOSTサーフェスをConvertし、VA-APIはSYSフレームを先頭CspCropでH2D転送してOpenCLフィルタを通す
-            if (!m_clFilterBypassForResChange && t1->taskType() != PipelineTaskType::VAAPIENC) {
+            const bool vaapiSysInput = m_backend == VCEBackend::VAAPI
+                && t0->taskType() == PipelineTaskType::INPUT
+                && t1->taskType() == PipelineTaskType::OPENCL;
+            if (!m_clFilterBypassForResChange && t1->taskType() != PipelineTaskType::VAAPIENC && !vaapiSysInput) {
                 allocateOpenCLFrame = true;
             }
         }
@@ -4863,7 +4866,7 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
             t0RequestNumFrame += 4; // 内部でフレームが増える場合に備えて
         }
         if ((t1->taskType() == PipelineTaskType::VAAPIENC && (t0->taskType() == PipelineTaskType::INPUT || t0->taskType() == PipelineTaskType::OPENCL))
-            || (m_backend == VCEBackend::VAAPI && m_clFilterBypassForResChange && t1->taskType() == PipelineTaskType::OPENCL && t0->taskType() == PipelineTaskType::INPUT)) {
+            || (m_backend == VCEBackend::VAAPI && t0->taskType() == PipelineTaskType::INPUT && t1->taskType() == PipelineTaskType::OPENCL)) {
             allocateSysFrame = true;
         }
         if (allocateOpenCLFrame) {
