@@ -231,6 +231,7 @@ VCECore::VCECore() :
     m_dev(),
     m_backend(VCEBackend::Auto),
     m_amfProbeDevices(),
+    m_inputAvhwExplicit(false),
     m_deviceUsage(),
     m_parallelEnc(),
     m_vpFilters(),
@@ -562,10 +563,6 @@ int VCECore::GetEncoderBitdepth(const VCEParam *inputParam) const {
 
 RGY_ERR VCECore::initInput(VCEParam *inputParam, DeviceCodecCsp& HWDecCodecCsp) {
 #if ENABLE_RAW_READER
-    if (m_backend == VCEBackend::VAAPI && inputParam->input.type == RGY_INPUT_FMT_AVHW) {
-        PrintMes(RGY_LOG_ERROR, _T("VA-API backend does not support --avhw input decoding. Please use --avsw.\n"));
-        return RGY_ERR_UNSUPPORTED;
-    }
     m_pStatus = std::make_shared<EncodeStatus>();
 
     int subburnTrackId = 0;
@@ -605,15 +602,8 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, DeviceCodecCsp& HWDecCodecCsp) 
     const bool vpp_kfm_rff_aware =
         (ENABLE_VPP_FILTER_KFM && inputParam->vpp.kfm.enable && inputParam->vpp.kfm.rff);
 
-#if ENABLE_VAAPI
-    // VAのhwaccel読み込みは次段階で実装するため、この段階では自動選択をavswに留める。
-    DeviceCodecCsp emptyHWDecCodecCsp;
-    auto& readerHWDecCodecCsp = m_backend == VCEBackend::VAAPI ? emptyHWDecCodecCsp : HWDecCodecCsp;
-#else
-    auto& readerHWDecCodecCsp = HWDecCodecCsp;
-#endif
     auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, &inputParam->inprm, inputCspOfRawReader,
-        m_pStatus, &inputParam->common, &inputParam->ctrl, readerHWDecCodecCsp, subburnTrackId,
+        m_pStatus, &inputParam->common, &inputParam->ctrl, HWDecCodecCsp, subburnTrackId,
         inputParam->vpp.afs.enable, inputParam->vpp.rff.enable || inputParam->vpp.afs.rff || vpp_kfm_rff_aware, inputParam->vpp.libplacebo_tonemapping.enable, inputParam->vpp.ivtc.expand != 0,
         m_poolPkt.get(), m_poolFrame.get(), nullptr, m_pPerfMonitor.get(), m_pLog);
     if (err != RGY_ERR_NONE) {
@@ -1143,7 +1133,48 @@ RGY_ERR VCECore::tryDecode(amf::AMFComponentPtr& decoder) {
 }
 
 RGY_ERR VCECore::initDecoder(VCEParam *prm) {
-    if (m_backend == VCEBackend::VAAPI) return RGY_ERR_NONE;
+    if (m_backend == VCEBackend::VAAPI) {
+#if ENABLE_VAAPI && ENABLE_AVSW_READER
+        const auto inputCodec = m_pFileReader->getInputCodec();
+        if (inputCodec == RGY_CODEC_UNKNOWN) {
+            return RGY_ERR_NONE;
+        }
+        auto avswreader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
+        if (avswreader == nullptr) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to initialize VA-API hw decoder, unknown reader type.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        if (m_dev == nullptr) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to initialize VA-API hw decoder, device is not selected.\n"));
+            return RGY_ERR_DEVICE_NOT_FOUND;
+        }
+        const auto inputInfo = m_pFileReader->GetInputFrameInfo();
+        const auto& decCaps = m_dev->getHWDecCodecCsp(false);
+        const auto codecCaps = decCaps.find(inputCodec);
+        const bool supported = inputInfo.csp >= 0 && inputInfo.csp < RGY_CSP_COUNT
+            && codecCaps != decCaps.end()
+            && std::find(codecCaps->second.begin(), codecCaps->second.end(), inputInfo.csp) != codecCaps->second.end();
+        if (!supported) {
+            if (m_inputAvhwExplicit) {
+                PrintMes(RGY_LOG_ERROR, _T("VA-API device #%d (%s) does not support %s %s decoding.\n"),
+                    m_dev->id(), m_dev->name().c_str(), CodecToStr(inputCodec).c_str(),
+                    inputInfo.csp >= 0 && inputInfo.csp < RGY_CSP_COUNT ? RGY_CSP_NAMES[inputInfo.csp] : _T("unknown CSP"));
+                return RGY_ERR_UNSUPPORTED;
+            }
+            PrintMes(RGY_LOG_WARN, _T("Selected VA-API device does not support %s %s decoding, switching to sw decoder.\n"),
+                CodecToStr(inputCodec).c_str(),
+                inputInfo.csp >= 0 && inputInfo.csp < RGY_CSP_COUNT ? RGY_CSP_NAMES[inputInfo.csp] : _T("unknown CSP"));
+            return avswreader->initSWVideoDecoder(_T(""));
+        }
+        if (m_dev->va() == nullptr || m_dev->va()->hwdevice() == nullptr) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to get VA-API device for input decoding.\n"));
+            return RGY_ERR_DEVICE_LOST;
+        }
+        return avswreader->initSWVideoDecoder(_T(""), m_dev->va()->hwdevice(), AV_HWDEVICE_TYPE_VAAPI);
+#else
+        return RGY_ERR_NONE;
+#endif
+    }
 #if ENABLE_AVSW_READER
     if (m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN) {
         amf::AMFComponentPtr testDecoder;
@@ -5116,6 +5147,20 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         PrintMes(RGY_LOG_DEBUG, _T("HW dec codec csp support saved to cache file.\n"));
     }
 
+#if ENABLE_VAAPI
+    if (m_backend == VCEBackend::VAAPI) {
+        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL,
+            prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads,
+            prm->deviceID, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
+        if (devList.empty()) {
+            PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE.\n"));
+            return RGY_ERR_NOT_FOUND;
+        }
+        HWDecCodecCsp = getHWDecCodecCsp(prm->ctrl.skipHWDecodeCheck, devList);
+    }
+#endif
+
+    m_inputAvhwExplicit = prm->input.type == RGY_INPUT_FMT_AVHW;
     auto input_ret = std::async(std::launch::async, [&] {
         auto sts = initInput(prm, HWDecCodecCsp);
         if (sts == RGY_ERR_NONE) {

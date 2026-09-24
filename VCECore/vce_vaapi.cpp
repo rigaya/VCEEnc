@@ -181,9 +181,14 @@ CodecCsp query_decode_caps(VADisplay display) {
         if (codec == RGY_CODEC_AV1 && rtFormat == 0) return;
         if (rtFormat != 0 && requiredFormat != 0 && (rtFormat & requiredFormat) == 0) return;
         auto& csps = caps[codec];
-        if (std::find(csps.begin(), csps.end(), csp) == csps.end()) {
-            csps.push_back(csp);
-        }
+        const auto addCsp = [&csps](const RGY_CSP outputCsp) {
+            if (std::find(csps.begin(), csps.end(), outputCsp) == csps.end()) {
+                csps.push_back(outputCsp);
+            }
+        };
+        addCsp(csp);
+        if (csp == RGY_CSP_NV12) addCsp(RGY_CSP_YV12);
+        else if (csp == RGY_CSP_P010) addCsp(RGY_CSP_YV12_10);
     };
 
     add(RGY_CODEC_H264, VAProfileH264ConstrainedBaseline, RGY_CSP_NV12, VA_RT_FORMAT_YUV420);
