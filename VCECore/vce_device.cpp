@@ -78,6 +78,10 @@ bool useInteropDeviceForOpenCLSelection(const bool interopD3d9, const bool inter
 
 VCEDevice::VCEDevice(shared_ptr<RGYLog> &log, amf::AMFFactory *factory, amf::AMFTrace *trace) :
     m_log(log),
+    m_backend(VCEBackend::AMF),
+#if ENABLE_VAAPI
+    m_va(),
+#endif
     m_id(-1),
     m_devName(),
     m_d3d9interlop(false),
@@ -117,6 +121,7 @@ RGY_ERR VCEDevice::CreateContext() {
 }
 
 RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const RGYParamInitVulkan interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor, const bool enableAV1HWDec, const int openCLBuildThreads, const tstring& clPerfDumpDir, const double clPerfTimelineSec) {
+    m_backend = VCEBackend::AMF;
     m_devName = strsprintf(_T("device #%d"), deviceId);
     m_id = deviceId;
     {
@@ -211,7 +216,7 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
 #endif //#if ENABLE_D3D11
 
     if (enableOpenCL) {
-        const auto openclerr = initOpenCL(deviceId, interopD3d9, interopD3d11, enableVppPerfMonitor, openCLBuildThreads, clPerfDumpDir, clPerfTimelineSec);
+        const auto openclerr = initOpenCLContext(deviceId, interopD3d9, interopD3d11, enableVppPerfMonitor, openCLBuildThreads, clPerfDumpDir, clPerfTimelineSec);
         //OpenCLの初期化に失敗してもOpenCL無効のまま処理を継続してみる
         if (openclerr != RGY_ERR_NONE) {
             const auto openclDLLCheck = checkOpenCLDLL();
@@ -224,13 +229,92 @@ RGY_ERR VCEDevice::init(const int deviceId, const bool interopD3d9, const bool i
     return RGY_ERR_NONE;
 }
 
-RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool enableVppPerfMonitor, const int openCLBuildThreads, const tstring& clPerfDumpDir, const double clPerfTimelineSec) {
+#if ENABLE_VAAPI
+RGY_ERR VCEDevice::initVA(const VCEVADeviceInfo& info, const bool enableOpenCL, const bool enableVppPerfMonitor, const int openCLBuildThreads, const tstring& clPerfDumpDir, const double clPerfTimelineSec) {
+    m_backend = VCEBackend::VAAPI;
+    m_id = info.id;
+    m_devName = info.name;
+    m_va = std::make_unique<VCEDeviceVA>();
+    const auto openStatus = m_va->open(info, m_log);
+    if (openStatus != RGY_ERR_NONE) {
+        return openStatus;
+    }
+    if (enableOpenCL) {
+        const auto openclerr = initOpenCLContext(info.id, false, false, enableVppPerfMonitor, openCLBuildThreads, clPerfDumpDir, clPerfTimelineSec);
+        if (openclerr != RGY_ERR_NONE) {
+            PrintMes(RGY_LOG_WARN, _T("OpenCL is disabled for VA-API device #%d; continuing without OpenCL.\n"), info.id);
+        }
+    }
+    m_devName = getGPUInfo();
+    return RGY_ERR_NONE;
+}
+#endif
+
+RGY_ERR VCEDevice::initOpenCLContext(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool enableVppPerfMonitor, const int openCLBuildThreads, const tstring& clPerfDumpDir, const double clPerfTimelineSec) {
     const auto loglevelOpenCLError = RGY_LOG_WARN;
     RGYOpenCL cl(m_log);
+    auto selectedDevice = std::pair<std::shared_ptr<RGYOpenCLPlatform>, int>();
+#if ENABLE_VAAPI
+    if (m_backend == VCEBackend::VAAPI) {
+        selectedDevice = selectOpenCLDeviceVA(cl, deviceId);
+    }
+#endif
+    if (m_backend != VCEBackend::VAAPI) {
+        selectedDevice = selectOpenCLDeviceAMF(cl, deviceId, interopD3d9, interopD3d11);
+    }
+    auto selectedPlatform = selectedDevice.first;
+    const auto selectCLDevice = selectedDevice.second;
+    if (!selectedPlatform) {
+        return RGY_ERR_DEVICE_LOST;
+    }
+    selectedPlatform->setDev(selectedPlatform->devs()[selectCLDevice],
+#if ENABLE_D3D9
+        (interopD3d9) ? m_dx9.GetDevice() :
+#endif //#if ENABLE_D3D9
+        nullptr,
+#if ENABLE_D3D11
+        (interopD3d11) ? m_dx11.GetDevice() :
+#endif //#if ENABLE_D3D11
+        nullptr);
+
+    m_cl = std::make_shared<RGYOpenCLContext>(selectedPlatform, openCLBuildThreads, m_log);
+    const bool enableProfiling = enableVppPerfMonitor || !clPerfDumpDir.empty();
+    if (m_cl->createContext(enableProfiling ? CL_QUEUE_PROFILING_ENABLE : 0) != CL_SUCCESS) {
+        PrintMes(loglevelOpenCLError, _T("Failed to create OpenCL context.\n"));
+        return RGY_ERR_UNKNOWN;
+    }
+    if (!clPerfDumpDir.empty()) {
+        RGYOpenCLPerfCollector::instance().enable(clPerfDumpDir);
+        PrintMes(RGY_LOG_DEBUG, _T("OpenCL perf collector enabled: %s\n"), clPerfDumpDir.c_str());
+        if (clPerfTimelineSec != 0.0) {
+            const uint64_t window_ns = (clPerfTimelineSec < 0.0) ? 0
+                : (uint64_t)(clPerfTimelineSec * 1e9);
+            RGYOpenCLPerfCollector::instance().enableTimeline(window_ns, selectedPlatform->devs()[selectCLDevice]);
+            PrintMes(RGY_LOG_DEBUG, _T("OpenCL perf timeline enabled: %.1f sec\n"), clPerfTimelineSec);
+        }
+    }
+    if (m_log && RGY_LOG_DEBUG >= m_log->getLogLevel(RGY_LOGT_DEV)) {
+        PrintMes(RGY_LOG_DEBUG, _T("Created OpenCL context.\n"));
+        PrintMes(RGY_LOG_DEBUG, _T("Selected OpenCL device...\n%s\n"), m_cl->platform()->dev(0).infostr().c_str());
+    }
+
+    if (m_backend == VCEBackend::AMF) {
+        auto amferr = m_context->InitOpenCL(m_cl->queue().get());
+        if (amferr != AMF_OK) {
+            PrintMes(loglevelOpenCLError, _T("Failed to init AMF context by OpenCL.\n"));
+            m_cl.reset();
+            return err_to_rgy(amferr);
+        }
+    }
+    return RGY_ERR_NONE;
+}
+
+std::pair<std::shared_ptr<RGYOpenCLPlatform>, int> VCEDevice::selectOpenCLDeviceAMF(RGYOpenCL& cl, const int deviceId, const bool interopD3d9, const bool interopD3d11) {
+    const auto loglevelOpenCLError = RGY_LOG_WARN;
     auto platforms = cl.getPlatforms("AMD");
     if (platforms.size() == 0) {
         PrintMes(RGY_LOG_WARN, _T("Failed to find AMD OpenCL platforms.\n"));
-        return RGY_ERR_DEVICE_LOST;
+        return {};
     }
     int totalDevices = 0;
     int selectCLDevice = 0;
@@ -259,7 +343,7 @@ RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const 
                 if (tryNextPlatformOnInteropFail) {
                     continue;
                 }
-                return RGY_ERR_DEVICE_LOST;
+                return {};
             }
             usedInteropDeviceList = true;
         } else
@@ -272,7 +356,7 @@ RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const 
                     if (tryNextPlatformOnInteropFail) {
                         continue;
                     }
-                    return RGY_ERR_DEVICE_LOST;
+                    return {};
                 }
                 usedInteropDeviceList = true;
             } else
@@ -285,7 +369,7 @@ RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const 
                         continue;
                     }
                     PrintMes(loglevelOpenCLError, _T("Failed to find gpu device.\n"));
-                    return RGY_ERR_DEVICE_LOST;
+                    return {};
                 }
             }
             auto devices = platform->devs();
@@ -318,49 +402,38 @@ RGY_ERR VCEDevice::initOpenCL(const int deviceId, const bool interopD3d9, const 
     }
     if (!selectedPlatform) {
         PrintMes(loglevelOpenCLError, _T("Failed to find OpenCL device #%d.\n"), deviceId);
-        return RGY_ERR_DEVICE_LOST;
+        return {};
     }
-    selectedPlatform->setDev(selectedPlatform->devs()[selectCLDevice],
-#if ENABLE_D3D9
-    (interopD3d9) ? m_dx9.GetDevice() :
-#endif //#if ENABLE_D3D9
-        nullptr,
-#if ENABLE_D3D11
-        (interopD3d11) ? m_dx11.GetDevice() :
-#endif //#if ENABLE_D3D11
-        nullptr);
-
-    m_cl = std::make_shared<RGYOpenCLContext>(selectedPlatform, openCLBuildThreads, m_log);
-    const bool enableProfiling = enableVppPerfMonitor || !clPerfDumpDir.empty();
-    if (m_cl->createContext(enableProfiling ? CL_QUEUE_PROFILING_ENABLE : 0) != CL_SUCCESS) {
-        PrintMes(loglevelOpenCLError, _T("Failed to create OpenCL context.\n"));
-        return RGY_ERR_UNKNOWN;
-    }
-    if (!clPerfDumpDir.empty()) {
-        RGYOpenCLPerfCollector::instance().enable(clPerfDumpDir);
-        PrintMes(RGY_LOG_DEBUG, _T("OpenCL perf collector enabled: %s\n"), clPerfDumpDir.c_str());
-        if (clPerfTimelineSec != 0.0) {
-            const uint64_t window_ns = (clPerfTimelineSec < 0.0) ? 0
-                : (uint64_t)(clPerfTimelineSec * 1e9);
-            RGYOpenCLPerfCollector::instance().enableTimeline(window_ns, selectedPlatform->devs()[selectCLDevice]);
-            PrintMes(RGY_LOG_DEBUG, _T("OpenCL perf timeline enabled: %.1f sec\n"), clPerfTimelineSec);
-        }
-    }
-    if (m_log && RGY_LOG_DEBUG >= m_log->getLogLevel(RGY_LOGT_DEV)) {
-        PrintMes(RGY_LOG_DEBUG, _T("Created OpenCL context.\n"));
-        PrintMes(RGY_LOG_DEBUG, _T("Selected OpenCL device...\n%s\n"), m_cl->platform()->dev(0).infostr().c_str());
-    }
-
-    auto amferr = m_context->InitOpenCL(m_cl->queue().get());
-    if (amferr != AMF_OK) {
-        PrintMes(loglevelOpenCLError, _T("Failed to init AMF context by OpenCL.\n"));
-        m_cl.reset();
-        return err_to_rgy(amferr);
-    }
-    return RGY_ERR_NONE;
+    return { selectedPlatform, selectCLDevice };
 }
 
+#if ENABLE_VAAPI
+std::pair<std::shared_ptr<RGYOpenCLPlatform>, int> VCEDevice::selectOpenCLDeviceVA(RGYOpenCL& cl, const int deviceId) {
+    const auto& pciBusId = m_va->info().pciBusId;
+    if (pciBusId.empty()) {
+        PrintMes(RGY_LOG_WARN, _T("VA-API device #%d has no PCI bus ID; OpenCL is disabled.\n"), deviceId);
+        return {};
+    }
+    for (const auto& platformName : { "AMD", "rusticl" }) {
+        for (auto& platform : cl.getPlatforms(platformName)) {
+            if (platform->createDeviceList(CL_DEVICE_TYPE_GPU) != RGY_ERR_NONE) continue;
+            const auto devices = platform->devs();
+            for (int idev = 0; idev < (int)devices.size(); idev++) {
+                const auto info = RGYOpenCLDevice(devices[idev]).info();
+                if (info.topology_amd == pciBusId) {
+                    PrintMes(RGY_LOG_INFO, _T("Using OpenCL platform %s for VA-API device #%d.\n"), char_to_tstring(platform->info().name).c_str(), deviceId);
+                    return { platform, idev };
+                }
+            }
+        }
+    }
+    PrintMes(RGY_LOG_WARN, _T("Could not match VA-API PCI bus ID %s to an OpenCL device; OpenCL is disabled.\n"), char_to_tstring(pciBusId).c_str());
+    return {};
+}
+#endif
+
 void VCEDevice::getAllCaps() {
+    if (m_backend == VCEBackend::VAAPI) return;
     //エンコーダの情報
     for (int i = 0; list_codec[i].desc; i++) {
         const auto codec = (RGY_CODEC)list_codec[i].value;
@@ -378,6 +451,7 @@ void VCEDevice::getAllCaps() {
 }
 
 amf::AMFCapsPtr VCEDevice::getEncCapsImpl(AMF_RESULT& initRes, RGY_CODEC codec, bool for10bit, bool useInit) {
+    if (m_backend == VCEBackend::VAAPI) return nullptr;
     initRes = AMF_OK;
     useInit |= for10bit; //10bitが可能かをチェックするには、P010で初期化してみる必要がある
     PrintMes(RGY_LOG_DEBUG, _T("Getting caps for %s%s encoding.\n"), codec_rgy_to_enc(codec), (for10bit) ? _T(" 10bit") : _T(""));
@@ -483,6 +557,7 @@ amf::AMFCapsPtr VCEDevice::getEncCaps(RGY_CODEC codec) {
 }
 
 amf::AMFCapsPtr VCEDevice::getDecCaps(RGY_CODEC codec) {
+    if (m_backend == VCEBackend::VAAPI) return nullptr;
     if (m_decCaps.count(codec) == 0) {
         const auto codec_uvd_name = codec_rgy_to_dec(codec);
         m_decCaps[codec] = amf::AMFCapsPtr();
@@ -512,6 +587,7 @@ amf::AMFCapsPtr VCEDevice::getDecCaps(RGY_CODEC codec) {
 }
 
 amf::AMFCapsPtr VCEDevice::getFilterCaps(const std::wstring& filter) {
+    if (m_backend == VCEBackend::VAAPI) return nullptr;
     amf::AMFComponentPtr p_filter;
     amf::AMFCapsPtr caps;
     if (m_factory->CreateComponent(m_context, filter.c_str(), &p_filter) == AMF_OK
@@ -771,6 +847,11 @@ tstring VCEDevice::QueryFilterCaps(amf::AMFCapsPtr& filterCaps) {
 }
 
 tstring VCEDevice::getGPUInfo() const {
+#if ENABLE_VAAPI
+    if (m_backend == VCEBackend::VAAPI && m_va) {
+        return m_va->info().name;
+    }
+#endif
 #if ENABLE_D3D11
     if (m_dx11.isValid()) {
         auto str = m_dx11.GetDisplayDeviceName();
@@ -798,6 +879,7 @@ tstring VCEDevice::getGPUInfo() const {
 }
 
 CodecCsp VCEDevice::getHWDecCodecCsp(bool skipHWDecodeCheck) {
+    if (m_backend == VCEBackend::VAAPI) return CodecCsp();
     if (skipHWDecodeCheck) {
         CodecCsp codecCsp;
         for (int i = 0; i < _countof(HW_DECODE_LIST); i++) {

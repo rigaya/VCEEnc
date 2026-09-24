@@ -229,6 +229,8 @@ VCECore::VCECore() :
     m_repeatHeaders(false),
     m_devNames(),
     m_dev(),
+    m_backend(VCEBackend::Auto),
+    m_amfProbeDevices(),
     m_deviceUsage(),
     m_parallelEnc(),
     m_vpFilters(),
@@ -554,6 +556,10 @@ int VCECore::GetEncoderBitdepth(const VCEParam *inputParam) const {
 
 RGY_ERR VCECore::initInput(VCEParam *inputParam, DeviceCodecCsp& HWDecCodecCsp) {
 #if ENABLE_RAW_READER
+    if (m_backend == VCEBackend::VAAPI && inputParam->input.type == RGY_INPUT_FMT_AVHW) {
+        PrintMes(RGY_LOG_ERROR, _T("VA-API backend does not support --avhw input decoding. Please use --avsw.\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
     m_pStatus = std::make_shared<EncodeStatus>();
 
     int subburnTrackId = 0;
@@ -1101,6 +1107,7 @@ RGY_ERR VCECore::tryDecode(amf::AMFComponentPtr& decoder) {
 }
 
 RGY_ERR VCECore::initDecoder(VCEParam *prm) {
+    if (m_backend == VCEBackend::VAAPI) return RGY_ERR_NONE;
 #if ENABLE_AVSW_READER
     if (m_pFileReader->getInputCodec() != RGY_CODEC_UNKNOWN) {
         amf::AMFComponentPtr testDecoder;
@@ -3407,6 +3414,10 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     if (prm->codec == RGY_CODEC_RAW || prm->codec == RGY_CODEC_AVCODEC) {
         return RGY_ERR_NONE;
     }
+    if (m_backend == VCEBackend::VAAPI) {
+        PrintMes(RGY_LOG_ERROR, _T("VA-API encoding is not implemented yet.\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
     AMF_RESULT res = AMF_OK;
 
     m_encWidth  = (m_pLastFilterParam) ? m_pLastFilterParam->frameOut.width  : prm->input.srcWidth  - prm->input.crop.e.left - prm->input.crop.e.right;
@@ -4063,6 +4074,45 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
             return RGY_ERR_NOT_FOUND;
         }
     }
+#if ENABLE_VAAPI
+    if (m_backend == VCEBackend::VAAPI) {
+        const int outputWidth = prm->input.dstWidth > 0 ? prm->input.dstWidth
+            : prm->input.srcWidth - prm->input.crop.e.left - prm->input.crop.e.right;
+        const int outputHeight = prm->input.dstHeight > 0 ? prm->input.dstHeight
+            : prm->input.srcHeight - prm->input.crop.e.bottom - prm->input.crop.e.up;
+        tstring message;
+        if (prm->codec != RGY_CODEC_RAW && prm->codec != RGY_CODEC_AVCODEC) {
+            for (auto gpu = gpuList.begin(); gpu != gpuList.end();) {
+                auto *va = (*gpu)->va();
+                const auto& caps = va->encCaps(prm->codec);
+                if (!caps.available) {
+                    message += strsprintf(_T("GPU #%d (%s) does not support %s encoding.\n"),
+                        (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
+                    gpu = gpuList.erase(gpu);
+                    continue;
+                }
+                if (encBitdepth > 8 && !caps.support10bit) {
+                    message += strsprintf(_T("GPU #%d (%s) does not support %d-bit %s encoding.\n"),
+                        (*gpu)->id(), (*gpu)->name().c_str(), encBitdepth, CodecToStr(prm->codec).c_str());
+                    gpu = gpuList.erase(gpu);
+                    continue;
+                }
+                if ((caps.maxWidth > 0 && outputWidth > caps.maxWidth)
+                    || (caps.maxHeight > 0 && outputHeight > caps.maxHeight)) {
+                    message += strsprintf(_T("GPU #%d (%s) does not support output resolution %dx%d (maximum %dx%d).\n"),
+                        (*gpu)->id(), (*gpu)->name().c_str(), outputWidth, outputHeight, caps.maxWidth, caps.maxHeight);
+                    gpu = gpuList.erase(gpu);
+                    continue;
+                }
+                gpu++;
+            }
+        }
+        if (!message.empty()) {
+            PrintMes(gpuList.empty() ? RGY_LOG_ERROR : RGY_LOG_DEBUG, _T("%s"), message.c_str());
+        }
+        return gpuList.empty() ? RGY_ERR_UNSUPPORTED : RGY_ERR_NONE;
+    }
+#endif
     if (prm->ctrl.skipHWEncodeCheck) {
         return RGY_ERR_NONE;
     }
@@ -4444,7 +4494,7 @@ RGY_ERR VCECore::gpuAutoSelect(std::vector<std::unique_ptr<VCEDevice>> &gpuList,
 #pragma warning(push)
 #pragma warning(disable: 4127) //C4127: 条件式が定数です。
 RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId, const RGYDeviceUsageLockManager *devUsageLock) {
-    if (VULKAN_DEFAULT_DEVICE_ONLY && deviceId > 0) {
+    if (m_backend == VCEBackend::AMF && VULKAN_DEFAULT_DEVICE_ONLY && deviceId > 0) {
         PrintMes(RGY_LOG_ERROR, _T("Currently default device is always used when using vulkan!: selected device = %d\n"), deviceId);
         return RGY_ERR_UNSUPPORTED;
     }
@@ -4772,16 +4822,90 @@ DeviceCodecCsp VCECore::getHWDecCodecCsp(bool skipHWDecodeCheck, std::vector<std
     return HWDecCodecCsp;
 }
 
+std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3d9, bool interopD3d11, RGYParamInitVulkan interopVulkan,
+    bool enableOpenCL, bool enableVppPerfMonitor, bool enableAV1HWDec, int openCLBuildThreads, int targetDeviceId,
+    const tstring& clPerfDumpDir, const double clPerfTimelineSec) {
+#if ENABLE_VAAPI
+    if (m_backend == VCEBackend::VAAPI) {
+        return createDeviceListVA(enableOpenCL, enableVppPerfMonitor, openCLBuildThreads, targetDeviceId, clPerfDumpDir, clPerfTimelineSec);
+    }
+#endif
+    return VCEAMF::createDeviceList(interopD3d9, interopD3d11, interopVulkan, enableOpenCL, enableVppPerfMonitor,
+        enableAV1HWDec, openCLBuildThreads, targetDeviceId, clPerfDumpDir, clPerfTimelineSec);
+}
+
+#if ENABLE_VAAPI
+std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceListVA(bool enableOpenCL, bool enableVppPerfMonitor, int openCLBuildThreads,
+    int targetDeviceId, const tstring& clPerfDumpDir, double clPerfTimelineSec) {
+    std::vector<std::unique_ptr<VCEDevice>> devices;
+    for (const auto& info : enumerateVADevices(m_pLog.get())) {
+        if (targetDeviceId >= 0 && info.id != targetDeviceId) continue;
+        auto device = std::make_unique<VCEDevice>(m_pLog, nullptr, nullptr);
+        if (device->initVA(info, enableOpenCL, enableVppPerfMonitor, openCLBuildThreads, clPerfDumpDir, clPerfTimelineSec) == RGY_ERR_NONE) {
+            PrintMes(RGY_LOG_DEBUG, _T("Initialized VA-API device #%d (%s).\n"), info.id, info.name.c_str());
+            devices.push_back(std::move(device));
+        }
+    }
+    return devices;
+}
+#endif
+
+RGY_ERR VCECore::initBackend(VCEParam *prm) {
+    m_amfProbeDevices.clear();
+#if !ENABLE_VAAPI
+    if (prm->backend == VCEBackend::VAAPI) {
+        PrintMes(RGY_LOG_ERROR, _T("VA-API is not available in this build.\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
+    m_backend = VCEBackend::AMF;
+#else
+    if (prm->backend == VCEBackend::VAAPI) {
+        m_backend = VCEBackend::VAAPI;
+        PrintMes(RGY_LOG_INFO, _T("Selected backend: vaapi.\n"));
+        return RGY_ERR_NONE;
+    }
+    if (prm->backend == VCEBackend::AMF) {
+        m_backend = VCEBackend::AMF;
+    }
+    const bool backendAuto = prm->backend == VCEBackend::Auto;
+    auto err = initAMFFactory(prm->deviceID);
+    if (err != RGY_ERR_NONE) {
+        if (!backendAuto) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to initialize VCE factory: %s\n"), get_err_mes(err));
+            return err;
+        }
+        m_backend = VCEBackend::VAAPI;
+        PrintMes(RGY_LOG_WARN, _T("AMF initialization failed; falling back to VA-API.\n"));
+        PrintMes(RGY_LOG_INFO, _T("Selected backend: vaapi.\n"));
+        return RGY_ERR_NONE;
+    }
+    err = initTracer(prm->ctrl.loglevel.get(RGY_LOGT_AMF));
+    if (err != RGY_ERR_NONE) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to set up AMF Tracer: %s\n"), get_err_mes(err));
+        return err;
+    }
+    if (backendAuto) {
+        m_amfProbeDevices = VCEAMF::createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan,
+            prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec,
+            prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, prm->deviceID, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
+        if (m_amfProbeDevices.empty()) {
+            m_backend = VCEBackend::VAAPI;
+            PrintMes(RGY_LOG_WARN, _T("AMF found no usable devices; falling back to VA-API.\n"));
+            PrintMes(RGY_LOG_INFO, _T("Selected backend: vaapi.\n"));
+            return RGY_ERR_NONE;
+        }
+    }
+#endif
+    m_backend = VCEBackend::AMF;
+    PrintMes(RGY_LOG_INFO, _T("Selected backend: amf.\n"));
+    return RGY_ERR_NONE;
+}
+
 RGY_ERR VCECore::init(VCEParam *prm) {
     RGY_ERR ret = initLog(prm);
     if (ret != RGY_ERR_NONE) {
         PrintMes(RGY_LOG_ERROR, _T("Failed to initalize logger: %s"), get_err_mes(ret));
         return ret;
-    }
-
-    if (prm->backend == VCEBackend::VAAPI) {
-        PrintMes(RGY_LOG_ERROR, _T("--backend vaapi is not implemented yet.\n"));
-        return RGY_ERR_UNSUPPORTED;
     }
 
     if (const auto affinity = prm->ctrl.threadParams.get(RGYThreadType::PROCESS).affinity; affinity.mode != RGYThreadAffinityMode::ALL) {
@@ -4804,27 +4928,23 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     }
 #endif //#if ENABLE_PERF_COUNTER
 
-    ret = initAMFFactory(prm->deviceID);
+    ret = initBackend(prm);
     if (ret != RGY_ERR_NONE) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to initalize VCE factory: %s"), get_err_mes(ret));
-        return ret;
-    }
-
-    ret = initTracer(prm->ctrl.loglevel.get(RGY_LOGT_AMF));
-    if (ret != RGY_ERR_NONE) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to set up AMF Tracer: %s"), get_err_mes(ret));
         return ret;
     }
 
     DeviceCodecCsp HWDecCodecCsp;
-    auto deviceInfoCache = std::make_shared<RGYDeviceInfoCache>();
-    if ((ret = deviceInfoCache->loadCacheFile()) != RGY_ERR_NONE) {
-        if (ret == RGY_ERR_FILE_OPEN) { // ファイルは存在するが開けない
-            deviceInfoCache.reset(); // キャッシュの存在を無視して進める
+    std::shared_ptr<RGYDeviceInfoCache> deviceInfoCache;
+    if (m_backend == VCEBackend::AMF) {
+        deviceInfoCache = std::make_shared<RGYDeviceInfoCache>();
+        if ((ret = deviceInfoCache->loadCacheFile()) != RGY_ERR_NONE) {
+            if (ret == RGY_ERR_FILE_OPEN) { // ファイルは存在するが開けない
+                deviceInfoCache.reset(); // キャッシュの存在を無視して進める
+            }
+        } else {
+            HWDecCodecCsp = deviceInfoCache->getDeviceDecCodecCsp();
+            PrintMes(RGY_LOG_DEBUG, _T("HW dec codec csp support read from cache file.\n"));
         }
-    } else {
-        HWDecCodecCsp = deviceInfoCache->getDeviceDecCodecCsp();
-        PrintMes(RGY_LOG_DEBUG, _T("HW dec codec csp support read from cache file.\n"));
     }
     // デバイス指定時は、そのデバイスのデコード能力のみをリーダーに渡す
     // (他GPUのHWデコード対応を見てavhwを選ぶと、後で選択デバイスがデコード非対応で失敗するため)
@@ -4862,7 +4982,8 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         && (deviceInfoCache->getDeviceIds().size() == 0
             || (prm->deviceID >= 0 && deviceInfoCache->getDeviceIds().size() <= prm->deviceID))) {
         // キャッシュ更新のため全デバイスを列挙する
-        auto allDevs = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, -1, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
+        auto allDevs = (prm->deviceID < 0 && !m_amfProbeDevices.empty()) ? std::move(m_amfProbeDevices)
+            : createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, -1, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
         if (allDevs.size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
             return ret;
@@ -4880,7 +5001,11 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         // 複数GPUのAMF競合を避けるため、指定デバイスがある場合はそれだけを取り直す
         if (prm->deviceID >= 0) {
             allDevs.clear();
-            devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, prm->deviceID, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
+            if (!m_amfProbeDevices.empty()) {
+                devList = std::move(m_amfProbeDevices);
+            } else {
+                devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, prm->deviceID, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
+            }
             if (devList.size() == 0) {
                 PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
                 return ret;
@@ -4910,7 +5035,11 @@ RGY_ERR VCECore::init(VCEParam *prm) {
     });
 
     if (devList.size() == 0) {
-        devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, prm->deviceID, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
+        if (m_backend == VCEBackend::AMF && !m_amfProbeDevices.empty()) {
+            devList = std::move(m_amfProbeDevices);
+        } else {
+            devList = createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan, prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec, prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, prm->deviceID, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
+        }
         if (devList.size() == 0) {
             PrintMes(RGY_LOG_ERROR, _T("Could not find device to run VCE."));
             return ret;
@@ -4963,7 +5092,7 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         }
         // 複数GPU環境で他GPUのAMFコンポーネントが先にロードされていると、
         // 選択GPUでのエンコーダ作成に失敗することがあるため、選択デバイスのみ再初期化する
-        if (prm->deviceID < 0 && !devList.empty()) {
+        if (m_backend == VCEBackend::AMF && prm->deviceID < 0 && !devList.empty()) {
             const int selectedId = devList.front()->id();
             if (m_devNames.size() > 1) {
                 PrintMes(RGY_LOG_DEBUG, _T("Re-initialize selected device #%d alone to avoid multi-GPU AMF conflict.\n"), selectedId);
@@ -5498,6 +5627,10 @@ void VCECore::PrintEncoderParam() {
 }
 
 tstring VCECore::GetEncoderParam() {
+    if (m_backend == VCEBackend::VAAPI) {
+        return strsprintf(_T("%s\nBackend:       vaapi\nGPU:           %s\n"),
+            get_encoder_version(), m_dev ? m_dev->getGPUInfo().c_str() : _T(""));
+    }
     const amf::AMFPropertyStorage *pProperty = m_pEncoder;
 
     auto GetPropertyStr = [pProperty](const wchar_t *pName) {
@@ -5588,6 +5721,9 @@ tstring VCECore::GetEncoderParam() {
     mes += strsprintf(_T("OS:            %s %s\n"), getOSVersion().c_str(), rgy_is_64bit_os() ? _T("x64") : _T("x86"));
 #endif
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
+#if ENABLE_VAAPI
+    mes += _T("Backend:       amf\n");
+#endif
     {
         if (m_parallelEnc && m_devNames.size() > 1) {
             mes += strsprintf(_T("GPU:           %s"), m_devNames[0].c_str());

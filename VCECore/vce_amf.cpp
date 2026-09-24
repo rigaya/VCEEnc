@@ -26,6 +26,7 @@
 // ------------------------------------------------------------------------------------------
 
 #include <algorithm>
+#include <cstdlib>
 #include <cmath>
 #include <numeric>
 #include <vector>
@@ -205,24 +206,41 @@ void VCEAMF::Terminate() {
 }
 
 RGY_ERR VCEAMF::initAMFFactory(int deviceId) {
+    const char *overridePath = std::getenv("VCEENC_AMF_DLL_OVERRIDE");
+    if (overridePath != nullptr && overridePath[0] != '\0') {
 #if defined(_WIN32) || defined(_WIN64)
-    // 複数世代のAMDドライバが同居していると、System32のamfrt64が
-    // 古い方のamfrtdrv64を掴んでしまい新しいdGPUでエンコーダ作成に失敗する。
-    // 対象GPUのDriverStore上のamfrt64をLOAD_WITH_ALTERED_SEARCH_PATHで読む。
-    const auto amfDllPath = resolveAMFRuntimeDllPath(deviceId);
-    PrintMes(RGY_LOG_DEBUG, _T("Loading AMF runtime: %s (deviceId=%d)\n"), amfDllPath.c_str(), deviceId);
-    m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(
-        LoadLibraryEx(amfDllPath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH));
-    if (!m_dll) {
-        // フォールバック: 通常の検索パス
-        m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(RGY_LOAD_LIBRARY(wstring_to_tstring(AMF_DLL_NAME).c_str()));
-    }
+        const auto overridePathT = char_to_tstring(overridePath);
+        PrintMes(RGY_LOG_DEBUG, _T("Loading AMF runtime override: %s\n"), overridePathT.c_str());
+        m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(
+            LoadLibraryEx(overridePathT.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH));
 #else
-    (void)deviceId;
-    m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(RGY_LOAD_LIBRARY(wstring_to_tstring(AMF_DLL_NAME).c_str()));
+        PrintMes(RGY_LOG_DEBUG, _T("Loading AMF runtime override: %s\n"), char_to_tstring(overridePath).c_str());
+        m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(RGY_LOAD_LIBRARY(overridePath));
 #endif
+    } else {
+#if defined(_WIN32) || defined(_WIN64)
+        // 複数世代のAMDドライバが同居していると、System32のamfrt64が
+        // 古い方のamfrtdrv64を掴んでしまい新しいdGPUでエンコーダ作成に失敗する。
+        // 対象GPUのDriverStore上のamfrt64をLOAD_WITH_ALTERED_SEARCH_PATHで読む。
+        const auto amfDllPath = resolveAMFRuntimeDllPath(deviceId);
+        PrintMes(RGY_LOG_DEBUG, _T("Loading AMF runtime: %s (deviceId=%d)\n"), amfDllPath.c_str(), deviceId);
+        m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(
+            LoadLibraryEx(amfDllPath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH));
+        if (!m_dll) {
+            // フォールバック: 通常の検索パス
+            m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(RGY_LOAD_LIBRARY(wstring_to_tstring(AMF_DLL_NAME).c_str()));
+        }
+#else
+        (void)deviceId;
+        m_dll = std::unique_ptr<std::remove_pointer_t<HMODULE>, module_deleter>(RGY_LOAD_LIBRARY(wstring_to_tstring(AMF_DLL_NAME).c_str()));
+#endif
+    }
     if (!m_dll) {
-        PrintMes(RGY_LOG_ERROR, _T("Failed to load %s.\n"), wstring_to_tstring(AMF_DLL_NAME).c_str());
+        if (overridePath != nullptr && overridePath[0] != '\0') {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to load AMF runtime override: %s.\n"), char_to_tstring(overridePath).c_str());
+        } else {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to load %s.\n"), wstring_to_tstring(AMF_DLL_NAME).c_str());
+        }
         return RGY_ERR_NOT_FOUND;
     }
     AMFInit_Fn initFun = (AMFInit_Fn)RGY_GET_PROC_ADDRESS(m_dll.get(), AMF_INIT_FUNCTION_NAME);

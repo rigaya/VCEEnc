@@ -28,6 +28,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <utility>
 
 #include "rgy_version.h"
 #include "rgy_err.h"
@@ -37,6 +38,9 @@
 #include "rgy_device.h"
 #include "rgy_device_vulkan.h"
 #include "vce_param.h"
+#if ENABLE_VAAPI
+#include "vce_vaapi.h"
+#endif
 #pragma warning(push)
 #pragma warning(disable:4100)
 RGY_DISABLE_WARNING_PUSH
@@ -55,6 +59,11 @@ public:
     virtual ~VCEDevice();
 
     virtual RGY_ERR init(const int deviceId, const bool interopD3d9, const bool interopD3d11, const RGYParamInitVulkan interopVulkan, const bool enableOpenCL, const bool enableVppPerfMonitor, bool enableAV1Check, const int openCLBuildThreads, const tstring& clPerfDumpDir = tstring(), const double clPerfTimelineSec = 0.0);
+#if ENABLE_VAAPI
+    RGY_ERR initVA(const VCEVADeviceInfo& info, const bool enableOpenCL, const bool enableVppPerfMonitor, const int openCLBuildThreads, const tstring& clPerfDumpDir, const double clPerfTimelineSec);
+    VCEDeviceVA *va() { return m_va.get(); }
+#endif
+    VCEBackend backend() const { return m_backend; }
 
     amf::AMFCapsPtr getEncCaps(RGY_CODEC codec, bool for10bit);
     amf::AMFCapsPtr getEncCapsWithInit(AMF_RESULT& initRes, RGY_CODEC codec, bool for10bit);
@@ -90,7 +99,11 @@ public:
     static const wchar_t *CAP_10BITDEPTH;
 protected:
     amf::AMFCapsPtr getEncCapsImpl(AMF_RESULT& initRes, RGY_CODEC codec, bool for10bit, bool useInit);
-    RGY_ERR initOpenCL(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool enableVppPerfMonitor, const int openCLBuildThreads, const tstring& clPerfDumpDir, const double clPerfTimelineSec = 0.0);
+    RGY_ERR initOpenCLContext(const int deviceId, const bool interopD3d9, const bool interopD3d11, const bool enableVppPerfMonitor, const int openCLBuildThreads, const tstring& clPerfDumpDir, const double clPerfTimelineSec = 0.0);
+    std::pair<std::shared_ptr<RGYOpenCLPlatform>, int> selectOpenCLDeviceAMF(RGYOpenCL& cl, const int deviceId, const bool interopD3d9, const bool interopD3d11);
+#if ENABLE_VAAPI
+    std::pair<std::shared_ptr<RGYOpenCLPlatform>, int> selectOpenCLDeviceVA(RGYOpenCL& cl, const int deviceId);
+#endif
     virtual RGY_ERR CreateContext();
     void getAllCaps();
 
@@ -122,6 +135,10 @@ protected:
 
     std::shared_ptr<RGYLog> m_log;
 
+    VCEBackend m_backend;
+#if ENABLE_VAAPI
+    std::unique_ptr<VCEDeviceVA> m_va;
+#endif
     int m_id;
     tstring m_devName;
     bool m_d3d9interlop;

@@ -86,6 +86,7 @@ public:
 
     virtual RGY_ERR init(VCEParam *prm);
     virtual RGY_ERR initLog(VCEParam *prm);
+    virtual std::vector<std::unique_ptr<VCEDevice>> createDeviceList(bool interopD3d9, bool interopD3d11, RGYParamInitVulkan interopVulkan, bool enableOpenCL, bool enableVppPerfMonitor, bool enableAV1HWDec, int openCLBuildThreads, int targetDeviceId = -1, const tstring& clPerfDumpDir = tstring(), const double clPerfTimelineSec = 0.0) override;
     virtual RGY_ERR initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, int deviceId, const RGYDeviceUsageLockManager *devUsageLock);
     virtual RGY_ERR initInput(VCEParam *pParams, DeviceCodecCsp& HWDecCodecCsp);
     virtual RGY_ERR initOutput(VCEParam *prm);
@@ -101,6 +102,10 @@ public:
 
     void SetAbortFlagPointer(bool *abortFlag);
 protected:
+    RGY_ERR initBackend(VCEParam *prm);
+#if ENABLE_VAAPI
+    std::vector<std::unique_ptr<VCEDevice>> createDeviceListVA(bool enableOpenCL, bool enableVppPerfMonitor, int openCLBuildThreads, int targetDeviceId, const tstring& clPerfDumpDir, double clPerfTimelineSec);
+#endif
     virtual RGY_ERR readChapterFile(tstring chapfile);
     std::pair<RGY_ERR, VideoInfo> GetOutputVideoInfo();
     RGY_ERR checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &gpuList, VCEParam *prm, int deviceId);
@@ -178,6 +183,8 @@ protected:
 
     std::vector<tstring> m_devNames;
     std::unique_ptr<VCEDevice> m_dev;
+    VCEBackend m_backend;
+    std::vector<std::unique_ptr<VCEDevice>> m_amfProbeDevices;
     std::unique_ptr<RGYDeviceUsage> m_deviceUsage;
     std::unique_ptr<RGYParallelEnc> m_parallelEnc;
 

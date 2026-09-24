@@ -28,6 +28,7 @@
 
 #include "rgy_tchar.h"
 #include <algorithm>
+#include <cstdio>
 #include <vector>
 #include <atomic>
 #include <fstream>
@@ -819,7 +820,25 @@ RGYOpenCLDeviceInfo RGYOpenCLDevice::info() const {
         clGetInfo(clGetDeviceInfo, m_device, CL_DEVICE_INTEGRATED_MEMORY_NV, &info.integrated_mem_nv);
 #endif
 #if ENCODER_VCEENC || CLFILTERS_AUF
-        clGetInfo(clGetDeviceInfo, m_device, CL_DEVICE_TOPOLOGY_AMD, &info.topology_amd);
+        cl_device_topology_amd topology = {};
+        if (clGetDeviceInfo(m_device, CL_DEVICE_TOPOLOGY_AMD, sizeof(topology), &topology, nullptr) == CL_SUCCESS
+            && topology.raw.type == CL_DEVICE_TOPOLOGY_TYPE_PCIE_AMD) {
+            char pciBusId[32] = {};
+            std::snprintf(pciBusId, sizeof(pciBusId), "0000:%02x:%02x.%x",
+                (unsigned char)topology.pcie.bus, (unsigned char)topology.pcie.device, (unsigned char)topology.pcie.function);
+            info.topology_amd = pciBusId;
+        }
+#ifdef CL_DEVICE_PCI_BUS_INFO_KHR
+        if (info.topology_amd.empty()) {
+            cl_device_pci_bus_info_khr pciBusInfo = {};
+            if (clGetDeviceInfo(m_device, CL_DEVICE_PCI_BUS_INFO_KHR, sizeof(pciBusInfo), &pciBusInfo, nullptr) == CL_SUCCESS) {
+                char pciBusId[32] = {};
+                std::snprintf(pciBusId, sizeof(pciBusId), "%04x:%02x:%02x.%x",
+                    pciBusInfo.pci_domain, pciBusInfo.pci_bus, pciBusInfo.pci_device, pciBusInfo.pci_function);
+                info.topology_amd = pciBusId;
+            }
+        }
+#endif
         clGetInfo(clGetDeviceInfo, m_device, CL_DEVICE_BOARD_NAME_AMD, &info.board_name_amd);
         info.board_name_amd = str_replace(info.board_name_amd, "(TM)", "");
         info.board_name_amd = str_replace(info.board_name_amd, "(R)", "");
