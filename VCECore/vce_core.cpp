@@ -3449,6 +3449,12 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
 }
 
 RGY_ERR VCECore::initEncoder(VCEParam *prm) {
+#if ENABLE_VAAPI
+    if (m_backend == VCEBackend::VAAPI && prm->common.metric.enabled()) {
+        PrintMes(RGY_LOG_ERROR, _T("Video quality metrics (%s) are not supported with --backend vaapi.\n"), prm->common.metric.enabled_metric().c_str());
+        return RGY_ERR_UNSUPPORTED;
+    }
+#endif
     if (prm->codec == RGY_CODEC_RAW || prm->codec == RGY_CODEC_AVCODEC) {
         return RGY_ERR_NONE;
     }
@@ -3456,6 +3462,16 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
     m_encWidth  = (m_pLastFilterParam) ? m_pLastFilterParam->frameOut.width  : prm->input.srcWidth  - prm->input.crop.e.left - prm->input.crop.e.right;
     m_encHeight = (m_pLastFilterParam) ? m_pLastFilterParam->frameOut.height : prm->input.srcHeight - prm->input.crop.e.bottom - prm->input.crop.e.up;
+
+    // SAR自動設定
+    auto par = std::make_pair(prm->par[0], prm->par[1]);
+    if ((!prm->par[0] || !prm->par[1]) //SAR比の指定がない
+        && prm->input.sar[0] && prm->input.sar[1] //入力側からSAR比を取得ずみ
+        && (m_encWidth == prm->input.srcWidth && m_encHeight == prm->input.srcHeight)) {//リサイズは行われない
+        par = std::make_pair(prm->input.sar[0], prm->input.sar[1]);
+    }
+    adjust_sar(&par.first, &par.second, m_encWidth, m_encHeight);
+    m_sar = rgy_rational<int>(par.first, par.second);
 
 #if ENABLE_VAAPI
     if (m_backend == VCEBackend::VAAPI) {
@@ -3476,7 +3492,8 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         m_encVA = std::make_unique<VCEEncoderVA>();
         const AVRational fps{ m_encFps.n(), m_encFps.d() };
         const AVRational timebase{ m_outputTimebase.n(), m_outputTimebase.d() };
-        auto err = m_encVA->init(m_dev->va(), prm, m_encWidth, m_encHeight, fps, timebase, m_pLog);
+        const AVRational sar{ m_sar.n(), m_sar.d() };
+        auto err = m_encVA->init(m_dev->va(), prm, m_encWidth, m_encHeight, sar, fps, timebase, m_pLog);
         if (err != RGY_ERR_NONE) return err;
         PrintMes(RGY_LOG_INFO, _T("%s\n"), m_encVA->paramString().c_str());
         return RGY_ERR_NONE;
@@ -3851,16 +3868,6 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         //    prm->nVBVBufferSize = vbv_bufsize_kbps;
         //}
     }
-
-    //SAR自動設定
-    auto par = std::make_pair(prm->par[0], prm->par[1]);
-    if ((!prm->par[0] || !prm->par[1]) //SAR比の指定がない
-        && prm->input.sar[0] && prm->input.sar[1] //入力側からSAR比を取得ずみ
-        && (m_encWidth == prm->input.srcWidth && m_encHeight == prm->input.srcHeight)) {//リサイズは行われない
-        par = std::make_pair(prm->input.sar[0], prm->input.sar[1]);
-    }
-    adjust_sar(&par.first, &par.second, m_encWidth, m_encHeight);
-    m_sar = rgy_rational<int>(par.first, par.second);
 
     m_encVUI.descriptpresent =
            get_cx_value(list_colormatrix, _T("undef")) != (int)m_encVUI.matrix

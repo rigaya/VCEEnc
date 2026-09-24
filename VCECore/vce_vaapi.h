@@ -91,7 +91,7 @@ public:
     VCEEncoderVA();
     ~VCEEncoderVA();
     RGY_ERR init(VCEDeviceVA *dev, const VCEParam *prm, int width, int height,
-        AVRational fps, AVRational timebase, std::shared_ptr<RGYLog> log);
+        AVRational sar, AVRational fps, AVRational timebase, std::shared_ptr<RGYLog> log);
     RGY_ERR submit(RGYFrame *frame);
     RGY_ERR receive(std::shared_ptr<RGYBitstream>& bs);
     tstring paramString() const;

@@ -386,7 +386,7 @@ VCEEncoderVA::VCEEncoderVA() :
 VCEEncoderVA::~VCEEncoderVA() = default;
 
 RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int height,
-    AVRational fps, AVRational timebase, std::shared_ptr<RGYLog> log) {
+    AVRational sar, AVRational fps, AVRational timebase, std::shared_ptr<RGYLog> log) {
     if (dev == nullptr || prm == nullptr || dev->hwdevice() == nullptr || width <= 0 || height <= 0) return RGY_ERR_INVALID_PARAM;
     m_log = std::move(log);
     m_codec = prm->codec;
@@ -489,7 +489,7 @@ RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int
     ctx->gop_size = prm->nGOPLen > 0 ? prm->nGOPLen : fps.num * 2 / fps.den;
     ctx->max_b_frames = maxBFrames;
     ctx->refs = m_refs;
-    ctx->sample_aspect_ratio = AVRational{ 1, 1 };
+    ctx->sample_aspect_ratio = sar;
     if (prm->outputDepth > 8 && prm->codec == RGY_CODEC_HEVC) ctx->profile = AV_PROFILE_HEVC_MAIN_10;
     else if (prm->codec == RGY_CODEC_H264 && prm->codecParam[RGY_CODEC_H264].nProfile != defaultParam.codecParam[RGY_CODEC_H264].nProfile) ctx->profile = prm->codecParam[RGY_CODEC_H264].nProfile;
     else if (prm->codec == RGY_CODEC_HEVC) ctx->profile = prm->codecParam[RGY_CODEC_HEVC].nProfile == AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN_10 ? AV_PROFILE_HEVC_MAIN_10 : AV_PROFILE_HEVC_MAIN;

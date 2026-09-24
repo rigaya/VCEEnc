@@ -312,7 +312,7 @@ dllのバージョンを表示
 VCEEncで使用するDeviceIdを指定する。
 
 ### --backend &lt;auto|amf|vaapi&gt; (Linux)
-エンコードに使用するバックエンドを指定する。`auto` (既定値) と `amf` はAMFバックエンドを使用する。`vaapi` はVA-APIバックエンド用の指定で、現段階では「未実装」エラーで終了する。
+エンコードに使用するバックエンドを指定する。`auto` (既定値) はAMFの初期化に失敗するか、対象デバイスが見つからない場合にVA-APIへ切り替える。`amf` はAMFを、`vaapi` はVA-APIを使用する。VA-APIではHWデコードは使用せず、ソフトウェアデコード (`--avsw`) になる。非対応のエンコードオプションは警告を出して無視する。`--parallel`、AMF VPPフィルタ、`--avhw`、`--adapt-resolution`、`--ssim`/`--psnr`/`--vmaf` は使用できない。Bフレーム数や参照フレーム数はデバイスの能力に従う。`VCEENC_AMF_DLL_OVERRIDE` 環境変数はAMFランタイムの差し替え用（デバッグ用）。
 
 ### -c, --codec &lt;string&gt;
 エンコードするコーデックの指定

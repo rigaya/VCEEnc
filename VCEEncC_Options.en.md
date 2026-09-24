@@ -394,7 +394,7 @@ Show version of ffmpeg dll
 Specify the deviceId to be used with VCEEnc. 
 
 ### --backend &lt;auto|amf|vaapi&gt; (Linux)
-Select the encoding backend. `auto` (default) and `amf` use the AMF backend. `vaapi` selects the VA-API backend, which currently exits with a not-implemented error.
+Select the encoding backend. `auto` (default) falls back to VA-API if AMF initialization fails or no target AMF device is found. `amf` uses AMF, and `vaapi` uses VA-API. VA-API uses software decoding (`--avsw`), not hardware decoding. Unsupported encoding options are ignored with a warning. `--parallel`, AMF VPP filters, `--avhw`, `--adapt-resolution`, and `--ssim`/`--psnr`/`--vmaf` are not supported. B-frame and reference-frame counts follow device capabilities. The `VCEENC_AMF_DLL_OVERRIDE` environment variable can override the AMF runtime for debugging.
 
 ### -c, --codec &lt;string&gt;
 Specify the output codec
