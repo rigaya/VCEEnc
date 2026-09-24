@@ -205,8 +205,7 @@ bool test_encoder_open(AVBufferRef *hwdevice, const AVCodec *codec, const bool t
     if (hwdevice == nullptr || codec == nullptr) return false;
     AVBufferRef *framesRefRaw = av_hwframe_ctx_alloc(hwdevice);
     if (framesRefRaw == nullptr) return false;
-    std::unique_ptr<AVBufferRef, RGYAVDeleter<AVBufferRef>> framesRef(
-        framesRefRaw, RGYAVDeleter<AVBufferRef>(av_buffer_unref));
+    std::unique_ptr<AVBufferRef, RGYAVDeleter<AVBufferRef>> framesRef(framesRefRaw, RGYAVDeleter<AVBufferRef>(av_buffer_unref));
     auto *frames = (AVHWFramesContext *)framesRef->data;
     frames->format = AV_PIX_FMT_VAAPI;
     frames->sw_format = tenBit ? AV_PIX_FMT_P010 : AV_PIX_FMT_NV12;
@@ -217,8 +216,7 @@ bool test_encoder_open(AVBufferRef *hwdevice, const AVCodec *codec, const bool t
 
     AVCodecContext *contextRaw = avcodec_alloc_context3(codec);
     if (contextRaw == nullptr) return false;
-    std::unique_ptr<AVCodecContext, RGYAVDeleter<AVCodecContext>> context(
-        contextRaw, RGYAVDeleter<AVCodecContext>(avcodec_free_context));
+    std::unique_ptr<AVCodecContext, RGYAVDeleter<AVCodecContext>> context(contextRaw, RGYAVDeleter<AVCodecContext>(avcodec_free_context));
     context->width = frames->width;
     context->height = frames->height;
     context->time_base = AVRational{ 1, 30 };
@@ -280,8 +278,7 @@ std::vector<VCEVADeviceInfo> enumerateVADevices(RGYLog *log) {
         devices.push_back(std::move(info));
         if (log != nullptr) {
             log->write(RGY_LOG_DEBUG, RGY_LOGT_DEV, _T("VA-API device #%d: %s (%s, PCI %s)\n"),
-                devices.back().id, devices.back().name.c_str(), devices.back().renderNode.c_str(),
-                char_to_tstring(devices.back().pciBusId).c_str());
+                devices.back().id, devices.back().name.c_str(), devices.back().renderNode.c_str(), char_to_tstring(devices.back().pciBusId).c_str());
         }
     }
     return devices;
@@ -369,8 +366,7 @@ tstring VCEDeviceVA::capsString(RGY_CODEC codec) {
     appendMode(caps.rcModes & VCE_VA_RC_QVBR, _T("QVBR"));
     if (rcModes.empty()) rcModes = _T("none");
     return strsprintf(_T("  available: %s\n  10-bit: %s\n  rate control: %s\n  max ref (L0/L1): %d/%d\n  max resolution: %dx%d"),
-        caps.available ? _T("yes") : _T("no"), caps.support10bit ? _T("yes") : _T("no"), rcModes.c_str(),
-        caps.maxRefL0, caps.maxRefL1, caps.maxWidth, caps.maxHeight);
+        caps.available ? _T("yes") : _T("no"), caps.support10bit ? _T("yes") : _T("no"), rcModes.c_str(), caps.maxRefL0, caps.maxRefL1, caps.maxWidth, caps.maxHeight);
 }
 
 #endif // ENABLE_VAAPI

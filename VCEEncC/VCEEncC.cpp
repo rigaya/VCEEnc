@@ -46,9 +46,7 @@
 #include "rgy_avutil.h"
 #include "rgy_opencl.h"
 #include "rgy_opencl_perf.h"
-#if ENABLE_VAAPI
 #include "vce_vaapi.h"
-#endif
 
 static void show_version() {
     _ftprintf(stdout, _T("%s\n"), GetVCEEncVersion().c_str());
@@ -634,11 +632,11 @@ int _tmain(int argc, TCHAR **argv) {
 
     RGYParamLogLevel loglevelPrint(RGY_LOG_ERROR);
     int deviceidPrint = -1;
-#if ENABLE_VAAPI
-    VCEBackend backendPrint = VCEBackend::Auto;
-#else
-    constexpr VCEBackend backendPrint = VCEBackend::Auto;
+#if !ENABLE_VAAPI
+    constexpr
 #endif
+    VCEBackend backendPrint = VCEBackend::Auto;
+
     for (int iarg = 1; iarg < argc; iarg++) {
         if (iarg + 1 < argc && tstring(argv[iarg]) == _T("--log-level")) {
             parse_log_level_param(argv[iarg], argv[iarg+1], loglevelPrint);
