@@ -30,6 +30,7 @@
   - [--check-avversion](#--check-avversion)
 - [エンコードの基本的なオプション](#エンコードの基本的なオプション)
   - [-d, --device \<int\>](#-d---device-int)
+  - [--backend \<auto\|amf\|vaapi\> (Linux)](#--backend-autoamfvaapi-linux)
   - [-c, --codec \<string\>](#-c---codec-string)
   - [-o, --output \<string\>](#-o---output-string)
   - [-i, --input \<string\>](#-i---input-string)
@@ -309,6 +310,9 @@ dllのバージョンを表示
 
 ### -d, --device &lt;int&gt;
 VCEEncで使用するDeviceIdを指定する。
+
+### --backend &lt;auto|amf|vaapi&gt; (Linux)
+エンコードに使用するバックエンドを指定する。`auto` (既定値) と `amf` はAMFバックエンドを使用する。`vaapi` はVA-APIバックエンド用の指定で、現段階では「未実装」エラーで終了する。
 
 ### -c, --codec &lt;string&gt;
 エンコードするコーデックの指定

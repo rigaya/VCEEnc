@@ -187,6 +187,7 @@ VCEParam::VCEParam() :
     codec(RGY_CODEC_H264),
     codecParam(),
     deviceID(-1),
+    backend(VCEBackend::Auto),
 #if ENABLE_D3D11
     interopD3d9(false),
     interopD3d11(true),

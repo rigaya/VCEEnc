@@ -58,6 +58,8 @@ libavformat_dep = dependency('libavformat', required: true)
 libavfilter_dep = dependency('libavfilter', required: true)
 libavdevice_dep = dependency('libavdevice', required: true)
 libswresample_dep = dependency('libswresample', required: true)
+libva_dep = dependency('libva', required: true)
+libva_drm_dep = dependency('libva-drm', required: true)
 
 ffmpeg_deps = [
   libavutil_dep,
@@ -821,6 +823,8 @@ all_deps = [
   threads_dep,
   dl_dep,
   m_dep,
+  libva_dep,
+  libva_drm_dep,
 ] + ffmpeg_deps
 
 if stdcxxfs_dep.found()

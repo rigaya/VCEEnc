@@ -4779,6 +4779,11 @@ RGY_ERR VCECore::init(VCEParam *prm) {
         return ret;
     }
 
+    if (prm->backend == VCEBackend::VAAPI) {
+        PrintMes(RGY_LOG_ERROR, _T("--backend vaapi is not implemented yet.\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
+
     if (const auto affinity = prm->ctrl.threadParams.get(RGYThreadType::PROCESS).affinity; affinity.mode != RGYThreadAffinityMode::ALL) {
         SetProcessAffinityMask(GetCurrentProcess(), affinity.getMask());
         PrintMes(RGY_LOG_DEBUG, _T("Set Process Affinity Mask: %s (0x%llx).\n"), affinity.to_string().c_str(), affinity.getMask());

@@ -85,6 +85,19 @@ enum {
     VCE_RC_VBR = 4,
 };
 
+enum class VCEBackend : int {
+    Auto = 0,
+    AMF = 1,
+    VAAPI = 2,
+};
+
+const CX_DESC list_vce_backend[] = {
+    { _T("auto"),  (int)VCEBackend::Auto  },
+    { _T("amf"),   (int)VCEBackend::AMF   },
+    { _T("vaapi"), (int)VCEBackend::VAAPI },
+    { NULL, 0 }
+};
+
 enum : uint8_t {
     VCE_MOTION_EST_FULL   = 0x00,
     VCE_MOTION_EST_HALF   = 0x01,
@@ -628,6 +641,7 @@ struct VCEParam {
     VCECodecParam codecParam[RGY_CODEC_NUM];
 
     int     deviceID;
+    VCEBackend backend;
 
     bool    interopD3d9;
     bool    interopD3d11;

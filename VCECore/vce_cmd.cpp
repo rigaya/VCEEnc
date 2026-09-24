@@ -190,6 +190,9 @@ tstring encoder_help() {
     str += strsprintf(_T("\n")
         _T("Basic Encoding Options: \n")
         _T("-d,--device <int>               set device id to use, default = 0\n"));
+#if ENABLE_VAAPI
+    str += _T("   --backend <auto|amf|vaapi>   select encoding backend (default: auto) [Linux]\n");
+#endif
     str += gen_cmd_help_input();
     str += strsprintf(_T("\n")
         _T("-c,--codec <string>             set encode codec\n")
@@ -568,6 +571,18 @@ int parse_one_option(const TCHAR *option_name, const TCHAR* strInput[], int& i, 
         pParams->deviceID = value;
         return 0;
     }
+#if ENABLE_VAAPI
+    if (IS_OPTION("backend")) {
+        i++;
+        const int value = get_value_from_chr(list_vce_backend, strInput[i]);
+        if (PARSE_ERROR_FLAG == value) {
+            print_cmd_error_invalid_value(option_name, strInput[i], list_vce_backend);
+            return 1;
+        }
+        pParams->backend = (VCEBackend)value;
+        return 0;
+    }
+#endif
     if (IS_OPTION("interop-d3d9")) {
         pParams->interopD3d9 = true;
         return 0;
@@ -1830,6 +1845,11 @@ tstring gen_cmd(const VCEParam *pParams, bool save_disabled_prm, RGYDisableGenCm
 
 
     OPT_NUM(_T("-d"), deviceID);
+#if ENABLE_VAAPI
+    if (pParams->backend != encPrmDefault.backend) {
+        cmd << _T(" --backend ") << get_chr_from_value(list_vce_backend, (int)pParams->backend);
+    }
+#endif
     if (pParams->codec == RGY_CODEC_AVCODEC) {
         cmd << _T(" -c av_") << char_to_tstring(pParams->common.avVideoCodec);
     } else {

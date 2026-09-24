@@ -31,6 +31,7 @@
   - [--check-avversion](#--check-avversion)
 - [Basic encoding options](#basic-encoding-options)
   - [-d, --device \<int\>](#-d---device-int)
+  - [--backend \<auto\|amf\|vaapi\> (Linux)](#--backend-autoamfvaapi-linux)
   - [-c, --codec \<string\>](#-c---codec-string)
   - [-o, --output \<string\>](#-o---output-string)
   - [-i, --input \<string\>](#-i---input-string)
@@ -391,6 +392,9 @@ Show version of ffmpeg dll
 
 ### -d, --device &lt;int&gt;
 Specify the deviceId to be used with VCEEnc. 
+
+### --backend &lt;auto|amf|vaapi&gt; (Linux)
+Select the encoding backend. `auto` (default) and `amf` use the AMF backend. `vaapi` selects the VA-API backend, which currently exits with a not-implemented error.
 
 ### -c, --codec &lt;string&gt;
 Specify the output codec

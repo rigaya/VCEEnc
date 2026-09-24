@@ -62,6 +62,8 @@ const char *get_encoder_version();
 
 #if defined(_WIN32) || defined(_WIN64)
 
+#define ENABLE_VAAPI 0
+
 #define ENABLE_PERF_COUNTER 1
 #define ENABLE_AVCODEC_OUT_THREAD 1
 #define ENABLE_AVCODEC_AUDPROCESS_THREAD 1
@@ -129,6 +131,7 @@ const char *get_encoder_version();
 #endif
 
 #else //#if defined(WIN32) || defined(WIN64)
+#define ENABLE_VAAPI 1
 #define FOR_AUO 0
 #define ENABLE_PERF_COUNTER 0
 #define ENABLE_AVCODEC_OUT_THREAD 1
