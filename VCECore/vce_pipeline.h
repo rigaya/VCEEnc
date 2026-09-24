@@ -61,6 +61,9 @@
 #include "rgy_device.h"
 #include "vce_device.h"
 #include "vce_param.h"
+#if ENABLE_VAAPI
+#include "vce_vaapi.h"
+#endif
 #include "vce_filter.h"
 #include "rgy_parallel_enc.h"
 
@@ -105,7 +108,8 @@ enum class PipelineTaskOutputType {
 enum class PipelineTaskSurfaceType {
     UNKNOWN,
     CL,
-    AMF
+    AMF,
+    SYS
 };
 
 class PipelineTaskStopWatch {
@@ -197,6 +201,8 @@ public:
     bool operator ==(std::nullptr_t) const { return frame() == nullptr; }
     const RGYFrameAMF *amf() const { return dynamic_cast<const RGYFrameAMF*>(surf); }
     RGYFrameAMF *amf() { return dynamic_cast<RGYFrameAMF*>(surf); }
+    const RGYSysFrame *sys() const { return dynamic_cast<const RGYSysFrame*>(surf); }
+    RGYSysFrame *sys() { return dynamic_cast<RGYSysFrame*>(surf); }
     const RGYCLFrame *cl() const { return dynamic_cast<const RGYCLFrame*>(surf); }
     RGYCLFrame *cl() { return dynamic_cast<RGYCLFrame*>(surf); }
     const RGYFrame *frame() const { return surf; }
@@ -221,6 +227,7 @@ private:
             if (!surf_) return PipelineTaskSurfaceType::UNKNOWN;
             if (dynamic_cast<const RGYCLFrame*>(surf_.get())) return PipelineTaskSurfaceType::CL;
             if (dynamic_cast<const RGYFrameAMF*>(surf_.get())) return PipelineTaskSurfaceType::AMF;
+            if (dynamic_cast<const RGYSysFrame*>(surf_.get())) return PipelineTaskSurfaceType::SYS;
             return PipelineTaskSurfaceType::UNKNOWN;
         }
     };
@@ -240,6 +247,13 @@ public:
         }
     }
     void setSurfaces(std::vector<std::unique_ptr<RGYCLFrame>>& frames) {
+        clear();
+        m_surfaces.resize(frames.size());
+        for (size_t i = 0; i < m_surfaces.size(); i++) {
+            m_surfaces[i] = std::make_unique<PipelineTaskSurfacesPair>(std::move(frames[i]));
+        }
+    }
+    void setSurfaces(std::vector<std::unique_ptr<RGYSysFrame>>& frames) {
         clear();
         m_surfaces.resize(frames.size());
         for (size_t i = 0; i < m_surfaces.size(); i++) {
@@ -485,6 +499,7 @@ enum class PipelineTaskType {
     AMFDEC,
     AMFVPP,
     AMFENC,
+    VAAPIENC,
     INPUT,
     INPUTCL,
     CHECKPTS,
@@ -501,6 +516,7 @@ static const TCHAR *getPipelineTaskTypeName(PipelineTaskType type) {
     case PipelineTaskType::AMFVPP:      return _T("AMFVPP");
     case PipelineTaskType::AMFDEC:      return _T("AMFDEC");
     case PipelineTaskType::AMFENC:      return _T("AMFENC");
+    case PipelineTaskType::VAAPIENC:    return _T("VAAPIENC");
     case PipelineTaskType::INPUT:       return _T("INPUT");
     case PipelineTaskType::INPUTCL:     return _T("INPUTCL");
     case PipelineTaskType::CHECKPTS:    return _T("CHECKPTS");
@@ -518,6 +534,7 @@ static const TCHAR *getPipelineTaskTypeName(PipelineTaskType type) {
 static const int getPipelineTaskAllocPriority(PipelineTaskType type) {
     switch (type) {
     case PipelineTaskType::AMFENC:    return 3;
+    case PipelineTaskType::VAAPIENC:  return 3;
     case PipelineTaskType::AMFDEC:    return 2;
     case PipelineTaskType::AMFVPP:    return 1;
     case PipelineTaskType::INPUT:
@@ -667,6 +684,20 @@ public:
         }
         m_workSurfs.setSurfaces(frames);
         m_workSurfAllocWidth = frame.width;   // 実際に確保したサイズを記録する。requiredSurfOut()の戻り値ではなく必ずここの実引数から取ること
+        m_workSurfAllocHeight = frame.height;
+        return RGY_ERR_NONE;
+    }
+    RGY_ERR workSurfacesAllocSys(const int numFrames, const RGYFrameInfo& frame) {
+        auto sts = workSurfacesClear();
+        if (sts != RGY_ERR_NONE) return sts;
+        std::vector<std::unique_ptr<RGYSysFrame>> frames(numFrames);
+        for (auto& sys : frames) {
+            sys = std::make_unique<RGYSysFrame>();
+            sts = sys->allocate(frame);
+            if (sts != RGY_ERR_NONE) return sts;
+        }
+        m_workSurfs.setSurfaces(frames);
+        m_workSurfAllocWidth = frame.width;
         m_workSurfAllocHeight = frame.height;
         return RGY_ERR_NONE;
     }
@@ -870,10 +901,36 @@ public:
         if (m_stopwatch) m_stopwatch->add(0, 2);
         return err;
     }
+    RGY_ERR LoadNextFrameSys() {
+        auto surfWork = getWorkSurf();
+        if (!surfWork || surfWork.sys() == nullptr) return RGY_ERR_NOT_ENOUGH_BUFFER;
+        auto *sys = surfWork.sys();
+        auto err = m_input->LoadNextFrame(sys);
+        if (err == RGY_ERR_MORE_DATA) return RGY_ERR_MORE_BITSTREAM;
+        if (err != RGY_ERR_NONE) {
+            PrintMes(RGY_LOG_ERROR, _T("Error in reader: %s.\n"), get_err_mes(err));
+            return err;
+        }
+        const auto [readerWidth, readerHeight] = getReaderOutputResolution();
+        if (m_lastInputWidth > 0 && (readerWidth != m_lastInputWidth || readerHeight != m_lastInputHeight)) {
+            PrintMes(RGY_LOG_ERROR, _T("Input resolution changed from %dx%d to %dx%d; VA-API encode does not support resolution changes.\n"),
+                m_lastInputWidth, m_lastInputHeight, readerWidth, readerHeight);
+            return RGY_ERR_UNSUPPORTED;
+        }
+        printInputResolutionChange(readerWidth, readerHeight);
+        if (m_endPts >= 0 && sys->timestamp() != AV_NOPTS_VALUE && sys->timestamp() >= m_endPts) return RGY_ERR_MORE_BITSTREAM;
+        sys->setInputFrameId(m_inFrames);
+        m_outQeueue.push_back(std::make_unique<PipelineTaskOutputSurf>(surfWork));
+        m_inFrames++;
+        return RGY_ERR_NONE;
+    }
     virtual RGY_ERR sendFrame([[maybe_unused]] std::unique_ptr<PipelineTaskOutput>& frame) override {
         if (m_stopwatch) m_stopwatch->set(0);
         if (workSurfaceType() == PipelineTaskSurfaceType::CL) {
             return LoadNextFrameCL();
+        }
+        if (workSurfaceType() == PipelineTaskSurfaceType::SYS) {
+            return LoadNextFrameSys();
         }
         return LoadNextFrameAMF();
     }
@@ -2040,17 +2097,54 @@ public:
     }
 };
 
-class PipelineTaskAMFEncode : public PipelineTask {
+class PipelineTaskEncodeCommon : public PipelineTask {
 protected:
-    amf::AMFComponentPtr m_encoder;
     RGY_CODEC m_encCodec;
-    AMFParams& m_encParams;
     RGYTimecode *m_timecode;
     RGYTimestamp *m_encTimestamp;
     rgy_rational<int> m_outputTimebase;
-    RGYListRef<RGYBitstream> m_bitStreamOut;
     const RGYHDR10Plus *m_hdr10plus;
     const DOVIRpu *m_doviRpu;
+    PipelineTaskEncodeCommon(PipelineTaskType type, amf::AMFContextPtr context, int outMaxQueueSize,
+        RGY_CODEC codec, RGYTimecode *timecode, RGYTimestamp *encTimestamp, rgy_rational<int> outputTimebase,
+        const RGYHDR10Plus *hdr10plus, const DOVIRpu *doviRpu, std::shared_ptr<RGYLog> log)
+        : PipelineTask(type, context, outMaxQueueSize, log), m_encCodec(codec), m_timecode(timecode),
+        m_encTimestamp(encTimestamp), m_outputTimebase(outputTimebase), m_hdr10plus(hdr10plus), m_doviRpu(doviRpu) {}
+    RGY_ERR registerEncodeFrame(RGYFrame *frame, int64_t pts, int64_t duration, int inputFrameId) {
+        if (inputFrameId < 0) {
+            PrintMes(RGY_LOG_ERROR, _T("Invalid inputFrameId: %d.\n"), inputFrameId);
+            return RGY_ERR_UNKNOWN;
+        }
+        std::vector<std::shared_ptr<RGYFrameData>> metadatalist;
+        if ((m_encCodec == RGY_CODEC_HEVC || m_encCodec == RGY_CODEC_AV1) && frame) {
+            metadatalist = frame->dataList();
+            if (m_hdr10plus) {
+                // 外部からHDR10+を読み込む場合、metadatalist 内のHDR10+の削除
+                metadatalist.erase(std::remove_if(metadatalist.begin(), metadatalist.end(), [](const auto& data) {
+                    return data->dataType() == RGY_FRAME_DATA_HDR10PLUS;
+                }), metadatalist.end());
+            }
+            if (m_doviRpu) {
+                // 外部からdoviを読み込む場合、metadatalist 内のdovi rpuの削除
+                metadatalist.erase(std::remove_if(metadatalist.begin(), metadatalist.end(), [](const auto& data) {
+                    return data->dataType() == RGY_FRAME_DATA_DOVIRPU;
+                }), metadatalist.end());
+            }
+        }
+        if (m_timecode) m_timecode->write(pts, m_outputTimebase);
+        m_encTimestamp->add(pts, inputFrameId, m_inFrames, duration, metadatalist);
+        m_inFrames++;
+        //エンコーダまでたどり着いたフレームについてはdataListを解放
+        if (frame) frame->clearDataList();
+        return RGY_ERR_NONE;
+    }
+};
+
+class PipelineTaskAMFEncode : public PipelineTaskEncodeCommon {
+protected:
+    amf::AMFComponentPtr m_encoder;
+    AMFParams& m_encParams;
+    RGYListRef<RGYBitstream> m_bitStreamOut;
     std::thread m_outputThread;
     std::atomic<bool> m_abortOutput;
     std::atomic<bool> m_outputFinished;
@@ -2062,8 +2156,8 @@ public:
     PipelineTaskAMFEncode(
         amf::AMFComponentPtr enc, RGY_CODEC encCodec, AMFParams& encParams, amf::AMFContextPtr context, int outMaxQueueSize,
         RGYTimecode *timecode, RGYTimestamp *encTimestamp, rgy_rational<int> outputTimebase, const RGYHDR10Plus *hdr10plus, const DOVIRpu *doviRpu, std::shared_ptr<RGYLog> log)
-        : PipelineTask(PipelineTaskType::AMFENC, context, outMaxQueueSize, log),
-        m_encoder(enc), m_encCodec(encCodec), m_encParams(encParams), m_timecode(timecode), m_encTimestamp(encTimestamp), m_outputTimebase(outputTimebase), m_bitStreamOut(), m_hdr10plus(hdr10plus), m_doviRpu(doviRpu),
+        : PipelineTaskEncodeCommon(PipelineTaskType::AMFENC, context, outMaxQueueSize, encCodec, timecode, encTimestamp, outputTimebase, hdr10plus, doviRpu, log),
+        m_encoder(enc), m_encParams(encParams), m_bitStreamOut(),
         m_outputThread(), m_abortOutput(false), m_outputFinished(false), m_outputStatus(RGY_ERR_NONE), m_outputMutex(), m_outputQueue(), m_drainSent(false) {
     };
     virtual ~PipelineTaskAMFEncode() {
@@ -2202,33 +2296,6 @@ public:
             return RGY_ERR_UNSUPPORTED;
         }
 
-        std::vector<std::shared_ptr<RGYFrameData>> metadatalist;
-        if (m_encCodec == RGY_CODEC_HEVC || m_encCodec == RGY_CODEC_AV1) {
-            if (frame) {
-                metadatalist = dynamic_cast<PipelineTaskOutputSurf *>(frame.get())->surf().frame()->dataList();
-            }
-            if (m_hdr10plus) {
-                // 外部からHDR10+を読み込む場合、metadatalist 内のHDR10+の削除
-                for (auto it = metadatalist.begin(); it != metadatalist.end(); ) {
-                    if ((*it)->dataType() == RGY_FRAME_DATA_HDR10PLUS) {
-                        it = metadatalist.erase(it);
-                    } else {
-                        it++;
-                    }
-                }
-            }
-            if (m_doviRpu) {
-                // 外部からdoviを読み込む場合、metadatalist 内のdovi rpuの削除
-                for (auto it = metadatalist.begin(); it != metadatalist.end(); ) {
-                    if ((*it)->dataType() == RGY_FRAME_DATA_DOVIRPU) {
-                        it = metadatalist.erase(it);
-                    } else {
-                        it++;
-                    }
-                }
-            }
-        }
-
         //以下の処理は
         amf::AMFSurfacePtr pSurface = nullptr;
         RGYFrameAMF *surfEncodeIn = (frame) ? dynamic_cast<PipelineTaskOutputSurf *>(frame.get())->surf().amf() : nullptr;
@@ -2236,12 +2303,7 @@ public:
         if (surfEncodeIn) {
             const int64_t pts = surfEncodeIn->timestamp();
             const int64_t duration = surfEncodeIn->duration();
-            const auto frameDataList = surfEncodeIn->dataList();
             const auto inputFrameId = surfEncodeIn->inputFrameId();
-            if (inputFrameId < 0) {
-                PrintMes(RGY_LOG_ERROR, _T("Invalid inputFrameId: %d.\n"), inputFrameId);
-                return RGY_ERR_UNKNOWN;
-            }
             pSurface = surfEncodeIn->detachSurface();
             //現状VCEはインタレをサポートしないので、強制的にプログレとして処理する
             pSurface->SetFrameType(amf::AMF_FRAME_PROGRESSIVE);
@@ -2269,14 +2331,8 @@ public:
 
             pSurface->SetProperty(AMF_PARAM_STATISTICS_FEEDBACK(m_encCodec), true);
 
-            if (m_timecode) {
-                m_timecode->write(pts, m_outputTimebase);
-            }
-            m_encTimestamp->add(pts, inputFrameId, m_inFrames, duration, metadatalist);
-            m_inFrames++;
-
-            //エンコーダまでたどり着いたフレームについてはdataListを解放
-            surfEncodeIn->clearDataList();
+            auto registerErr = registerEncodeFrame(surfEncodeIn, pts, duration, inputFrameId);
+            if (registerErr != RGY_ERR_NONE) return registerErr;
         }
         if (m_stopwatch) m_stopwatch->add(0, 0);
 
@@ -2331,6 +2387,81 @@ public:
         }
     }
 };
+
+#if ENABLE_VAAPI
+class PipelineTaskVAAPIEncode : public PipelineTaskEncodeCommon {
+    VCEEncoderVA *m_encoder;
+    RGY_ERR m_receiveStatus;
+    bool m_drainSent;
+public:
+    PipelineTaskVAAPIEncode(VCEEncoderVA *enc, RGY_CODEC codec, amf::AMFContextPtr context, int outMaxQueueSize,
+        RGYTimecode *timecode, RGYTimestamp *encTimestamp, rgy_rational<int> outputTimebase,
+        const RGYHDR10Plus *hdr10plus, const DOVIRpu *doviRpu, std::shared_ptr<RGYLog> log)
+        : PipelineTaskEncodeCommon(PipelineTaskType::VAAPIENC, context, outMaxQueueSize, codec, timecode, encTimestamp,
+            outputTimebase, hdr10plus, doviRpu, log), m_encoder(enc), m_receiveStatus(RGY_ERR_NONE), m_drainSent(false) {}
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfIn() override {
+        if (!m_encoder) return std::nullopt;
+        const auto csp = m_encoder->bitdepth() > 8 ? RGY_CSP_P010 : RGY_CSP_NV12;
+        return std::make_pair(RGYFrameInfo(m_encoder->width(), m_encoder->height(), csp, m_encoder->bitdepth(), RGY_PICSTRUCT_FRAME, RGY_MEM_TYPE_CPU), 0);
+    }
+    virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override { return std::nullopt; }
+    virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        if (frame && frame->type() != PipelineTaskOutputType::SURFACE) return RGY_ERR_UNSUPPORTED;
+        RGYFrame *input = nullptr;
+        int64_t pts = 0, duration = 0;
+        int inputFrameId = -1;
+        if (frame) {
+            auto *surface = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
+            if (!surface || !surface->surf().sys()) return RGY_ERR_UNSUPPORTED;
+            frame->depend_clear();
+            input = surface->surf().frame();
+            pts = input->timestamp();
+            duration = input->duration();
+            inputFrameId = input->inputFrameId();
+        }
+        auto submitAndCollect = [&](RGYFrame *submitFrame) {
+            for (;;) {
+                auto err = m_encoder->submit(submitFrame);
+                if (err != RGY_ERR_MORE_DATA) return err;
+                bool received = false;
+                for (;;) {
+                    std::shared_ptr<RGYBitstream> bs;
+                    err = m_encoder->receive(bs);
+                    if (err == RGY_ERR_MORE_DATA) break;
+                    if (err == RGY_ERR_MORE_BITSTREAM) return RGY_ERR_DEVICE_FAILED;
+                    if (err != RGY_ERR_NONE) return err;
+                    received = true;
+                    m_outQeueue.push_back(std::make_unique<PipelineTaskOutputBitstream>(std::move(bs)));
+                }
+                if (!received) return RGY_ERR_DEVICE_FAILED;
+            }
+        };
+        if (!frame && !m_drainSent) {
+            auto err = submitAndCollect(nullptr);
+            if (err != RGY_ERR_NONE) return err;
+            m_drainSent = true;
+        }
+        if (frame) {
+            auto err = submitAndCollect(input);
+            if (err != RGY_ERR_NONE) return err;
+            err = registerEncodeFrame(input, pts, duration, inputFrameId);
+            if (err != RGY_ERR_NONE) return err;
+        }
+        for (;;) {
+            std::shared_ptr<RGYBitstream> bs;
+            auto err = m_encoder->receive(bs);
+            if (err == RGY_ERR_MORE_DATA) break;
+            if (err == RGY_ERR_MORE_BITSTREAM) {
+                m_receiveStatus = RGY_ERR_MORE_DATA;
+                break;
+            }
+            if (err != RGY_ERR_NONE) return err;
+            m_outQeueue.push_back(std::make_unique<PipelineTaskOutputBitstream>(std::move(bs)));
+        }
+        return (m_drainSent && m_receiveStatus == RGY_ERR_MORE_DATA) ? RGY_ERR_MORE_DATA : RGY_ERR_NONE;
+    }
+};
+#endif
 
 class PipelineTaskAMFPreProcess : public PipelineTask {
 protected:

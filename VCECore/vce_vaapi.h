@@ -37,6 +37,10 @@
 #include "rgy_err.h"
 #include "rgy_log.h"
 
+class RGYFrame;
+struct RGYBitstream;
+struct VCEParam;
+
 enum VCEVAEncRCMode : uint32_t {
     VCE_VA_RC_CBR  = 1u << 0,
     VCE_VA_RC_VBR  = 1u << 1,
@@ -80,6 +84,31 @@ protected:
     void *m_display;
     std::unordered_map<RGY_CODEC, VCEVAEncCaps> m_encCaps;
     std::shared_ptr<RGYLog> m_log;
+};
+
+class VCEEncoderVA {
+public:
+    VCEEncoderVA();
+    ~VCEEncoderVA();
+    RGY_ERR init(VCEDeviceVA *dev, const VCEParam *prm, int width, int height,
+        AVRational fps, AVRational timebase, std::shared_ptr<RGYLog> log);
+    RGY_ERR submit(RGYFrame *frame);
+    RGY_ERR receive(std::shared_ptr<RGYBitstream>& bs);
+    tstring paramString() const;
+    int width() const { return m_width; }
+    int height() const { return m_height; }
+    int bitdepth() const { return m_bitdepth; }
+protected:
+    std::unique_ptr<AVCodecContext, RGYAVDeleter<AVCodecContext>> m_codecCtx;
+    std::unique_ptr<AVBufferRef, RGYAVDeleter<AVBufferRef>> m_hwframes;
+    std::unique_ptr<AVFrame, RGYAVDeleter<AVFrame>> m_frameHW;
+    std::unique_ptr<AVFrame, RGYAVDeleter<AVFrame>> m_frameSW;
+    std::unique_ptr<AVPacket, RGYAVDeleter<AVPacket>> m_pkt;
+    std::shared_ptr<RGYLog> m_log;
+    RGY_CODEC m_codec;
+    int m_width, m_height, m_bitdepth;
+    int m_rateControl;
+    AVRational m_timebase;
 };
 
 #endif // ENABLE_VAAPI

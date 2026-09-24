@@ -241,6 +241,9 @@ VCECore::VCECore() :
     m_pTrimParam(nullptr),
     m_pDecoder(),
     m_pEncoder(),
+#if ENABLE_VAAPI
+    m_encVA(),
+#endif
     m_thDecoder(),
     m_thOutput(),
     m_params(),
@@ -275,6 +278,9 @@ void VCECore::Terminate() {
         m_pEncoder = nullptr;
         PrintMes(RGY_LOG_DEBUG, _T("Closed Encoder.\n"));
     }
+#if ENABLE_VAAPI
+    m_encVA.reset();
+#endif
 
     if (m_pDecoder != nullptr) {
         PrintMes(RGY_LOG_DEBUG, _T("Closing Decoder...\n"));
@@ -854,6 +860,23 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
 }
 
 std::pair<RGY_ERR, VideoInfo> VCECore::GetOutputVideoInfo() {
+#if ENABLE_VAAPI
+    if (m_backend == VCEBackend::VAAPI && m_encVA) {
+        VideoInfo info;
+        info.codec = m_encCodec;
+        info.csp = m_encCSP;
+        info.bitdepth = m_encVA->bitdepth();
+        info.srcWidth = info.dstWidth = m_encVA->width();
+        info.srcHeight = info.dstHeight = m_encVA->height();
+        info.fpsN = m_encFps.n();
+        info.fpsD = m_encFps.d();
+        info.sar[0] = m_sar.n();
+        info.sar[1] = m_sar.d();
+        info.picstruct = RGY_PICSTRUCT_FRAME;
+        info.vui = m_encVUI;
+        return { RGY_ERR_NONE, info };
+    }
+#endif
     if (m_pEncoder) {
         return { RGY_ERR_NONE, videooutputinfo(
             m_encCodec,
@@ -1539,7 +1562,11 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.overlay.size() > 0)  filterPipeline.push_back(VppType::CL_OVERLAY);
 
     // AviUtlの共有メモリ入力は開始時に解像度が固定されるため、待機用OpenCLブロックを追加する必要はない。
-    if (filterPipeline.size() == 0 && inputParam->input.type != RGY_INPUT_FMT_SM) {
+    if (filterPipeline.size() == 0 && inputParam->input.type != RGY_INPUT_FMT_SM
+#if ENABLE_VAAPI
+        && m_backend != VCEBackend::VAAPI
+#endif
+    ) {
         // フィルタが1つも無い構成ではOpenCLブロック自体が無く、解像度変更を吸収する場所が無い(AMFエンコーダがAMF_INVALID_RESOLUTIONで停止する)
         // このため等倍のCL_CROPを1つ常設してOpenCLブロックを作る。これはInitFilters()で先頭・末尾のCspCrop2つに展開され、
         // reconstructFilterChain()が要求する「先頭と末尾がCspCrop」の形になる
@@ -3414,14 +3441,28 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
     if (prm->codec == RGY_CODEC_RAW || prm->codec == RGY_CODEC_AVCODEC) {
         return RGY_ERR_NONE;
     }
-    if (m_backend == VCEBackend::VAAPI) {
-        PrintMes(RGY_LOG_ERROR, _T("VA-API encoding is not implemented yet.\n"));
-        return RGY_ERR_UNSUPPORTED;
-    }
     AMF_RESULT res = AMF_OK;
 
     m_encWidth  = (m_pLastFilterParam) ? m_pLastFilterParam->frameOut.width  : prm->input.srcWidth  - prm->input.crop.e.left - prm->input.crop.e.right;
     m_encHeight = (m_pLastFilterParam) ? m_pLastFilterParam->frameOut.height : prm->input.srcHeight - prm->input.crop.e.bottom - prm->input.crop.e.up;
+
+#if ENABLE_VAAPI
+    if (m_backend == VCEBackend::VAAPI) {
+        if (!m_vpFilters.empty()) {
+            PrintMes(RGY_LOG_ERROR, _T("VA-API + OpenCL filters are not supported yet.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        m_encCodec = prm->codec;
+        m_encCSP = prm->outputDepth > 8 ? RGY_CSP_P010 : RGY_CSP_NV12;
+        m_encVA = std::make_unique<VCEEncoderVA>();
+        const AVRational fps{ m_encFps.n(), m_encFps.d() };
+        const AVRational timebase{ m_outputTimebase.n(), m_outputTimebase.d() };
+        auto err = m_encVA->init(m_dev->va(), prm, m_encWidth, m_encHeight, fps, timebase, m_pLog);
+        if (err != RGY_ERR_NONE) return err;
+        PrintMes(RGY_LOG_INFO, _T("%s\n"), m_encVA->paramString().c_str());
+        return RGY_ERR_NONE;
+    }
+#endif
 
     if (m_pLog->getLogLevel(RGY_LOGT_CORE) <= RGY_LOG_DEBUG) {
         TCHAR cpuInfo[256] = { 0 };
@@ -4711,6 +4752,12 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
     if (m_pEncoder) {
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskAMFEncode>(m_pEncoder, m_encCodec, m_params, m_dev->context(), 1, m_timecode.get(), m_encTimestamp.get(), m_outputTimebase, m_hdr10plus.get(), m_dovirpu.get(), m_pLog));
     } else {
+#if ENABLE_VAAPI
+        if (m_encVA) {
+            m_pipelineTasks.push_back(std::make_unique<PipelineTaskVAAPIEncode>(m_encVA.get(), m_encCodec, m_dev->context(), 1,
+                m_timecode.get(), m_encTimestamp.get(), m_outputTimebase, m_hdr10plus.get(), m_dovirpu.get(), m_pLog));
+        } else
+#endif
         m_pipelineTasks.push_back(std::make_unique<PipelineTaskOutputRaw>(m_dev->context(), m_pFileWriter.get(), m_timecode.get(), m_outputTimebase, m_dev->cl(), 1, m_pLog));
     }
 
@@ -4762,6 +4809,7 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
         int t1RequestNumFrame = 0;
         RGYFrameInfo allocateFrameInfo;
         bool allocateOpenCLFrame = false;
+        bool allocateSysFrame = false;
         if (t0Alloc.has_value() && t1Alloc.has_value()) {
             t0RequestNumFrame = t0Alloc.value().second;
             t1RequestNumFrame = t1Alloc.value().second;
@@ -4798,6 +4846,9 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
         if (t0->taskType() == PipelineTaskType::OPENCL) {
             t0RequestNumFrame += 4; // 内部でフレームが増える場合に備えて
         }
+        if (t1->taskType() == PipelineTaskType::VAAPIENC && t0->taskType() == PipelineTaskType::INPUT) {
+            allocateSysFrame = true;
+        }
         if (allocateOpenCLFrame) {
             const int requestNumFrames = std::max(1, t0RequestNumFrame + t1RequestNumFrame + t0->additionalOutputSurfaces() + asyncdepth + 1);
             PrintMes(RGY_LOG_DEBUG, _T("AllocFrames: %s-%s, type: CL, %s %dx%d, request %d frames\n"),
@@ -4806,6 +4857,18 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
             auto sts = t0->workSurfacesAllocCL(requestNumFrames, allocateFrameInfo, m_dev->cl().get());
             if (sts != RGY_ERR_NONE) {
                 PrintMes(RGY_LOG_ERROR, _T("AllocFrames:   Failed to allocate frames for %s-%s: %s."), t0->print().c_str(), t1->print().c_str(), get_err_mes(sts));
+                return sts;
+            }
+        }
+        if (allocateSysFrame) {
+            const int requestNumFrames = std::max(1, t0RequestNumFrame + t1RequestNumFrame + asyncdepth + 1);
+            allocateFrameInfo.mem_type = RGY_MEM_TYPE_CPU;
+            PrintMes(RGY_LOG_DEBUG, _T("AllocFrames: %s-%s, type: SYS, %s %dx%d, request %d frames\n"),
+                t0->print().c_str(), t1->print().c_str(), RGY_CSP_NAMES[allocateFrameInfo.csp],
+                allocateFrameInfo.width, allocateFrameInfo.height, requestNumFrames);
+            auto sts = t0->workSurfacesAllocSys(requestNumFrames, allocateFrameInfo);
+            if (sts != RGY_ERR_NONE) {
+                PrintMes(RGY_LOG_ERROR, _T("AllocFrames: Failed to allocate system frames: %s.\n"), get_err_mes(sts));
                 return sts;
             }
         }
@@ -5627,10 +5690,12 @@ void VCECore::PrintEncoderParam() {
 }
 
 tstring VCECore::GetEncoderParam() {
+#if ENABLE_VAAPI
     if (m_backend == VCEBackend::VAAPI) {
-        return strsprintf(_T("%s\nBackend:       vaapi\nGPU:           %s\n"),
-            get_encoder_version(), m_dev ? m_dev->getGPUInfo().c_str() : _T(""));
+        return strsprintf(_T("%s\nBackend:       vaapi\nGPU:           %s\n%s\n"),
+            get_encoder_version(), m_dev ? m_dev->getGPUInfo().c_str() : _T(""), m_encVA ? m_encVA->paramString().c_str() : _T(""));
     }
+#endif
     const amf::AMFPropertyStorage *pProperty = m_pEncoder;
 
     auto GetPropertyStr = [pProperty](const wchar_t *pName) {

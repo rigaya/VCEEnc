@@ -47,6 +47,9 @@
 #include "vce_param.h"
 #include "vce_amf.h"
 #include "vce_pipeline.h"
+#if ENABLE_VAAPI
+#include "vce_vaapi.h"
+#endif
 #include "rgy_filter.h"
 #include "rgy_filter_ssim.h"
 #include "rgy_device_usage.h"
@@ -202,6 +205,9 @@ protected:
 
     amf::AMFComponentPtr m_pDecoder;
     amf::AMFComponentPtr m_pEncoder;
+#if ENABLE_VAAPI
+    std::unique_ptr<VCEEncoderVA> m_encVA;
+#endif
 #if THREAD_DEC_USE_FUTURE
     std::future<RGY_ERR> m_thDecoder;
 #else

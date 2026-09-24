@@ -25,6 +25,10 @@
 // ------------------------------------------------------------------------------------------
 
 #include "vce_vaapi.h"
+#include "vce_param.h"
+#include "rgy_frame.h"
+#include "rgy_bitstream.h"
+#include "vce_util.h"
 
 #if ENABLE_VAAPI
 
@@ -367,6 +371,172 @@ tstring VCEDeviceVA::capsString(RGY_CODEC codec) {
     if (rcModes.empty()) rcModes = _T("none");
     return strsprintf(_T("  available: %s\n  10-bit: %s\n  rate control: %s\n  max ref (L0/L1): %d/%d\n  max resolution: %dx%d"),
         caps.available ? _T("yes") : _T("no"), caps.support10bit ? _T("yes") : _T("no"), rcModes.c_str(), caps.maxRefL0, caps.maxRefL1, caps.maxWidth, caps.maxHeight);
+}
+
+VCEEncoderVA::VCEEncoderVA() :
+    m_codecCtx(nullptr, RGYAVDeleter<AVCodecContext>(avcodec_free_context)),
+    m_hwframes(nullptr, RGYAVDeleter<AVBufferRef>(av_buffer_unref)),
+    m_frameHW(nullptr, RGYAVDeleter<AVFrame>(av_frame_free)),
+    m_frameSW(nullptr, RGYAVDeleter<AVFrame>(av_frame_free)),
+    m_pkt(nullptr, RGYAVDeleter<AVPacket>(av_packet_free)),
+    m_log(), m_codec(RGY_CODEC_UNKNOWN), m_width(0), m_height(0), m_bitdepth(8), m_rateControl(VCE_RC_CQP), m_timebase{ 1, 30 } {
+}
+
+VCEEncoderVA::~VCEEncoderVA() = default;
+
+RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int height,
+    AVRational fps, AVRational timebase, std::shared_ptr<RGYLog> log) {
+    if (dev == nullptr || prm == nullptr || dev->hwdevice() == nullptr || width <= 0 || height <= 0) return RGY_ERR_INVALID_PARAM;
+    m_log = std::move(log);
+    m_codec = prm->codec;
+    m_width = width;
+    m_height = height;
+    m_bitdepth = prm->outputDepth;
+    m_rateControl = prm->rateControl;
+    m_timebase = timebase;
+    const char *name = codec_name(prm->codec);
+    const AVCodec *codec = name ? avcodec_find_encoder_by_name(name) : nullptr;
+    if (codec == nullptr) {
+        if (m_log) m_log->write(RGY_LOG_ERROR, RGY_LOGT_DEV, _T("VA-API encoder %s was not found.\n"), char_to_tstring(name ? name : "unknown").c_str());
+        return RGY_ERR_UNSUPPORTED;
+    }
+    if (prm->bframes.has_value() && m_log) {
+        m_log->write(RGY_LOG_WARN, RGY_LOGT_DEV, _T("--bframes is not supported with --backend vaapi in this step; using 0.\n"));
+    }
+
+    AVBufferRef *framesRaw = av_hwframe_ctx_alloc(dev->hwdevice());
+    if (framesRaw == nullptr) return RGY_ERR_NULL_PTR;
+    m_hwframes.reset(framesRaw);
+    auto *frames = (AVHWFramesContext *)m_hwframes->data;
+    frames->format = AV_PIX_FMT_VAAPI;
+    frames->sw_format = (prm->outputDepth > 8) ? AV_PIX_FMT_P010 : AV_PIX_FMT_NV12;
+    frames->width = width;
+    frames->height = height;
+    frames->initial_pool_size = 8;
+    int ret = av_hwframe_ctx_init(m_hwframes.get());
+    if (ret < 0) return RGY_ERR_DEVICE_FAILED;
+
+    AVCodecContext *ctxRaw = avcodec_alloc_context3(codec);
+    if (ctxRaw == nullptr) return RGY_ERR_NULL_PTR;
+    m_codecCtx.reset(ctxRaw);
+    auto *ctx = m_codecCtx.get();
+    ctx->width = width;
+    ctx->height = height;
+    ctx->time_base = timebase;
+    ctx->framerate = fps;
+    ctx->pix_fmt = AV_PIX_FMT_VAAPI;
+    ctx->gop_size = prm->nGOPLen > 0 ? prm->nGOPLen : fps.num * 2 / fps.den;
+    ctx->max_b_frames = 0;
+    ctx->bit_rate = (int64_t)prm->nBitrate * 1000;
+    ctx->rc_max_rate = (int64_t)prm->nMaxBitrate * 1000;
+    ctx->rc_buffer_size = prm->nVBVBufferSize * 1000;
+    ctx->sample_aspect_ratio = AVRational{ 1, 1 };
+    if (prm->outputDepth > 8 && prm->codec == RGY_CODEC_HEVC) ctx->profile = AV_PROFILE_HEVC_MAIN_10;
+    ctx->hw_frames_ctx = av_buffer_ref(m_hwframes.get());
+    if (ctx->hw_frames_ctx == nullptr) return RGY_ERR_NULL_PTR;
+
+    AVDictionary *opts = nullptr;
+    const char *rcMode = prm->rateControl == VCE_RC_CQP ? "CQP" : prm->rateControl == VCE_RC_CBR ? "CBR" : "VBR";
+    av_dict_set(&opts, "rc_mode", rcMode, 0);
+    if (prm->rateControl == VCE_RC_CQP) {
+        ctx->flags |= AV_CODEC_FLAG_QSCALE;
+        ctx->global_quality = prm->qp.qpP * FF_QP2LAMBDA;
+        ctx->i_quant_factor = (float)prm->qp.qpI / (float)(std::max)(1, prm->qp.qpP);
+        ctx->b_quant_factor = (float)prm->qp.qpB / (float)(std::max)(1, prm->qp.qpP);
+    }
+    ret = avcodec_open2(ctx, codec, &opts);
+    av_dict_free(&opts);
+    if (ret < 0) {
+        char errbuf[AV_ERROR_MAX_STRING_SIZE] = {};
+        av_strerror(ret, errbuf, sizeof(errbuf));
+        if (m_log) m_log->write(RGY_LOG_ERROR, RGY_LOGT_DEV, _T("Failed to open VA-API encoder %s: %s.\n"), char_to_tstring(name).c_str(), char_to_tstring(errbuf).c_str());
+        return RGY_ERR_UNSUPPORTED;
+    }
+    m_frameHW.reset(av_frame_alloc());
+    m_frameSW.reset(av_frame_alloc());
+    m_pkt.reset(av_packet_alloc());
+    if (!m_frameHW || !m_frameSW || !m_pkt) return RGY_ERR_NULL_PTR;
+    m_frameHW->format = AV_PIX_FMT_VAAPI;
+    m_frameHW->width = width;
+    m_frameHW->height = height;
+    if (m_log) m_log->write(RGY_LOG_INFO, RGY_LOGT_DEV, _T("VA-API encoder initialized: %s %dx%d, %dbit, %d/%d fps.\n"),
+        char_to_tstring(name).c_str(), width, height, m_bitdepth, fps.num, fps.den);
+    return RGY_ERR_NONE;
+}
+
+RGY_ERR VCEEncoderVA::submit(RGYFrame *frame) {
+    if (!m_codecCtx) return RGY_ERR_NOT_INITIALIZED;
+    if (frame == nullptr) {
+        const int ret = avcodec_send_frame(m_codecCtx.get(), nullptr);
+        return ret == AVERROR(EAGAIN) ? RGY_ERR_MORE_DATA : (ret < 0 ? RGY_ERR_DEVICE_FAILED : RGY_ERR_NONE);
+    }
+    auto *sys = dynamic_cast<RGYSysFrame *>(frame);
+    if (sys == nullptr) return RGY_ERR_UNSUPPORTED;
+    const auto& info = sys->frameInfo();
+    if (info.width != m_width || info.height != m_height) return RGY_ERR_INVALID_VIDEO_PARAM;
+    av_frame_unref(m_frameSW.get());
+    m_frameSW->format = (m_bitdepth > 8) ? AV_PIX_FMT_P010 : AV_PIX_FMT_NV12;
+    m_frameSW->width = m_width;
+    m_frameSW->height = m_height;
+    for (int plane = 0; plane < 4; plane++) {
+        m_frameSW->data[plane] = info.ptr[plane];
+        m_frameSW->linesize[plane] = info.pitch[plane];
+    }
+    m_frameSW->pts = info.timestamp;
+    m_frameSW->duration = (int64_t)info.duration;
+    m_frameSW->pict_type = AV_PICTURE_TYPE_NONE;
+    av_frame_unref(m_frameHW.get());
+    m_frameHW->format = AV_PIX_FMT_VAAPI;
+    m_frameHW->width = m_width;
+    m_frameHW->height = m_height;
+    int ret = av_hwframe_get_buffer(m_hwframes.get(), m_frameHW.get(), 0);
+    if (ret < 0) return RGY_ERR_DEVICE_FAILED;
+    ret = av_hwframe_transfer_data(m_frameHW.get(), m_frameSW.get(), 0);
+    if (ret < 0) return RGY_ERR_DEVICE_FAILED;
+    m_frameHW->pts = info.timestamp;
+    m_frameHW->duration = (int64_t)info.duration;
+    ret = avcodec_send_frame(m_codecCtx.get(), m_frameHW.get());
+    return ret == AVERROR(EAGAIN) ? RGY_ERR_MORE_DATA : (ret < 0 ? RGY_ERR_DEVICE_FAILED : RGY_ERR_NONE);
+}
+
+RGY_ERR VCEEncoderVA::receive(std::shared_ptr<RGYBitstream>& bs) {
+    bs.reset();
+    if (!m_codecCtx || !m_pkt) return RGY_ERR_NOT_INITIALIZED;
+    const int ret = avcodec_receive_packet(m_codecCtx.get(), m_pkt.get());
+    if (ret == AVERROR(EAGAIN)) return RGY_ERR_MORE_DATA;
+    if (ret == AVERROR_EOF) return RGY_ERR_MORE_BITSTREAM;
+    if (ret < 0) return RGY_ERR_DEVICE_FAILED;
+    auto output = std::make_shared<RGYBitstream>(RGYBitstreamInit());
+    const int64_t pts = m_pkt->pts == AV_NOPTS_VALUE ? 0 : m_pkt->pts;
+    const int64_t dts = m_pkt->dts == AV_NOPTS_VALUE ? pts : m_pkt->dts;
+    const auto duration = m_pkt->duration;
+    const auto copyErr = output->copy(m_pkt->data, m_pkt->size, pts, dts, duration);
+    if (copyErr != RGY_ERR_NONE) return copyErr;
+    if (m_codec == RGY_CODEC_AV1) {
+        const auto units = parse_unit_av1(output->data(), output->size());
+        const auto hasTemporalDelimiter = std::find_if(units.begin(), units.end(), [](const auto& unit) {
+            return unit->type == OBU_TEMPORAL_DELIMITER;
+        }) != units.end();
+        if (!hasTemporalDelimiter) {
+            // 後段はTemporal DelimiterでAV1フレームを分割するため、VAAPI出力に無い場合は補う。
+            std::vector<uint8_t> packetWithTemporalDelimiter{ 0x12, 0x00 };
+            packetWithTemporalDelimiter.insert(packetWithTemporalDelimiter.end(), output->data(), output->data() + output->size());
+            const auto prependErr = output->copy(packetWithTemporalDelimiter.data(), packetWithTemporalDelimiter.size(), pts, dts, duration);
+            if (prependErr != RGY_ERR_NONE) return prependErr;
+        }
+    }
+    output->setFrametype((m_pkt->flags & AV_PKT_FLAG_KEY) ? RGY_FRAMETYPE_IDR : RGY_FRAMETYPE_P);
+    bs = std::move(output);
+    av_packet_unref(m_pkt.get());
+    return RGY_ERR_NONE;
+}
+
+tstring VCEEncoderVA::paramString() const {
+    if (!m_codecCtx) return _T("VA-API encoder is not initialized.");
+    const TCHAR *rc = m_rateControl == VCE_RC_CQP ? _T("CQP") : (m_rateControl == VCE_RC_CBR ? _T("CBR") : _T("VBR"));
+    return strsprintf(_T("Codec:         %s\nResolution:    %dx%d\nFrame rate:    %d/%d\nRate control:  %s\nBitrate:       %lld kbps\nB frames:      0"),
+        CodecToStr(m_codec).c_str(), m_width, m_height, m_codecCtx->framerate.num, m_codecCtx->framerate.den,
+        rc, (long long)(m_codecCtx->bit_rate / 1000));
 }
 
 #endif // ENABLE_VAAPI
