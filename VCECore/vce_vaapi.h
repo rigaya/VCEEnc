@@ -76,6 +76,8 @@ public:
     RGY_ERR open(const VCEVADeviceInfo& info, std::shared_ptr<RGYLog> log);
     const VCEVAEncCaps& encCaps(RGY_CODEC codec);
     tstring capsString(RGY_CODEC codec);
+    const CodecCsp& decCaps();
+    tstring decCapsString(RGY_CODEC codec);
     const VCEVADeviceInfo& info() const { return m_info; }
     AVBufferRef *hwdevice() { return m_hwdevice.get(); }
 protected:
@@ -83,6 +85,8 @@ protected:
     std::unique_ptr<AVBufferRef, RGYAVDeleter<AVBufferRef>> m_hwdevice;
     void *m_display;
     std::unordered_map<RGY_CODEC, VCEVAEncCaps> m_encCaps;
+    CodecCsp m_decCaps;
+    bool m_decCapsQueried;
     std::shared_ptr<RGYLog> m_log;
 };
 

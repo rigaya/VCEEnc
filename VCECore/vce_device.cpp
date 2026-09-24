@@ -879,7 +879,11 @@ tstring VCEDevice::getGPUInfo() const {
 }
 
 CodecCsp VCEDevice::getHWDecCodecCsp(bool skipHWDecodeCheck) {
-    if (m_backend == VCEBackend::VAAPI) return CodecCsp();
+#if ENABLE_VAAPI
+    if (m_backend == VCEBackend::VAAPI) {
+        return m_va ? m_va->decCaps() : CodecCsp();
+    }
+#endif
     if (skipHWDecodeCheck) {
         CodecCsp codecCsp;
         for (int i = 0; i < _countof(HW_DECODE_LIST); i++) {

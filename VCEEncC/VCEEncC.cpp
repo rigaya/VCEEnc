@@ -231,6 +231,17 @@ static void show_vce_features_vaapi(int deviceid, const RGYParamLogLevel& loglev
             }
             _ftprintf(stdout, _T("\n"));
         }
+        _ftprintf(stdout, _T("Decode features:\n"));
+        for (size_t i = 0; i < _countof(HW_DECODE_LIST); i++) {
+            const auto codec = HW_DECODE_LIST[i].rgy_codec;
+            _ftprintf(stdout, _T("%s decode features\n"), CodecToStr(codec).c_str());
+            if (openStatus == RGY_ERR_NONE) {
+                _ftprintf(stdout, _T("%s\n"), dev.decCapsString(codec).c_str());
+            } else {
+                _ftprintf(stdout, _T("  available:     no\n  8bit depth:    no\n  10bit depth:   no\n  output format: none\n"));
+            }
+            _ftprintf(stdout, _T("\n"));
+        }
     });
     exit(0);
 }

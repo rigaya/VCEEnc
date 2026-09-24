@@ -605,8 +605,15 @@ RGY_ERR VCECore::initInput(VCEParam *inputParam, DeviceCodecCsp& HWDecCodecCsp) 
     const bool vpp_kfm_rff_aware =
         (ENABLE_VPP_FILTER_KFM && inputParam->vpp.kfm.enable && inputParam->vpp.kfm.rff);
 
+#if ENABLE_VAAPI
+    // VAのhwaccel読み込みは次段階で実装するため、この段階では自動選択をavswに留める。
+    DeviceCodecCsp emptyHWDecCodecCsp;
+    auto& readerHWDecCodecCsp = m_backend == VCEBackend::VAAPI ? emptyHWDecCodecCsp : HWDecCodecCsp;
+#else
+    auto& readerHWDecCodecCsp = HWDecCodecCsp;
+#endif
     auto err = initReaders(m_pFileReader, m_AudioReaders, &inputParam->input, &inputParam->inprm, inputCspOfRawReader,
-        m_pStatus, &inputParam->common, &inputParam->ctrl, HWDecCodecCsp, subburnTrackId,
+        m_pStatus, &inputParam->common, &inputParam->ctrl, readerHWDecCodecCsp, subburnTrackId,
         inputParam->vpp.afs.enable, inputParam->vpp.rff.enable || inputParam->vpp.afs.rff || vpp_kfm_rff_aware, inputParam->vpp.libplacebo_tonemapping.enable, inputParam->vpp.ivtc.expand != 0,
         m_poolPkt.get(), m_poolFrame.get(), nullptr, m_pPerfMonitor.get(), m_pLog);
     if (err != RGY_ERR_NONE) {

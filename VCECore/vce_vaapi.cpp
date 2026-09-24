@@ -144,6 +144,63 @@ bool has_encoding_entrypoint(VADisplay display, const VAProfile profile, VAEntry
     return false;
 }
 
+bool has_profile_entrypoint(VADisplay display, const VAProfile profile, const VAEntrypoint target) {
+    const int maxEntrypoints = vaMaxNumEntrypoints(display);
+    if (maxEntrypoints <= 0) return false;
+    std::vector<VAEntrypoint> entrypoints(maxEntrypoints);
+    int numEntrypoints = 0;
+    if (vaQueryConfigEntrypoints(display, profile, entrypoints.data(), &numEntrypoints) != VA_STATUS_SUCCESS) {
+        return false;
+    }
+    return std::find(entrypoints.begin(), entrypoints.begin() + numEntrypoints, target) != entrypoints.begin() + numEntrypoints;
+}
+
+uint32_t query_decode_rt_format(VADisplay display, const VAProfile profile) {
+    VAConfigAttrib attrib = { VAConfigAttribRTFormat, VA_ATTRIB_NOT_SUPPORTED };
+    if (vaGetConfigAttributes(display, profile, VAEntrypointVLD, &attrib, 1) != VA_STATUS_SUCCESS) {
+        return 0;
+    }
+    return attrib.value == VA_ATTRIB_NOT_SUPPORTED ? 0 : attrib.value;
+}
+
+CodecCsp query_decode_caps(VADisplay display) {
+    CodecCsp caps;
+    const int maxProfiles = vaMaxNumProfiles(display);
+    if (maxProfiles <= 0) return caps;
+    std::vector<VAProfile> profiles(maxProfiles);
+    int numProfiles = 0;
+    if (vaQueryConfigProfiles(display, profiles.data(), &numProfiles) != VA_STATUS_SUCCESS) return caps;
+    profiles.resize(numProfiles);
+
+    const auto add = [&caps, display, &profiles](const RGY_CODEC codec, const VAProfile profile, const RGY_CSP csp, const uint32_t requiredFormat) {
+        if (std::find(profiles.begin(), profiles.end(), profile) == profiles.end()
+            || !has_profile_entrypoint(display, profile, VAEntrypointVLD)) {
+            return;
+        }
+        const auto rtFormat = query_decode_rt_format(display, profile);
+        if (codec == RGY_CODEC_AV1 && rtFormat == 0) return;
+        if (rtFormat != 0 && requiredFormat != 0 && (rtFormat & requiredFormat) == 0) return;
+        auto& csps = caps[codec];
+        if (std::find(csps.begin(), csps.end(), csp) == csps.end()) {
+            csps.push_back(csp);
+        }
+    };
+
+    add(RGY_CODEC_H264, VAProfileH264ConstrainedBaseline, RGY_CSP_NV12, VA_RT_FORMAT_YUV420);
+    add(RGY_CODEC_H264, VAProfileH264Main, RGY_CSP_NV12, VA_RT_FORMAT_YUV420);
+    add(RGY_CODEC_H264, VAProfileH264High, RGY_CSP_NV12, VA_RT_FORMAT_YUV420);
+    add(RGY_CODEC_H264, VAProfileH264High10, RGY_CSP_P010, VA_RT_FORMAT_YUV420_10);
+    add(RGY_CODEC_HEVC, VAProfileHEVCMain, RGY_CSP_NV12, VA_RT_FORMAT_YUV420);
+    add(RGY_CODEC_HEVC, VAProfileHEVCMain10, RGY_CSP_P010, VA_RT_FORMAT_YUV420_10);
+    add(RGY_CODEC_AV1, VAProfileAV1Profile0, RGY_CSP_NV12, VA_RT_FORMAT_YUV420);
+    add(RGY_CODEC_AV1, VAProfileAV1Profile0, RGY_CSP_P010, VA_RT_FORMAT_YUV420_10);
+    add(RGY_CODEC_VP9, VAProfileVP9Profile0, RGY_CSP_NV12, VA_RT_FORMAT_YUV420);
+    add(RGY_CODEC_VP9, VAProfileVP9Profile2, RGY_CSP_P010, VA_RT_FORMAT_YUV420_10);
+    add(RGY_CODEC_MPEG2, VAProfileMPEG2Simple, RGY_CSP_NV12, VA_RT_FORMAT_YUV420);
+    add(RGY_CODEC_MPEG2, VAProfileMPEG2Main, RGY_CSP_NV12, VA_RT_FORMAT_YUV420);
+    return caps;
+}
+
 bool query_profile_attributes(VADisplay display, const VAProfile profile, const VAEntrypoint entrypoint,
     uint32_t& rcModes, int& maxRefL0, int& maxRefL1, int& maxWidth, int& maxHeight, uint32_t& rtFormat) {
     std::array<VAConfigAttrib, 5> attrs = {{
@@ -345,6 +402,8 @@ VCEDeviceVA::VCEDeviceVA() :
     m_hwdevice(nullptr, RGYAVDeleter<AVBufferRef>(av_buffer_unref)),
     m_display(nullptr),
     m_encCaps(),
+    m_decCaps(),
+    m_decCapsQueried(false),
     m_log() {
 }
 
@@ -423,6 +482,31 @@ tstring VCEDeviceVA::capsString(RGY_CODEC codec) {
     if (rcModes.empty()) rcModes = _T("none");
     return strsprintf(_T("  available: %s\n  10-bit: %s\n  rate control: %s\n  max ref (L0/L1): %d/%d\n  max resolution: %dx%d"),
         caps.available ? _T("yes") : _T("no"), caps.support10bit ? _T("yes") : _T("no"), rcModes.c_str(), caps.maxRefL0, caps.maxRefL1, caps.maxWidth, caps.maxHeight);
+}
+
+const CodecCsp& VCEDeviceVA::decCaps() {
+    if (!m_decCapsQueried) {
+        m_decCaps = m_display != nullptr ? query_decode_caps((VADisplay)m_display) : CodecCsp();
+        m_decCapsQueried = true;
+    }
+    return m_decCaps;
+}
+
+tstring VCEDeviceVA::decCapsString(RGY_CODEC codec) {
+    const auto& caps = decCaps();
+    const auto it = caps.find(codec);
+    const bool supported = it != caps.end() && !it->second.empty();
+    const bool support8bit = supported && std::find(it->second.begin(), it->second.end(), RGY_CSP_NV12) != it->second.end();
+    const bool support10bit = supported && std::find(it->second.begin(), it->second.end(), RGY_CSP_P010) != it->second.end();
+    tstring outputFormats;
+    if (support8bit) outputFormats += _T("NV12");
+    if (support10bit) {
+        if (!outputFormats.empty()) outputFormats += _T(", ");
+        outputFormats += _T("P010");
+    }
+    if (outputFormats.empty()) outputFormats = _T("none");
+    return strsprintf(_T("  available:     %s\n  8bit depth:    %s\n  10bit depth:   %s\n  output format: %s"),
+        supported ? _T("yes") : _T("no"), support8bit ? _T("yes") : _T("no"), support10bit ? _T("yes") : _T("no"), outputFormats.c_str());
 }
 
 VCEEncoderVA::VCEEncoderVA() :
