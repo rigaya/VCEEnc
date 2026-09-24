@@ -83,27 +83,27 @@ static void for_each_va_device(int deviceid, const RGYParamLogLevel& loglevel, c
 }
 #endif
 
-static void show_hw(int deviceid, VCEBackend backend, const RGYParamLogLevel& loglevel) {
-    show_version();
 #if ENABLE_VAAPI
-    if (backend == VCEBackend::VAAPI) {
-        for_each_va_device(deviceid, loglevel, true, [](const VCEVADeviceInfo& info, VCEDeviceVA& dev, const RGY_ERR openStatus) {
-            _ftprintf(stdout, _T("device #%d: %s (%s)\n"), info.id, info.name.c_str(), info.renderNode.c_str());
-            _ftprintf(stdout, _T("Supported Codecs:\n"));
-            bool codecFound = false;
-            if (openStatus == RGY_ERR_NONE) {
-                for (const auto codec : { RGY_CODEC_H264, RGY_CODEC_HEVC, RGY_CODEC_AV1 }) {
-                    if (dev.encCaps(codec).available) {
-                        _ftprintf(stdout, _T("%s\n"), CodecToStr(codec).c_str());
-                        codecFound = true;
-                    }
+static void show_hw_vaapi(int deviceid, const RGYParamLogLevel& loglevel) {
+    for_each_va_device(deviceid, loglevel, true, [](const VCEVADeviceInfo& info, VCEDeviceVA& dev, const RGY_ERR openStatus) {
+        _ftprintf(stdout, _T("device #%d: %s (%s)\n"), info.id, info.name.c_str(), info.renderNode.c_str());
+        _ftprintf(stdout, _T("Supported Codecs:\n"));
+        bool codecFound = false;
+        if (openStatus == RGY_ERR_NONE) {
+            for (const auto codec : { RGY_CODEC_H264, RGY_CODEC_HEVC, RGY_CODEC_AV1 }) {
+                if (dev.encCaps(codec).available) {
+                    _ftprintf(stdout, _T("%s\n"), CodecToStr(codec).c_str());
+                    codecFound = true;
                 }
             }
-            if (!codecFound) _ftprintf(stdout, _T("(none)\n"));
-        });
-        exit(0);
-    }
+        }
+        if (!codecFound) _ftprintf(stdout, _T("(none)\n"));
+    });
+    exit(0);
+}
 #endif
+
+static void show_hw_amf(int deviceid, const RGYParamLogLevel& loglevel) {
     auto core = std::make_unique<VCEAMF>();
     auto err = RGY_ERR_NONE;
     if ((err = core->initLogLevel(loglevel)) == RGY_ERR_NONE
@@ -177,6 +177,16 @@ static void show_hw(int deviceid, VCEBackend backend, const RGYParamLogLevel& lo
     exit(1);
 }
 
+static void show_hw(int deviceid, VCEBackend backend, const RGYParamLogLevel& loglevel) {
+    show_version();
+#if ENABLE_VAAPI
+    if (backend == VCEBackend::VAAPI) {
+        show_hw_vaapi(deviceid, loglevel);
+    }
+#endif
+    show_hw_amf(deviceid, loglevel);
+}
+
 static void show_device(int deviceid, const RGYParamLogLevel& loglevel) {
     show_version();
     auto core = std::make_unique<VCEAMF>();
@@ -208,29 +218,39 @@ static void show_device(int deviceid, const RGYParamLogLevel& loglevel) {
     exit(1);
 }
 
-static void show_vce_features(int deviceid, VCEBackend backend, const RGYParamLogLevel& loglevel) {
 #if ENABLE_VAAPI
-    if (backend == VCEBackend::VAAPI) {
-        for_each_va_device(deviceid, loglevel, false, [](const VCEVADeviceInfo& info, VCEDeviceVA& dev, const RGY_ERR openStatus) {
-            _ftprintf(stdout, _T("device #%d: %s (%s)\n"), info.id, info.name.c_str(), info.renderNode.c_str());
-            for (const auto codec : { RGY_CODEC_H264, RGY_CODEC_HEVC, RGY_CODEC_AV1 }) {
-                _ftprintf(stdout, _T("%s encode features\n"), CodecToStr(codec).c_str());
-                if (openStatus == RGY_ERR_NONE) {
-                    _ftprintf(stdout, _T("%s\n"), dev.capsString(codec).c_str());
-                } else {
-                    _ftprintf(stdout, _T("  available: no\n"));
-                }
-                _ftprintf(stdout, _T("\n"));
+static void show_vce_features_vaapi(int deviceid, const RGYParamLogLevel& loglevel) {
+    for_each_va_device(deviceid, loglevel, false, [](const VCEVADeviceInfo& info, VCEDeviceVA& dev, const RGY_ERR openStatus) {
+        _ftprintf(stdout, _T("device #%d: %s (%s)\n"), info.id, info.name.c_str(), info.renderNode.c_str());
+        for (const auto codec : { RGY_CODEC_H264, RGY_CODEC_HEVC, RGY_CODEC_AV1 }) {
+            _ftprintf(stdout, _T("%s encode features\n"), CodecToStr(codec).c_str());
+            if (openStatus == RGY_ERR_NONE) {
+                _ftprintf(stdout, _T("%s\n"), dev.capsString(codec).c_str());
+            } else {
+                _ftprintf(stdout, _T("  available: no\n"));
             }
-        });
-        exit(0);
-    }
+            _ftprintf(stdout, _T("\n"));
+        }
+    });
+    exit(0);
+}
 #endif
+
+static void show_vce_features_amf(int deviceid, const RGYParamLogLevel& loglevel) {
     const auto codecs = std::vector<RGY_CODEC>{RGY_CODEC_H264, RGY_CODEC_HEVC, RGY_CODEC_AV1 };
     _ftprintf(stdout, _T("%s\n"), check_vce_enc_features(codecs, deviceid, loglevel).c_str());
     _ftprintf(stdout, _T("\n%s\n"), check_vce_dec_features(deviceid, loglevel).c_str());
     _ftprintf(stdout, _T("\n%s\n"), check_vce_filter_features(deviceid, loglevel).c_str());
     exit(0);
+}
+
+static void show_vce_features(int deviceid, VCEBackend backend, const RGYParamLogLevel& loglevel) {
+#if ENABLE_VAAPI
+    if (backend == VCEBackend::VAAPI) {
+        show_vce_features_vaapi(deviceid, loglevel);
+    }
+#endif
+    show_vce_features_amf(deviceid, loglevel);
 }
 
 static void show_environment_info() {
