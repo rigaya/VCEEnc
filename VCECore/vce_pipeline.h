@@ -2406,6 +2406,7 @@ public:
     }
     virtual std::optional<std::pair<RGYFrameInfo, int>> requiredSurfOut() override { return std::nullopt; }
     virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
+        if (frame) frame->depend_clear();
         if (frame && frame->type() != PipelineTaskOutputType::SURFACE) return RGY_ERR_UNSUPPORTED;
         RGYFrame *input = nullptr;
         int64_t pts = 0, duration = 0;
@@ -2413,7 +2414,6 @@ public:
         if (frame) {
             auto *surface = dynamic_cast<PipelineTaskOutputSurf *>(frame.get());
             if (!surface || !surface->surf().sys()) return RGY_ERR_UNSUPPORTED;
-            frame->depend_clear();
             input = surface->surf().frame();
             pts = input->timestamp();
             duration = input->duration();
@@ -2442,9 +2442,9 @@ public:
             m_drainSent = true;
         }
         if (frame) {
-            auto err = submitAndCollect(input);
+            auto err = registerEncodeFrame(input, pts, duration, inputFrameId);
             if (err != RGY_ERR_NONE) return err;
-            err = registerEncodeFrame(input, pts, duration, inputFrameId);
+            err = submitAndCollect(input);
             if (err != RGY_ERR_NONE) return err;
         }
         for (;;) {
@@ -2688,6 +2688,7 @@ protected:
     // 以下2つはフィルタゼロ構成(vce_core.cppでCL_CROPを常設した構成)専用。「構成そのものの判定」と「今バイパス中か」は別物なので分けてある
     bool m_bypassForResChange;                                  // 解像度変更対応のために常設されたCL_CROPブロックである(不変)。AMF HOST入力のConvert要否判定に使う
     bool m_bypassActive;                                        // 現在バイパス中(解像度変更を検出したらfalseになる)。素通し判定に使う
+    bool m_rejectResolutionChange;
     // 新しい入力解像度に合わせてOpenCLフィルタチェーンを組み直す。呼び出し前にチェーンのdrainと保留イベントのクリアを済ませておくこと
     // 想定するチェーン形状は「先頭CspCrop → (任意のフィルタ) → 末尾CspCrop」。initFilters()のaddOpenCLCopyFilter()が必ず前後にCspCropを置くため成立する
     // 以下の事前条件チェックはその形状が崩れていないことの確認で、1つでも外れたら黙って壊すより明示エラーで止める
@@ -2811,8 +2812,8 @@ protected:
         return RGY_ERR_NONE;
     }
 public:
-    PipelineTaskOpenCL(amf::AMFContextPtr context, std::vector<std::unique_ptr<RGYFilter>>& vppfilters, RGYFilterSsim *videoMetric, std::shared_ptr<RGYOpenCLContext> cl, int outMaxQueueSize, bool dx11interlop, std::shared_ptr<RGYLog> log) :
-        PipelineTask(PipelineTaskType::OPENCL, context, outMaxQueueSize, log), m_cl(cl), m_dx11interlop(dx11interlop), m_vpFilters(vppfilters), m_prevInputFrame(), m_videoMetric(videoMetric), m_normalizeTargetFrame(), m_normalizeResizeParam(), m_normalizeResizeIdx(-1), m_bypassForResChange(false), m_bypassActive(false) {
+    PipelineTaskOpenCL(amf::AMFContextPtr context, std::vector<std::unique_ptr<RGYFilter>>& vppfilters, RGYFilterSsim *videoMetric, std::shared_ptr<RGYOpenCLContext> cl, int outMaxQueueSize, bool dx11interlop, std::shared_ptr<RGYLog> log, bool rejectResolutionChange = false) :
+        PipelineTask(PipelineTaskType::OPENCL, context, outMaxQueueSize, log), m_cl(cl), m_dx11interlop(dx11interlop), m_vpFilters(vppfilters), m_prevInputFrame(), m_videoMetric(videoMetric), m_normalizeTargetFrame(), m_normalizeResizeParam(), m_normalizeResizeIdx(-1), m_bypassForResChange(false), m_bypassActive(false), m_rejectResolutionChange(rejectResolutionChange) {
         // 解像度変更時に「戻すべき解像度」= 初期状態の先頭フィルタの出力。チェーンを組み直す前に控えておく必要がある
         if (!m_vpFilters.empty() && m_vpFilters.front()->GetFilterParam() != nullptr) {
             m_normalizeTargetFrame = m_vpFilters.front()->GetFilterParam()->frameOut;
@@ -2886,6 +2887,11 @@ public:
             if (taskSurf != nullptr && filterParam != nullptr) {
                 const auto inputFrame = taskSurf->surf().frame();
                 if (inputFrame->width() != filterParam->frameIn.width || inputFrame->height() != filterParam->frameIn.height) {
+                    if (m_rejectResolutionChange) {
+                        PrintMes(RGY_LOG_ERROR, _T("Input resolution change is not supported with --backend vaapi (%dx%d -> %dx%d).\n"),
+                            filterParam->frameIn.width, filterParam->frameIn.height, inputFrame->width(), inputFrame->height());
+                        return RGY_ERR_UNSUPPORTED;
+                    }
                     const auto newInputFrame = inputFrame->frameInfo();
                     const int oldInputWidth = filterParam->frameIn.width;
                     const int oldInputHeight = filterParam->frameIn.height;
@@ -2984,8 +2990,10 @@ public:
                 filterframes.push_back(std::make_pair(surfVppInAMF->getInfoCopy(), 0u));
             } else if (auto surfVppInCL = taskSurf->surf().cl(); surfVppInCL != nullptr) {
                 filterframes.push_back(std::make_pair(surfVppInCL->frameInfo(), 0u));
+            } else if (auto surfVppInSys = taskSurf->surf().sys(); surfVppInSys != nullptr) {
+                filterframes.push_back(std::make_pair(surfVppInSys->frameInfo(), 0u));
             } else {
-                PrintMes(RGY_LOG_ERROR, _T("Invalid task surface (not opencl or amf).\n"));
+                PrintMes(RGY_LOG_ERROR, _T("Invalid task surface (not system, opencl or amf).\n"));
                 return RGY_ERR_NULL_PTR;
             }
             //ここでinput frameの参照を m_prevInputFrame で保持するようにして、OpenCLによるフレームの処理が完了しているかを確認できるようにする
@@ -3067,6 +3075,13 @@ public:
                     return RGY_ERR_NOT_ENOUGH_BUFFER;
                 }
                 surfVppOutInfo = surfVppOut.cl()->frameInfo();
+            } else if (workSurfaceType() == PipelineTaskSurfaceType::SYS) {
+                surfVppOut = getWorkSurf();
+                if (surfVppOut == nullptr || surfVppOut.sys() == nullptr) {
+                    PrintMes(RGY_LOG_ERROR, _T("failed to get system work surface for VA-API output.\n"));
+                    return RGY_ERR_NOT_ENOUGH_BUFFER;
+                }
+                surfVppOutInfo = surfVppOut.sys()->frameInfo();
             } else {
                 //エンコードバッファにコピー
                 amf::AMFContext::AMFOpenCLLocker locker(m_context);

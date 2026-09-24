@@ -379,7 +379,8 @@ VCEEncoderVA::VCEEncoderVA() :
     m_frameHW(nullptr, RGYAVDeleter<AVFrame>(av_frame_free)),
     m_frameSW(nullptr, RGYAVDeleter<AVFrame>(av_frame_free)),
     m_pkt(nullptr, RGYAVDeleter<AVPacket>(av_packet_free)),
-    m_log(), m_codec(RGY_CODEC_UNKNOWN), m_width(0), m_height(0), m_bitdepth(8), m_rateControl(VCE_RC_CQP), m_timebase{ 1, 30 } {
+    m_log(), m_codec(RGY_CODEC_UNKNOWN), m_width(0), m_height(0), m_bitdepth(8), m_rateControl(VCE_RC_CQP),
+    m_qp(0), m_bframes(0), m_refs(0), m_preset(4), m_timebase{ 1, 30 } {
 }
 
 VCEEncoderVA::~VCEEncoderVA() = default;
@@ -394,15 +395,72 @@ RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int
     m_bitdepth = prm->outputDepth;
     m_rateControl = prm->rateControl;
     m_timebase = timebase;
+    const bool qvbr = prm->rateControl == get_codec_qvbr(prm->codec);
+    const bool hqvbr = prm->rateControl == get_codec_hqvbr(prm->codec);
+    const bool hqcbr = prm->rateControl == get_codec_hqcbr(prm->codec);
+    const auto& caps = dev->encCaps(prm->codec);
+    const auto defaultParam = VCEParam();
+    auto warnUnsupported = [&](const TCHAR *option, const bool changed) {
+        if (changed && m_log) m_log->write(RGY_LOG_WARN, RGY_LOGT_DEV,
+            _T("WARN: %s is not supported with --backend vaapi, ignored.\n"), option);
+    };
+    warnUnsupported(_T("--pe"), prm->pe != defaultParam.pe);
+    warnUnsupported(_T("--vbaq"), prm->bVBAQ != defaultParam.bVBAQ);
+    warnUnsupported(_T("--pa"), prm->pa != defaultParam.pa);
+    warnUnsupported(_T("--b-pyramid"), prm->bPyramid != defaultParam.bPyramid);
+    warnUnsupported(_T("--adapt-minigop"), prm->adaptMiniGOP != defaultParam.adaptMiniGOP);
+    warnUnsupported(_T("--slices"), prm->nSlices != defaultParam.nSlices);
+    warnUnsupported(_T("--ltr"), prm->LTRFrames != defaultParam.LTRFrames);
+    warnUnsupported(_T("--filler"), prm->bFiller != defaultParam.bFiller);
+    warnUnsupported(_T("--tiles"), prm->tiles != defaultParam.tiles);
+    warnUnsupported(_T("--deblock"), prm->deblockFilter != defaultParam.deblockFilter);
+    warnUnsupported(_T("--skip-frame"), prm->enableSkipFrame != defaultParam.enableSkipFrame);
+    warnUnsupported(_T("--motion-est"), prm->nMotionEst != defaultParam.nMotionEst);
+    warnUnsupported(_T("--enforce-hrd"), prm->bEnforceHRD != defaultParam.bEnforceHRD);
+    warnUnsupported(_T("--b-deltaqp"), prm->deltaQPBFrame != defaultParam.deltaQPBFrame);
+    warnUnsupported(_T("--bref-deltaqp"), prm->deltaQPBFrameRef != defaultParam.deltaQPBFrameRef);
+    warnUnsupported(_T("--repeat-headers"), prm->repeatHeaders != defaultParam.repeatHeaders);
+    warnUnsupported(_T("--temporal-layers"), prm->temporalLayers != defaultParam.temporalLayers);
+    warnUnsupported(_T("--cdef-mode"), prm->cdefMode != defaultParam.cdefMode);
+    warnUnsupported(_T("--cdf-update"), prm->cdfUpdate != defaultParam.cdfUpdate);
+    warnUnsupported(_T("--cdf-frame-end-update"), prm->cdfFrameEndUpdate != defaultParam.cdfFrameEndUpdate);
+    warnUnsupported(_T("--aq-mode"), prm->aqMode != defaultParam.aqMode);
+    warnUnsupported(_T("--qp-min/--qp-max inter"), prm->nQPMinInter != prm->nQPMin || prm->nQPMaxInter != prm->nQPMax);
+    warnUnsupported(_T("--smart-access-video"), prm->smartAccessVideo != defaultParam.smartAccessVideo);
+    warnUnsupported(_T("--multi-instance"), prm->multiInstance != defaultParam.multiInstance);
+    warnUnsupported(_T("--screen-content-tools"), prm->screenContentTools != defaultParam.screenContentTools);
+    warnUnsupported(_T("--palette-mode"), prm->paletteMode != defaultParam.paletteMode);
+    warnUnsupported(_T("--force-integer-mv"), prm->forceIntegerMV != defaultParam.forceIntegerMV);
+    if (prm->ctrl.parallelEnc.isEnabled()) {
+        if (m_log) m_log->write(RGY_LOG_ERROR, RGY_LOGT_DEV, _T("--parallel is not supported with --backend vaapi.\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
+    if (prm->vppamf.pp.enable || prm->vppamf.enhancer.enable || prm->vppamf.frc.enable) {
+        if (m_log) m_log->write(RGY_LOG_ERROR, RGY_LOGT_DEV, _T("AMF preprocess/enhancer/FRC filters are not supported with --backend vaapi.\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
+    if (prm->rateControl == get_codec_qvbr(prm->codec) && !(caps.rcModes & VCE_VA_RC_QVBR)) {
+        if (m_log) m_log->write(RGY_LOG_ERROR, RGY_LOGT_DEV, _T("QVBR is not supported by this VA-API device.\n"));
+        return RGY_ERR_UNSUPPORTED;
+    }
     const char *name = codec_name(prm->codec);
     const AVCodec *codec = name ? avcodec_find_encoder_by_name(name) : nullptr;
     if (codec == nullptr) {
         if (m_log) m_log->write(RGY_LOG_ERROR, RGY_LOGT_DEV, _T("VA-API encoder %s was not found.\n"), char_to_tstring(name ? name : "unknown").c_str());
         return RGY_ERR_UNSUPPORTED;
     }
-    if (prm->bframes.has_value() && m_log) {
-        m_log->write(RGY_LOG_WARN, RGY_LOGT_DEV, _T("--bframes is not supported with --backend vaapi in this step; using 0.\n"));
+    int maxBFrames = prm->bframes.value_or(defaultParam.bframes.value_or(VCE_DEFAULT_BFRAMES));
+    if (maxBFrames > 0 && caps.maxRefL1 <= 0) {
+        if (m_log) m_log->write(RGY_LOG_WARN, RGY_LOGT_DEV, _T("WARN: --bframes is not supported with --backend vaapi, ignored (device reports maxRefL1=0).\n"));
+        maxBFrames = 0;
     }
+    m_bframes = maxBFrames;
+    m_refs = prm->refFrames.value_or(caps.maxRefL0);
+    if (m_refs > caps.maxRefL0) {
+        if (m_log) m_log->write(RGY_LOG_WARN, RGY_LOGT_DEV, _T("WARN: --ref %d exceeds the VA-API device limit (%d), using %d.\n"), m_refs, caps.maxRefL0, caps.maxRefL0);
+        m_refs = caps.maxRefL0;
+    }
+    m_qp = qvbr ? prm->qvbrLevel : prm->qp.qpP;
 
     AVBufferRef *framesRaw = av_hwframe_ctx_alloc(dev->hwdevice());
     if (framesRaw == nullptr) return RGY_ERR_NULL_PTR;
@@ -422,27 +480,65 @@ RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int
     auto *ctx = m_codecCtx.get();
     ctx->width = width;
     ctx->height = height;
+    ctx->bit_rate = (int64_t)(prm->nBitrate > 0 ? prm->nBitrate : (qvbr ? defaultParam.nBitrate : 0)) * 1000;
+    ctx->rc_max_rate = (int64_t)prm->nMaxBitrate * 1000;
+    ctx->rc_buffer_size = prm->nVBVBufferSize * 1000;
     ctx->time_base = timebase;
     ctx->framerate = fps;
     ctx->pix_fmt = AV_PIX_FMT_VAAPI;
     ctx->gop_size = prm->nGOPLen > 0 ? prm->nGOPLen : fps.num * 2 / fps.den;
-    ctx->max_b_frames = 0;
-    ctx->bit_rate = (int64_t)prm->nBitrate * 1000;
-    ctx->rc_max_rate = (int64_t)prm->nMaxBitrate * 1000;
-    ctx->rc_buffer_size = prm->nVBVBufferSize * 1000;
+    ctx->max_b_frames = maxBFrames;
+    ctx->refs = m_refs;
     ctx->sample_aspect_ratio = AVRational{ 1, 1 };
     if (prm->outputDepth > 8 && prm->codec == RGY_CODEC_HEVC) ctx->profile = AV_PROFILE_HEVC_MAIN_10;
+    else if (prm->codec == RGY_CODEC_H264 && prm->codecParam[RGY_CODEC_H264].nProfile != defaultParam.codecParam[RGY_CODEC_H264].nProfile) ctx->profile = prm->codecParam[RGY_CODEC_H264].nProfile;
+    else if (prm->codec == RGY_CODEC_HEVC) ctx->profile = prm->codecParam[RGY_CODEC_HEVC].nProfile == AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN_10 ? AV_PROFILE_HEVC_MAIN_10 : AV_PROFILE_HEVC_MAIN;
+    else if (prm->codec == RGY_CODEC_AV1) ctx->profile = AV_PROFILE_AV1_MAIN;
+    if (prm->codecParam[prm->codec].nLevel > 0) ctx->level = prm->codecParam[prm->codec].nLevel;
+    if (prm->nQPMin.has_value()) ctx->qmin = prm->nQPMin.value();
+    if (prm->nQPMax.has_value()) ctx->qmax = prm->nQPMax.value();
+    ctx->color_primaries = (AVColorPrimaries)prm->common.out_vui.colorprim;
+    ctx->color_trc = (AVColorTransferCharacteristic)prm->common.out_vui.transfer;
+    ctx->colorspace = (AVColorSpace)prm->common.out_vui.matrix;
+    ctx->color_range = (AVColorRange)prm->common.out_vui.colorrange;
     ctx->hw_frames_ctx = av_buffer_ref(m_hwframes.get());
     if (ctx->hw_frames_ctx == nullptr) return RGY_ERR_NULL_PTR;
 
     AVDictionary *opts = nullptr;
-    const char *rcMode = prm->rateControl == VCE_RC_CQP ? "CQP" : prm->rateControl == VCE_RC_CBR ? "CBR" : "VBR";
+    const bool cbr = prm->rateControl == get_codec_cbr(prm->codec) || hqcbr;
+    const char *rcMode = prm->rateControl == get_codec_cqp(prm->codec) ? "CQP" : qvbr ? "QVBR" : cbr ? "CBR" : "VBR";
     av_dict_set(&opts, "rc_mode", rcMode, 0);
-    if (prm->rateControl == VCE_RC_CQP) {
+    if (prm->refFrames.has_value()) av_dict_set_int(&opts, "refs", prm->refFrames.value(), 0);
+    if (hqvbr && m_log) m_log->write(RGY_LOG_WARN, RGY_LOGT_DEV, _T("WARN: --hqvbr is not supported with --backend vaapi, ignored (using VBR).\n"));
+    if (hqcbr && m_log) m_log->write(RGY_LOG_WARN, RGY_LOGT_DEV, _T("WARN: --hqcbr is not supported with --backend vaapi, ignored (using CBR).\n"));
+    if (prm->qualityPreset != defaultParam.qualityPreset) {
+        const int preset = prm->qualityPreset;
+        // VA-APIのcompression_levelは値が大きいほど高速側のため、fast=7、balanced=4、slow=2、slower=1に対応させる。
+        const int compressionLevel = preset == AMF_VIDEO_ENCODER_QUALITY_PRESET_SPEED
+            || preset == AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_SPEED
+            || preset == AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_SPEED ? 7
+            : preset == AMF_VIDEO_ENCODER_QUALITY_PRESET_QUALITY
+            || preset == AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_QUALITY
+            || preset == AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_QUALITY ? 2
+            : preset == AMF_VIDEO_ENCODER_QUALITY_PRESET_HIGH_QUALITY
+            || preset == AMF_VIDEO_ENCODER_HEVC_QUALITY_PRESET_HIGH_QUALITY
+            || preset == AMF_VIDEO_ENCODER_AV1_QUALITY_PRESET_HIGH_QUALITY ? 1 : 4;
+        ctx->compression_level = compressionLevel;
+        m_preset = compressionLevel;
+    }
+    if (prm->codec == RGY_CODEC_H264 && prm->aud) av_dict_set(&opts, "aud", "1", 0);
+    if (prm->codec == RGY_CODEC_HEVC && prm->aud) av_dict_set(&opts, "aud", "1", 0);
+    if (prm->codec != RGY_CODEC_H264) {
+        const int tier = prm->codecParam[prm->codec].nTier == AMF_VIDEO_ENCODER_HEVC_TIER_HIGH ? 1 : 0;
+        av_dict_set_int(&opts, "tier", tier, 0);
+    }
+    if (prm->rateControl == get_codec_cqp(prm->codec)) {
         ctx->flags |= AV_CODEC_FLAG_QSCALE;
         ctx->global_quality = prm->qp.qpP * FF_QP2LAMBDA;
         ctx->i_quant_factor = (float)prm->qp.qpI / (float)(std::max)(1, prm->qp.qpP);
         ctx->b_quant_factor = (float)prm->qp.qpB / (float)(std::max)(1, prm->qp.qpP);
+    } else if (qvbr) {
+        av_dict_set_int(&opts, "qp", prm->qvbrLevel, 0);
     }
     ret = avcodec_open2(ctx, codec, &opts);
     av_dict_free(&opts);
@@ -533,10 +629,24 @@ RGY_ERR VCEEncoderVA::receive(std::shared_ptr<RGYBitstream>& bs) {
 
 tstring VCEEncoderVA::paramString() const {
     if (!m_codecCtx) return _T("VA-API encoder is not initialized.");
-    const TCHAR *rc = m_rateControl == VCE_RC_CQP ? _T("CQP") : (m_rateControl == VCE_RC_CBR ? _T("CBR") : _T("VBR"));
-    return strsprintf(_T("Codec:         %s\nResolution:    %dx%d\nFrame rate:    %d/%d\nRate control:  %s\nBitrate:       %lld kbps\nB frames:      0"),
+    const TCHAR *rc = m_rateControl == get_codec_cqp(m_codec) ? _T("CQP") : m_rateControl == get_codec_qvbr(m_codec) ? _T("QVBR") : m_rateControl == get_codec_cbr(m_codec) || m_rateControl == get_codec_hqcbr(m_codec) ? _T("CBR") : _T("VBR");
+    const TCHAR *preset = m_preset == 7 ? _T("fast") : m_preset == 2 ? _T("slow") : m_preset == 1 ? _T("slower") : _T("balanced");
+    const tstring level = m_codecCtx->level == AV_LEVEL_UNKNOWN ? tstring(_T("auto")) : strsprintf(_T("%d"), m_codecCtx->level);
+    tstring rcDetails;
+    if (m_rateControl == get_codec_cqp(m_codec)) {
+        const auto qpP = m_codecCtx->global_quality / FF_QP2LAMBDA;
+        const auto qpI = (int)(qpP * m_codecCtx->i_quant_factor);
+        const auto qpB = (int)(qpP * m_codecCtx->b_quant_factor);
+        rcDetails = strsprintf(_T("QP (I/P/B):    %d/%d/%d"), qpI, qpP, qpB);
+    } else if (m_rateControl == get_codec_qvbr(m_codec)) {
+        rcDetails = strsprintf(_T("QVBR QP:       %d\nBitrate:       %lld kbps"), m_qp, (long long)(m_codecCtx->bit_rate / 1000));
+    } else {
+        rcDetails = strsprintf(_T("Bitrate:       %lld kbps\nMax bitrate:   %lld kbps\nVBV buffer:    %d kbit"),
+            (long long)(m_codecCtx->bit_rate / 1000), (long long)(m_codecCtx->rc_max_rate / 1000), m_codecCtx->rc_buffer_size / 1000);
+    }
+    return strsprintf(_T("Codec:         %s\nResolution:    %dx%d\nFrame rate:    %d/%d\nRate control:  %s\n%s\nB frames:      %d\nRef frames:    %d\nProfile:       %d\nLevel:         %s\nPreset:        %s (compression_level=%d)\nGOP:           %d"),
         CodecToStr(m_codec).c_str(), m_width, m_height, m_codecCtx->framerate.num, m_codecCtx->framerate.den,
-        rc, (long long)(m_codecCtx->bit_rate / 1000));
+        rc, rcDetails.c_str(), m_bframes, m_refs, m_codecCtx->profile, level.c_str(), preset, m_preset, m_codecCtx->gop_size);
 }
 
 #endif // ENABLE_VAAPI

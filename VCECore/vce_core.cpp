@@ -836,7 +836,11 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
         //    prm->codecParam[prm->codec].nProfile = AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN_10;
         //}
     }
-    if (prm->bframes.value_or(0) > 0 && prm->codec == RGY_CODEC_HEVC) {
+    if (prm->bframes.value_or(0) > 0 && prm->codec == RGY_CODEC_HEVC
+#if ENABLE_VAAPI
+        && m_backend != VCEBackend::VAAPI
+#endif
+    ) {
         PrintMes(RGY_LOG_WARN, _T("Bframes is not supported with HEVC encoding, disabled.\n"));
         prm->bframes = 0;
         prm->bPyramid = 0;
@@ -868,6 +872,8 @@ std::pair<RGY_ERR, VideoInfo> VCECore::GetOutputVideoInfo() {
         info.bitdepth = m_encVA->bitdepth();
         info.srcWidth = info.dstWidth = m_encVA->width();
         info.srcHeight = info.dstHeight = m_encVA->height();
+        info.videoDelay = m_encVA->videoDelay();
+        info.hevcConformanceWindow = (m_encCodec == RGY_CODEC_HEVC);
         info.fpsN = m_encFps.n();
         info.fpsD = m_encFps.d();
         info.sar[0] = m_sar.n();
@@ -1380,7 +1386,7 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
                 outputCspConverted = true;
             }
             if (ftype0 != VppFilterType::FILTER_OPENCL || filterPipeline[i] == VppType::CL_CROP) { // 前のfilterがOpenCLでない場合、変換が必要
-                const auto frameInMemType = (delayedCspConv) ? RGY_MEM_TYPE_GPU : VCE_AMF_GPU_IMAGE;
+                const auto frameInMemType = (delayedCspConv) ? RGY_MEM_TYPE_GPU : (m_backend == VCEBackend::VAAPI ? RGY_MEM_TYPE_CPU : VCE_AMF_GPU_IMAGE);
                 auto sts = addOpenCLCopyFilter(vppOpenCLFilters, true, targetSurfaceCsp(), targetSurfaceBitdepth(), frameInMemType, RGY_MEM_TYPE_GPU, !delayedCspConv);
                 if (sts != RGY_ERR_NONE) {
                     return sts;
@@ -1395,9 +1401,14 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
                 }
             }
             if (ftype2 != VppFilterType::FILTER_OPENCL) { // 次のfilterがOpenCLでない場合、変換が必要
-                auto sts = addOpenCLCopyFilter(vppOpenCLFilters, false, targetSurfaceCsp(), targetSurfaceBitdepth(), RGY_MEM_TYPE_GPU, VCE_AMF_GPU_IMAGE, false);
+                const auto frameOutMemType = m_backend == VCEBackend::VAAPI ? RGY_MEM_TYPE_GPU : VCE_AMF_GPU_IMAGE;
+                auto sts = addOpenCLCopyFilter(vppOpenCLFilters, false, targetSurfaceCsp(), targetSurfaceBitdepth(), RGY_MEM_TYPE_GPU, frameOutMemType, false);
                 if (sts != RGY_ERR_NONE) {
                     return sts;
+                }
+                if (m_backend == VCEBackend::VAAPI) {
+                    sts = addOpenCLCopyFilter(vppOpenCLFilters, false, targetSurfaceCsp(), targetSurfaceBitdepth(), RGY_MEM_TYPE_GPU, RGY_MEM_TYPE_CPU, false);
+                    if (sts != RGY_ERR_NONE) return sts;
                 }
                 // ブロックに追加する
                 m_vpFilters.push_back(VppVilterBlock(vppOpenCLFilters));
@@ -3448,8 +3459,16 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
 #if ENABLE_VAAPI
     if (m_backend == VCEBackend::VAAPI) {
-        if (!m_vpFilters.empty()) {
-            PrintMes(RGY_LOG_ERROR, _T("VA-API + OpenCL filters are not supported yet.\n"));
+        if (prm->common.adaptResolution.first > 0 || prm->common.adaptResolution.second > 0) {
+            PrintMes(RGY_LOG_ERROR, _T("--adapt-resolution is not supported with --backend vaapi.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        if (getVppResizeType(prm->vpp.resize_algo) == RGY_VPP_RESIZE_TYPE_AMF) {
+            PrintMes(RGY_LOG_ERROR, _T("AMF resize filters are not supported with --backend vaapi.\n"));
+            return RGY_ERR_UNSUPPORTED;
+        }
+        if (std::any_of(m_vpFilters.begin(), m_vpFilters.end(), [](const VppVilterBlock& block) { return block.type == VppFilterType::FILTER_AMF; })) {
+            PrintMes(RGY_LOG_ERROR, _T("AMF VPP filters (including amf_* resize) are not supported with --backend vaapi.\n"));
             return RGY_ERR_UNSUPPORTED;
         }
         m_encCodec = prm->codec;
@@ -4702,7 +4721,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
                 PrintMes(RGY_LOG_ERROR, _T("OpenCL not enabled, OpenCL filters cannot be used.\n"));
                 return RGY_ERR_UNSUPPORTED;
             }
-            auto taskOpenCL = std::make_unique<PipelineTaskOpenCL>(m_dev->context(), filterBlock.vppcl, nullptr, m_dev->cl(), 1, m_dev->dx11interlop(), m_pLog);
+            auto taskOpenCL = std::make_unique<PipelineTaskOpenCL>(m_dev->context(), filterBlock.vppcl, nullptr, m_dev->cl(), 1, m_dev->dx11interlop(), m_pLog, m_backend == VCEBackend::VAAPI);
             taskOpenCL->setNormalizeResizeParam(getNormalizeResizeParam());
             if (m_clFilterBypassForResChange) { // フィルタゼロ構成のために常設したブロック = 解像度が変わるまで素通しさせる
                 taskOpenCL->setBypassUntilResolutionChange();
@@ -4735,7 +4754,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
             }
             // metric用に作ったこのブロックはバイパスさせない(素通しするとm_videoMetric->filter()が呼ばれず指標計算が飛ぶ)
             // なおここへ来る構成ではInitFiltersCreateVppList()側でm_clFilterBypassForResChangeがそもそもfalseになっている(二重の防御)
-            auto taskOpenCL = std::make_unique<PipelineTaskOpenCL>(m_dev->context(), m_vpFilters.front().vppcl, m_videoQualityMetric.get(), m_dev->cl(), 1, m_dev->dx11interlop(), m_pLog);
+            auto taskOpenCL = std::make_unique<PipelineTaskOpenCL>(m_dev->context(), m_vpFilters.front().vppcl, m_videoQualityMetric.get(), m_dev->cl(), 1, m_dev->dx11interlop(), m_pLog, m_backend == VCEBackend::VAAPI);
             taskOpenCL->setNormalizeResizeParam(getNormalizeResizeParam());
             m_pipelineTasks.push_back(std::move(taskOpenCL));
         } else if (m_pipelineTasks[prevtask]->taskType() == PipelineTaskType::OPENCL) {
@@ -4827,7 +4846,8 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
             return RGY_ERR_UNSUPPORTED;
         }
 
-        if (   (t0->taskType() == PipelineTaskType::OPENCL && !t1->isAMFTask()) // openclとraw出力がつながっているような場合
+        if (   (t0->taskType() == PipelineTaskType::OPENCL && t1->taskType() == PipelineTaskType::VAAPIENC)
+            || (t0->taskType() == PipelineTaskType::OPENCL && !t1->isAMFTask()) // openclとraw出力がつながっているような場合
             || (t1->taskType() == PipelineTaskType::OPENCL && !t0->isAMFTask()) // inputとopenclがつながっているような場合
             ) {
             if (!m_dev->cl()) {
@@ -4839,14 +4859,14 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
             // 常にmap/unmapとcsp往復(nv12->yv12->nv12)のコストがかかってしまう(実測で約29%の速度低下)
             // 確保しなければPipelineTaskInputはLoadNextFrameAMF()のままとなり、常設ブロック導入前と同じデータフロー・同じ性能になる
             // 解像度変更後はAMF HOSTサーフェス入力のままOpenCLフィルタを通す(PipelineTaskOpenCL::sendFrame()がConvertする)
-            if (!m_clFilterBypassForResChange) {
+            if (!m_clFilterBypassForResChange && t1->taskType() != PipelineTaskType::VAAPIENC) {
                 allocateOpenCLFrame = true;
             }
         }
         if (t0->taskType() == PipelineTaskType::OPENCL) {
             t0RequestNumFrame += 4; // 内部でフレームが増える場合に備えて
         }
-        if (t1->taskType() == PipelineTaskType::VAAPIENC && t0->taskType() == PipelineTaskType::INPUT) {
+        if (t1->taskType() == PipelineTaskType::VAAPIENC && (t0->taskType() == PipelineTaskType::INPUT || t0->taskType() == PipelineTaskType::OPENCL)) {
             allocateSysFrame = true;
         }
         if (allocateOpenCLFrame) {

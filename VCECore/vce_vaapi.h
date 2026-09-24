@@ -98,6 +98,7 @@ public:
     int width() const { return m_width; }
     int height() const { return m_height; }
     int bitdepth() const { return m_bitdepth; }
+    int videoDelay() const { return (m_codec != RGY_CODEC_AV1 && m_bframes > 0) ? 1 : 0; }
 protected:
     std::unique_ptr<AVCodecContext, RGYAVDeleter<AVCodecContext>> m_codecCtx;
     std::unique_ptr<AVBufferRef, RGYAVDeleter<AVBufferRef>> m_hwframes;
@@ -108,6 +109,10 @@ protected:
     RGY_CODEC m_codec;
     int m_width, m_height, m_bitdepth;
     int m_rateControl;
+    int m_qp;
+    int m_bframes;
+    int m_refs;
+    int m_preset;
     AVRational m_timebase;
 };
 
