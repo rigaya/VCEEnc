@@ -177,18 +177,45 @@ static void show_hw_amf(int deviceid, const RGYParamLogLevel& loglevel) {
     exit(1);
 }
 
+static VCEBackend info_backend(VCEBackend backend, int deviceid, const RGYParamLogLevel& loglevel) {
+#if ENABLE_VAAPI
+    if (backend == VCEBackend::Auto) {
+        auto core = std::make_unique<VCEAMF>();
+        if (core->initLogLevel(loglevel) != RGY_ERR_NONE || core->initAMFFactory(deviceid) != RGY_ERR_NONE) {
+            _ftprintf(stderr, _T("AMF initialization failed; showing VA-API devices.\n"));
+            return VCEBackend::VAAPI;
+        }
+        return VCEBackend::AMF;
+    }
+#else
+    UNREFERENCED_PARAMETER(deviceid);
+    UNREFERENCED_PARAMETER(loglevel);
+#endif
+    return backend;
+}
+
 static void show_hw(int deviceid, VCEBackend backend, const RGYParamLogLevel& loglevel) {
     show_version();
 #if ENABLE_VAAPI
-    if (backend == VCEBackend::VAAPI) {
+    if (info_backend(backend, deviceid, loglevel) == VCEBackend::VAAPI) {
         show_hw_vaapi(deviceid, loglevel);
     }
 #endif
     show_hw_amf(deviceid, loglevel);
 }
 
-static void show_device(int deviceid, const RGYParamLogLevel& loglevel) {
+static void show_device(int deviceid, VCEBackend backend, const RGYParamLogLevel& loglevel) {
     show_version();
+#if ENABLE_VAAPI
+    if (info_backend(backend, deviceid, loglevel) == VCEBackend::VAAPI) {
+        for_each_va_device(deviceid, loglevel, true, [](const VCEVADeviceInfo& info, VCEDeviceVA&, const RGY_ERR openStatus) {
+            if (openStatus == RGY_ERR_NONE) {
+                _ftprintf(stdout, _T("device #%d: %s (%s)\n"), info.id, info.name.c_str(), info.renderNode.c_str());
+            }
+        });
+        exit(0);
+    }
+#endif
     auto core = std::make_unique<VCEAMF>();
     auto err = RGY_ERR_NONE;
     if ((err = core->initLogLevel(loglevel)) == RGY_ERR_NONE
@@ -257,7 +284,7 @@ static void show_vce_features_amf(int deviceid, const RGYParamLogLevel& loglevel
 
 static void show_vce_features(int deviceid, VCEBackend backend, const RGYParamLogLevel& loglevel) {
 #if ENABLE_VAAPI
-    if (backend == VCEBackend::VAAPI) {
+    if (info_backend(backend, deviceid, loglevel) == VCEBackend::VAAPI) {
         show_vce_features_vaapi(deviceid, loglevel);
     }
 #endif
@@ -325,7 +352,7 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1, const RGYPa
                 deviceid = value;
             }
         }
-        show_device(deviceid, loglevel);
+        show_device(deviceid, backendFromOption, loglevel);
         return 1;
     }
     if (IS_OPTION("check-environment")) {

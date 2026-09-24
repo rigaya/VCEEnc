@@ -1648,6 +1648,12 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     }
     //OpenCLが使用できない場合
     if (!m_dev->cl()) {
+        if (m_backend == VCEBackend::VAAPI
+            && std::any_of(filterPipeline.begin(), filterPipeline.end(), [](const VppType filter) {
+                return getVppFilterType(filter) == VppFilterType::FILTER_OPENCL && filter != VppType::CL_CROP;
+            })) {
+            return filterPipeline;
+        }
         //置き換え
         for (auto& filter : filterPipeline) {
             if (filter == VppType::CL_RESIZE) filter = VppType::AMF_RESIZE;

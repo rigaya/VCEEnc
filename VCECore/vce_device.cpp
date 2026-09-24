@@ -414,8 +414,12 @@ std::pair<std::shared_ptr<RGYOpenCLPlatform>, int> VCEDevice::selectOpenCLDevice
         PrintMes(RGY_LOG_WARN, _T("VA-API device #%d has no PCI bus ID; OpenCL is disabled.\n"), deviceId);
         return {};
     }
-    for (const auto& platformName : { "AMD", "rusticl" }) {
-        for (auto& platform : cl.getPlatforms(platformName)) {
+    const auto platforms = cl.getPlatforms(nullptr);
+    for (const auto preferAMD : { true, false }) {
+        for (auto& platform : platforms) {
+            const bool isAMD = platform->isVendor("AMD");
+            const bool isRusticl = platform->info().name.find("rusticl") != std::string::npos;
+            if (preferAMD ? !isAMD : !isRusticl) continue;
             if (platform->createDeviceList(CL_DEVICE_TYPE_GPU) != RGY_ERR_NONE) continue;
             const auto devices = platform->devs();
             for (int idev = 0; idev < (int)devices.size(); idev++) {

@@ -3491,7 +3491,7 @@ RGYOpenCL::~RGYOpenCL() {
 
 std::vector<shared_ptr<RGYOpenCLPlatform>> RGYOpenCL::getPlatforms(const char *vendor) {
     std::vector<shared_ptr<RGYOpenCLPlatform>> platform_list;
-    if (RGYOpenCL::openCLCrush) {
+    if (RGYOpenCL::openCLCrush || RGYOpenCL::openCLHandle == nullptr) {
         return platform_list;
     }
 
