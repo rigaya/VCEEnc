@@ -753,6 +753,7 @@ vcecore_sources = files(
   'VCECore/vce_cmd.cpp',
   'VCECore/vce_core.cpp',
   'VCECore/vce_device.cpp',
+  'VCECore/vce_vaapi.cpp',
   'VCECore/vce_param.cpp',
   'VCECore/vce_util.cpp',
 )

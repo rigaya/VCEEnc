@@ -46,6 +46,9 @@
 #include "rgy_avutil.h"
 #include "rgy_opencl.h"
 #include "rgy_opencl_perf.h"
+#if ENABLE_VAAPI
+#include "vce_vaapi.h"
+#endif
 
 static void show_version() {
     _ftprintf(stdout, _T("%s\n"), GetVCEEncVersion().c_str());
@@ -55,8 +58,54 @@ static void show_help() {
     _ftprintf(stdout, _T("%s\n"), encoder_help().c_str());
 }
 
-static void show_hw(int deviceid, const RGYParamLogLevel& loglevel) {
+#if ENABLE_VAAPI
+template<typename DisplayFunc>
+static void for_each_va_device(int deviceid, const RGYParamLogLevel& loglevel, const bool printAvailable, DisplayFunc display) {
+    auto log = std::make_shared<RGYLog>(nullptr, loglevel);
+    const auto devices = enumerateVADevices(log.get());
+    if (devices.empty()) {
+        _ftprintf(stdout, _T("VA-API unavailable.\n"));
+        exit(1);
+    }
+    if (printAvailable) {
+        _ftprintf(stdout, _T("VA-API available\n"));
+    }
+    bool selected = false;
+    for (const auto& info : devices) {
+        if (deviceid >= 0 && info.id != deviceid) continue;
+        selected = true;
+        VCEDeviceVA dev;
+        const auto openStatus = dev.open(info, log);
+        display(info, dev, openStatus);
+    }
+    if (!selected) {
+        _ftprintf(stdout, _T("No VA-API device #%d found.\n"), deviceid);
+        exit(1);
+    }
+}
+#endif
+
+static void show_hw(int deviceid, VCEBackend backend, const RGYParamLogLevel& loglevel) {
     show_version();
+#if ENABLE_VAAPI
+    if (backend == VCEBackend::VAAPI) {
+        for_each_va_device(deviceid, loglevel, true, [](const VCEVADeviceInfo& info, VCEDeviceVA& dev, const RGY_ERR openStatus) {
+            _ftprintf(stdout, _T("device #%d: %s (%s)\n"), info.id, info.name.c_str(), info.renderNode.c_str());
+            _ftprintf(stdout, _T("Supported Codecs:\n"));
+            bool codecFound = false;
+            if (openStatus == RGY_ERR_NONE) {
+                for (const auto codec : { RGY_CODEC_H264, RGY_CODEC_HEVC, RGY_CODEC_AV1 }) {
+                    if (dev.encCaps(codec).available) {
+                        _ftprintf(stdout, _T("%s\n"), CodecToStr(codec).c_str());
+                        codecFound = true;
+                    }
+                }
+            }
+            if (!codecFound) _ftprintf(stdout, _T("(none)\n"));
+        });
+        exit(0);
+    }
+#endif
     auto core = std::make_unique<VCEAMF>();
     auto err = RGY_ERR_NONE;
     if ((err = core->initLogLevel(loglevel)) == RGY_ERR_NONE
@@ -161,7 +210,24 @@ static void show_device(int deviceid, const RGYParamLogLevel& loglevel) {
     exit(1);
 }
 
-static void show_vce_features(int deviceid, const RGYParamLogLevel& loglevel) {
+static void show_vce_features(int deviceid, VCEBackend backend, const RGYParamLogLevel& loglevel) {
+#if ENABLE_VAAPI
+    if (backend == VCEBackend::VAAPI) {
+        for_each_va_device(deviceid, loglevel, false, [](const VCEVADeviceInfo& info, VCEDeviceVA& dev, const RGY_ERR openStatus) {
+            _ftprintf(stdout, _T("device #%d: %s (%s)\n"), info.id, info.name.c_str(), info.renderNode.c_str());
+            for (const auto codec : { RGY_CODEC_H264, RGY_CODEC_HEVC, RGY_CODEC_AV1 }) {
+                _ftprintf(stdout, _T("%s encode features\n"), CodecToStr(codec).c_str());
+                if (openStatus == RGY_ERR_NONE) {
+                    _ftprintf(stdout, _T("%s\n"), dev.capsString(codec).c_str());
+                } else {
+                    _ftprintf(stdout, _T("  available: no\n"));
+                }
+                _ftprintf(stdout, _T("\n"));
+            }
+        });
+        exit(0);
+    }
+#endif
     const auto codecs = std::vector<RGY_CODEC>{RGY_CODEC_H264, RGY_CODEC_HEVC, RGY_CODEC_AV1 };
     _ftprintf(stdout, _T("%s\n"), check_vce_enc_features(codecs, deviceid, loglevel).c_str());
     _ftprintf(stdout, _T("\n%s\n"), check_vce_dec_features(deviceid, loglevel).c_str());
@@ -188,7 +254,7 @@ static void show_option_list() {
     }
 }
 
-int parse_print_options(const TCHAR *option_name, const TCHAR *arg1, const RGYParamLogLevel& loglevel, const int deviceidFromOption) {
+int parse_print_options(const TCHAR *option_name, const TCHAR *arg1, const RGYParamLogLevel& loglevel, const int deviceidFromOption, const VCEBackend backendFromOption) {
 
 #define IS_OPTION(x) (0 == _tcscmp(option_name, _T(x)))
 
@@ -219,7 +285,7 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1, const RGYPa
                 deviceid = value;
             }
         }
-        show_hw(deviceid, loglevel);
+        show_hw(deviceid, backendFromOption, loglevel);
         return 1;
     }
     if (IS_OPTION("check-device")) {
@@ -293,7 +359,7 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1, const RGYPa
                 deviceid = value;
             }
         }
-        show_vce_features(deviceid, loglevel);
+        show_vce_features(deviceid, backendFromOption, loglevel);
         return 1;
     }
     if (0 == _tcscmp(option_name, _T("check-clinfo"))) {
@@ -568,17 +634,34 @@ int _tmain(int argc, TCHAR **argv) {
 
     RGYParamLogLevel loglevelPrint(RGY_LOG_ERROR);
     int deviceidPrint = -1;
-    for (int iarg = 1; iarg < argc-1; iarg++) {
-        if (tstring(argv[iarg]) == _T("--log-level")) {
+#if ENABLE_VAAPI
+    VCEBackend backendPrint = VCEBackend::Auto;
+#else
+    constexpr VCEBackend backendPrint = VCEBackend::Auto;
+#endif
+    for (int iarg = 1; iarg < argc; iarg++) {
+        if (iarg + 1 < argc && tstring(argv[iarg]) == _T("--log-level")) {
             parse_log_level_param(argv[iarg], argv[iarg+1], loglevelPrint);
-        } else if (tstring(argv[iarg]) == _T("-d") || tstring(argv[iarg]) == _T("--device")) {
+        } else if (iarg + 1 < argc && (tstring(argv[iarg]) == _T("-d") || tstring(argv[iarg]) == _T("--device"))) {
             int value = 0;
             if (1 == _stscanf_s(argv[iarg+1], _T("%d"), &value)) {
                 deviceidPrint = value;
             }
+#if ENABLE_VAAPI
+        } else if (tstring(argv[iarg]) == _T("--backend")) {
+            if (iarg + 1 >= argc) {
+                print_cmd_error_invalid_value(_T("backend"), _T(""), list_vce_backend);
+                return 1;
+            }
+            const int value = get_value_from_chr(list_vce_backend, argv[iarg+1]);
+            if (value == PARSE_ERROR_FLAG) {
+                print_cmd_error_invalid_value(_T("backend"), argv[iarg+1], list_vce_backend);
+                return 1;
+            }
+            backendPrint = (VCEBackend)value;
+#endif
         }
     }
-
     for (int iarg = 1; iarg < argc; iarg++) {
         const TCHAR *option_name = nullptr;
         if (argv[iarg][0] == _T('-')) {
@@ -593,7 +676,7 @@ int _tmain(int argc, TCHAR **argv) {
             }
         }
         if (option_name != nullptr) {
-            int ret = parse_print_options(option_name, (iarg+1 < argc) ? argv[iarg+1] : _T(""), loglevelPrint, deviceidPrint);
+            int ret = parse_print_options(option_name, (iarg+1 < argc) ? argv[iarg+1] : _T(""), loglevelPrint, deviceidPrint, backendPrint);
             if (ret != 0) {
                 return ret == 1 ? 0 : 1;
             }
