@@ -312,7 +312,7 @@ dllのバージョンを表示
 VCEEncで使用するDeviceIdを指定する。
 
 ### --backend &lt;auto|amf|vaapi&gt; (Linux)
-エンコードに使用するバックエンドを指定する。`auto` (既定値) はAMFの初期化に失敗するか、対象デバイスが見つからない場合にVA-APIへ切り替える。`amf` はAMFを、`vaapi` はVA-APIを使用する。VA-APIでは `--avhw` はlibavcodecのVA-API hwaccelでデコードし、デコード能力のないコーデックは自動選択時にソフトウェアデコードへ切り替える。非対応のエンコードオプションは警告を出して無視する。`--parallel`、AMF VPPフィルタ、`--ssim`/`--psnr`/`--vmaf` は使用できない。Bフレーム数や参照フレーム数はデバイスの能力に従う。`VCEENC_AMF_DLL_OVERRIDE` 環境変数はAMFランタイムの差し替え用（デバッグ用）。
+エンコードに使用するバックエンドを指定する。`auto` (既定値) はAMFの初期化に失敗するか、対象デバイスが見つからない場合にVA-APIへ切り替える。`amf` はAMFを、`vaapi` はVA-APIを使用する。VA-APIでは入力のデコードに既定でavswを使い、明示的な `--avhw` ではlibavcodecのVA-API hwaccelでデコードした後、システムメモリへ転送する。非対応のエンコードオプションは警告を出して無視する。`--parallel`、AMF VPPフィルタ、`--ssim`/`--psnr`/`--vmaf` は使用できない。Bフレーム数や参照フレーム数はデバイスの能力に従う。`VCEENC_AMF_DLL_OVERRIDE` 環境変数はAMFランタイムの差し替え用（デバッグ用）。
 
 ### -c, --codec &lt;string&gt;
 エンコードするコーデックの指定
@@ -389,7 +389,7 @@ avformat + sw decoderを使用して読み込む。ffmpegの対応するほと�
 avformat + hw decoderを使用して読み込む。
 デコードからエンコードまでを一貫してGPUで行うため高速。
 
-Linuxで `--backend vaapi` を指定した場合は、libavcodecのVA-API hwaccelでデコードした後、システムメモリへ転送して処理する。VA-APIが入力コーデックに対応していない場合、明示的な `--avhw` はエラーになる。MPEG-2とVC-1は、`--avhw` を明示した場合のみHWデコードする。`--dhdr10-info copy` と `--dolby-vision-rpu copy` を同時に指定すると、avswでデコードする。
+Linuxで `--backend vaapi` を指定した場合、HWデコードは `--avhw` を明示したときだけ使う。libavcodecのVA-API hwaccelでデコードした後、システムメモリへ転送して処理する。VA-APIが入力コーデックに対応していない場合、明示的な `--avhw` はエラーになる。`--dhdr10-info copy` と `--dolby-vision-rpu copy` を同時に指定すると、avswでデコードする。
 
 | コーデック | 対応状況 |
 |:---|:---:|

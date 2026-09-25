@@ -394,7 +394,7 @@ Show version of ffmpeg dll
 Specify the deviceId to be used with VCEEnc. 
 
 ### --backend &lt;auto|amf|vaapi&gt; (Linux)
-Select the encoding backend. `auto` (default) falls back to VA-API if AMF initialization fails or no target AMF device is found. `amf` uses AMF, and `vaapi` uses VA-API. With VA-API, `--avhw` uses libavcodec's VA-API hwaccel and transfers decoded frames to system memory; codecs not supported by the selected device fall back to software decoding during automatic input selection. Unsupported encoding options are ignored with a warning. `--parallel`, AMF VPP filters, and `--ssim`/`--psnr`/`--vmaf` are not supported. B-frame and reference-frame counts follow device capabilities. The `VCEENC_AMF_DLL_OVERRIDE` environment variable can override the AMF runtime for debugging.
+Select the encoding backend. `auto` (default) falls back to VA-API if AMF initialization fails or no target AMF device is found. `amf` uses AMF, and `vaapi` uses VA-API. With VA-API, input decoding defaults to avsw; explicit `--avhw` uses libavcodec's VA-API hwaccel and transfers decoded frames to system memory. Unsupported encoding options are ignored with a warning. `--parallel`, AMF VPP filters, and `--ssim`/`--psnr`/`--vmaf` are not supported. B-frame and reference-frame counts follow device capabilities. The `VCEENC_AMF_DLL_OVERRIDE` environment variable can override the AMF runtime for debugging.
 
 ### -c, --codec &lt;string&gt;
 Specify the output codec
@@ -473,7 +473,7 @@ Read input file using avformat + libavcodec's sw decoder. The optional parameter
 Read input file using avformat + QSV hw decoder. Using this mode will provide maximum performance,
 since entire transcode process will be run on the GPU.
 
-On Linux with `--backend vaapi`, decoding uses libavcodec's VA-API hwaccel and transfers decoded frames to system memory. An explicit `--avhw` request fails if the selected VA device does not support the input codec. MPEG-2 and VC-1 are hardware-decoded only when `--avhw` is specified explicitly. Specifying `--dhdr10-info copy` and `--dolby-vision-rpu copy` together switches decoding to avsw.
+On Linux with `--backend vaapi`, hardware decoding is used only when `--avhw` is specified explicitly. It uses libavcodec's VA-API hwaccel and transfers decoded frames to system memory. An explicit `--avhw` request fails if the selected VA device does not support the input codec. Specifying `--dhdr10-info copy` and `--dolby-vision-rpu copy` together switches decoding to avsw.
 
 **Codecs supported by avhw reader**  
 

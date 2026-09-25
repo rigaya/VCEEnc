@@ -1040,6 +1040,42 @@ RGY_ERR VCECore::createDecoder(VCEParam *prm, amf::AMFComponentPtr& decoder) {
         return err_to_rgy(res);
     }
     PrintMes(RGY_LOG_DEBUG, _T("Initialized decoder.\n"));
+    if (inputCodec == RGY_CODEC_H264 || inputCodec == RGY_CODEC_HEVC) {
+        amf_int64 dpbSize = 0;
+        amf_int64 poolSize = 0;
+        const auto dpbResult = decoder->GetProperty(AMF_VIDEO_DECODER_DPB_SIZE, &dpbSize);
+        const auto poolResult = decoder->GetProperty(AMF_VIDEO_DECODER_SURFACE_POOL_SIZE, &poolSize);
+        // AMF は Init 時に SPS を解析し、H.264 の max_num_ref_frames / VUI の
+        // max_dec_frame_buffering、または HEVC の sps_max_dec_pic_buffering に基づく値を公開する。
+        // Init 前の値は仮値の 1。ヘッダがない、または読み取れない場合は仕様上限の 16 面を使用する。
+        static const amf_int64 MAX_DECODER_DPB_SIZE = 16;
+        const amf_int64 streamDpbSize = (header.size() > 0 && dpbResult == AMF_OK && dpbSize > 0 && dpbSize <= MAX_DECODER_DPB_SIZE)
+            ? dpbSize : MAX_DECODER_DPB_SIZE;
+        // asyncdepth 3、各タスクの出力キュー (上限 1 でも一時的に 2 枚)、
+        // デコーダ出力の Duplicate と VPP/エンコーダへの受け渡しで保持する面の余裕。
+        // 8 面では参照 12 枚の H.264 が停止し、12 面では完走することを実機で確認した。
+        static const amf_int64 PIPELINE_DECODER_SURFACES = 12;
+        const amf_int64 requestedPoolSize = streamDpbSize + PIPELINE_DECODER_SURFACES;
+        PrintMes(RGY_LOG_DEBUG, _T("Decoder surface pool: DPB=%lld (%s), current=%lld (%s), required=%lld.\n"),
+            (long long)dpbSize, AMFRetString(dpbResult), (long long)poolSize, AMFRetString(poolResult), (long long)requestedPoolSize);
+        if (poolResult != AMF_OK || poolSize < requestedPoolSize) {
+            // 初期化後の SetProperty は成功を返してもプールを作り直さないため、いったん破棄して再初期化する。
+            if (AMF_OK != (res = decoder->Terminate())) {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to terminate decoder before resizing the surface pool: %s\n"), AMFRetString(res));
+                return err_to_rgy(res);
+            }
+            if (AMF_OK != (res = decoder->SetProperty(AMF_VIDEO_DECODER_SURFACE_POOL_SIZE, requestedPoolSize))) {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to set decoder surface pool size: %s\n"), AMFRetString(res));
+                return err_to_rgy(res);
+            }
+            if (AMF_OK != (res = decoder->Init(csp_rgy_to_enc(prm->input.csp), prm->input.srcWidth, prm->input.srcHeight))) {
+                PrintMes(RGY_LOG_ERROR, _T("Failed to reinitialize decoder with %lld surfaces: %s\n"),
+                    (long long)requestedPoolSize, AMFRetString(res));
+                return err_to_rgy(res);
+            }
+            PrintMes(RGY_LOG_DEBUG, _T("Decoder surface pool resized to %lld.\n"), (long long)requestedPoolSize);
+        }
+    }
     return RGY_ERR_NONE;
 }
 
@@ -1156,17 +1192,18 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
         const auto initSWDecoder = [&](AVBufferRef *hwdevice) {
             const bool useInputCspForDeint = prm->vpp.deintCsp == VppDeintCsp::Input && hasVppDeinterlacer(prm, true);
             avswreader->setPreferredOutputCsp(useInputCspForDeint ? RGY_CSP_NA : GetEncoderCSP(prm));
-            const auto err = (hwdevice) ? avswreader->initSWVideoDecoder(_T(""), hwdevice, AV_HWDEVICE_TYPE_VAAPI) : avswreader->initSWVideoDecoder(_T(""));
+            // libdav1d には VA-API の hw config がないため、AV1 の明示 HW デコードには FFmpeg 標準デコーダを使う。
+            const auto decoderName = (hwdevice && inputCodec == RGY_CODEC_AV1) ? _T("av1") : _T("");
+            const auto err = (hwdevice) ? avswreader->initSWVideoDecoder(decoderName, hwdevice, AV_HWDEVICE_TYPE_VAAPI) : avswreader->initSWVideoDecoder(_T(""));
             if (err == RGY_ERR_NONE) {
                 prm->input.csp = m_pFileReader->GetInputFrameInfo().csp;
             }
             return err;
         };
-        // MPEG-2 と VC-1 の VA の hwaccel は、--avhw を明示したときだけ使う。
-        // Polaris (Mesa 26.0) の MPEG-2 では、出力が崩れたうえに GPU reset まで起きた。
-        // どの世代・どのストリームで起きるか確かめきれないため、入力の自動選択では avsw にする。
-        if (!m_inputAvhwExplicit && (inputCodec == RGY_CODEC_MPEG2 || inputCodec == RGY_CODEC_VC1)) {
-            PrintMes(RGY_LOG_INFO, _T("VA-API hw decode of %s is used only with --avhw, using sw decoder.\n"), CodecToStr(inputCodec).c_str());
+        // VA の hwaccel はデコード後の転送が遅く、avsw より遅い (設計書 17.8)。
+        // また Polaris の MPEG-2 では映像の乱れと GPU reset が起きたため、明示指定がなければ avsw を使う。
+        if (!m_inputAvhwExplicit) {
+            PrintMes(RGY_LOG_INFO, _T("VA-API hw decode is used only with --avhw, using sw decoder for %s.\n"), CodecToStr(inputCodec).c_str());
             return initSWDecoder(nullptr);
         }
         const auto inputInfo = m_pFileReader->GetInputFrameInfo();
@@ -1176,16 +1213,10 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
             && codecCaps != decCaps.end()
             && std::find(codecCaps->second.begin(), codecCaps->second.end(), inputInfo.csp) != codecCaps->second.end();
         if (!supported) {
-            if (m_inputAvhwExplicit) {
-                PrintMes(RGY_LOG_ERROR, _T("VA-API device #%d (%s) does not support %s %s decoding.\n"),
-                    m_dev->id(), m_dev->name().c_str(), CodecToStr(inputCodec).c_str(),
-                    inputInfo.csp >= 0 && inputInfo.csp < RGY_CSP_COUNT ? RGY_CSP_NAMES[inputInfo.csp] : _T("unknown CSP"));
-                return RGY_ERR_UNSUPPORTED;
-            }
-            PrintMes(RGY_LOG_WARN, _T("Selected VA-API device does not support %s %s decoding, switching to sw decoder.\n"),
-                CodecToStr(inputCodec).c_str(),
+            PrintMes(RGY_LOG_ERROR, _T("VA-API device #%d (%s) does not support %s %s decoding.\n"),
+                m_dev->id(), m_dev->name().c_str(), CodecToStr(inputCodec).c_str(),
                 inputInfo.csp >= 0 && inputInfo.csp < RGY_CSP_COUNT ? RGY_CSP_NAMES[inputInfo.csp] : _T("unknown CSP"));
-            return initSWDecoder(nullptr);
+            return RGY_ERR_UNSUPPORTED;
         }
         if (m_dev->va() == nullptr || m_dev->va()->hwdevice() == nullptr) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to get VA-API device for input decoding.\n"));
@@ -1205,6 +1236,22 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
             return err;
         }
         if (testDecoder) {
+#if !defined(_WIN32) && !defined(_WIN64)
+            amf_int64 decoderDpbSize = 0;
+            if (m_pFileReader->getInputCodec() == RGY_CODEC_H264
+                && testDecoder->GetProperty(AMF_VIDEO_DECODER_DPB_SIZE, &decoderDpbSize) == AMF_OK
+                && decoderDpbSize >= 16) {
+                // Linux の AMF/Vulkan デコーダは、最大 DPB 16 面の H.264 で
+                // プールを 32 面に増やしてもドライバ内で SIGSEGV になる実例がある。
+                PrintMes(RGY_LOG_WARN, _T("AMF H.264 decoder with %lld reference surfaces is unstable on Linux, switching to sw decoder.\n"),
+                    (long long)decoderDpbSize);
+                auto avswreader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
+                if (avswreader == nullptr) {
+                    return RGY_ERR_UNSUPPORTED;
+                }
+                return avswreader->initSWVideoDecoder(_T(""));
+            }
+#endif
             err = tryDecode(testDecoder);
             if (err != RGY_ERR_NONE) {
                 PrintMes(RGY_LOG_WARN, _T("Failed to try hw decoder, switching to sw decoder.\n"));
@@ -1215,6 +1262,8 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
                 }
                 return avswreader->initSWVideoDecoder(_T(""));
             }
+            // 試験用デコーダのプールを解放してから、本番用デコーダを確保する。
+            testDecoder = nullptr;
         }
     }
     auto err = createDecoder(prm, m_pDecoder);
