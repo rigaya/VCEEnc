@@ -211,6 +211,7 @@ protected:
     amf::AMFComponentPtr m_pEncoder;
 #if ENABLE_VAAPI
     std::unique_ptr<VCEEncoderVA> m_encVA;
+    bool m_vaDirectSurface;
 #endif
 #if THREAD_DEC_USE_FUTURE
     std::future<RGY_ERR> m_thDecoder;

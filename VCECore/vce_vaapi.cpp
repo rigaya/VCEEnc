@@ -29,6 +29,7 @@
 #include "rgy_frame.h"
 #include "rgy_bitstream.h"
 #include "vce_util.h"
+#include "rgy_input_avcodec.h"
 
 #if ENABLE_VAAPI
 
@@ -751,6 +752,25 @@ RGY_ERR VCEEncoderVA::submit(RGYFrame *frame) {
     if (!m_codecCtx) return RGY_ERR_NOT_INITIALIZED;
     if (frame == nullptr) {
         const int ret = avcodec_send_frame(m_codecCtx.get(), nullptr);
+        return ret == AVERROR(EAGAIN) ? RGY_ERR_MORE_DATA : (ret < 0 ? RGY_ERR_DEVICE_FAILED : RGY_ERR_NONE);
+    }
+    if (auto *direct = dynamic_cast<RGYFrameHWAVFrame *>(frame); direct && direct->avframe()->buf[0]) {
+        const auto *source = direct->avframe();
+        const auto *sourceFrames = source && source->hw_frames_ctx ? (const AVHWFramesContext *)source->hw_frames_ctx->data : nullptr;
+        const auto *encoderFrames = m_hwframes ? (const AVHWFramesContext *)m_hwframes->data : nullptr;
+        const auto *sourceDevice = sourceFrames && sourceFrames->device_ctx ? (const AVVAAPIDeviceContext *)sourceFrames->device_ctx->hwctx : nullptr;
+        const auto *encoderDevice = encoderFrames && encoderFrames->device_ctx ? (const AVVAAPIDeviceContext *)encoderFrames->device_ctx->hwctx : nullptr;
+        if (!source || source->format != AV_PIX_FMT_VAAPI || !sourceDevice || !encoderDevice
+            || sourceDevice->display != encoderDevice->display
+            || source->width != m_width || source->height != m_height
+            || sourceFrames->sw_format != encoderFrames->sw_format) return RGY_ERR_UNSUPPORTED;
+        av_frame_unref(m_frameHW.get());
+        if (av_frame_ref(m_frameHW.get(), source) < 0) return RGY_ERR_NULL_PTR;
+        m_frameHW->pts = direct->timestamp();
+        m_frameHW->duration = direct->duration();
+        m_frameHW->pict_type = AV_PICTURE_TYPE_NONE;
+        m_frameHW->flags &= ~AV_FRAME_FLAG_KEY;
+        const int ret = avcodec_send_frame(m_codecCtx.get(), m_frameHW.get());
         return ret == AVERROR(EAGAIN) ? RGY_ERR_MORE_DATA : (ret < 0 ? RGY_ERR_DEVICE_FAILED : RGY_ERR_NONE);
     }
     auto *sys = dynamic_cast<RGYSysFrame *>(frame);

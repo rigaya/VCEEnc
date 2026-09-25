@@ -247,6 +247,7 @@ VCECore::VCECore() :
     m_pEncoder(),
 #if ENABLE_VAAPI
     m_encVA(),
+    m_vaDirectSurface(false),
 #endif
     m_thDecoder(),
     m_thOutput(),
@@ -1197,7 +1198,14 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
             avswreader->setPreferredOutputCsp(useInputCspForDeint ? RGY_CSP_NA : GetEncoderCSP(prm));
             // libdav1d には VA-API の hw config がないため、AV1 の明示 HW デコードには FFmpeg 標準デコーダを使う。
             const auto decoderName = (hwdevice && inputCodec == RGY_CODEC_AV1) ? _T("av1") : _T("");
-            const auto err = (hwdevice) ? avswreader->initSWVideoDecoder(decoderName, hwdevice, AV_HWDEVICE_TYPE_VAAPI) : avswreader->initSWVideoDecoder(_T(""));
+            const auto& crop = prm->input.crop.e;
+            const bool directCandidate = hwdevice && prm->outputDepth <= 8 && !prm->common.metric.enabled()
+                && crop.left == 0 && crop.right == 0 && crop.up == 0 && crop.bottom == 0
+                && prm->common.adaptResolution.first == 0 && prm->common.adaptResolution.second == 0;
+            // FFmpegのDPB確保分とは別に、入力プール6面、VAエンコーダのasync_depth 2面、
+            // Bフレームの保持分と、タスク間で一時的に参照が重なる4面を追加する。
+            const int extraHWFrames = directCandidate ? 6 + 2 + std::max(0, prm->bframes.value_or(0)) + 4 : 0;
+            const auto err = (hwdevice) ? avswreader->initSWVideoDecoder(decoderName, hwdevice, AV_HWDEVICE_TYPE_VAAPI, extraHWFrames) : avswreader->initSWVideoDecoder(_T(""));
             if (err == RGY_ERR_NONE) {
                 prm->input.csp = m_pFileReader->GetInputFrameInfo().csp;
             }
@@ -3598,6 +3606,17 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         }
         m_encCodec = prm->codec;
         m_encCSP = prm->outputDepth > 8 ? RGY_CSP_P010 : RGY_CSP_NV12;
+        const auto avReader = std::dynamic_pointer_cast<RGYInputAvcodec>(m_pFileReader);
+        const auto& crop = prm->input.crop.e;
+        // P010はDL後の画素こそ一致するが、surface直結ではエンコーダ出力が異なるため8bitに限定する。
+        m_vaDirectSurface = m_encCSP == RGY_CSP_NV12
+            && !prm->common.metric.enabled()
+            && avReader && avReader->canPassHWFrame(m_encCSP)
+            && crop.left == 0 && crop.right == 0 && crop.up == 0 && crop.bottom == 0
+            && prm->common.adaptResolution.first == 0 && prm->common.adaptResolution.second == 0
+            && (m_vpFilters.empty() || (m_clFilterBypassForResChange && m_vpFilters.size() == 1))
+            && m_encWidth == prm->input.srcWidth && m_encHeight == prm->input.srcHeight;
+        if (m_vaDirectSurface) PrintMes(RGY_LOG_DEBUG, _T("VA-API decoder surface direct path enabled.\n"));
         m_encVA = std::make_unique<VCEEncoderVA>();
         auto err = m_encVA->init(m_dev->va(), prm, m_encWidth, m_encHeight, m_sar, m_encFps, m_outputTimebase, m_pLog);
         if (err != RGY_ERR_NONE) return err;
@@ -5002,7 +5021,13 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
             PrintMes(RGY_LOG_DEBUG, _T("AllocFrames: %s-%s, type: SYS, %s %dx%d, request %d frames\n"),
                 t0->print().c_str(), t1->print().c_str(), RGY_CSP_NAMES[allocateFrameInfo.csp],
                 allocateFrameInfo.width, allocateFrameInfo.height, requestNumFrames);
-            auto sts = t0->workSurfacesAllocSys(requestNumFrames, allocateFrameInfo);
+            auto sts = t0->workSurfacesAllocSys(requestNumFrames, allocateFrameInfo,
+#if ENABLE_VAAPI
+                m_vaDirectSurface && t0->taskType() == PipelineTaskType::INPUT
+#else
+                false
+#endif
+            );
             if (sts != RGY_ERR_NONE) {
                 PrintMes(RGY_LOG_ERROR, _T("AllocFrames: Failed to allocate system frames: %s.\n"), get_err_mes(sts));
                 return sts;
@@ -6018,7 +6043,13 @@ tstring VCECore::GetEncoderParam() {
         }
     }
     auto inputInfo = m_pFileReader->GetInputFrameInfo();
-    mes += strsprintf(_T("Input Info:    %s\n"), m_pFileReader->GetInputMessage());
+    mes += strsprintf(_T("Input Info:    %s%s\n"), m_pFileReader->GetInputMessage(),
+#if ENABLE_VAAPI
+        m_vaDirectSurface ? _T(" (avhw direct)") : _T("")
+#else
+        _T("")
+#endif
+    );
     if (cropEnabled(inputInfo.crop)) {
         mes += strsprintf(_T("Crop:          %d,%d,%d,%d\n"), inputInfo.crop.e.left, inputInfo.crop.e.up, inputInfo.crop.e.right, inputInfo.crop.e.bottom);
     }

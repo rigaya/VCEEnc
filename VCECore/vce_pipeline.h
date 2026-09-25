@@ -705,11 +705,15 @@ public:
         m_workSurfAllocHeight = frame.height;
         return RGY_ERR_NONE;
     }
-    RGY_ERR workSurfacesAllocSys(const int numFrames, const RGYFrameInfo& frame) {
+    RGY_ERR workSurfacesAllocSys(const int numFrames, const RGYFrameInfo& frame, bool passHWFrame = false) {
         auto sts = workSurfacesClear();
         if (sts != RGY_ERR_NONE) return sts;
         std::vector<std::unique_ptr<RGYSysFrame>> frames(numFrames);
         for (auto& sys : frames) {
+            if (passHWFrame) {
+                sys = std::make_unique<RGYFrameHWAVFrame>(frame);
+                continue;
+            }
             sys = std::make_unique<RGYSysFrame>();
             sts = sys->allocate(frame);
             if (sts != RGY_ERR_NONE) return sts;
