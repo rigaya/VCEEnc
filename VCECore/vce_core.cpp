@@ -1148,6 +1148,27 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to initialize VA-API hw decoder, device is not selected.\n"));
             return RGY_ERR_DEVICE_NOT_FOUND;
         }
+        // --avhw で開いた読み込みは、出力の色空間がデコーダの出力形式 (P010 など) になっていて、
+        // initReaders() でそれが prm->input.csp にも書き戻されている。
+        // VA の hwaccel はダウンロード後に avsw と同じ経路を通るので、色空間も avsw と同じ決め方 (initInput() と同じ) にし、
+        // 切り替えたあとの読み込みの出力の色空間を prm->input.csp に反映する。
+        // (そのままだと、HEVC Main10 → 8bit のときに OpenCL での色変換が必要になり、OpenCL がないと失敗する)
+        const auto initSWDecoder = [&](AVBufferRef *hwdevice) {
+            const bool useInputCspForDeint = prm->vpp.deintCsp == VppDeintCsp::Input && hasVppDeinterlacer(prm, true);
+            avswreader->setPreferredOutputCsp(useInputCspForDeint ? RGY_CSP_NA : GetEncoderCSP(prm));
+            const auto err = (hwdevice) ? avswreader->initSWVideoDecoder(_T(""), hwdevice, AV_HWDEVICE_TYPE_VAAPI) : avswreader->initSWVideoDecoder(_T(""));
+            if (err == RGY_ERR_NONE) {
+                prm->input.csp = m_pFileReader->GetInputFrameInfo().csp;
+            }
+            return err;
+        };
+        // MPEG-2 と VC-1 の VA の hwaccel は、--avhw を明示したときだけ使う。
+        // Polaris (Mesa 26.0) の MPEG-2 では、出力が崩れたうえに GPU reset まで起きた。
+        // どの世代・どのストリームで起きるか確かめきれないため、入力の自動選択では avsw にする。
+        if (!m_inputAvhwExplicit && (inputCodec == RGY_CODEC_MPEG2 || inputCodec == RGY_CODEC_VC1)) {
+            PrintMes(RGY_LOG_INFO, _T("VA-API hw decode of %s is used only with --avhw, using sw decoder.\n"), CodecToStr(inputCodec).c_str());
+            return initSWDecoder(nullptr);
+        }
         const auto inputInfo = m_pFileReader->GetInputFrameInfo();
         const auto& decCaps = m_dev->getHWDecCodecCsp(false);
         const auto codecCaps = decCaps.find(inputCodec);
@@ -1164,13 +1185,13 @@ RGY_ERR VCECore::initDecoder(VCEParam *prm) {
             PrintMes(RGY_LOG_WARN, _T("Selected VA-API device does not support %s %s decoding, switching to sw decoder.\n"),
                 CodecToStr(inputCodec).c_str(),
                 inputInfo.csp >= 0 && inputInfo.csp < RGY_CSP_COUNT ? RGY_CSP_NAMES[inputInfo.csp] : _T("unknown CSP"));
-            return avswreader->initSWVideoDecoder(_T(""));
+            return initSWDecoder(nullptr);
         }
         if (m_dev->va() == nullptr || m_dev->va()->hwdevice() == nullptr) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to get VA-API device for input decoding.\n"));
             return RGY_ERR_DEVICE_LOST;
         }
-        return avswreader->initSWVideoDecoder(_T(""), m_dev->va()->hwdevice(), AV_HWDEVICE_TYPE_VAAPI);
+        return initSWDecoder(m_dev->va()->hwdevice());
 #else
         return RGY_ERR_NONE;
 #endif

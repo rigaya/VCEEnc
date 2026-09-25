@@ -20,7 +20,7 @@ if [ -e /etc/lsb-release ]; then
     elif [ "${PACKAGE_OS_CODENAME}" = "jammy" ]; then
         PACKAGE_DEPENDS="libc6(>=2.31)"
         PACKAGE_DEPENDS="${PACKAGE_DEPENDS},libva2,libva-drm2,libva-x11-2,mesa-va-drivers | va-driver,ocl-icd-libopencl1"
-    elif [ "${PACKAGE_OS_CODENAME}" = "noble" ]; then
+    elif [ "${PACKAGE_OS_CODENAME}" = "noble" ] || [ "${PACKAGE_OS_CODENAME}" = "resolute" ]; then
         PACKAGE_DEPENDS="libc6(>=2.31)"
         PACKAGE_DEPENDS="${PACKAGE_DEPENDS},libva2,libva-drm2,libva-x11-2,mesa-va-drivers | va-driver,ocl-icd-libopencl1"
     else

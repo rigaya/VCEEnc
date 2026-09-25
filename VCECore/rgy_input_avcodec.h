@@ -981,6 +981,11 @@ public:
     //並列エンコードの親側で不要なデコーダを終了させる
     void CloseVideoDecoder();
 
+    //initSWVideoDecoder()が出力する色空間の希望を設定する (RGY_CSP_NAなら入力に合わせる)
+    //HWデコード(avhw)として開いた場合、m_inputVideoInfo.cspはデコーダの出力形式になっているため、
+    //あとからswデコード/hwaccelに切り替えるときに、avswと同じ色空間を選ばせるために使う
+    void setPreferredOutputCsp(RGY_CSP csp) { m_inputVideoInfo.csp = csp; }
+
     //swデコーダの初期化
     RGY_ERR initSWVideoDecoder(const tstring& avswDecoder, AVBufferRef *hwdevice = nullptr, AVHWDeviceType hwdeviceType = AV_HWDEVICE_TYPE_NONE);
 

@@ -3501,7 +3501,8 @@ std::vector<shared_ptr<RGYOpenCLPlatform>> RGYOpenCL::getPlatforms(const char *v
     //OpenCLのドライバは場合によってはクラッシュする可能性がある
     try {
         if (CL_SUCCESS != (ret = clGetPlatformIDs(0, NULL, &platform_count))) {
-            CL_LOG(RGY_LOG_ERROR, _T("Error (clGetPlatformIDs): %s\n"), cl_errmes(ret));
+            // ICD が1つもない環境 (OpenCL なしで動かす VA-API など) では -1001 が返る。異常ではないので ERROR にしない
+            CL_LOG((ret == RGY_CL_PLATFORM_NOT_FOUND_KHR) ? RGY_LOG_DEBUG : RGY_LOG_ERROR, _T("Error (clGetPlatformIDs): %s\n"), cl_errmes(ret));
             return platform_list;
         }
     } catch (...) {

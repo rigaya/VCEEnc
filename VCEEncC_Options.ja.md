@@ -389,7 +389,7 @@ avformat + sw decoderを使用して読み込む。ffmpegの対応するほと�
 avformat + hw decoderを使用して読み込む。
 デコードからエンコードまでを一貫してGPUで行うため高速。
 
-Linuxで `--backend vaapi` を指定した場合は、libavcodecのVA-API hwaccelでデコードした後、システムメモリへ転送して処理する。VA-APIが入力コーデックに対応していない場合、明示的な `--avhw` はエラーになる。`--dhdr10-info copy` と `--dolby-vision-rpu copy` を同時に指定すると、avswでデコードする。
+Linuxで `--backend vaapi` を指定した場合は、libavcodecのVA-API hwaccelでデコードした後、システムメモリへ転送して処理する。VA-APIが入力コーデックに対応していない場合、明示的な `--avhw` はエラーになる。MPEG-2とVC-1は、`--avhw` を明示した場合のみHWデコードする。`--dhdr10-info copy` と `--dolby-vision-rpu copy` を同時に指定すると、avswでデコードする。
 
 | コーデック | 対応状況 |
 |:---|:---:|

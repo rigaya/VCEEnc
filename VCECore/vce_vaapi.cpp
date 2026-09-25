@@ -34,7 +34,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cerrno>
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <fcntl.h>
@@ -203,6 +205,9 @@ CodecCsp query_decode_caps(VADisplay display) {
     add(RGY_CODEC_VP9, VAProfileVP9Profile2, RGY_CSP_P010, VA_RT_FORMAT_YUV420_10);
     add(RGY_CODEC_MPEG2, VAProfileMPEG2Simple, RGY_CSP_NV12, VA_RT_FORMAT_YUV420);
     add(RGY_CODEC_MPEG2, VAProfileMPEG2Main, RGY_CSP_NV12, VA_RT_FORMAT_YUV420);
+    add(RGY_CODEC_VC1, VAProfileVC1Simple, RGY_CSP_NV12, VA_RT_FORMAT_YUV420);
+    add(RGY_CODEC_VC1, VAProfileVC1Main, RGY_CSP_NV12, VA_RT_FORMAT_YUV420);
+    add(RGY_CODEC_VC1, VAProfileVC1Advanced, RGY_CSP_NV12, VA_RT_FORMAT_YUV420);
     return caps;
 }
 
@@ -296,9 +301,16 @@ bool is_amd_render_node(const std::filesystem::path& renderNode) {
     }
 }
 
-bool probe_va_device(const std::filesystem::path& renderNode, tstring& name, RGYLog *log) {
+// openErrno: render node を開けなかったときの errno (開けた場合は 0)
+bool probe_va_device(const std::filesystem::path& renderNode, tstring& name, int& openErrno, RGYLog *log) {
+    openErrno = 0;
     const int fd = open(renderNode.c_str(), O_RDWR | O_CLOEXEC);
     if (fd < 0) {
+        openErrno = errno;
+        if (log != nullptr) {
+            log->write(RGY_LOG_DEBUG, RGY_LOGT_DEV, _T("Failed to open %s: %s.\n"),
+                char_to_tstring(renderNode.string()).c_str(), char_to_tstring(strerror(openErrno)).c_str());
+        }
         return false;
     }
     VADisplay display = vaGetDisplayDRM(fd);
@@ -368,7 +380,7 @@ VCEVAEncCaps::VCEVAEncCaps() :
     maxHeight(0) {
 }
 
-std::vector<VCEVADeviceInfo> enumerateVADevices(RGYLog *log) {
+std::vector<VCEVADeviceInfo> enumerateVADevices(RGYLog *log, tstring *openErrorMessage) {
     std::vector<std::filesystem::path> nodes;
     std::error_code ec;
     const std::filesystem::path drmPath("/dev/dri");
@@ -384,10 +396,19 @@ std::vector<VCEVADeviceInfo> enumerateVADevices(RGYLog *log) {
     });
 
     std::vector<VCEVADeviceInfo> devices;
+    int lastOpenErrno = 0;
+    std::filesystem::path lastOpenFailedNode;
     for (const auto& node : nodes) {
         if (!is_amd_render_node(node)) continue;
         tstring name;
-        if (!probe_va_device(node, name, log)) continue;
+        int openErrno = 0;
+        if (!probe_va_device(node, name, openErrno, log)) {
+            if (openErrno != 0) {
+                lastOpenErrno = openErrno;
+                lastOpenFailedNode = node;
+            }
+            continue;
+        }
         VCEVADeviceInfo info;
         info.id = (int)devices.size();
         info.renderNode = char_to_tstring(node.string());
@@ -397,6 +418,22 @@ std::vector<VCEVADeviceInfo> enumerateVADevices(RGYLog *log) {
         if (log != nullptr) {
             log->write(RGY_LOG_DEBUG, RGY_LOGT_DEV, _T("VA-API device #%d: %s (%s, PCI %s)\n"),
                 devices.back().id, devices.back().name.c_str(), devices.back().renderNode.c_str(), char_to_tstring(devices.back().pciBusId).c_str());
+        }
+    }
+    // AMD の render node がすべて使えず、その原因が open() の失敗だった場合は、
+    // "VA-API unavailable" だけでは原因が分からないため、errno とヒントを出す。
+    // (Intel など、ほかのベンダーの node は対象外)
+    if (devices.empty() && lastOpenErrno != 0) {
+        auto message = strsprintf(_T("Failed to open AMD render node %s: %s.\n"),
+            char_to_tstring(lastOpenFailedNode.string()).c_str(), char_to_tstring(strerror(lastOpenErrno)).c_str());
+        if (lastOpenErrno == EACCES || lastOpenErrno == EPERM) {
+            message += _T("  Add the user to the \"render\" group (e.g. sudo usermod -aG render $USER) and log in again.\n");
+        }
+        if (log != nullptr) {
+            log->write(RGY_LOG_WARN, RGY_LOGT_DEV, _T("%s"), message.c_str());
+        }
+        if (openErrorMessage != nullptr) {
+            *openErrorMessage = message;
         }
     }
     return devices;

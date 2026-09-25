@@ -60,9 +60,11 @@ static void show_help() {
 template<typename DisplayFunc>
 static void for_each_va_device(int deviceid, const RGYParamLogLevel& loglevel, const bool printAvailable, DisplayFunc display) {
     auto log = std::make_shared<RGYLog>(nullptr, loglevel);
-    const auto devices = enumerateVADevices(log.get());
+    // 表示系のログの既定は ERROR のため、enumerateVADevices() の WARN は出ない。開けなかった理由はここで表示する
+    tstring openErrorMessage;
+    const auto devices = enumerateVADevices(log.get(), &openErrorMessage);
     if (devices.empty()) {
-        _ftprintf(stdout, _T("VA-API unavailable.\n"));
+        _ftprintf(stdout, _T("VA-API unavailable.\n%s"), openErrorMessage.c_str());
         exit(1);
     }
     if (printAvailable) {

@@ -473,7 +473,7 @@ Read input file using avformat + libavcodec's sw decoder. The optional parameter
 Read input file using avformat + QSV hw decoder. Using this mode will provide maximum performance,
 since entire transcode process will be run on the GPU.
 
-On Linux with `--backend vaapi`, decoding uses libavcodec's VA-API hwaccel and transfers decoded frames to system memory. An explicit `--avhw` request fails if the selected VA device does not support the input codec. Specifying `--dhdr10-info copy` and `--dolby-vision-rpu copy` together switches decoding to avsw.
+On Linux with `--backend vaapi`, decoding uses libavcodec's VA-API hwaccel and transfers decoded frames to system memory. An explicit `--avhw` request fails if the selected VA device does not support the input codec. MPEG-2 and VC-1 are hardware-decoded only when `--avhw` is specified explicitly. Specifying `--dhdr10-info copy` and `--dolby-vision-rpu copy` together switches decoding to avsw.
 
 **Codecs supported by avhw reader**  
 

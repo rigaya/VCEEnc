@@ -420,6 +420,15 @@ std::pair<std::shared_ptr<RGYOpenCLPlatform>, int> VCEDevice::selectOpenCLDevice
             const bool isAMD = platform->isVendor("AMD");
             const bool isRusticl = platform->info().name.find("rusticl") != std::string::npos;
             if (preferAMD ? !isAMD : !isRusticl) continue;
+            if (isRusticl) {
+                // rusticl は RUSTICL_ENABLE でドライバを有効にしないと GPU のデバイスが0個になり、
+                // createDeviceList() が ERROR を出してしまう。ここで先に数えて、ヒント付きの WARN にする
+                cl_uint deviceCount = 0;
+                if (clGetDeviceIDs(platform->get(), CL_DEVICE_TYPE_GPU, 0, nullptr, &deviceCount) != CL_SUCCESS || deviceCount == 0) {
+                    PrintMes(RGY_LOG_WARN, _T("OpenCL platform %s has no GPU device; set RUSTICL_ENABLE=radeonsi to use it.\n"), char_to_tstring(platform->info().name).c_str());
+                    continue;
+                }
+            }
             if (platform->createDeviceList(CL_DEVICE_TYPE_GPU) != RGY_ERR_NONE) continue;
             const auto devices = platform->devs();
             for (int idev = 0; idev < (int)devices.size(); idev++) {

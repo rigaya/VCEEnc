@@ -67,7 +67,8 @@ struct VCEVAEncCaps {
     VCEVAEncCaps();
 };
 
-std::vector<VCEVADeviceInfo> enumerateVADevices(RGYLog *log);
+// openErrorMessage: AMD の render node をどれも開けなかったとき、その理由 (node、strerror、ヒント) を返す
+std::vector<VCEVADeviceInfo> enumerateVADevices(RGYLog *log, tstring *openErrorMessage = nullptr);
 
 class VCEDeviceVA {
 public:

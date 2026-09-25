@@ -418,7 +418,13 @@ class RGYOpenCLQueue;
 typedef std::unique_ptr<std::remove_pointer<cl_context>::type, decltype(clReleaseContext)> unique_context;
 typedef std::unique_ptr<std::remove_pointer<cl_command_queue>::type, decltype(clReleaseCommandQueue)> unique_queue;
 
+// ICD loader が platform を見つけられないときの戻り値 (cl_khr_icd)。RGY_ERR には対応する値がないため、ここで文字列にする
+static const cl_int RGY_CL_PLATFORM_NOT_FOUND_KHR = -1001;
+
 static const TCHAR *cl_errmes(cl_int err) {
+    if (err == RGY_CL_PLATFORM_NOT_FOUND_KHR) {
+        return _T("no OpenCL platform found (CL_PLATFORM_NOT_FOUND_KHR).");
+    }
     return get_err_mes(err_cl_to_rgy(err));
 }
 
