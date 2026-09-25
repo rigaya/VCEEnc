@@ -28,6 +28,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <map>
 #include <utility>
 
 #include "rgy_version.h"
@@ -79,6 +80,9 @@ public:
     tstring QueryDecCaps(RGY_CODEC codec, amf::AMFCapsPtr& decoderCaps);
     tstring QueryFilterCaps(amf::AMFCapsPtr& filterCaps);
     tstring getGPUInfo() const;
+#if ENABLE_VAAPI
+    std::string pciBusId();
+#endif
     CodecCsp getHWDecCodecCsp(bool skipHWDecodeCheck = false);
 
     int id() const { return m_id; }
@@ -163,3 +167,8 @@ protected:
     std::unordered_map<RGY_CODEC, amf::AMFCapsPtr> m_decCaps;
     std::unordered_map<std::wstring, amf::AMFCapsPtr> m_filterCaps;
 };
+
+#if ENABLE_VAAPI
+std::map<int, std::string> getAMFDevicePciBusIds(const std::vector<std::unique_ptr<VCEDevice>>& devices);
+std::map<int, std::string> probeAMFDevicePciBusIds();
+#endif

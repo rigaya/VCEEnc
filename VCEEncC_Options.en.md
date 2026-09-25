@@ -394,7 +394,9 @@ Show version of ffmpeg dll
 Specify the deviceId to be used with VCEEnc. 
 
 ### --backend &lt;auto|amf|vaapi&gt; (Linux)
-Select the encoding backend. `auto` (default) falls back to VA-API if AMF initialization fails or no target AMF device is found. `amf` uses AMF, and `vaapi` uses VA-API. With VA-API, input decoding defaults to avsw; explicit `--avhw` uses libavcodec's VA-API hwaccel and transfers decoded frames to system memory. Unsupported encoding options are ignored with a warning. `--parallel`, AMF VPP filters, and `--ssim`/`--psnr`/`--vmaf` are not supported. B-frame and reference-frame counts follow device capabilities. The `VCEENC_AMF_DLL_OVERRIDE` environment variable can override the AMF runtime for debugging.
+Select the encoding backend. `auto` (default) falls back to VA-API if AMF initialization fails or no AMF device can encode the selected codec. `amf` uses AMF, and `vaapi` uses VA-API.
+When AMF is available, AMF and VA-API device numbers refer to the same physical GPU. Without AMF or a PCI bus ID, VA-API devices use render-node order.
+With VA-API, input decoding defaults to avsw; explicit `--avhw` uses libavcodec's VA-API hwaccel and transfers decoded frames to system memory. Unsupported encoding options are ignored with a warning. `--parallel`, AMF VPP filters, and `--ssim`/`--psnr`/`--vmaf` are not supported. B-frame and reference-frame counts follow device capabilities. The `VCEENC_AMF_DLL_OVERRIDE` environment variable can override the AMF runtime for debugging.
 
 ### -c, --codec &lt;string&gt;
 Specify the output codec

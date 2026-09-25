@@ -231,6 +231,9 @@ VCECore::VCECore() :
     m_dev(),
     m_backend(VCEBackend::Auto),
     m_amfProbeDevices(),
+#if ENABLE_VAAPI
+    m_vaPciBusIds(),
+#endif
     m_inputAvhwExplicit(false),
     m_deviceUsage(),
     m_parallelEnc(),
@@ -5034,7 +5037,7 @@ std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3
 std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceListVA(bool enableOpenCL, bool enableVppPerfMonitor, int openCLBuildThreads,
     int targetDeviceId, const tstring& clPerfDumpDir, double clPerfTimelineSec) {
     std::vector<std::unique_ptr<VCEDevice>> devices;
-    for (const auto& info : enumerateVADevices(m_pLog.get())) {
+    for (const auto& info : enumerateVADevices(m_pLog.get(), nullptr, m_vaPciBusIds)) {
         if (targetDeviceId >= 0 && info.id != targetDeviceId) continue;
         auto device = std::make_unique<VCEDevice>(m_pLog, nullptr, nullptr);
         if (device->initVA(info, enableOpenCL, enableVppPerfMonitor, openCLBuildThreads, clPerfDumpDir, clPerfTimelineSec) == RGY_ERR_NONE) {
@@ -5065,7 +5068,10 @@ RGY_ERR VCECore::initBackend(VCEParam *prm) {
     }
     m_backend = VCEBackend::AMF;
 #else
+    m_vaPciBusIds.clear();
     if (prm->backend == VCEBackend::VAAPI) {
+        // 明示 VA でも AMF の物理 GPU 番号を調べ、-d の意味を統一する。
+        m_vaPciBusIds = probeAMFDevicePciBusIds();
         m_backend = VCEBackend::VAAPI;
         PrintMes(RGY_LOG_INFO, _T("Selected backend: vaapi.\n"));
         return RGY_ERR_NONE;
@@ -5093,12 +5099,38 @@ RGY_ERR VCECore::initBackend(VCEParam *prm) {
     if (backendAuto) {
         m_amfProbeDevices = VCEAMF::createDeviceList(prm->interopD3d9, prm->interopD3d11, prm->ctrl.enableVulkan,
             prm->ctrl.enableOpenCL, prm->vpp.checkPerformance, prm->enableAV1HWDec,
-            prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, prm->deviceID, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
+            prm->ctrl.parallelEnc.isParent() ? 1 : prm->ctrl.openclBuildThreads, -1, prm->ctrl.clPerfDumpDir, prm->ctrl.clPerfTimelineSec);
+        m_vaPciBusIds = getAMFDevicePciBusIds(m_amfProbeDevices);
         if (m_amfProbeDevices.empty()) {
             m_backend = VCEBackend::VAAPI;
             PrintMes(RGY_LOG_WARN, _T("AMF found no usable devices; falling back to VA-API.\n"));
             PrintMes(RGY_LOG_INFO, _T("Selected backend: vaapi.\n"));
             return RGY_ERR_NONE;
+        }
+        const auto supportsCodec = [prm](const auto& device) {
+            return (prm->codec == RGY_CODEC_RAW || prm->codec == RGY_CODEC_AVCODEC)
+                || device->getEncCaps(prm->codec) != nullptr;
+        };
+        const bool supported = std::any_of(m_amfProbeDevices.begin(), m_amfProbeDevices.end(), [prm, &supportsCodec](const auto& device) {
+            return (prm->deviceID < 0 || device->id() == prm->deviceID) && supportsCodec(device);
+        });
+        if (!supported) {
+            m_backend = VCEBackend::VAAPI;
+            if (prm->deviceID >= 0) {
+                PrintMes(RGY_LOG_WARN, _T("AMF does not support %s encoding on device #%d; falling back to VA-API.\n"),
+                    CodecToStr(prm->codec).c_str(), prm->deviceID);
+            } else {
+                PrintMes(RGY_LOG_WARN, _T("No AMF device supports %s encoding; falling back to VA-API.\n"),
+                    CodecToStr(prm->codec).c_str());
+            }
+            m_amfProbeDevices.clear();
+            PrintMes(RGY_LOG_INFO, _T("Selected backend: vaapi.\n"));
+            return RGY_ERR_NONE;
+        }
+        if (prm->deviceID >= 0) {
+            m_amfProbeDevices.erase(std::remove_if(m_amfProbeDevices.begin(), m_amfProbeDevices.end(), [prm](const auto& device) {
+                return device->id() != prm->deviceID;
+            }), m_amfProbeDevices.end());
         }
     }
 #endif

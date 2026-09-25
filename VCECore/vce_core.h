@@ -188,6 +188,9 @@ protected:
     std::unique_ptr<VCEDevice> m_dev;
     VCEBackend m_backend;
     std::vector<std::unique_ptr<VCEDevice>> m_amfProbeDevices;
+#if ENABLE_VAAPI
+    std::map<int, std::string> m_vaPciBusIds;
+#endif
     bool                             m_inputAvhwExplicit;
     std::unique_ptr<RGYDeviceUsage> m_deviceUsage;
     std::unique_ptr<RGYParallelEnc> m_parallelEnc;

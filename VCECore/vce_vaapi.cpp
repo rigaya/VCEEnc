@@ -380,7 +380,8 @@ VCEVAEncCaps::VCEVAEncCaps() :
     maxHeight(0) {
 }
 
-std::vector<VCEVADeviceInfo> enumerateVADevices(RGYLog *log, tstring *openErrorMessage) {
+std::vector<VCEVADeviceInfo> enumerateVADevices(RGYLog *log, tstring *openErrorMessage,
+    const std::map<int, std::string>& amfPciBusIds) {
     std::vector<std::filesystem::path> nodes;
     std::error_code ec;
     const std::filesystem::path drmPath("/dev/dri");
@@ -415,9 +416,21 @@ std::vector<VCEVADeviceInfo> enumerateVADevices(RGYLog *log, tstring *openErrorM
         info.pciBusId = read_pci_bus_id(node);
         info.name = std::move(name);
         devices.push_back(std::move(info));
-        if (log != nullptr) {
+    }
+    if (!amfPciBusIds.empty()) {
+        int nextId = amfPciBusIds.rbegin()->first + 1;
+        for (auto& device : devices) {
+            const auto match = std::find_if(amfPciBusIds.begin(), amfPciBusIds.end(), [&device](const auto& amf) {
+                return amf.second == device.pciBusId;
+            });
+            device.id = match != amfPciBusIds.end() ? match->first : nextId++;
+        }
+        std::sort(devices.begin(), devices.end(), [](const auto& a, const auto& b) { return a.id < b.id; });
+    }
+    if (log != nullptr) {
+        for (const auto& device : devices) {
             log->write(RGY_LOG_DEBUG, RGY_LOGT_DEV, _T("VA-API device #%d: %s (%s, PCI %s)\n"),
-                devices.back().id, devices.back().name.c_str(), devices.back().renderNode.c_str(), char_to_tstring(devices.back().pciBusId).c_str());
+                device.id, device.name.c_str(), device.renderNode.c_str(), char_to_tstring(device.pciBusId).c_str());
         }
     }
     // AMD の render node がすべて使えず、その原因が open() の失敗だった場合は、

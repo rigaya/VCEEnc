@@ -31,6 +31,7 @@
 #if ENABLE_VAAPI
 
 #include <optional>
+#include <map>
 #include <unordered_map>
 #include <vector>
 #include "rgy_avutil.h"
@@ -69,7 +70,8 @@ struct VCEVAEncCaps {
 };
 
 // openErrorMessage: AMD の render node をどれも開けなかったとき、その理由 (node、strerror、ヒント) を返す
-std::vector<VCEVADeviceInfo> enumerateVADevices(RGYLog *log, tstring *openErrorMessage = nullptr);
+std::vector<VCEVADeviceInfo> enumerateVADevices(RGYLog *log, tstring *openErrorMessage = nullptr,
+    const std::map<int, std::string>& amfPciBusIds = {});
 
 class VCEDeviceVA {
 public:

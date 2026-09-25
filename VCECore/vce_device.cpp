@@ -26,6 +26,7 @@
 // ------------------------------------------------------------------------------------------
 
 #include "vce_device.h"
+#include "vce_amf.h"
 #include "vce_util.h"
 #include "VideoDecoderUVD.h"
 #include "rgy_avutil.h"
@@ -109,6 +110,70 @@ VCEDevice::VCEDevice(shared_ptr<RGYLog> &log, amf::AMFFactory *factory, amf::AMF
 
 VCEDevice::~VCEDevice() {
 }
+
+#if ENABLE_VAAPI
+std::string VCEDevice::pciBusId() {
+    if (m_backend == VCEBackend::VAAPI) {
+        return m_va ? m_va->info().pciBusId : std::string();
+    }
+#if ENABLE_VULKAN && defined(VK_EXT_PCI_BUS_INFO_EXTENSION_NAME)
+    if (m_vk.GetPhysicalDevice() != VK_NULL_HANDLE) {
+        uint32_t count = 0;
+        auto *vk = m_vk.GetVulkan();
+        if (vk->vkEnumerateDeviceExtensionProperties(m_vk.GetPhysicalDevice(), nullptr, &count, nullptr) == VK_SUCCESS) {
+            std::vector<VkExtensionProperties> extensions(count);
+            if (vk->vkEnumerateDeviceExtensionProperties(m_vk.GetPhysicalDevice(), nullptr, &count, extensions.data()) == VK_SUCCESS
+                && std::any_of(extensions.begin(), extensions.end(), [](const auto& ext) {
+                    return std::strcmp(ext.extensionName, VK_EXT_PCI_BUS_INFO_EXTENSION_NAME) == 0;
+                })) {
+                VkPhysicalDevicePCIBusInfoPropertiesEXT pci = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PCI_BUS_INFO_PROPERTIES_EXT };
+                VkPhysicalDeviceProperties2 properties = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
+                properties.pNext = &pci;
+                vk->vkGetPhysicalDeviceProperties2(m_vk.GetPhysicalDevice(), &properties);
+                const auto id = strsprintf("%04x:%02x:%02x.%x", pci.pciDomain, pci.pciBus, pci.pciDevice, pci.pciFunction);
+                PrintMes(RGY_LOG_DEBUG, _T("PCI bus ID from Vulkan: %s.\n"), char_to_tstring(id).c_str());
+                return id;
+            }
+        }
+    }
+#endif
+    // Vulkan で PCI ID が得られない環境では、選択済み OpenCL デバイスの ID を使う。
+    if (m_cl && m_cl->platform() && !m_cl->platform()->devs().empty()) {
+        const auto id = m_cl->platform()->dev(0).info().topology_amd;
+        PrintMes(RGY_LOG_DEBUG, _T("PCI bus ID from OpenCL: %s.\n"), char_to_tstring(id).c_str());
+        return id;
+    }
+    RGYOpenCL cl(m_log);
+    const auto selected = selectOpenCLDeviceAMF(cl, m_id, m_d3d9interlop, m_d3d11interlop);
+    if (selected.first && selected.second >= 0 && selected.second < (int)selected.first->devs().size()) {
+        const auto id = selected.first->dev(selected.second).info().topology_amd;
+        PrintMes(RGY_LOG_DEBUG, _T("PCI bus ID from OpenCL probe: %s.\n"), char_to_tstring(id).c_str());
+        return id;
+    }
+    return {};
+}
+
+std::map<int, std::string> getAMFDevicePciBusIds(const std::vector<std::unique_ptr<VCEDevice>>& devices) {
+    std::map<int, std::string> ids;
+    for (const auto& device : devices) {
+        const auto pciBusId = device->pciBusId();
+        // 1台でも特定できなければ、VA の番号を部分的に AMF に合わせない。
+        if (pciBusId.empty()) return {};
+        ids.emplace(device->id(), pciBusId);
+    }
+    return ids;
+}
+
+std::map<int, std::string> probeAMFDevicePciBusIds() {
+    VCEAMF amfProbe;
+    if (amfProbe.initLogLevel(RGY_LOG_QUIET) != RGY_ERR_NONE
+        || amfProbe.initAMFFactory(-1) != RGY_ERR_NONE
+        || amfProbe.initTracer(RGY_LOG_QUIET) != RGY_ERR_NONE) return {};
+    auto devices = amfProbe.createDeviceList(false, false, RGYParamInitVulkan::TargetVendor,
+        false, false, false, 1, -1);
+    return getAMFDevicePciBusIds(devices);
+}
+#endif
 
 RGY_ERR VCEDevice::CreateContext() {
     auto res = m_factory->CreateContext(&m_context);
