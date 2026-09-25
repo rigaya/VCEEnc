@@ -77,6 +77,18 @@
 #define CL_DEVICE_PCIE_ID_AMD                           0x4034
 #endif
 
+// cl_amd_device_attribute_query defines the topology layout in AMD's OpenCL
+// headers, but the Khronos OpenCL-Headers only provide the query constant.
+#if ENCODER_VCEENC || CLFILTERS_AUF
+union RGYCLDeviceTopologyAMD { // cl_device_topology_amd
+    struct { cl_uint type; cl_uint data[5]; } raw;
+    struct { cl_uint type; cl_uchar unused[17]; cl_uchar bus; cl_uchar device; cl_uchar function; } pcie;
+};
+#ifndef CL_DEVICE_TOPOLOGY_TYPE_PCIE_AMD
+#define CL_DEVICE_TOPOLOGY_TYPE_PCIE_AMD (1)
+#endif
+#endif
+
 
 #define CL_LOG(level, ...)  { if (m_log) { m_log->write(level, RGY_LOGT_OPENCL, __VA_ARGS__); } }
 
@@ -820,7 +832,7 @@ RGYOpenCLDeviceInfo RGYOpenCLDevice::info() const {
         clGetInfo(clGetDeviceInfo, m_device, CL_DEVICE_INTEGRATED_MEMORY_NV, &info.integrated_mem_nv);
 #endif
 #if ENCODER_VCEENC || CLFILTERS_AUF
-        cl_device_topology_amd topology = {};
+        RGYCLDeviceTopologyAMD topology = {};
         if (clGetDeviceInfo(m_device, CL_DEVICE_TOPOLOGY_AMD, sizeof(topology), &topology, nullptr) == CL_SUCCESS
             && topology.raw.type == CL_DEVICE_TOPOLOGY_TYPE_PCIE_AMD) {
             char pciBusId[32] = {};
