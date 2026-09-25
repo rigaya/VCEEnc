@@ -53,11 +53,12 @@ extern "C" {
 
 namespace {
 
-// VA-APIのcompression_levelは値が大きいほど高速側のため、fast=7、balanced=4、slow=2、slower=1に対応させる。
-constexpr int VA_PRESET_COMPRESSION_FAST = 7;
-constexpr int VA_PRESET_COMPRESSION_BALANCED = 4;
-constexpr int VA_PRESET_COMPRESSION_SLOW = 2;
-constexpr int VA_PRESET_COMPRESSION_SLOWER = 1;
+// MesaのvlVaQualityBits: bit0=valid、bit1-2=preset、bit3=pre_encode、bit4=vbaq。
+// 0はspeed/付加機能なし、1はbalanced/付加機能autoの特別値。明示presetはvalidを立て、付加機能は立てない。
+constexpr int VA_PRESET_COMPRESSION_FAST = 0;
+constexpr int VA_PRESET_COMPRESSION_BALANCED = 3;
+constexpr int VA_PRESET_COMPRESSION_SLOW = 5;
+constexpr int VA_PRESET_COMPRESSION_SLOWER = 7;
 constexpr int VA_DEFAULT_FRAME_RATE = 30;
 constexpr int VA_DEFAULT_BIT_DEPTH = 8;
 constexpr int VA_DEFAULT_GOP_LENGTH = 30;
@@ -98,9 +99,9 @@ int va_compression_level(const RGY_CODEC codec, const int preset) {
 
 const TCHAR *va_preset_name(const int preset) {
     switch (preset) {
-    case VA_PRESET_COMPRESSION_FAST: return _T("fast");
-    case VA_PRESET_COMPRESSION_SLOW: return _T("slow");
-    case VA_PRESET_COMPRESSION_SLOWER: return _T("slower");
+    case VA_PRESET_COMPRESSION_FAST: return _T("speed");
+    case VA_PRESET_COMPRESSION_SLOW: return _T("quality");
+    case VA_PRESET_COMPRESSION_SLOWER: return _T("high quality");
     default: return _T("balanced");
     }
 }
@@ -709,11 +710,9 @@ RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int
     if (prm->refFrames.has_value()) av_dict_set_int(&opts, "refs", prm->refFrames.value(), 0);
     if (hqvbr && m_log) m_log->write(RGY_LOG_WARN, RGY_LOGT_DEV, _T("WARN: --hqvbr is not supported with --backend vaapi, ignored (using VBR).\n"));
     if (hqcbr && m_log) m_log->write(RGY_LOG_WARN, RGY_LOGT_DEV, _T("WARN: --hqcbr is not supported with --backend vaapi, ignored (using CBR).\n"));
-    if (prm->qualityPreset != defaultParam.qualityPreset) {
-        const int compressionLevel = va_compression_level(prm->codec, prm->qualityPreset);
-        ctx->compression_level = compressionLevel;
-        m_preset = compressionLevel;
-    }
+    const int compressionLevel = va_compression_level(prm->codec, prm->qualityPreset);
+    ctx->compression_level = compressionLevel;
+    m_preset = compressionLevel;
     if (prm->codec == RGY_CODEC_H264 && prm->aud) av_dict_set(&opts, "aud", "1", 0);
     if (prm->codec == RGY_CODEC_HEVC && prm->aud) av_dict_set(&opts, "aud", "1", 0);
     if (prm->codec != RGY_CODEC_H264) {
