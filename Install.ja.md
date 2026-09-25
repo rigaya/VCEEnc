@@ -20,8 +20,6 @@
 
 ## Linux (Ubuntu 24.04)
 
-公式配布パッケージではlibvmafを静的リンクするため、VMAF評価に`libvmaf.so`は不要です。libvship評価を使用する場合は、実行時ローダーが`libvship.so`と、選択したbackendが必要とする共有ライブラリを検索できる場所へ配置します（システムのライブラリ検索パス、または`LD_LIBRARY_PATH`）。ソースから通常設定でビルドした場合はlibvmafを動的ロードするため、VMAF評価には`libvmaf.so`も必要です。評価を使用しない通常のエンコードには、これらのライブラリは不要です。
-
 VCEEncCパッケージはAMFに依存しません。AMFがない環境でも、`mesa-va-drivers` のVA-APIで動作し、`--backend auto` なら自動でVA-APIに切り替わります。AMF backendを使う場合は、以下のAMFインストール手順を利用してください。VA-APIのみを使う場合、手順1～2のAMF導入は不要です。
 
   > [!WARNING]
