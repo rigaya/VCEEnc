@@ -660,6 +660,10 @@ int vce_run(VCEParam *pParams) {
 int _tmain(int argc, TCHAR **argv) {
 #if defined(_WIN32) || defined(_WIN64)
     _tsetlocale(LC_CTYPE, _T(".UTF8"));
+#else
+    // MesaのOpenCL (rusticl) は、既定ではRadeon (radeonsi) が無効で、GPUのデバイスが見つからない。
+    // VA-APIでOpenCLフィルタを使えるよう、利用者が指定していない場合に限り、OpenCLの初期化前に有効にしておく。
+    setenv("RUSTICL_ENABLE", "radeonsi", 0);
 #endif //#if defined(_WIN32) || defined(_WIN64)
 
     if (argc == 1) {
