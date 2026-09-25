@@ -27,13 +27,12 @@ Linuxでは、HWエンコーダを使う方法を、AMFとVA-APIの2種類から
 | 対応GPU | RDNA (Radeon RX 5000シリーズ) 以降、Ryzen 5000シリーズ以降のAPU ※1 | GCN世代以降のRadeon ※2 |
 | インストール | やや面倒 | 容易 |
 | HWエンコーダの詳細設定 | 可 | 基本的な設定のみ ※3 |
-| HWデコード (`--avhw`) | 可 | 可 (遅め) ※4 |
-| 処理速度 | 高 | 中 |
+| HWデコード (`--avhw`) | 可 | 可 ※4 |
 
 ※1 AMFのLinux向けのサポート表 ([AMF Wiki](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/wiki/Driver%20Linux)) に載っているGPUです。Polaris・Vega世代のdGPUや、Ryzen 4000シリーズ以前のAPUは対象外です。  
 ※2 Mesa (radeonsi) のVA-APIを使います。使えるコーデックはGPUの世代によって異なります。H.264はGCN世代以降、HEVC 8bitはPolaris (RX 400/500) 以降、HEVC 10bitはRDNA (RX 5000) ・Ryzen 4000シリーズのAPU以降、AV1はRDNA3 (RX 7000) 以降が目安です。動作確認済みのGPUは、RX 550 (Polaris)、Radeon Vega 8 (Ryzen 3 3200G、Picasso)、RX 9060 XT (RDNA4) です。  
 ※3 レート制御 (CQP/CBR/VBR)、GOP長、プリセットなどの基本的な設定に対応します。AMF固有の詳細設定は、警告を出して無視します。Bフレーム数や参照フレーム数は、GPUの能力に合わせて制限されます。  
-※4 VA-APIでは、HWデコードは `--avhw` を明示したときだけ使います。デコードした映像をいったんCPU側に転送するため、多くの場合、ソフトウェアデコード (`--avsw`、既定) の方が高速です。
+※4 VA-APIでは、HWデコードは `--avhw` を明示したときだけ使います。8bitでフィルタを使わない場合は、デコードした映像をそのままエンコーダに渡します。フィルタや10bitのエンコードなどを使う場合は、デコードした映像をいったんCPU側に転送するため、処理が遅くなることがあります。
 
 AMF非対応のGPUでは、VA-APIを選んでください。VCEEncCは、AMFがインストールされていればAMFを、なければ自動でVA-APIを使います (`--backend auto`、既定)。AMFがインストールされている環境でVA-APIを使いたい場合は、`--backend vaapi` を指定します。
 

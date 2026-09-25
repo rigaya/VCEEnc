@@ -25,13 +25,12 @@ On Linux, you can choose from two ways to use the HW encoder: AMF or VA-API.
 | Supported GPUs | RDNA (Radeon RX 5000 series) or later, Ryzen 5000 series or later APUs *1 | Radeon GCN generation or later *2 |
 | Installation | Somewhat complicated | Easy |
 | Detailed HW encoder settings | Yes | Basic settings only *3 |
-| HW decode (`--avhw`) | Yes | Yes (slower) *4 |
-| Performance | High | Medium |
+| HW decode (`--avhw`) | Yes | Yes *4 |
 
 *1 GPUs listed in the Linux support table of AMF ([AMF Wiki](https://github.com/GPUOpen-LibrariesAndSDKs/AMF/wiki/Driver%20Linux)). Polaris / Vega generation dGPUs and Ryzen 4000 series or older APUs are not supported.  
 *2 Uses the VA-API of Mesa (radeonsi). Available codecs depend on the GPU generation. As a rough guide, H.264 is supported on GCN or later, HEVC 8bit on Polaris (RX 400/500) or later, HEVC 10bit on RDNA (RX 5000) / Ryzen 4000 series APUs or later, and AV1 on RDNA3 (RX 7000) or later. Tested GPUs: RX 550 (Polaris), Radeon Vega 8 (Ryzen 3 3200G, Picasso), RX 9060 XT (RDNA4).  
 *3 Basic settings such as rate control (CQP/CBR/VBR), GOP length and presets are supported. AMF specific detailed settings are ignored with a warning. B-frame and reference-frame counts are limited to the capabilities of the GPU.  
-*4 With VA-API, HW decode is used only when `--avhw` is specified explicitly. As decoded frames are transferred to the CPU side, software decode (`--avsw`, default) is faster in many cases.
+*4 With VA-API, HW decode is used only when `--avhw` is specified explicitly. For 8bit encoding without filters, decoded frames are passed directly to the encoder. When filters, 10bit encoding, etc. are used, decoded frames are transferred to the CPU side, which may slow down the processing.
 
 On GPUs not supported by AMF, please choose VA-API. VCEEncC uses AMF when AMF is installed, and automatically uses VA-API when it is not (`--backend auto`, default). To use VA-API on a system with AMF installed, specify `--backend vaapi`.
 
