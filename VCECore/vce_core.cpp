@@ -3598,7 +3598,6 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
         m_encVA = std::make_unique<VCEEncoderVA>();
         auto err = m_encVA->init(m_dev->va(), prm, m_encWidth, m_encHeight, m_sar, m_encFps, m_outputTimebase, m_pLog);
         if (err != RGY_ERR_NONE) return err;
-        PrintMes(RGY_LOG_INFO, _T("%s\n"), m_encVA->paramString().c_str());
         return RGY_ERR_NONE;
     }
 #endif
@@ -5848,12 +5847,6 @@ void VCECore::PrintEncoderParam() {
 }
 
 tstring VCECore::GetEncoderParam() {
-#if ENABLE_VAAPI
-    if (m_backend == VCEBackend::VAAPI) {
-        return strsprintf(_T("%s\nBackend:       vaapi\nGPU:           %s\n%s\n"),
-            get_encoder_version(), m_dev ? m_dev->getGPUInfo().c_str() : _T(""), m_encVA ? m_encVA->paramString().c_str() : _T(""));
-    }
-#endif
     const amf::AMFPropertyStorage *pProperty = m_pEncoder;
 
     auto GetPropertyStr = [pProperty](const wchar_t *pName) {
@@ -5945,7 +5938,7 @@ tstring VCECore::GetEncoderParam() {
 #endif
     mes += strsprintf(_T("CPU:           %s\n"), cpu_info);
 #if ENABLE_VAAPI
-    mes += _T("Backend:       amf\n");
+    mes += strsprintf(_T("Backend:       %s\n"), m_backend == VCEBackend::VAAPI ? _T("vaapi") : _T("amf"));
 #endif
     {
         if (m_parallelEnc && m_devNames.size() > 1) {
@@ -5971,11 +5964,18 @@ tstring VCECore::GetEncoderParam() {
             mes += _T("\n");
         }
     }
-    mes += strsprintf(_T("AMF:           Runtime %d.%d.%d / SDK %d.%d.%d\n"),
-        (int)AMF_GET_MAJOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_MINOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_SUBMINOR_VERSION(m_AMFRuntimeVersion),
-        AMF_VERSION_MAJOR, AMF_VERSION_MINOR, AMF_VERSION_RELEASE);
+#if ENABLE_VAAPI
+    if (m_backend == VCEBackend::VAAPI) {
+        mes += strsprintf(_T("VA-API:        %s\n"), m_dev->va()->vendorString().c_str());
+    } else
+#endif
+    {
+        mes += strsprintf(_T("AMF:           Runtime %d.%d.%d / SDK %d.%d.%d\n"),
+            (int)AMF_GET_MAJOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_MINOR_VERSION(m_AMFRuntimeVersion), (int)AMF_GET_SUBMINOR_VERSION(m_AMFRuntimeVersion),
+            AMF_VERSION_MAJOR, AMF_VERSION_MINOR, AMF_VERSION_RELEASE);
+    }
 
-    if (m_pEncoder) {
+    if (m_backend == VCEBackend::AMF && m_pEncoder) {
         if (GetPropertyBool(AMF_PARAM_ENABLE_SMART_ACCESS_VIDEO(m_encCodec))) {
             mes += _T("Smart Access:  on\n");
         }
@@ -6022,22 +6022,44 @@ tstring VCECore::GetEncoderParam() {
             mes += strsprintf(_T("%s%s\n"), m, m_videoQualityMetric->GetInputMessage().c_str());
         }
     }
+    bool hasEncoder = m_pEncoder != nullptr;
+    tstring outputProfile, outputLevel, outputTier;
+    int64_t outWidth = 0, outHeight = 0;
+    int frameRateN = 0, frameRateD = 0;
+    bool outputInterlaced = false;
+#if ENABLE_VAAPI
+    if (m_backend == VCEBackend::VAAPI && m_encVA) {
+        hasEncoder = true;
+        outputProfile = m_encVA->profileString();
+        outputLevel = m_encVA->levelString();
+        if (m_encCodec == RGY_CODEC_HEVC) outputTier = _T(" (") + m_encVA->tierString() + _T(" tier)");
+        outWidth = m_encVA->width();
+        outHeight = m_encVA->height();
+        frameRateN = m_encFps.n();
+        frameRateD = m_encFps.d();
+        outputInterlaced = m_picStruct == RGY_PICSTRUCT_INTERLACED;
+    } else
+#endif
     if (m_pEncoder) {
-        mes += strsprintf(_T("Output:        %s  %s @ Level %s%s\n"),
-            CodecToStr(m_encCodec).c_str(),
-            getPropertyDesc(AMF_PARAM_PROFILE(m_encCodec), get_profile_list(m_encCodec)).c_str(),
-            getPropertyDesc(AMF_PARAM_PROFILE_LEVEL(m_encCodec), get_level_list(m_encCodec)).c_str(),
-            (m_encCodec == RGY_CODEC_HEVC) ? (tstring(_T(" (")) + getPropertyDesc(AMF_VIDEO_ENCODER_HEVC_TIER, get_tier_list(m_encCodec)) + _T(" tier)")).c_str() : _T(""));
-        const AMF_VIDEO_ENCODER_SCANTYPE_ENUM scan_type = (m_encCodec == RGY_CODEC_H264) ? (AMF_VIDEO_ENCODER_SCANTYPE_ENUM)GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE) : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE;
-        auto frameRate = GetPropertyRate(AMF_PARAM_FRAMERATE(m_encCodec));
-        int64_t outWidth = 0, outHeight = 0;
+        outputProfile = getPropertyDesc(AMF_PARAM_PROFILE(m_encCodec), get_profile_list(m_encCodec));
+        outputLevel = getPropertyDesc(AMF_PARAM_PROFILE_LEVEL(m_encCodec), get_level_list(m_encCodec));
+        if (m_encCodec == RGY_CODEC_HEVC) outputTier = _T(" (") + getPropertyDesc(AMF_VIDEO_ENCODER_HEVC_TIER, get_tier_list(m_encCodec)) + _T(" tier)");
+        const auto scanType = (m_encCodec == RGY_CODEC_H264) ? (AMF_VIDEO_ENCODER_SCANTYPE_ENUM)GetPropertyInt(AMF_VIDEO_ENCODER_SCANTYPE) : AMF_VIDEO_ENCODER_SCANTYPE_PROGRESSIVE;
+        const auto frameRate = GetPropertyRate(AMF_PARAM_FRAMERATE(m_encCodec));
+        frameRateN = frameRate.num;
+        frameRateD = frameRate.den;
+        outputInterlaced = scanType == AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED;
         m_params.GetParam(VCE_PARAM_KEY_OUTPUT_WIDTH, outWidth);
         m_params.GetParam(VCE_PARAM_KEY_OUTPUT_HEIGHT, outHeight);
+    }
+    if (hasEncoder) {
+        mes += strsprintf(_T("Output:        %s  %s @ Level %s%s\n"),
+            CodecToStr(m_encCodec).c_str(), outputProfile.c_str(), outputLevel.c_str(), outputTier.c_str());
         mes += strsprintf(_T("               %dx%d%s %d:%d %0.3ffps (%d/%dfps)\n"),
             (int)outWidth, (int)outHeight,
-            scan_type == AMF_VIDEO_ENCODER_SCANTYPE_INTERLACED ? _T("i") : _T("p"),
+            outputInterlaced ? _T("i") : _T("p"),
             m_sar.n(), m_sar.d(),
-            frameRate.num / (double)frameRate.den, frameRate.num, frameRate.den);
+            frameRateN / (double)frameRateD, frameRateN, frameRateD);
     } else {
         auto [err, outputVideoInfo] = GetOutputVideoInfo();
         if (err != RGY_ERR_NONE) {
@@ -6068,6 +6090,12 @@ tstring VCECore::GetEncoderParam() {
             }
         }
     }
+#if ENABLE_VAAPI
+    if (m_backend == VCEBackend::VAAPI) {
+        if (m_encVA) mes += m_encVA->paramString();
+        return mes;
+    }
+#endif
     if (!m_pEncoder) {
         return mes;
     }

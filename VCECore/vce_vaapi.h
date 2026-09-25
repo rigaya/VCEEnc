@@ -30,6 +30,7 @@
 
 #if ENABLE_VAAPI
 
+#include <optional>
 #include <unordered_map>
 #include <vector>
 #include "rgy_avutil.h"
@@ -80,9 +81,11 @@ public:
     const CodecCsp& decCaps();
     tstring decCapsString(RGY_CODEC codec);
     const VCEVADeviceInfo& info() const { return m_info; }
+    const tstring& vendorString() const { return m_vendorString; }
     AVBufferRef *hwdevice() { return m_hwdevice.get(); }
 protected:
     VCEVADeviceInfo m_info;
+    tstring m_vendorString;
     std::unique_ptr<AVBufferRef, RGYAVDeleter<AVBufferRef>> m_hwdevice;
     void *m_display;
     std::unordered_map<RGY_CODEC, VCEVAEncCaps> m_encCaps;
@@ -100,6 +103,9 @@ public:
     RGY_ERR submit(RGYFrame *frame);
     RGY_ERR receive(std::shared_ptr<RGYBitstream>& bs);
     tstring paramString() const;
+    tstring profileString() const;
+    tstring levelString() const;
+    tstring tierString() const;
     int width() const { return m_width; }
     int height() const { return m_height; }
     int bitdepth() const { return m_bitdepth; }
@@ -118,6 +124,9 @@ protected:
     int m_bframes;
     int m_refs;
     int m_preset;
+    int m_tier;
+    std::optional<int> m_qpMin;
+    std::optional<int> m_qpMax;
 };
 
 #endif // ENABLE_VAAPI

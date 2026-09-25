@@ -441,6 +441,7 @@ std::vector<VCEVADeviceInfo> enumerateVADevices(RGYLog *log, tstring *openErrorM
 
 VCEDeviceVA::VCEDeviceVA() :
     m_info(),
+    m_vendorString(),
     m_hwdevice(nullptr, RGYAVDeleter<AVBufferRef>(av_buffer_unref)),
     m_display(nullptr),
     m_encCaps(),
@@ -475,6 +476,8 @@ RGY_ERR VCEDeviceVA::open(const VCEVADeviceInfo& info, std::shared_ptr<RGYLog> l
         m_hwdevice.reset();
         return RGY_ERR_DEVICE_NOT_FOUND;
     }
+    const char *vendor = vaQueryVendorString((VADisplay)m_display);
+    m_vendorString = vendor ? char_to_tstring(vendor) : _T("unknown");
     return RGY_ERR_NONE;
 }
 
@@ -558,7 +561,7 @@ VCEEncoderVA::VCEEncoderVA() :
     m_frameSW(nullptr, RGYAVDeleter<AVFrame>(av_frame_free)),
     m_pkt(nullptr, RGYAVDeleter<AVPacket>(av_packet_free)),
     m_log(), m_codec(RGY_CODEC_UNKNOWN), m_width(0), m_height(0), m_bitdepth(VA_DEFAULT_BIT_DEPTH), m_rateControl(VCE_RC_CQP),
-    m_qp(0), m_bframes(0), m_refs(0), m_preset(VA_PRESET_COMPRESSION_BALANCED) {
+    m_qp(0), m_bframes(0), m_refs(0), m_preset(VA_PRESET_COMPRESSION_BALANCED), m_tier(0), m_qpMin(), m_qpMax() {
 }
 
 VCEEncoderVA::~VCEEncoderVA() = default;
@@ -641,6 +644,8 @@ RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int
         m_refs = caps.maxRefL0;
     }
     m_qp = qvbr ? prm->qvbrLevel : prm->qp.qpP;
+    m_qpMin = prm->nQPMin;
+    m_qpMax = prm->nQPMax;
 
     AVBufferRef *framesRaw = av_hwframe_ctx_alloc(dev->hwdevice());
     if (framesRaw == nullptr) return RGY_ERR_NULL_PTR;
@@ -699,8 +704,8 @@ RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int
     if (prm->codec == RGY_CODEC_H264 && prm->aud) av_dict_set(&opts, "aud", "1", 0);
     if (prm->codec == RGY_CODEC_HEVC && prm->aud) av_dict_set(&opts, "aud", "1", 0);
     if (prm->codec != RGY_CODEC_H264) {
-        const int tier = prm->codecParam[prm->codec].nTier == AMF_VIDEO_ENCODER_HEVC_TIER_HIGH ? 1 : 0;
-        av_dict_set_int(&opts, "tier", tier, 0);
+        m_tier = prm->codecParam[prm->codec].nTier == AMF_VIDEO_ENCODER_HEVC_TIER_HIGH ? 1 : 0;
+        av_dict_set_int(&opts, "tier", m_tier, 0);
     }
     if (prm->rateControl == get_codec_cqp(prm->codec)) {
         ctx->flags |= AV_CODEC_FLAG_QSCALE;
@@ -797,26 +802,61 @@ RGY_ERR VCEEncoderVA::receive(std::shared_ptr<RGYBitstream>& bs) {
     return RGY_ERR_NONE;
 }
 
+tstring VCEEncoderVA::profileString() const {
+    if (!m_codecCtx) return _T("auto");
+    const char *profile = avcodec_profile_name(m_codecCtx->codec_id, m_codecCtx->profile);
+    return profile ? char_to_tstring(profile) : _T("auto");
+}
+
+tstring VCEEncoderVA::levelString() const {
+    if (!m_codecCtx || m_codecCtx->level == AV_LEVEL_UNKNOWN) return _T("auto");
+    const TCHAR *level = get_cx_desc(get_level_list(m_codec), m_codecCtx->level);
+    return level && level[0] ? tstring(level) : strsprintf(_T("%d"), m_codecCtx->level);
+}
+
+tstring VCEEncoderVA::tierString() const {
+    return m_codec == RGY_CODEC_HEVC ? (m_tier ? _T("high") : _T("main")) : _T("");
+}
+
 tstring VCEEncoderVA::paramString() const {
-    if (!m_codecCtx) return _T("VA-API encoder is not initialized.");
-    const TCHAR *rc = m_rateControl == get_codec_cqp(m_codec) ? _T("CQP") : m_rateControl == get_codec_qvbr(m_codec) ? _T("QVBR") : m_rateControl == get_codec_cbr(m_codec) || m_rateControl == get_codec_hqcbr(m_codec) ? _T("CBR") : _T("VBR");
-    const TCHAR *preset = va_preset_name(m_preset);
-    const tstring level = m_codecCtx->level == AV_LEVEL_UNKNOWN ? tstring(_T("auto")) : strsprintf(_T("%d"), m_codecCtx->level);
-    tstring rcDetails;
+    if (!m_codecCtx) return _T("VA-API encoder is not initialized.\n");
+    tstring mes = strsprintf(_T("Quality:       %s\n"), va_preset_name(m_preset));
     if (m_rateControl == get_codec_cqp(m_codec)) {
-        const auto qpP = m_codecCtx->global_quality / FF_QP2LAMBDA;
-        const auto qpI = (int)(qpP * m_codecCtx->i_quant_factor);
-        const auto qpB = (int)(qpP * m_codecCtx->b_quant_factor);
-        rcDetails = strsprintf(_T("QP (I/P/B):    %d/%d/%d"), qpI, qpP, qpB);
-    } else if (m_rateControl == get_codec_qvbr(m_codec)) {
-        rcDetails = strsprintf(_T("QVBR QP:       %d\nBitrate:       %lld kbps"), m_qp, (long long)(m_codecCtx->bit_rate / 1000));
+        const int qpP = m_codecCtx->global_quality / FF_QP2LAMBDA;
+        const int qpI = (int)(qpP * m_codecCtx->i_quant_factor);
+        const int qpB = (int)(qpP * m_codecCtx->b_quant_factor);
+        mes += strsprintf(_T("CQP:           %s:%d, %s:%d"),
+            m_codec == RGY_CODEC_AV1 ? _T("Intra") : _T("I"), qpI,
+            m_codec == RGY_CODEC_AV1 ? _T("Inter") : _T("P"), qpP);
+        if (m_bframes > 0) {
+            mes += strsprintf(_T(", %s:%d"), m_codec == RGY_CODEC_AV1 ? _T("InterB") : _T("B"), qpB);
+        }
+        mes += _T("\n");
     } else {
-        rcDetails = strsprintf(_T("Bitrate:       %lld kbps\nMax bitrate:   %lld kbps\nVBV buffer:    %d kbit"),
-            (long long)(m_codecCtx->bit_rate / 1000), (long long)(m_codecCtx->rc_max_rate / 1000), m_codecCtx->rc_buffer_size / 1000);
+        const TCHAR *rc = m_rateControl == get_codec_qvbr(m_codec) ? _T("QVBR")
+            : m_rateControl == get_codec_cbr(m_codec) || m_rateControl == get_codec_hqcbr(m_codec) ? _T("CBR") : _T("VBR");
+        mes += strsprintf(_T("%s:           %lld kbps\n"), rc, (long long)(m_codecCtx->bit_rate / 1000));
+        if (m_rateControl == get_codec_qvbr(m_codec)) {
+            mes += strsprintf(_T("QVBR level:    %d\n"), m_qp);
+        }
+        if (m_codecCtx->rc_max_rate > 0) {
+            mes += strsprintf(_T("Max bitrate:   %lld kbps\n"), (long long)(m_codecCtx->rc_max_rate / 1000));
+        }
+        if (m_qpMin.has_value() || m_qpMax.has_value()) {
+            const auto qmin = m_qpMin.has_value() ? strsprintf(_T("%d"), m_qpMin.value()) : tstring(_T("auto"));
+            const auto qmax = m_qpMax.has_value() ? strsprintf(_T("%d"), m_qpMax.value()) : tstring(_T("auto"));
+            mes += strsprintf(_T("QP:            Min: %s:%s, Max: %s:%s\n"), qmin.c_str(), qmin.c_str(), qmax.c_str(), qmax.c_str());
+        }
     }
-    return strsprintf(_T("Codec:         %s\nResolution:    %dx%d\nFrame rate:    %d/%d\nRate control:  %s\n%s\nB frames:      %d\nRef frames:    %d\nProfile:       %d\nLevel:         %s\nPreset:        %s (compression_level=%d)\nGOP:           %d"),
-        CodecToStr(m_codec).c_str(), m_width, m_height, m_codecCtx->framerate.num, m_codecCtx->framerate.den,
-        rc, rcDetails.c_str(), m_bframes, m_refs, m_codecCtx->profile, level.c_str(), preset, m_preset, m_codecCtx->gop_size);
+    if (m_codecCtx->rc_buffer_size > 0) {
+        mes += strsprintf(_T("VBV Bufsize:   %d kb\n"), m_codecCtx->rc_buffer_size / 1000);
+    }
+    // AMFの表示に合わせ、H.264でBフレームを使わない場合はBframesの行を出さない
+    if (m_bframes > 0 || m_codec != RGY_CODEC_H264) {
+        mes += strsprintf(_T("Bframes:       %d frames\n"), m_bframes);
+    }
+    mes += strsprintf(_T("Ref frames:    %d frames\nGOP Len:       %d frames\n"), m_refs, m_codecCtx->gop_size);
+    return mes;
 }
 
 #endif // ENABLE_VAAPI
