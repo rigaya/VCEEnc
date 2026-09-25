@@ -5054,6 +5054,16 @@ RGY_ERR VCECore::initBackend(VCEParam *prm) {
         PrintMes(RGY_LOG_ERROR, _T("VA-API is not available in this build.\n"));
         return RGY_ERR_UNSUPPORTED;
     }
+    auto err = initAMFFactory(prm->deviceID);
+    if (err != RGY_ERR_NONE) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to initialize VCE factory: %s\n"), get_err_mes(err));
+        return err;
+    }
+    err = initTracer(prm->ctrl.loglevel.get(RGY_LOGT_AMF));
+    if (err != RGY_ERR_NONE) {
+        PrintMes(RGY_LOG_ERROR, _T("Failed to set up AMF Tracer: %s\n"), get_err_mes(err));
+        return err;
+    }
     m_backend = VCEBackend::AMF;
 #else
     if (prm->backend == VCEBackend::VAAPI) {
