@@ -838,10 +838,7 @@ RGY_ERR VCECore::checkParam(VCEParam *prm) {
         if (prm->codecParam[prm->codec].nProfile == AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN_10) {
             prm->outputDepth = 10;
         }
-        //RX5500XTがmain10をサポートしないと返したりするので、ここはひとまず無効化する
-        //if (prm->outputDepth == 10) {
-        //    prm->codecParam[prm->codec].nProfile = AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN_10;
-        //}
+        // Main10 の自動設定は、GPU 確定後に選択した GPU の能力を確認して行う。
     }
     if (prm->bframes.value_or(0) > 0 && prm->codec == RGY_CODEC_HEVC
 #if ENABLE_VAAPI
@@ -3661,6 +3658,16 @@ RGY_ERR VCECore::initEncoder(VCEParam *prm) {
 
     amf::AMFCapsPtr encoderCaps;
     if (m_pEncoder->GetCaps(&encoderCaps) == AMF_OK) {
+        // Main は 8bit 専用のため、10bit 出力では Main10 にする。
+        if (prm->codec == RGY_CODEC_HEVC && prm->outputDepth == 10
+            && prm->codecParam[prm->codec].nProfile == AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN) {
+            amf_int64 maxProfile = 0;
+            // RX5500XT などが Main10 非対応と申告する場合は、従来の Main を維持する。
+            if (encoderCaps->GetProperty(AMF_PARAM_CAP_MAX_PROFILE(prm->codec), &maxProfile) == AMF_OK
+                && maxProfile >= AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN_10) {
+                prm->codecParam[prm->codec].nProfile = AMF_VIDEO_ENCODER_HEVC_PROFILE_MAIN_10;
+            }
+        }
         //パラメータチェック
         amf::AMF_ACCELERATION_TYPE accelType = encoderCaps->GetAccelerationType();
         if (accelType != amf::AMF_ACCEL_GPU && accelType != amf::AMF_ACCEL_HARDWARE) {
