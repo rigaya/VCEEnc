@@ -41,6 +41,7 @@
 #include <filesystem>
 #include <fstream>
 #include <fcntl.h>
+#include <mutex>
 #include <string>
 #include <unistd.h>
 
@@ -363,6 +364,9 @@ bool test_encoder_open(AVBufferRef *hwdevice, const AVCodec *codec, const bool t
     context->hw_frames_ctx = av_buffer_ref(framesRef.get());
     if (context->hw_frames_ctx == nullptr) return false;
 
+    // av_log のレベルはプロセス共通なので、並列子の試し開きを直列化する。
+    static std::mutex probeLogMutex;
+    const std::lock_guard<std::mutex> probeLogLock(probeLogMutex);
     const int previousLogLevel = av_log_get_level();
     av_log_set_level(AV_LOG_QUIET);
     struct AvLogLevelRestorer { int prev; ~AvLogLevelRestorer() { av_log_set_level(prev); } } avGuard{ previousLogLevel };
@@ -629,10 +633,6 @@ RGY_ERR VCEEncoderVA::init(VCEDeviceVA *dev, const VCEParam *prm, int width, int
     warnUnsupported(_T("--screen-content-tools"), prm->screenContentTools != defaultParam.screenContentTools);
     warnUnsupported(_T("--palette-mode"), prm->paletteMode != defaultParam.paletteMode);
     warnUnsupported(_T("--force-integer-mv"), prm->forceIntegerMV != defaultParam.forceIntegerMV);
-    if (prm->ctrl.parallelEnc.isEnabled()) {
-        if (m_log) m_log->write(RGY_LOG_ERROR, RGY_LOGT_DEV, _T("--parallel is not supported with --backend vaapi.\n"));
-        return RGY_ERR_UNSUPPORTED;
-    }
     if (prm->vppamf.pp.enable || prm->vppamf.enhancer.enable || prm->vppamf.frc.enable) {
         if (m_log) m_log->write(RGY_LOG_ERROR, RGY_LOGT_DEV, _T("AMF preprocess/enhancer/FRC filters are not supported with --backend vaapi.\n"));
         return RGY_ERR_UNSUPPORTED;

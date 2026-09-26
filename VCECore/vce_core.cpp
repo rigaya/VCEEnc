@@ -495,6 +495,12 @@ RGY_ERR VCECore::InitParallelEncode(VCEParam *inputParam, const int maxEncoders)
         m_deviceUsage->close();
     }
     if (inputParam->ctrl.parallelEnc.isParent()) {
+#if ENABLE_VAAPI
+        // 子は別スレッドで初期化するため VA だけを引き継ぎ、GPU の自動選択は子ごとに行う。
+        if (m_backend == VCEBackend::VAAPI) {
+            inputParam->backend = m_backend;
+        }
+#endif
         // とんでもなく大きい値にする人がいそうなので、適当に制限する
         const int maxParallelCount = std::max(4, maxEncoders * 2);
         if (inputParam->ctrl.parallelEnc.parallelCount < 0) {
@@ -4295,7 +4301,27 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
                     gpu = gpuList.erase(gpu);
                     continue;
                 }
+                if (prm->rateControl == get_codec_qvbr(prm->codec) && !(caps.rcModes & VCE_VA_RC_QVBR)) {
+                    message += strsprintf(_T("GPU #%d (%s) does not support QVBR for %s encoding.\n"),
+                        (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
+                    gpu = gpuList.erase(gpu);
+                    continue;
+                }
                 gpu++;
+            }
+            if (prm->bframes.value_or(0) > 0 && std::any_of(gpuList.begin(), gpuList.end(), [prm](const auto& gpu) {
+                    return gpu->va()->encCaps(prm->codec).maxRefL1 > 0;
+                })) {
+                // B フレームの有無が子ごとに異なると、チャンク境界で DTS が逆戻りする。
+                for (auto gpu = gpuList.begin(); gpu != gpuList.end();) {
+                    if ((*gpu)->va()->encCaps(prm->codec).maxRefL1 <= 0) {
+                        PrintMes(RGY_LOG_DEBUG, _T("GPU #%d (%s) excluded: %s B-frames require maxRefL1 > 0.\n"),
+                            (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
+                        gpu = gpuList.erase(gpu);
+                    } else {
+                        gpu++;
+                    }
+                }
             }
         }
         if (!message.empty()) {

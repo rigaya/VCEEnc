@@ -408,7 +408,7 @@ For details, please refer to the [installation guide](./Install.en.md#linux).
 
 `auto` (default) automatically switches to VA-API if AMF initialization fails or no AMF device can encode the selected codec.
 
-With `vaapi`, unsupported encoding options are ignored with a warning, and `--parallel`, AMF VPP filters, and `--ssim`/`--psnr`/`--vmaf` are not available.
+With `vaapi`, unsupported encoding options are ignored with a warning, and AMF VPP filters and `--ssim`/`--psnr`/`--vmaf` are not available.
 
 ### -c, --codec &lt;string&gt;
 Specify the output codec
