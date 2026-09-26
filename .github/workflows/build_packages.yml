@@ -109,10 +109,22 @@ jobs:
               exit 1
             fi
           '
-          docker exec build_pkg ./build/vceencc --version
-          docker exec build_pkg ./check_options.py -exe ./build/vceencc
-          docker exec build_pkg ./build/vceencc --check-cmd-parse
-          docker exec build_pkg cp ./build/vceencc ./vceencc
+          docker exec build_pkg meson install -C ./build --destdir /tmp/vceencc-install
+          docker exec build_pkg cp /tmp/vceencc-install/usr/local/bin/vceencc ./vceencc
+          docker exec build_pkg bash -lc '
+            if [ -n "${LIBVA_BUILD_PREFIX:-}" ] && readelf -d ./vceencc | grep -E "RPATH|RUNPATH" | grep -F "${LIBVA_BUILD_PREFIX}"; then
+              echo "配布バイナリがビルド専用 libva を参照しています。" >&2
+              exit 1
+            fi
+            ldd_output=$(ldd -r ./vceencc 2>&1) || { echo "$ldd_output"; exit 1; }
+            echo "$ldd_output"
+            if echo "$ldd_output" | grep -E "not found|undefined symbol"; then
+              exit 1
+            fi
+          '
+          docker exec build_pkg ./vceencc --version
+          docker exec build_pkg ./check_options.py -exe ./vceencc
+          docker exec build_pkg ./vceencc --check-cmd-parse
           docker exec build_pkg ./build_${PKG_TYPE}.sh
           docker exec build_pkg bash -lc "cp -v ./*.${PKG_TYPE} /output/"
           PKGFILE=$(find "${{ steps.prep.outputs.output_dir }}" -maxdepth 1 -type f -name "*.${PKG_TYPE}" -print -quit)

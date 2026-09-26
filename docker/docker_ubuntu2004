@@ -6,6 +6,8 @@ ARG FFMPEG_DLL_REF=master
 ARG BUILD_SCRIPTS_DIR=/opt/build_scripts
 ARG FFMPEG_PREFIX=/opt/build_scripts/ffmpeg_dll/build_dll/x64/build
 ARG VMAF_PREFIX=/opt/build_scripts/ffmpeg_dll/x64/build
+ARG LIBVA_VERSION=2.24.1
+ARG LIBVA_BUILD_PREFIX=/opt/libva-build
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -64,6 +66,18 @@ ENV RUSTUP_HOME=/usr/local/rustup
 ENV CARGO_HOME=/usr/local/cargo
 ENV PATH=/usr/local/cargo/bin:$PATH
 
+# 実行時の libva は配布先のシステム版を使い、ここでは新しいヘッダとリンク情報だけを用意する。
+RUN git clone --depth 1 --branch ${LIBVA_VERSION} https://github.com/intel/libva.git /tmp/libva-src \
+    && meson setup /tmp/libva-src/build /tmp/libva-src --prefix=${LIBVA_BUILD_PREFIX} \
+      --libdir=lib -Dwith_x11=no -Dwith_glx=no -Dwith_wayland=no -Dwith_win32=no \
+    && meson compile -C /tmp/libva-src/build \
+    && meson install -C /tmp/libva-src/build \
+    && test -f ${LIBVA_BUILD_PREFIX}/lib/pkgconfig/libva-drm.pc \
+    && rm -rf /tmp/libva-src
+
+ENV LIBVA_BUILD_PREFIX=${LIBVA_BUILD_PREFIX}
+ENV PKG_CONFIG_PATH=${LIBVA_BUILD_PREFIX}/lib/pkgconfig
+
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
       | sh -s -- -y --profile minimal \
     && /usr/local/cargo/bin/rustup show \
@@ -77,6 +91,8 @@ RUN git clone --depth 1 --branch ${FFMPEG_DLL_REF} ${FFMPEG_DLL_REPO} ${BUILD_SC
     && sed -i 's/\r$//' ./build_libvmaf.sh \
     && export NUMBER_OF_PROCESSORS="$(nproc)" \
     && bash ./build_ffmpeg_dll.sh --skip-src-archive --disable-pgo \
+    && grep -F '#define CONFIG_AV1_VAAPI_ENCODER 1' ./build_dll/x64/ffmpeg/config_components.h \
+    && grep -F '#define CONFIG_AV1_VAAPI_HWACCEL 1' ./build_dll/x64/ffmpeg/config_components.h \
     && bash ./build_libvmaf.sh --skip-src-archive --disable-cuda \
     && test -f "${FFMPEG_PREFIX}/lib/pkgconfig/libavutil.pc" \
     && test -f "${VMAF_PREFIX}/lib/pkgconfig/libvmaf.pc" \
