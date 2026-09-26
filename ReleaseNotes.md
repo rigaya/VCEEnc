@@ -1,5 +1,9 @@
 # VCEEnc Release Notes
 
+## 9.19
+
+- Fix OpenCL not available when using VA-API in 9.18. (Linux)
+
 ## 9.18
 
 - Add VA-API encoding on Linux ([--backend](./VCEEncC_Options.en.md#--backend-autoamfvaapi-linux)).
