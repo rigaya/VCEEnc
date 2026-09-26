@@ -312,9 +312,21 @@ dllのバージョンを表示
 VCEEncで使用するDeviceIdを指定する。
 
 ### --backend &lt;auto|amf|vaapi&gt; (Linux)
-エンコードに使用するバックエンドを指定する。`auto` (既定値) はAMFの初期化に失敗するか、指定したコーデックをAMFでエンコードできるデバイスがない場合にVA-APIへ切り替える。`amf` はAMFを、`vaapi` はVA-APIを使用する。
-AMFが使える環境ではAMFとVA-APIのデバイス番号を同じ物理GPUにそろえる。AMFが使えない場合やPCIバスIDを取得できない場合、VA-APIの番号はrender node順になる。
-VA-APIでは入力のデコードに既定でavswを使い、明示的な `--avhw` ではlibavcodecのVA-API hwaccelでデコードした後、システムメモリへ転送する。非対応のエンコードオプションは警告を出して無視する。`--parallel`、AMF VPPフィルタ、`--ssim`/`--psnr`/`--vmaf` は使用できない。Bフレーム数や参照フレーム数はデバイスの能力に従う。`VCEENC_AMF_DLL_OVERRIDE` 環境変数はAMFランタイムの差し替え用（デバッグ用）。
+
+Linuxでは、HWエンコーダを使う方法を、`amf`と`vaapi`の2種類から選択できます。(Windowsでは本オプションはありません)
+
+| 方法 | amf | vaapi |
+|:--|:--:|:--:|
+| 対応GPU | RDNA (Radeon RX 5000シリーズ) 以降、Ryzen 5000シリーズ以降のAPU | GCN世代以降のRadeon |
+| インストール | やや面倒 | 容易 |
+| HWエンコーダの詳細設定 | 可 | 基本的な設定のみ |
+| HWデコード (`--avhw`) | 可 | 可 |
+
+詳細は[インストール方法](./Install.ja.md#linux)を参照してください。
+
+`auto` (デフォルト) はAMFの初期化に失敗するか、指定したコーデックをAMFでエンコードできるデバイスがない場合に自動的にVA-APIへ切り替えます。
+
+`vaapi`では、非対応のエンコードオプションについて警告を出して無視するほか、`--parallel`、AMF VPPフィルタ、`--ssim`/`--psnr`/`--vmaf` は使用できません。
 
 ### -c, --codec &lt;string&gt;
 エンコードするコーデックの指定
