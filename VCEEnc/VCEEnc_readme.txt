@@ -188,6 +188,20 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2026.09.26 (9.18)
+[VCEEncC]
+- Linux版でVA-APIによるエンコードに対応。(--backend)
+  - --backend autoでAMFが対応しないときはVA-APIに切り替えるようにした。
+- Linuxでも--interlace autoを使用できるようにした。
+- LinuxでRUSTICL_ENABLEが未設定の場合、radeonsiを設定してMesaのOpenCL (rusticl)でRadeonを使えるようにした。
+- Linuxパッケージの依存からAMFを外し、AMFのない環境ではVA-APIで動作するようにした。
+- AMFのHWデコーダ使用時に、参照フレームの多いH.264で停止する問題を修正。
+- LinuxのAMFでは、DPBが16のH.264をswデコードに切り替えるようにした。
+- --ssim, --psnr使用時のフリーズと終了時の誤判定を修正。(#145)
+- --vpp-tweakの行末書き込みを修正。(#144)
+- フレーム数が既知の入力で--trimを指定すると、未初期化のtrimリストを参照する問題を修正。
+- 画素フォーマット変換の不具合を修正。
+
 2026.09.11 (9.17)
 [VCEEncC]
 - VMAFによる画質評価を追加。

@@ -1,5 +1,19 @@
 # VCEEnc Release Notes
 
+## 9.18
+
+- Add VA-API encoding on Linux ([--backend](./VCEEncC_Options.en.md#--backend-autoamfvaapi-linux)).
+  - With [--backend](./VCEEncC_Options.en.md#--backend-autoamfvaapi-linux) `auto`, fall back to VA-API when AMF cannot encode the selected codec.
+- Allow [--interlace](./VCEEncC_Options.en.md#--interlace-string) `auto` on Linux.
+- Set `RUSTICL_ENABLE=radeonsi` when unset, so Mesa OpenCL (rusticl) can use Radeon GPUs.
+- Drop AMF from Linux package dependencies, so encoding works through VA-API without AMF.
+- Fix a stall on H.264 with many reference frames when using the AMF hardware decoder.
+- On Linux AMF, fall back to software decoding for H.264 streams whose DPB is 16.
+- Fix a freeze and an incorrect exit status when using [--ssim](./VCEEncC_Options.en.md#--ssim) or [--psnr](./VCEEncC_Options.en.md#--psnr). ( #145 )
+- Fix the end-of-row write in [--vpp-tweak](./VCEEncC_Options.en.md#--vpp-tweak-param1value1param2value2). ( #144 )
+- Fix [--trim](./VCEEncC_Options.en.md#--trim-intintintintintint) reading an uninitialized trim list when the input frame count is known.
+- Fix pixel format conversion bugs.
+
 ## 9.17
 
 - Add VMAF quality evaluation ([--vmaf](./VCEEncC_Options.en.md#--vmaf-param1value1param2value2)).
