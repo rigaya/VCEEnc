@@ -1,5 +1,12 @@
 # VCEEnc Release Notes
 
+## 9.20
+
+- Fix [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2) non deterministic behaviour.
+- Fix [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2) failing on runtimes without `cl_khr_image2d_from_buffer`, such as Mesa rusticl.
+- Fix a crash during [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2) cleanup with YUV444.
+- Fix OpenCL interop failing when multiple Intel OpenCL platforms are present.
+
 ## 9.19
 
 - Fix OpenCL not available when using VA-API in 9.18. (Linux)

@@ -188,6 +188,13 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2026.09.27 (9.20)
+[VCEEncC]
+- --vpp-afsでの非決定性を修正。
+- cl_khr_image2d_from_buffer非対応環境(Mesa rusticlなど)で、--vpp-afsが失敗する問題を修正。
+- --vpp-afsで、YUV444時に終了処理でクラッシュする問題を修正。
+- 複数のIntel OpenCL platformが存在する環境で、OpenCL interopが失敗する問題を修正。
+
 2026.09.26 (9.19)
 - 9.18で、VA-API使用時にOpenCLが有効にならなくなっていた問題を修正。
 
