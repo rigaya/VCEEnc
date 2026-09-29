@@ -4311,7 +4311,7 @@ RGY_ERR VCECore::checkGPUListByEncoder(std::vector<std::unique_ptr<VCEDevice>> &
                     gpu = gpuList.erase(gpu);
                     continue;
                 }
-                if (prm->rateControl == get_codec_qvbr(prm->codec) && !(caps.rcModes & VCE_VA_RC_QVBR)) {
+                if (prm->rateControl == get_codec_qvbr(prm->codec) && !(caps.rcModes & RGY_VA_RC_QVBR)) {
                     message += strsprintf(_T("GPU #%d (%s) does not support QVBR for %s encoding.\n"),
                         (*gpu)->id(), (*gpu)->name().c_str(), CodecToStr(prm->codec).c_str());
                     gpu = gpuList.erase(gpu);
@@ -5120,7 +5120,7 @@ std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceList(bool interopD3
 std::vector<std::unique_ptr<VCEDevice>> VCECore::createDeviceListVA(bool enableOpenCL, bool enableVppPerfMonitor, int openCLBuildThreads,
     int targetDeviceId, const tstring& clPerfDumpDir, double clPerfTimelineSec) {
     std::vector<std::unique_ptr<VCEDevice>> devices;
-    for (const auto& info : enumerateVADevices(m_pLog.get(), nullptr, m_vaPciBusIds)) {
+    for (const auto& info : enumerateVADevices(VCE_VA_VENDOR_ID_AMD, 0, m_pLog.get(), nullptr, m_vaPciBusIds)) {
         if (targetDeviceId >= 0 && info.id != targetDeviceId) continue;
         auto device = std::make_unique<VCEDevice>(m_pLog, nullptr, nullptr);
         if (device->initVA(info, enableOpenCL, enableVppPerfMonitor, openCLBuildThreads, clPerfDumpDir, clPerfTimelineSec) == RGY_ERR_NONE) {

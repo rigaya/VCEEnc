@@ -30,105 +30,26 @@
 
 #if ENABLE_VAAPI
 
-#include <optional>
-#include <map>
-#include <unordered_map>
-#include <vector>
-#include "rgy_avutil.h"
-#include "rgy_def.h"
-#include "rgy_err.h"
-#include "rgy_log.h"
+#include "rgy_libavcodec_vaapi.h"
 
-class RGYFrame;
-struct RGYBitstream;
 struct VCEParam;
 
-enum VCEVAEncRCMode : uint32_t {
-    VCE_VA_RC_CBR  = 1u << 0,
-    VCE_VA_RC_VBR  = 1u << 1,
-    VCE_VA_RC_CQP  = 1u << 2,
-    VCE_VA_RC_QVBR = 1u << 3,
-};
+// VA-API の実装は QSVEnc と共通の rgy_libavcodec_vaapi.* にある。
+// ここには VCEParam からの変換、AMF 専用オプションの警告、Mesa 用の preset 対応だけを置く。
+static constexpr uint32_t VCE_VA_VENDOR_ID_AMD = 0x1002;
+using VCEVADeviceInfo = RGYVADeviceInfo;
+using VCEDeviceVA = RGYDeviceVA;
 
-struct VCEVADeviceInfo {
-    int         id = -1;
-    tstring     renderNode;
-    std::string pciBusId;
-    tstring     name;
-};
-
-struct VCEVAEncCaps {
-    bool     available;
-    bool     support10bit;
-    uint32_t rcModes;
-    int      maxRefL0;
-    int      maxRefL1;
-    int      maxWidth;
-    int      maxHeight;
-
-    VCEVAEncCaps();
-};
-
-// openErrorMessage: AMD の render node をどれも開けなかったとき、その理由 (node、strerror、ヒント) を返す
-std::vector<VCEVADeviceInfo> enumerateVADevices(RGYLog *log, tstring *openErrorMessage = nullptr,
-    const std::map<int, std::string>& amfPciBusIds = {});
-
-class VCEDeviceVA {
-public:
-    VCEDeviceVA();
-    ~VCEDeviceVA();
-    RGY_ERR open(const VCEVADeviceInfo& info, std::shared_ptr<RGYLog> log);
-    const VCEVAEncCaps& encCaps(RGY_CODEC codec);
-    tstring capsString(RGY_CODEC codec);
-    const CodecCsp& decCaps();
-    tstring decCapsString(RGY_CODEC codec);
-    const VCEVADeviceInfo& info() const { return m_info; }
-    const tstring& vendorString() const { return m_vendorString; }
-    AVBufferRef *hwdevice() { return m_hwdevice.get(); }
-protected:
-    VCEVADeviceInfo m_info;
-    tstring m_vendorString;
-    std::unique_ptr<AVBufferRef, RGYAVDeleter<AVBufferRef>> m_hwdevice;
-    void *m_display;
-    std::unordered_map<RGY_CODEC, VCEVAEncCaps> m_encCaps;
-    CodecCsp m_decCaps;
-    bool m_decCapsQueried;
-    std::shared_ptr<RGYLog> m_log;
-};
-
-class VCEEncoderVA {
+class VCEEncoderVA : public RGYEncoderVA {
 public:
     VCEEncoderVA();
-    ~VCEEncoderVA();
     RGY_ERR init(VCEDeviceVA *dev, const VCEParam *prm, int width, int height,
         rgy_rational<int> sar, rgy_rational<int> fps, rgy_rational<int> timebase, std::shared_ptr<RGYLog> log);
-    RGY_ERR submit(RGYFrame *frame);
-    RGY_ERR receive(std::shared_ptr<RGYBitstream>& bs);
+    // 従来の VCEEnc の表示 (preset 名と level の表記) を保つため、共通側の表示を置き換える。
     tstring paramString() const;
-    tstring profileString() const;
     tstring levelString() const;
-    tstring tierString() const;
-    int width() const { return m_width; }
-    int height() const { return m_height; }
-    int bitdepth() const { return m_bitdepth; }
-    int videoDelay() const { return (m_codec != RGY_CODEC_AV1 && m_bframes > 0) ? 1 : 0; }
 protected:
-    std::unique_ptr<AVCodecContext, RGYAVDeleter<AVCodecContext>> m_codecCtx;
-    std::unique_ptr<AVBufferRef, RGYAVDeleter<AVBufferRef>> m_hwframes;
-    std::unique_ptr<AVFrame, RGYAVDeleter<AVFrame>> m_frameHW;
-    std::unique_ptr<AVFrame, RGYAVDeleter<AVFrame>> m_frameSW;
-    std::unique_ptr<AVPacket, RGYAVDeleter<AVPacket>> m_pkt;
-    std::shared_ptr<RGYLog> m_log;
-    RGY_CODEC m_codec;
-    int m_width, m_height, m_bitdepth;
-    int m_rateControl;
-    int m_qp;
-    int m_bframes;
-    int m_refs;
     int m_preset;
-    int m_tier;
-    std::optional<int> m_qpMin;
-    std::optional<int> m_qpMax;
 };
 
 #endif // ENABLE_VAAPI

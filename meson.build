@@ -715,6 +715,7 @@ vcecore_sources = files(
   'VCECore/rgy_input_sm.cpp',
   'VCECore/rgy_input_vpy.cpp',
   'VCECore/rgy_language.cpp',
+  'VCECore/rgy_libavcodec_vaapi.cpp',
   'VCECore/rgy_libdovi.cpp',
   'VCECore/rgy_libass.cpp',
   'VCECore/rgy_libplacebo.cpp',
