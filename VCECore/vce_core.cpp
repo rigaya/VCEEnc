@@ -5074,7 +5074,9 @@ RGY_ERR VCECore::allocatePiplelineFrames() {
             }
         }
         if (allocateSysFrame) {
-            const int requestNumFrames = std::max(1, t0RequestNumFrame + t1RequestNumFrame + asyncdepth + 1);
+            // OpenCLフィルタの出力をSYSフレームで受ける場合 (VA-API出力) も、kfm/rtgmcのように1入力で複数フレームを
+            // まとめて出すフィルタの分を確保しておかないと、出力をまとめて積む間にwork surfaceが枯渇する
+            const int requestNumFrames = std::max(1, t0RequestNumFrame + t1RequestNumFrame + t0->additionalOutputSurfaces() + asyncdepth + 1);
             allocateFrameInfo.mem_type = RGY_MEM_TYPE_CPU;
             PrintMes(RGY_LOG_DEBUG, _T("AllocFrames: %s-%s, type: SYS, %s %dx%d, request %d frames\n"),
                 t0->print().c_str(), t1->print().c_str(), RGY_CSP_NAMES[allocateFrameInfo.csp],
