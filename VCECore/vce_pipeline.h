@@ -457,6 +457,31 @@ public:
         return (err != RGY_ERR_NONE) ? err : unmapErr;
     }
 
+    RGY_ERR writeSYS(RGYOutput *writer) {
+        auto sysframe = m_surf.sys();
+        const auto& info = sysframe->frameInfo();
+        // VAサーフェスを参照するSYSオブジェクトは、ホスト画素として出力できない。
+        if (info.mem_type != RGY_MEM_TYPE_CPU || info.ptr[0] == nullptr) {
+            _ftprintf(stderr, _T("SYSサーフェスをraw出力できません: CPUメモリ上の画素が必要です。\n"));
+            return RGY_ERR_INVALID_OPERATION;
+        }
+        if (info.csp <= RGY_CSP_NA || info.csp >= RGY_CSP_COUNT || info.width <= 0 || info.height <= 0) {
+            _ftprintf(stderr, _T("SYSサーフェスをraw出力できません: フレーム形式または解像度が無効です。\n"));
+            return RGY_ERR_INVALID_OPERATION;
+        }
+        for (int i = 0; i < RGY_CSP_PLANES[info.csp]; i++) {
+            const auto plane = getPlane(&info, (RGY_PLANE)i);
+            if (plane.ptr[0] == nullptr || plane.pitch[0] <= 0) {
+                _ftprintf(stderr, _T("SYSサーフェスをraw出力できません: プレーン%dのホスト画素またはピッチが無効です。\n"), i);
+                return RGY_ERR_INVALID_OPERATION;
+            }
+        }
+        // 上流処理の完了を待ってから、マップ不要のホストフレームを渡す。
+        const auto err = RGYOpenCLEvent::wait(m_clevents);
+        if (err != RGY_ERR_NONE) return err;
+        return writer->WriteNextFrame(sysframe);
+    }
+
     virtual RGY_ERR write([[maybe_unused]] RGYOutput *writer, [[maybe_unused]] RGYOpenCLQueue *clqueue, [[maybe_unused]] RGYFilterSsim *videoQualityMetric) override {
         if (!writer || writer->getOutType() == OUT_TYPE_NONE) {
             return RGY_ERR_NOT_INITIALIZED;
@@ -464,8 +489,10 @@ public:
         if (writer->getOutType() != OUT_TYPE_SURFACE) {
             return RGY_ERR_INVALID_OPERATION;
         }
-        auto err = (m_surf.amf() != nullptr) ? writeAMF(writer) : writeCL(writer, clqueue);
-        return err;
+        if (m_surf.amf() != nullptr) return writeAMF(writer);
+        if (m_surf.cl() != nullptr) return writeCL(writer, clqueue);
+        if (m_surf.sys() != nullptr) return writeSYS(writer);
+        return RGY_ERR_INVALID_OPERATION;
     }
 };
 
