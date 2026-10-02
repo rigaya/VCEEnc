@@ -523,6 +523,22 @@ RGY_ERR RGYFilterNnedi::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<RGYLo
         const RGYWorkSize local(predLocalX, predLocalY);
         const auto subgroupSize = (int)program->kernel(kernelName).config(cl->queue(), local, local).subGroupSize();
         if (subgroupSize != 16 && subgroupSize != 32) {
+            if (RGYOpenCLDevice(cl->queue().devid()).checkExtension("cl_intel_required_subgroup_size")) {
+                // 自動選択の幅が16/32でない場合 (Arc A310ではSIMD8) でも、幅を指定できるデバイスでは16を要求してサブグループ版を使う
+                const int requiredSubgroupSize = 16;
+                const auto requiredBuildOptions = buildOptions + strsprintf(
+                    " -cl-std=CL2.0 -D NNEDI_PRED_SUBGROUP_OPT=1 -D NNEDI_PRED_SUBGROUP_SIZE=%d -D NNEDI_PRED_REQD_SUBGROUP_SIZE=%d",
+                    requiredSubgroupSize, requiredSubgroupSize);
+                auto requiredProgram = cl->buildResource(_T("RGY_FILTER_NNEDI_CL"), _T("EXE_DATA"), requiredBuildOptions.c_str());
+                const auto builtSubgroupSize = requiredProgram ? (int)requiredProgram->kernel(kernelName).config(cl->queue(), local, local).subGroupSize() : 0;
+                if (builtSubgroupSize == requiredSubgroupSize) {
+                    if (log) {
+                        log->write(RGY_LOG_DEBUG, RGY_LOGT_VPP,
+                            _T("Built RGY_FILTER_NNEDI_CL with required predictor subgroup size %d (auto size %d).\n"), requiredSubgroupSize, subgroupSize);
+                    }
+                    return requiredProgram;
+                }
+            }
             if (log) {
                 log->write(RGY_LOG_DEBUG, RGY_LOGT_VPP,
                     _T("NNEDI predictor subgroup optimization skipped: subgroup size %d.\n"), subgroupSize);
@@ -863,17 +879,28 @@ RGY_ERR RGYFilterNnedi::run_filter(const RGYFrameInfo *pInputFrame, RGYFrameInfo
         return RGY_ERR_NONE;
     }
     for (int i = 0; i < outputFrames; i++) {
-        if (!doubleHeight) {
-            err = m_cl->copyFrame(&m_frameBuf[i]->frame, pInputFrame, nullptr, queue, (i == 0) ? wait_events : std::vector<RGYOpenCLEvent>(), nullptr, RGYFrameCopyMode::FRAME, "nnedi.output_init_copy");
-            if (err != RGY_ERR_NONE) {
-                AddMessage(RGY_LOG_ERROR, _T("failed to initialize NNEDI output frame %d: %s.\n"), i, get_err_mes(err));
-                return err;
-            }
-        }
         RGYNnediFrameMap frameMap;
         err = rgy_nnedi_map_output_frame(&frameMap, topology, i);
         if (err != RGY_ERR_NONE) {
             return err;
+        }
+        if (!doubleHeight) {
+            // 処理するplaneの生成側フィールドは、prescreen(cubic)とpredictorで全画素が書かれる。
+            // そのため出力の初期化は、処理するplaneでは残す側(copyField)のフィールドだけをコピーすればよい
+            // (コピー量が半分になる)。処理しないplaneはソースのまま残すため全体をコピーする。
+            const auto fieldCopyMode = (frameMap.copyField == RGYNnediField::Top) ? RGYFrameCopyMode::FIELD_TOP : RGYFrameCopyMode::FIELD_BOTTOM;
+            auto pOutInit = &m_frameBuf[i]->frame;
+            for (int iplane = 0; iplane < RGY_CSP_PLANES[pInputFrame->csp]; iplane++) {
+                auto dstPlane = getPlane(pOutInit, (RGY_PLANE)iplane);
+                const auto srcPlane = getPlane(pInputFrame, (RGY_PLANE)iplane);
+                const auto initCopyMode = nnediPlaneEnabled(prm->nnedi, iplane) ? fieldCopyMode : RGYFrameCopyMode::FRAME;
+                // 同一in-orderキューなので入力待ちは最初のコピーだけに付ければよい
+                err = m_cl->copyPlane(&dstPlane, &srcPlane, nullptr, queue, (i == 0 && iplane == 0) ? wait_events : std::vector<RGYOpenCLEvent>(), nullptr, initCopyMode, "nnedi.output_init_copy");
+                if (err != RGY_ERR_NONE) {
+                    AddMessage(RGY_LOG_ERROR, _T("failed to initialize NNEDI output frame %d plane %d: %s.\n"), i, iplane, get_err_mes(err));
+                    return err;
+                }
+            }
         }
         err = prepareFieldReference(pInputFrame, i, frameMap, queue, (doubleHeight && i == 0) ? wait_events : std::vector<RGYOpenCLEvent>(), nullptr);
         if (err != RGY_ERR_NONE) {
