@@ -33,6 +33,7 @@ RGYFilterNnediUpscale::RGYFilterNnediUpscale(shared_ptr<RGYOpenCLContext> contex
     RGYFilter(context), m_shift(), m_passV(), m_passH(), m_transposeToH(), m_transposeBack() {
     m_name = _T("nnedi-upscale");
 }
+
 RGYFilterNnediUpscale::~RGYFilterNnediUpscale() {
     close();
 }
@@ -268,3 +269,4 @@ void RGYFilterNnediUpscale::close() {
     m_shift.clear();
     m_cl.reset();
 }
+

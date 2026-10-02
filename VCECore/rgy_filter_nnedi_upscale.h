@@ -73,3 +73,4 @@ protected:
 };
 
 #endif //__RGY_FILTER_NNEDI_UPSCALE_H__
+

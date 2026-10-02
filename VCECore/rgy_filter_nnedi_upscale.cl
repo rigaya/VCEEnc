@@ -54,6 +54,7 @@ __kernel void kernel_nnedi_upscale_shift(
     *(__global Type *)(pDst + (size_t)y * dstPitch + (size_t)x * sizeof(Type))
         = (Type)clamp(v + 0.5f, 0.0f, maxval);
 }
+
 // 2タップ平均による半画素補正。負のローブによるエッジ周辺のリンギングを避ける。
 __kernel void kernel_nnedi_upscale_shift_linear(
     __global uchar *restrict pDst, const int dstPitch,
@@ -68,3 +69,4 @@ __kernel void kernel_nnedi_upscale_shift_linear(
     *(__global Type *)(pDst + (size_t)y * dstPitch + (size_t)x * sizeof(Type))
         = (Type)clamp(v + 0.5f, 0.0f, maxval);
 }
+

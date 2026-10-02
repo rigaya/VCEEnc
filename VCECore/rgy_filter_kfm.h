@@ -267,6 +267,7 @@ protected:
     int deint60CacheTrimFloor() const;
     bool lazyDeint60Enabled(const RGYFilterParamKfm& prm) const;
     const RGYFrameInfo *findDeint60Frame(int n60, std::vector<RGYOpenCLEvent> *wait_events) const;
+    const KfmCachedSource *findSourceByFrame(const RGYFrameInfo *frame) const;
     const RGYFrameInfo *findSourceFrame(const RGYFrameInfo *frame, std::vector<RGYOpenCLEvent> *wait_events);
     const KfmCachedSource *findSourceByIndex(int sourceIndex) const;
     const KfmCachedSource *findSourceByIndexExact(int sourceIndex) const;
