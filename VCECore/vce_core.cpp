@@ -4843,8 +4843,14 @@ bool VCECore::VppAfsRffAware() const {
 // 単体ビットストリーム出力はQPを集計しないため、統計のGPU→CPU転送と入力側との競合を省く。
 static bool amfNeedsAverageQPStatistics(RGYOutput *writer, RGY_CODEC codec, const RGYLog *log) {
 #if ENABLE_AVSW_READER
+#if defined(_WIN32)
+    const bool codecReturnsAverageQP = codec == RGY_CODEC_H264 || codec == RGY_CODEC_HEVC;
+#else
+    // Linux(AMF 1.5.0)のH.264は統計を有効にしても平均QPを返さず、回収コストだけがかかるため対象外とする。
+    const bool codecReturnsAverageQP = codec == RGY_CODEC_HEVC;
+#endif
     return dynamic_cast<RGYOutputAvcodec *>(writer) != nullptr
-        && (codec == RGY_CODEC_H264 || codec == RGY_CODEC_HEVC)
+        && codecReturnsAverageQP
         && (log == nullptr || log->getLogLevel(RGY_LOGT_CORE_RESULT) <= RGY_LOG_INFO);
 #else
     return false;
