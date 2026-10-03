@@ -794,12 +794,13 @@ class PipelineTaskInput : public PipelineTask {
     // GetInputFrameInfo()を最大値に書き換えると、初期フィルタ構成やエンコーダ出力解像度まで最大値として初期化されてしまう。
     int m_adaptResolutionMaxWidth;
     int m_adaptResolutionMaxHeight;
+    std::unique_ptr<RGYOpenCLQueue> m_uploadQueue;
 public:
     PipelineTaskInput(amf::AMFContextPtr context, int64_t endPts, int outMaxQueueSize, RGYInput *input, std::shared_ptr<RGYOpenCLContext> cl,
         int adaptResolutionMaxWidth, int adaptResolutionMaxHeight, std::shared_ptr<RGYLog> log)
         : PipelineTask(PipelineTaskType::INPUT, context, outMaxQueueSize, log), m_input(input), m_cl(cl), m_endPts(endPts),
         m_lastInputWidth(0), m_lastInputHeight(0),
-        m_adaptResolutionMaxWidth(adaptResolutionMaxWidth), m_adaptResolutionMaxHeight(adaptResolutionMaxHeight) {
+        m_adaptResolutionMaxWidth(adaptResolutionMaxWidth), m_adaptResolutionMaxHeight(adaptResolutionMaxHeight), m_uploadQueue() {
 
     };
     // リーダーが出力するフレームの解像度を得る (avsw入力の解像度変更追従で使用)
@@ -822,7 +823,14 @@ public:
             m_lastInputHeight = newHeight;
         }
     }
-    virtual ~PipelineTaskInput() {};
+    virtual ~PipelineTaskInput() {
+        if (m_uploadQueue) {
+            // 異常終了時に残ったmapも、専用キューが有効な間に解放して完了させる。
+            m_outQeueue.clear();
+            m_workSurfs.clear();
+            m_uploadQueue->finish();
+        }
+    };
     virtual void setStopWatch() override {
         m_stopwatch = std::make_unique<PipelineTaskStopWatch>(
             std::vector<tstring>{ _T("getWorkSurf"), _T("queueMapBuffer"), _T("LoadNextFrame"), _T("unmapBuffer") },
@@ -859,14 +867,29 @@ public:
             clframe->frame.width = m_workSurfAllocWidth;
             clframe->frame.height = m_workSurfAllocHeight;
         }
-        auto err = clframe->queueMapBuffer(m_cl->queue(), CL_MAP_WRITE); // CPUが書き込むためにMapする
+#if defined(__linux__)
+        if (!m_uploadQueue) {
+            m_uploadQueue = std::make_unique<RGYOpenCLQueue>(m_cl->createQueue(
+                m_cl->queue().devid(), m_cl->queue().getProperties() & CL_QUEUE_PROFILING_ENABLE));
+            if (m_uploadQueue->get() == nullptr) return RGY_ERR_DEVICE_FAILED;
+        }
+#endif
+        auto& uploadQueue = m_uploadQueue ? *m_uploadQueue : m_cl->queue();
+        // 先頭CspCropの完了まで下流が参照を保持するため、再取得時には前回の読み込みが終わっている。
+        // ROCmの別キューmapの待機漏れを避け、mapには他キューのイベントを渡さない。
+        auto err = clframe->queueMapBuffer(uploadQueue, CL_MAP_WRITE);
         if (err != RGY_ERR_NONE) {
             clframe->frame.width = surfaceWidth;
             clframe->frame.height = surfaceHeight;
             PrintMes(RGY_LOG_ERROR, _T("Failed to map buffer: %s.\n"), get_err_mes(err));
             return err;
         }
-        clframe->mapWait(); //すぐ終わるはず
+        if (m_uploadQueue) {
+            err = uploadQueue.flush();
+            if (err != RGY_ERR_NONE) return err;
+        }
+        err = clframe->mapWait();
+        if (err != RGY_ERR_NONE) return err;
         if (m_stopwatch) m_stopwatch->add(0, 1);
         auto mappedframe = clframe->mappedHost();
         err = m_input->LoadNextFrame(mappedframe);
@@ -880,12 +903,19 @@ public:
         }
         if (m_stopwatch) m_stopwatch->add(0, 2);
         clframe->setPropertyFrom(mappedframe);
-        auto clerr = clframe->unmapBuffer();
+        auto clerr = clframe->unmapBuffer(uploadQueue);
         if (clerr != RGY_ERR_NONE) {
             PrintMes(RGY_LOG_ERROR, _T("Failed to unmap buffer: %s.\n"), get_err_mes(err));
             if (err == RGY_ERR_NONE) {
                 err = clerr;
             }
+        }
+        if (m_uploadQueue && clerr == RGY_ERR_NONE) {
+            // map完了後のunmapには待機依存がない。各面のunmap完了をホストで待ってから下流へ渡す。
+            // mapEventsはunmap時に更新されるため、mapWaitでunmapの完了も待てる。
+            clerr = uploadQueue.flush();
+            if (clerr == RGY_ERR_NONE) clerr = clframe->mapWait();
+            if (err == RGY_ERR_NONE && clerr != RGY_ERR_NONE) err = clerr;
         }
         // 新解像度の反映はunmapの「後」に行う。map/unmapを確保時の解像度で揃えるため、この順序は動かしてはいけない
         // 下流(PipelineTaskOpenCL)はここで書いたframe.width/heightを見て解像度変更を検出するので、m_endPtsによる早期returnより手前に置く必要もある
