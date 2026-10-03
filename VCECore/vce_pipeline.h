@@ -2216,7 +2216,7 @@ protected:
     bool m_inputBusy;
     std::atomic<int64_t> m_submitTimeNs;
     bool m_submitTimeReported;
-    static constexpr size_t INPUT_QUEUE_DEPTH = 3;
+    static constexpr size_t INPUT_QUEUE_DEPTH = 6;
 public:
     PipelineTaskAMFEncode(
         amf::AMFComponentPtr enc, RGY_CODEC encCodec, AMFParams& encParams, amf::AMFContextPtr context, int outMaxQueueSize,
