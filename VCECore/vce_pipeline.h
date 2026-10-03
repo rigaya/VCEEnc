@@ -2216,16 +2216,18 @@ protected:
     bool m_inputBusy;
     std::atomic<int64_t> m_submitTimeNs;
     bool m_submitTimeReported;
+    const bool m_statisticsFeedback;
     static constexpr size_t INPUT_QUEUE_DEPTH = 6;
 public:
     PipelineTaskAMFEncode(
         amf::AMFComponentPtr enc, RGY_CODEC encCodec, AMFParams& encParams, amf::AMFContextPtr context, int outMaxQueueSize,
-        RGYTimecode *timecode, RGYTimestamp *encTimestamp, rgy_rational<int> outputTimebase, const RGYHDR10Plus *hdr10plus, const DOVIRpu *doviRpu, std::shared_ptr<RGYLog> log)
+        RGYTimecode *timecode, RGYTimestamp *encTimestamp, rgy_rational<int> outputTimebase, const RGYHDR10Plus *hdr10plus, const DOVIRpu *doviRpu, bool statisticsFeedback, std::shared_ptr<RGYLog> log)
         : PipelineTaskEncodeCommon(PipelineTaskType::AMFENC, context, outMaxQueueSize, encCodec, timecode, encTimestamp, outputTimebase, hdr10plus, doviRpu, log),
         m_encoder(enc), m_encParams(encParams), m_bitStreamOut(),
         m_outputThread(), m_abortOutput(false), m_outputFinished(false), m_outputStatus(RGY_ERR_NONE), m_outputMutex(), m_outputQueue(), m_drainSent(false),
         m_inputThread(), m_abortInput(false), m_inputStatus(RGY_ERR_NONE), m_inputMutex(), m_inputCv(), m_inputQueue(),
-        m_inputBusy(false), m_submitTimeNs(0), m_submitTimeReported(false) {
+        m_inputBusy(false), m_submitTimeNs(0), m_submitTimeReported(false), m_statisticsFeedback(statisticsFeedback) {
+        PrintMes(RGY_LOG_DEBUG, _T("AMF statistics feedback for average QP: %s\n"), m_statisticsFeedback ? _T("enabled") : _T("disabled"));
     };
     virtual ~PipelineTaskAMFEncode() {
         // SubmitInputが出力待ちになる場合に備え、入力側の終了まではQueryOutputを継続する。
@@ -2479,7 +2481,7 @@ public:
             pSurface->SetProperty(RGY_PROP_TIMESTAMP, pts);
             pSurface->SetProperty(RGY_PROP_DURATION, duration);
 
-            pSurface->SetProperty(AMF_PARAM_STATISTICS_FEEDBACK(m_encCodec), true);
+            pSurface->SetProperty(AMF_PARAM_STATISTICS_FEEDBACK(m_encCodec), m_statisticsFeedback);
 
             auto registerErr = registerEncodeFrame(surfEncodeIn, pts, duration, inputFrameId);
             if (registerErr != RGY_ERR_NONE) return registerErr;

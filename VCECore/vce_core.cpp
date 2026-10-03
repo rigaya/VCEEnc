@@ -4839,6 +4839,18 @@ bool VCECore::VppAfsRffAware() const {
     return vpp_afs_rff_aware;
 }
 
+// 平均QPを集計するmux出力で、終了時の結果表示が有効な場合だけAMFの統計を回収する。
+// 単体ビットストリーム出力はQPを集計しないため、統計のGPU→CPU転送と入力側との競合を省く。
+static bool amfNeedsAverageQPStatistics(RGYOutput *writer, RGY_CODEC codec, const RGYLog *log) {
+#if ENABLE_AVSW_READER
+    return dynamic_cast<RGYOutputAvcodec *>(writer) != nullptr
+        && (codec == RGY_CODEC_H264 || codec == RGY_CODEC_HEVC)
+        && (log == nullptr || log->getLogLevel(RGY_LOGT_CORE_RESULT) <= RGY_LOG_INFO);
+#else
+    return false;
+#endif
+}
+
 RGY_ERR VCECore::initPipeline(VCEParam *prm) {
     m_pipelineTasks.clear();
 
@@ -4965,7 +4977,7 @@ RGY_ERR VCECore::initPipeline(VCEParam *prm) {
         }
     }
     if (m_pEncoder) {
-        m_pipelineTasks.push_back(std::make_unique<PipelineTaskAMFEncode>(m_pEncoder, m_encCodec, m_params, m_dev->context(), 1, m_timecode.get(), m_encTimestamp.get(), m_outputTimebase, m_hdr10plus.get(), m_dovirpu.get(), m_pLog));
+        m_pipelineTasks.push_back(std::make_unique<PipelineTaskAMFEncode>(m_pEncoder, m_encCodec, m_params, m_dev->context(), 1, m_timecode.get(), m_encTimestamp.get(), m_outputTimebase, m_hdr10plus.get(), m_dovirpu.get(), amfNeedsAverageQPStatistics(m_pFileWriter.get(), m_encCodec, m_pLog.get()), m_pLog));
     } else {
 #if ENABLE_VAAPI
         if (m_encVA) {
