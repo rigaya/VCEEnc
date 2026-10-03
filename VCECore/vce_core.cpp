@@ -1523,12 +1523,19 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
                 }
             }
             if (ftype2 != VppFilterType::FILTER_OPENCL) { // 次のfilterがOpenCLでない場合、変換が必要
-                const auto frameOutMemType = m_backend == VCEBackend::VAAPI ? RGY_MEM_TYPE_GPU : VCE_AMF_GPU_IMAGE;
+                bool amfHostOutput = false;
+#if defined(__linux__)
+                // LinuxのAMFエンコーダへはHOSTで渡し、AMF内部の同期DtoHを避ける。
+                // AMFフィルタ間の転送とraw出力には従来の経路を使う。
+                amfHostOutput = m_backend == VCEBackend::AMF && ftype2 == VppFilterType::FILTER_NONE
+                    && inputParam->codec != RGY_CODEC_RAW && inputParam->codec != RGY_CODEC_AVCODEC;
+#endif
+                const auto frameOutMemType = (m_backend == VCEBackend::VAAPI || amfHostOutput) ? RGY_MEM_TYPE_GPU : VCE_AMF_GPU_IMAGE;
                 auto sts = addOpenCLCopyFilter(vppOpenCLFilters, false, targetSurfaceCsp(), targetSurfaceBitdepth(), RGY_MEM_TYPE_GPU, frameOutMemType, false);
                 if (sts != RGY_ERR_NONE) {
                     return sts;
                 }
-                if (m_backend == VCEBackend::VAAPI) {
+                if (m_backend == VCEBackend::VAAPI || amfHostOutput) {
                     sts = addOpenCLCopyFilter(vppOpenCLFilters, false, targetSurfaceCsp(), targetSurfaceBitdepth(), RGY_MEM_TYPE_GPU, RGY_MEM_TYPE_CPU, false);
                     if (sts != RGY_ERR_NONE) return sts;
                 }

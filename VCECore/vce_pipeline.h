@@ -34,6 +34,7 @@
 #include <atomic>
 #include <deque>
 #include <mutex>
+#include <condition_variable>
 #include <set>
 #include <unordered_map>
 #pragma warning(push)
@@ -2206,15 +2207,37 @@ protected:
     std::mutex m_outputMutex;
     std::deque<std::unique_ptr<PipelineTaskOutput>> m_outputQueue;
     bool m_drainSent;
+    std::thread m_inputThread;
+    std::atomic<bool> m_abortInput;
+    std::atomic<RGY_ERR> m_inputStatus;
+    std::mutex m_inputMutex;
+    std::condition_variable m_inputCv;
+    std::deque<amf::AMFSurfacePtr> m_inputQueue;
+    bool m_inputBusy;
+    std::atomic<int64_t> m_submitTimeNs;
+    bool m_submitTimeReported;
+    static constexpr size_t INPUT_QUEUE_DEPTH = 3;
 public:
     PipelineTaskAMFEncode(
         amf::AMFComponentPtr enc, RGY_CODEC encCodec, AMFParams& encParams, amf::AMFContextPtr context, int outMaxQueueSize,
         RGYTimecode *timecode, RGYTimestamp *encTimestamp, rgy_rational<int> outputTimebase, const RGYHDR10Plus *hdr10plus, const DOVIRpu *doviRpu, std::shared_ptr<RGYLog> log)
         : PipelineTaskEncodeCommon(PipelineTaskType::AMFENC, context, outMaxQueueSize, encCodec, timecode, encTimestamp, outputTimebase, hdr10plus, doviRpu, log),
         m_encoder(enc), m_encParams(encParams), m_bitStreamOut(),
-        m_outputThread(), m_abortOutput(false), m_outputFinished(false), m_outputStatus(RGY_ERR_NONE), m_outputMutex(), m_outputQueue(), m_drainSent(false) {
+        m_outputThread(), m_abortOutput(false), m_outputFinished(false), m_outputStatus(RGY_ERR_NONE), m_outputMutex(), m_outputQueue(), m_drainSent(false),
+        m_inputThread(), m_abortInput(false), m_inputStatus(RGY_ERR_NONE), m_inputMutex(), m_inputCv(), m_inputQueue(),
+        m_inputBusy(false), m_submitTimeNs(0), m_submitTimeReported(false) {
     };
     virtual ~PipelineTaskAMFEncode() {
+        // SubmitInputが出力待ちになる場合に備え、入力側の終了まではQueryOutputを継続する。
+        {
+            std::lock_guard<std::mutex> lock(m_inputMutex);
+            m_abortInput = true;
+        }
+        m_inputCv.notify_all();
+        if (m_inputThread.joinable()) {
+            m_inputThread.join();
+        }
+        m_inputQueue.clear();
         m_abortOutput = true;
         if (m_outputThread.joinable()) {
             m_outputThread.join();
@@ -2225,7 +2248,13 @@ public:
     void setEnc(amf::AMFComponentPtr encode) { m_encoder = encode; };
     virtual void setStopWatch() override {
         m_stopwatch = std::make_unique<PipelineTaskStopWatch>(
-            std::vector<tstring>{ _T("GetFramePorperties"), _T("getOutputBitstream"), _T("SubmitInput"), _T("Drain") },
+            std::vector<tstring>{ _T("GetFramePorperties"), _T("getOutputBitstream"),
+#if defined(__linux__)
+                _T("EnqueueInput"),
+#else
+                _T("SubmitInput"),
+#endif
+                _T("Drain") },
             std::vector<tstring>{_T("")}
         );
     }
@@ -2327,9 +2356,72 @@ public:
                     break;
                 }
             }
-            m_outputFinished = true;
+            {
+                // 背圧待ちの条件確認と通知の間で終了通知を取りこぼさない。
+                std::lock_guard<std::mutex> lock(m_inputMutex);
+                m_outputFinished = true;
+            }
+            m_inputCv.notify_all();
         });
     }
+
+    RGY_ERR submitSurface(amf::AMFSurfacePtr pSurface) {
+        for (;;) {
+            if (m_abortInput) return RGY_ERR_ABORTED;
+            if (m_outputFinished) {
+                const auto outputStatus = m_outputStatus.load();
+                return (outputStatus == RGY_ERR_MORE_DATA) ? RGY_ERR_UNDEFINED_BEHAVIOR : outputStatus;
+            }
+            AMF_RESULT ar = AMF_OK;
+            try {
+                ar = m_encoder->SubmitInput(pSurface);
+            } catch (...) {
+                PrintMes(RGY_LOG_ERROR, _T("Fatal error when submitting frame to encoder.\n"));
+                return RGY_ERR_DEVICE_FAILED;
+            }
+            if (ar == AMF_NEED_MORE_INPUT) {
+                return RGY_ERR_NONE;
+            } else if (ar == AMF_INPUT_FULL) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            } else if (ar == AMF_REPEAT) {
+                pSurface = nullptr;
+            } else {
+                return err_to_rgy(ar);
+            }
+        }
+    }
+
+#if defined(__linux__)
+    void startInputThread() {
+        if (m_inputThread.joinable()) return;
+        m_inputThread = std::thread([this]() {
+            for (;;) {
+                amf::AMFSurfacePtr surface;
+                {
+                    std::unique_lock<std::mutex> lock(m_inputMutex);
+                    m_inputCv.wait(lock, [this]() { return m_abortInput || !m_inputQueue.empty(); });
+                    if (m_abortInput) break;
+                    surface = std::move(m_inputQueue.front());
+                    m_inputQueue.pop_front();
+                    m_inputBusy = true;
+                }
+                m_inputCv.notify_all();
+                const auto start = std::chrono::steady_clock::now();
+                const auto status = submitSurface(surface);
+                m_submitTimeNs += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
+                // サーフェスの解放も完了してから、drainに入力処理の完了を伝える。
+                surface = nullptr;
+                {
+                    std::lock_guard<std::mutex> lock(m_inputMutex);
+                    if (status != RGY_ERR_NONE) m_inputStatus = status;
+                    m_inputBusy = false;
+                }
+                m_inputCv.notify_all();
+                if (status != RGY_ERR_NONE) break;
+            }
+        });
+    }
+#endif
 
     virtual std::vector<std::unique_ptr<PipelineTaskOutput>> getOutput(const bool sync) override {
         {
@@ -2344,6 +2436,10 @@ public:
 
     virtual RGY_ERR sendFrame(std::unique_ptr<PipelineTaskOutput>& frame) override {
         startOutputThread();
+#if defined(__linux__)
+        startInputThread();
+        if (m_inputStatus != RGY_ERR_NONE) return m_inputStatus.load();
+#endif
         if (m_stopwatch) m_stopwatch->set(0);
         if (frame && frame->type() != PipelineTaskOutputType::SURFACE) {
             PrintMes(RGY_LOG_ERROR, _T("Invalid frame type.\n"));
@@ -2391,6 +2487,18 @@ public:
         if (m_stopwatch) m_stopwatch->add(0, 0);
 
         if (drain) {
+#if defined(__linux__)
+            bool inputPending = false;
+            {
+                std::lock_guard<std::mutex> lock(m_inputMutex);
+                if (m_inputStatus != RGY_ERR_NONE) return m_inputStatus.load();
+                inputPending = !m_inputQueue.empty() || m_inputBusy;
+            }
+            if (inputPending) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                return RGY_ERR_MORE_SURFACE;
+            }
+#endif
             if (!m_drainSent) {
                 AMF_RESULT ar = AMF_OK;
                 try {
@@ -2413,32 +2521,55 @@ public:
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 return RGY_ERR_MORE_SURFACE;
             }
+#if defined(__linux__)
+            if (m_stopwatch && !m_submitTimeReported) {
+                PrintMes(RGY_LOG_INFO, _T("AMFENC: 入力スレッド:SubmitInput : %.3f ms\n"), m_submitTimeNs.load() * 1.0e-6);
+                m_submitTimeReported = true;
+            }
+#endif
             return m_outputStatus.load();
         }
 
-        for (;;) {
-            if (m_outputFinished) {
-                const auto outputStatus = m_outputStatus.load();
-                return (outputStatus == RGY_ERR_MORE_DATA) ? RGY_ERR_UNDEFINED_BEHAVIOR : outputStatus;
+#if defined(__linux__)
+        if (pSurface->GetMemoryType() != amf::AMF_MEMORY_HOST) {
+            {
+                std::unique_lock<std::mutex> lock(m_inputMutex);
+                // 非HOSTサーフェスの非同期変換では終端出力に差が出るため、従来の同期投入を維持する。
+                // 先行HOST入力の投入完了も待ち、異なるメモリ種別の間でも入力順を保つ。
+                m_inputCv.wait(lock, [this]() {
+                    return m_abortInput || m_inputStatus != RGY_ERR_NONE || m_outputFinished
+                        || (m_inputQueue.empty() && !m_inputBusy);
+                });
+                if (m_abortInput) return RGY_ERR_ABORTED;
+                if (m_inputStatus != RGY_ERR_NONE) return m_inputStatus.load();
             }
-            AMF_RESULT ar = AMF_OK;
-            try {
-                ar = m_encoder->SubmitInput(pSurface);
-            } catch (...) {
-                PrintMes(RGY_LOG_ERROR, _T("Fatal error when submitting frame to encoder.\n"));
-                return RGY_ERR_DEVICE_FAILED;
-            }
-            if (ar == AMF_NEED_MORE_INPUT) {
-                return RGY_ERR_NONE;
-            } else if (ar == AMF_INPUT_FULL) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            } else if (ar == AMF_REPEAT) {
-                pSurface = nullptr;
-            } else {
-                if (m_stopwatch) m_stopwatch->add(0, 2);
-                return err_to_rgy(ar);
-            }
+            const auto status = submitSurface(pSurface);
+            if (m_stopwatch) m_stopwatch->add(0, 2);
+            return status;
         }
+        {
+            std::unique_lock<std::mutex> lock(m_inputMutex);
+            // キューは有界にし、停止・入力エラー・出力側の終了でも背圧待ちを解除する。
+            m_inputCv.wait(lock, [this]() {
+                return m_abortInput || m_inputStatus != RGY_ERR_NONE || m_outputFinished
+                    || m_inputQueue.size() < INPUT_QUEUE_DEPTH;
+            });
+            if (m_abortInput) return RGY_ERR_ABORTED;
+            if (m_inputStatus != RGY_ERR_NONE) return m_inputStatus.load();
+            if (m_outputFinished) {
+                const auto status = m_outputStatus.load();
+                return status == RGY_ERR_MORE_DATA ? RGY_ERR_UNDEFINED_BEHAVIOR : status;
+            }
+            m_inputQueue.push_back(std::move(pSurface));
+        }
+        m_inputCv.notify_all();
+        if (m_stopwatch) m_stopwatch->add(0, 2);
+        return RGY_ERR_NONE;
+#else
+        const auto status = submitSurface(pSurface);
+        if (m_stopwatch) m_stopwatch->add(0, 2);
+        return status;
+#endif
     }
 };
 
@@ -3198,7 +3329,14 @@ public:
                         return err_to_rgy(ar);
                     }
                 } else {
-                    auto ar = m_context->AllocSurface(amf::AMF_MEMORY_OPENCL, csp_rgy_to_enc(lastFilterOut.csp),
+                    auto memoryType = amf::AMF_MEMORY_OPENCL;
+#if defined(__linux__)
+                    // 末尾のDtoHはHOSTのplaneへ直接書き込み、完了は既存のAMF境界で待つ。
+                    if (lastFilterOut.mem_type == RGY_MEM_TYPE_CPU) {
+                        memoryType = amf::AMF_MEMORY_HOST;
+                    }
+#endif
+                    auto ar = m_context->AllocSurface(memoryType, csp_rgy_to_enc(lastFilterOut.csp),
                         lastFilterOut.width, lastFilterOut.height, &pSurface);
                     if (ar != AMF_OK) {
                         PrintMes(RGY_LOG_ERROR, _T("Failed to allocate surface: %s.\n"), get_err_mes(err_to_rgy(ar)));
