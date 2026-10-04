@@ -35,7 +35,7 @@
     - git logのメッセージの文体に近い形としつつ、ですます調で過去形にすること。
   
   - ブログに記載する文章例を作成する。
-    - VCEEnc/VCEEnc_readme.txt に記載した内容をHTML形式で記載。
+    - VCEEnc/VCEEnc_readme.txt に記載した内容をHTML形式でコードブロックに記載。
     - 各項目については、見出し(```<ul><li>など```)として扱う必要はなく、```<strong>- XXXという機能を追加。</strong>(--option-name)```などのようにすること。
       - ただし、すでに `--option-name` の記載があれば、あとづけの`(--option-name)`は二重記載不要。
         - OK: `<strong>- XXXという機能を追加。</strong>(--option-name)`

@@ -1,5 +1,20 @@
 # VCEEnc Release Notes
 
+## 9.21
+
+- Speed up Linux AMF encoding with OpenCL filters, by copying filter output to a host surface and submitting it on a dedicated thread.
+- On Linux, map and unmap input frames on a dedicated queue so the host does not wait for queued GPU work.
+- Fix [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) frame count and tail frames varying between runs on ROCm.
+- Speed up [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2).
+- Fix [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) aborting when used with [--trim](./VCEEncC_Options.en.md#--trim-intintintintintint).
+- Fix accumulated rounding error of TrueHD in [--audio-copy](./VCEEncC_Options.en.md#--audio-copy-intstringintstring). ( NVEnc#805 )
+- Improve CPU usage readout on Linux.
+- Fix raw output dropping frames still queued at shutdown.
+- Fix [--vpp-rtgmc](./VCEEncC_Options.en.md#--vpp-rtgmc-param1value1) failing on Mesa rusticl.
+- Fix [-c raw](./VCEEncC_Options.en.md#-c---codec-string) with no filters failing on VA-API.
+- Fix VA-API exiting because not enough frames are allocated when an OpenCL filter such as [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) emits multiple frames per input.
+- Fix [--fallback-bitdepth](./VCEEncC_Options.en.md#--fallback-bitdepth) being ignored on VA-API, so encoding failed on GPUs without 10-bit support.
+
 ## 9.20
 
 - Fix [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2) non deterministic behaviour.
