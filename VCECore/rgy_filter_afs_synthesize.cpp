@@ -73,7 +73,7 @@ static RGY_ERR run_synthesize(uint8_t **dst,
     const int *dstPitch, const int sipPitch,
     const int tb_order, const uint8_t status, const AFS_TUNE_MODE tune_mode, const RGY_CSP csp,
     int mode,
-    RGYOpenCLQueue &queue, RGYOpenCLProgram *synthesize) {
+    RGYOpenCLQueue &queue, RGYOpenCLProgram *synthesize, RGYOpenCLContext *cl) {
     auto err = RGY_ERR_NONE;
 
     if (mode < 0) {
@@ -110,11 +110,18 @@ static RGY_ERR run_synthesize(uint8_t **dst,
         const RGYWorkSize global(divCeil(width, 8), divCeil(height, 2));
 
         if (RGY_CSP_CHROMA_FORMAT[csp] == RGY_CHROMAFMT_YUV420) {
+            std::array<std::unique_ptr<RGYCLFrame, RGYCLImageFromBufferDeleter>, 4> imageCb, imageCr;
+            for (int i = 0; i < 4; i++) {
+                auto src = i < 2 ? p0 : p1;
+                imageCb[i] = cl->createImageFromFrameBuffer(src->cb[i % 2]->frame, true, CL_MEM_READ_ONLY, nullptr, CL_R, &queue);
+                imageCr[i] = cl->createImageFromFrameBuffer(src->cr[i % 2]->frame, true, CL_MEM_READ_ONLY, nullptr, CL_R, &queue);
+                if (!imageCb[i] || !imageCr[i]) return RGY_ERR_MEM_OBJECT_ALLOCATION_FAILURE;
+            }
             err = synthesize->kernel("kernel_synthesize_mode_1234_yuv420").config(queue, local, global).launch(
                 (cl_mem)dst[0], (cl_mem)dst[1], (cl_mem)dst[2],
                 p0->y->mem(0), p1->y->mem(0), (cl_mem)sip,
-                p0->imgCb[0].mem(), p0->imgCb[1].mem(), p1->imgCb[0].mem(), p1->imgCb[1].mem(),
-                p0->imgCr[0].mem(), p0->imgCr[1].mem(), p1->imgCr[0].mem(), p1->imgCr[1].mem(),
+                imageCb[0]->mem(0), imageCb[1]->mem(0), imageCb[2]->mem(0), imageCb[3]->mem(0),
+                imageCr[0]->mem(0), imageCr[1]->mem(0), imageCr[2]->mem(0), imageCr[3]->mem(0),
                 width, height, p0->y->frame.pitch[0], dstPitch[0], dstPitch[1], sipPitch,
                 tb_order, status);
         } else {
@@ -159,6 +166,6 @@ RGY_ERR RGYFilterAfs::synthesize(int iframe, RGYCLFrame *pOut, afsSourceCacheFra
         pOut->frame.ptr, p0, p1, targetSp.ptr[0],
         p1->frameinfo().width, p1->frameinfo().height,
         pOut->frame.pitch, targetSp.pitch[0],
-        pAfsPrm->afs.tb_order, m_status[iframe], pAfsPrm->afs.tune, pOut->frame.csp, mode, queue, m_synthesize.get());
+        pAfsPrm->afs.tb_order, m_status[iframe], pAfsPrm->afs.tune, pOut->frame.csp, mode, queue, m_synthesize.get(), m_cl.get());
     return err;
 }

@@ -121,15 +121,28 @@ RGY_ERR run_analyze_stripe(uint8_t *dst,
 
     const int srcWidth  = p0->y->frame.width;
     const int srcHeight = p0->y->frame.height;
-    const cl_mem texP0U0 = yuv420 ? p0->imgCb[0].mem() : p0->imgU.mem();
-    const cl_mem texP0V0 = yuv420 ? p0->imgCr[0].mem() : p0->imgV.mem();
-    const cl_mem texP1U0 = yuv420 ? p1->imgCb[0].mem() : p1->imgU.mem();
-    const cl_mem texP1V0 = yuv420 ? p1->imgCr[0].mem() : p1->imgV.mem();
+    // 画像はこのカーネル投入の間だけ所有し、解析と合成の間で共有しない。
+    auto imageY0 = cl->createImageFromFrameBuffer(p0->y->frame, false, CL_MEM_READ_ONLY, nullptr, CL_RGBA, &queue, wait_event);
+    auto imageY1 = cl->createImageFromFrameBuffer(p1->y->frame, false, CL_MEM_READ_ONLY, nullptr, CL_RGBA, &queue, wait_event);
+    if (!imageY0 || !imageY1) return RGY_ERR_MEM_OBJECT_ALLOCATION_FAILURE;
+    std::array<std::unique_ptr<RGYCLFrame, RGYCLImageFromBufferDeleter>, 4> imageCb, imageCr;
+    if (yuv420) {
+        for (int i = 0; i < 4; i++) {
+            auto src = i < 2 ? p0 : p1;
+            imageCb[i] = cl->createImageFromFrameBuffer(src->cb[i % 2]->frame, true, CL_MEM_READ_ONLY, nullptr, CL_R, &queue, wait_event);
+            imageCr[i] = cl->createImageFromFrameBuffer(src->cr[i % 2]->frame, true, CL_MEM_READ_ONLY, nullptr, CL_R, &queue, wait_event);
+            if (!imageCb[i] || !imageCr[i]) return RGY_ERR_MEM_OBJECT_ALLOCATION_FAILURE;
+        }
+    }
+    const cl_mem texP0U0 = yuv420 ? imageCb[0]->mem(0) : imageY0->mem(1);
+    const cl_mem texP0V0 = yuv420 ? imageCr[0]->mem(0) : imageY0->mem(2);
+    const cl_mem texP1U0 = yuv420 ? imageCb[2]->mem(0) : imageY1->mem(1);
+    const cl_mem texP1V0 = yuv420 ? imageCr[2]->mem(0) : imageY1->mem(2);
     // YUV444 の未使用フィールドにも有効な image を渡し、setArg の検証を満たす。
-    const cl_mem texP0U1 = yuv420 ? p0->imgCb[1].mem() : texP0U0;
-    const cl_mem texP0V1 = yuv420 ? p0->imgCr[1].mem() : texP0V0;
-    const cl_mem texP1U1 = yuv420 ? p1->imgCb[1].mem() : texP1U0;
-    const cl_mem texP1V1 = yuv420 ? p1->imgCr[1].mem() : texP1V0;
+    const cl_mem texP0U1 = yuv420 ? imageCb[1]->mem(0) : texP0U0;
+    const cl_mem texP0V1 = yuv420 ? imageCr[1]->mem(0) : texP0V0;
+    const cl_mem texP1U1 = yuv420 ? imageCb[3]->mem(0) : texP1U0;
+    const cl_mem texP1V1 = yuv420 ? imageCr[3]->mem(0) : texP1V0;
 
     const RGYWorkSize local(BLOCK_INT_X, BLOCK_Y);
     //横方向は1スレッドで4pixel処理する
@@ -167,8 +180,8 @@ RGY_ERR run_analyze_stripe(uint8_t *dst,
 
     err = analyze->kernel(AFS_ANALYZE_KERNEL_NAME).config(queue, local, global, wait_event, &event).launch(
         (cl_mem)dst, count_motion->mem(),
-        p0->imgY.mem(), texP0U0, texP0U1, texP0V0, texP0V1,
-        p1->imgY.mem(), texP1U0, texP1U1, texP1V0, texP1V1,
+        imageY0->mem(0), texP0U0, texP0U1, texP0V0, texP0V1,
+        imageY1->mem(0), texP1U0, texP1U1, texP1V0, texP1V1,
         divCeil(srcWidth, 4), (int)(dstPitch / sizeof(uint32_t)), srcHeight,
         thre_Ymotion_yuv, thre_deint_yuv, thre_shift_yuv,
         thre_Cmotion_yuv, thre_Cmotion_yuvf, thre_deint_yuvf, thre_shift_yuvf,
