@@ -4781,8 +4781,12 @@ RGY_ERR VCECore::initDevice(std::vector<std::unique_ptr<VCEDevice>> &gpuList, in
 RGY_ERR VCECore::initSSIMCalc(VCEParam *prm) {
     if (prm->common.metric.enabled()) {
         if (!m_dev->cl()) {
-            PrintMes(RGY_LOG_ERROR, _T("OpenCL disabled, %s calculation not supported!\n"), prm->common.metric.enabled_metric().c_str());
-            return RGY_ERR_UNSUPPORTED;
+            if (prm->common.metric.vmaf.enable || prm->common.metric.vshipEnabled()) {
+                PrintMes(RGY_LOG_ERROR, _T("OpenCL disabled, %s calculation not supported!\n"), prm->common.metric.enabled_metric().c_str());
+                return RGY_ERR_UNSUPPORTED;
+            }
+            PrintMes(RGY_LOG_WARN, _T("OpenCL disabled, skipping SSIM/PSNR calculation.\n"));
+            return RGY_ERR_NONE;
         }
         const auto formatOut = csp_rgy_to_enc(GetEncoderCSP(prm));
         amf::AMFContext::AMFOpenCLLocker locker(m_dev->context());
