@@ -5758,6 +5758,7 @@ RGY_ERR VCECore::run2() {
             if (checkAbort()) { err = RGY_ERR_ABORTED; return false; }
             return err >= RGY_ERR_NONE || err == RGY_ERR_MORE_SURFACE;
         };
+        bool flushFailed = false;
         for (size_t flushedTaskSend = 0, flushedTaskGet = 0; flushedTaskGet < m_pipelineTasks.size(); ) { // taskを前方からひとつづつflushしていく
             err = RGY_ERR_NONE;
             if (flushedTaskSend == flushedTaskGet) {
@@ -5771,6 +5772,12 @@ RGY_ERR VCECore::run2() {
                     auto& task = m_pipelineTasks[d.task];
                     err = task->sendFrame(d.data);
                     if (!checkContinue(err)) {
+                        if (err != RGY_ERR_MORE_DATA && err != RGY_ERR_MORE_BITSTREAM) {
+                            // flush中のエラーを無視すると、処理中のフレームを失ったまま正常終了してしまうので中断する。
+                            PrintMes(setloglevel(err), _T("Break in task %s during flush: %s.\n"), task->print().c_str(), get_err_mes(err));
+                            flushFailed = true;
+                            break;
+                        }
                         if (d.task == flushedTaskSend) flushedTaskSend++;
                         break;
                     }
@@ -5785,10 +5792,14 @@ RGY_ERR VCECore::run2() {
                     if (stopwatchOutput) stopwatchOutput->set(0);
                     if ((err = d.data->write(m_pFileWriter.get(), (m_dev->cl()) ? &m_dev->cl()->queue() : nullptr, m_videoQualityMetric.get())) != RGY_ERR_NONE) {
                         PrintMes(RGY_LOG_ERROR, _T("failed to write output: %s.\n"), get_err_mes(err));
+                        flushFailed = true;
                         break;
                     }
                     if (stopwatchOutput) stopwatchOutput->add(0, 0);
                 }
+            }
+            if (flushFailed) {
+                break;
             }
             if (dataqueue.empty()) {
                 // taskを前方からひとつづつ出力が残っていないかチェック(主にcheckptsの処理のため)
