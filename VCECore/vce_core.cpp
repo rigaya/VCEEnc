@@ -946,6 +946,20 @@ RGY_ERR VCECore::initOutput(VCEParam *inputParams) {
         outputVideoInfo.bitdepth = GetEncoderBitdepth(inputParams);
         inputParams->common.AVMuxTarget &= ~RGY_MUX_VIDEO;
     }
+    if (outputVideoInfo.codec == RGY_CODEC_RAW) {
+        // OpenCLのフレーム情報にはSARがないため、エンコード時と同じ規則で補う。
+        auto sar = std::make_pair(inputParams->par[0], inputParams->par[1]);
+        if ((!sar.first || !sar.second)
+            && inputParams->input.sar[0] && inputParams->input.sar[1]
+            && outputVideoInfo.dstWidth == inputParams->input.srcWidth
+            && outputVideoInfo.dstHeight == inputParams->input.srcHeight) {
+            sar = std::make_pair(inputParams->input.sar[0], inputParams->input.sar[1]);
+        }
+        adjust_sar(&sar.first, &sar.second, outputVideoInfo.dstWidth, outputVideoInfo.dstHeight);
+        if (sar.first <= 0 || sar.second <= 0) sar = { 1, 1 };
+        outputVideoInfo.sar[0] = sar.first;
+        outputVideoInfo.sar[1] = sar.second;
+    }
 
     auto require_repeat_headers = [this]() {
         return m_hdr10plus || m_hdr10plusMetadataCopy || m_dovirpuMetadataCopy || (m_hdrseiOut && m_hdrseiOut->gen_nal().size() > 0);
