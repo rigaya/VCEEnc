@@ -1280,10 +1280,8 @@ protected:
                     return RGY_ERR_UNSUPPORTED;
                 }
             }
-            // pre-analysis使用時などに発生するSubmitInput時のAMF_DECODER_NO_FREE_SURFACESを回避するため、
-            // 明示的にsurface->Duplicateを行ってコピーを下流に渡していく
-            // デコーダのオプションのAMF_VIDEO_DECODER_SURFACE_COPYでも同様になるはずだが、
-            // メモリ確保エラーが発生することがある(AMF_DIRECTX_FAIL)ので、明示的なコピーのほうがよい
+            // Pre-analysis併用時も、デコーダの出力サーフェスを下流が保持し続けないよう独立したコピーを渡す。
+            // SurfaceCopyもAV1の停止対策として有効だが、従来の明示的なDuplicateも維持する。
             amf::AMFDataPtr dataCopy;
             ar = surfDecOut->Duplicate(surfDecOut->GetMemoryType(), &dataCopy);
             if (ar != AMF_OK) {

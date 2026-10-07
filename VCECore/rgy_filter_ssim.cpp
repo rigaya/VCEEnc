@@ -441,17 +441,35 @@ RGY_ERR RGYFilterSsim::init_cl_resources() {
         return err_to_rgy(res);
     }
 
-    //AMF_VIDEO_DECODER_SURFACE_COPYを使用すると、pre-analysis使用時などに発生するSubmitInput時のAMF_DECODER_NO_FREE_SURFACESを回避できる
-    //しかし、メモリ確保エラーが発生することがある(AMF_DIRECTX_FAIL)
-    //そこで、AMF_VIDEO_DECODER_SURFACE_COPYは使用せず、QueryOutput後、明示的にsurface->Duplicateを行って同様の挙動を再現する
-    //AV1デコードでは、これを有効にしないとAMF_DECODER_NO_FREE_SURFACESで止まってしまうことがわかったので、再度有効にする
+    // 以前はメモリ確保エラーを避けるため明示的なDuplicateだけを使用していたが、
+    // AV1ではそれだけだとAMF_DECODER_NO_FREE_SURFACESで停止するため、本体と同様にSurfaceCopyも有効にする。
+    // QueryOutput後のOpenCLへのDuplicateも、比較処理に渡す独立したサーフェスを確保するため維持する。
     m_decoder->SetProperty(AMF_VIDEO_DECODER_SURFACE_COPY, true);
 
-    amf::AMFBufferPtr buffer;
-    m_context->AllocBuffer(amf::AMF_MEMORY_HOST, prm->input.codecExtraSize, &buffer);
-
-    memcpy(buffer->GetNative(), prm->input.codecExtra, prm->input.codecExtraSize);
-    m_decoder->SetProperty(AMF_VIDEO_DECODER_EXTRADATA, amf::AMFVariant(buffer));
+    // Annex Bなどヘッダをストリーム内に持つ形式では、別途extradataを設定する必要はない。
+    if (prm->input.codecExtraSize > 0) {
+        if (prm->input.codecExtra == nullptr) {
+            AddMessage(RGY_LOG_ERROR, _T("Quality metric decoder extradata is missing (%u bytes).\n"), (unsigned int)prm->input.codecExtraSize);
+            return RGY_ERR_NULL_PTR;
+        }
+        amf::AMFBufferPtr buffer;
+        res = m_context->AllocBuffer(amf::AMF_MEMORY_HOST, prm->input.codecExtraSize, &buffer);
+        if (res != AMF_OK) {
+            AddMessage(RGY_LOG_ERROR, _T("Failed to allocate quality metric decoder extradata buffer (%u bytes): %s.\n"),
+                (unsigned int)prm->input.codecExtraSize, AMFRetString(res));
+            return err_to_rgy(res);
+        }
+        if (!buffer || buffer->GetNative() == nullptr) {
+            AddMessage(RGY_LOG_ERROR, _T("Quality metric decoder extradata buffer is null (%u bytes).\n"), (unsigned int)prm->input.codecExtraSize);
+            return RGY_ERR_NULL_PTR;
+        }
+        memcpy(buffer->GetNative(), prm->input.codecExtra, prm->input.codecExtraSize);
+        if (AMF_OK != (res = m_decoder->SetProperty(AMF_VIDEO_DECODER_EXTRADATA, amf::AMFVariant(buffer)))) {
+            AddMessage(RGY_LOG_ERROR, _T("Failed to set quality metric decoder extradata (%u bytes): %s.\n"),
+                (unsigned int)prm->input.codecExtraSize, AMFRetString(res));
+            return err_to_rgy(res);
+        }
+    }
 
     AddMessage(RGY_LOG_DEBUG, _T("initialize decoder: %dx%d, %s.\n"),
         prm->input.srcWidth, prm->input.srcHeight,
@@ -1947,6 +1965,14 @@ RGY_ERR RGYFilterSsim::finish() {
             if (m_input.empty()) {
                 break;
             }
+            if (m_abort) {
+                result = RGY_ERR_ABORTED;
+                break;
+            }
+            if (const auto sts = metricStatus(); sts != RGY_ERR_NONE) {
+                result = sts;
+                break;
+            }
 #endif
             const auto sts = compare_frames();
             if (sts == RGY_ERR_NONE) {
@@ -1955,6 +1981,13 @@ RGY_ERR RGYFilterSsim::finish() {
             if (sts == RGY_ERR_MORE_DATA) {
                 break;
             }
+#if ENCODER_VCEENC
+            // Drainは非同期。AMF_REPEAT / 出力なしはEOFではないため、残りの出力を待つ。
+            if (sts == RGY_ERR_MORE_BITSTREAM) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                continue;
+            }
+#endif
             result = sts;
             break;
         }

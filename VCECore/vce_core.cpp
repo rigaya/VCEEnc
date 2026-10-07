@@ -1021,10 +1021,9 @@ RGY_ERR VCECore::createDecoder(VCEParam *prm, amf::AMFComponentPtr& decoder) {
     }
     PrintMes(RGY_LOG_DEBUG, _T("created decoder context.\n"));
 
-    //AMF_VIDEO_DECODER_SURFACE_COPYを使用すると、pre-analysis使用時などに発生するSubmitInput時のAMF_DECODER_NO_FREE_SURFACESを回避できる
-    //しかし、メモリ確保エラーが発生することがある(AMF_DIRECTX_FAIL)
-    //そこで、AMF_VIDEO_DECODER_SURFACE_COPYは使用せず、QueryOutput後、明示的にsurface->Duplicateを行って同様の挙動を再現する
-    //AV1デコードでは、これを有効にしないとAMF_DECODER_NO_FREE_SURFACESで止まってしまうことがわかったので、再度有効にする
+    // 以前はPre-analysis併用時の停止を明示的なDuplicateで回避し、SurfaceCopyのメモリ確保エラーを避けていた。
+    // AV1ではDuplicateだけだとAMF_DECODER_NO_FREE_SURFACESで停止するため、SurfaceCopyも再度有効にした。
+    // 下流へ独立したサーフェスを渡すQueryOutput後のDuplicateも維持する。
     decoder->SetProperty(AMF_VIDEO_DECODER_SURFACE_COPY, true);
 
     decoder->SetProperty(AMF_VIDEO_DECODER_ENABLE_SMART_ACCESS_VIDEO, prm->smartAccessVideo);
@@ -1045,10 +1044,23 @@ RGY_ERR VCECore::createDecoder(VCEParam *prm, amf::AMFComponentPtr& decoder) {
 
     if (header.size() > 0) {
         amf::AMFBufferPtr buffer;
-        m_dev->context()->AllocBuffer(amf::AMF_MEMORY_HOST, header.size(), &buffer);
-
+        res = m_dev->context()->AllocBuffer(amf::AMF_MEMORY_HOST, header.size(), &buffer);
+        if (res != AMF_OK) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to allocate %s decoder extradata buffer (%llu bytes): %s.\n"),
+                CodecToStr(inputCodec).c_str(), (unsigned long long)header.size(), AMFRetString(res));
+            return err_to_rgy(res);
+        }
+        if (!buffer || buffer->GetNative() == nullptr) {
+            PrintMes(RGY_LOG_ERROR, _T("%s decoder extradata buffer is null (%llu bytes).\n"),
+                CodecToStr(inputCodec).c_str(), (unsigned long long)header.size());
+            return RGY_ERR_NULL_PTR;
+        }
         memcpy(buffer->GetNative(), header.data(), header.size());
-        decoder->SetProperty(AMF_VIDEO_DECODER_EXTRADATA, amf::AMFVariant(buffer));
+        if (AMF_OK != (res = decoder->SetProperty(AMF_VIDEO_DECODER_EXTRADATA, amf::AMFVariant(buffer)))) {
+            PrintMes(RGY_LOG_ERROR, _T("Failed to set %s decoder extradata (%llu bytes): %s.\n"),
+                CodecToStr(inputCodec).c_str(), (unsigned long long)header.size(), AMFRetString(res));
+            return err_to_rgy(res);
+        }
     }
 
     PrintMes(RGY_LOG_DEBUG, _T("initialize %s decoder: %dx%d, %s.\n"),
