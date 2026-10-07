@@ -618,7 +618,10 @@ RGY_ERR RGYFilterSsim::addBitstream(const RGYBitstream *bitstream) {
             break;
         }
     }
-    if (ar != AMF_OK) {
+    // AMF_NEED_MORE_INPUTは入力を受理したが、出力には追加の入力が必要な状態。
+    // 通常のデコード処理と同様に成功として扱い、評価のためにエンコードを中断しない。
+    if (ar != AMF_OK && ar != AMF_NEED_MORE_INPUT) {
+        AddMessage(RGY_LOG_ERROR, _T("Failed to submit bitstream to quality metric decoder: %s.\n"), AMFRetString(ar));
         return err_to_rgy(ar);
     }
 #endif //#if ENCODER_VCEENC
