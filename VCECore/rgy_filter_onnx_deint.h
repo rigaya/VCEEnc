@@ -32,6 +32,7 @@
 #include "rgy_filter_cl.h"
 #include "rgy_prm.h"
 #include "rgy_onnxrt_dml.h"
+#include "rgy_filter_bwdif.h"
 #include <array>
 #include <memory>
 #include <vector>
@@ -57,6 +58,7 @@ public:
     tstring device;
     tstring precision;
     VppOnnxDeintMode mode;
+    bool vhsRestore;
     CspMatrix colormatrix;
     CspColorRange colorrange;
     rgy_rational<int> timebase;
@@ -64,7 +66,7 @@ public:
     int32_t adapterLuidHigh;
 
     RGYFilterParamOnnxDeint() :
-        modelFile(), modelDir(), device(_T("GPU.0")), precision(_T("fp32")), mode(VppOnnxDeintMode::Bob),
+        modelFile(), modelDir(), device(_T("GPU.0")), precision(_T("fp32")), mode(VppOnnxDeintMode::Bob), vhsRestore(false),
         colormatrix(RGY_MATRIX_AUTO), colorrange(RGY_COLORRANGE_AUTO), timebase(), adapterLuidLow(0), adapterLuidHigh(0) {};
     virtual ~RGYFilterParamOnnxDeint() {};
     virtual tstring print() const override;
@@ -98,6 +100,8 @@ protected:
         bool interlaced;
         TemporalFrame() : frame(), rgb(), tff(true), interlaced(false) {};
     };
+    RGY_ERR runVhsRestore(const RGYFrameInfo *input, RGYFrameInfo **outputs, int *outputCount,
+        RGYOpenCLQueue& queue, const std::vector<RGYOpenCLEvent>& wait_events, RGYOpenCLEvent *event);
     RGY_ERR allocTemporalRing(const RGY_CSP csp, const int bitdepth);
     RGY_ERR addTemporalFrame(const RGYFrameInfo *input, RGYOpenCLQueue& queue,
         const std::vector<RGYOpenCLEvent>& wait_events);
@@ -112,6 +116,7 @@ protected:
         RGYOpenCLQueue& queue, const std::vector<RGYOpenCLEvent>& wait_events, RGYOpenCLEvent *event);
 
     std::unique_ptr<RGYOnnxRTDML> m_ov;
+    std::unique_ptr<RGYFilterBwdif> m_bwdif;
     std::unique_ptr<RGYFilterCspCrop> m_cropToRgb;
     std::unique_ptr<RGYFilterCspCrop> m_cropFromRgb;
     int m_width;

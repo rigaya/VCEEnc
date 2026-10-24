@@ -32,10 +32,18 @@
 #include <cstring>
 
 static OnnxDeintModelSpec onnxDeintModelSpec(VppOnnxDeintArchitecture architecture, int frameWidth, int frameHeight) {
+    if (architecture == VppOnnxDeintArchitecture::VhsRestore) {
+        return { architecture, 3, 3, frameHeight, frameWidth, frameHeight, frameWidth, 1, true };
+    }
     if (architecture == VppOnnxDeintArchitecture::DDD) {
         return { architecture, 9, 3, frameWidth, frameHeight / 2, frameWidth, frameHeight / 2, 1, false };
     }
     return { architecture, 3, 6, frameHeight, frameWidth, frameHeight / 2, frameWidth, 0, true };
+}
+
+static const TCHAR *onnx_deint_architecture_name(VppOnnxDeintArchitecture architecture) {
+    if (architecture == VppOnnxDeintArchitecture::VhsRestore) return _T("vhs_restore");
+    return architecture == VppOnnxDeintArchitecture::DDD ? _T("ddd") : _T("stdeint");
 }
 
 static const TCHAR *onnx_deint_cx_desc_or_unknown(const CX_DESC *list, int value) {
@@ -71,7 +79,7 @@ static bool onnx_deint_supported_colorrange(CspColorRange range) {
 }
 
 RGYFilterOnnxDeint::RGYFilterOnnxDeint(shared_ptr<RGYOpenCLContext> context) :
-    RGYFilter(context), m_ov(), m_cropToRgb(), m_cropFromRgb(), m_width(0), m_height(0), m_modelName(), m_modelPath(), m_spec(),
+    RGYFilter(context), m_ov(), m_bwdif(), m_cropToRgb(), m_cropFromRgb(), m_width(0), m_height(0), m_modelName(), m_modelPath(), m_spec(),
     m_mode(VppOnnxDeintMode::Bob), m_defaultTff(true),
     m_inputBuf(), m_outputBuf(), m_program(), m_inputBufCL(), m_outputBufCL(), m_weaveBufCL(),
     m_inputPlanes(), m_weavePlanes(),
@@ -85,6 +93,7 @@ RGYFilterOnnxDeint::~RGYFilterOnnxDeint() {
 
 void RGYFilterOnnxDeint::close() {
     m_ov.reset();
+    m_bwdif.reset();
     m_cropToRgb.reset();
     m_cropFromRgb.reset();
     m_program.reset();
@@ -107,7 +116,7 @@ void RGYFilterOnnxDeint::close() {
 }
 
 tstring RGYFilterParamOnnxDeint::print() const {
-    return strsprintf(_T("onnx-deint: model=%s, mode %s, device %s, precision %s, colormatrix %s, colorrange %s"), modelFile.c_str(),
+    return strsprintf(_T("%s: model=%s, mode %s, device %s, precision %s, colormatrix %s, colorrange %s"), vhsRestore ? _T("vhs-restore") : _T("onnx-deint"), modelFile.c_str(),
         get_cx_desc(list_vpp_onnx_deint_mode, (int)mode), device.c_str(), precision.c_str(),
         onnx_deint_cx_desc_or_unknown(list_colormatrix, colormatrix), onnx_deint_cx_desc_or_unknown(list_colorrange, colorrange));
 }
@@ -119,6 +128,7 @@ RGY_ERR RGYFilterOnnxDeint::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<R
         AddMessage(RGY_LOG_ERROR, _T("Invalid parameter type.\n"));
         return RGY_ERR_INVALID_PARAM;
     }
+    m_name = prm->vhsRestore ? _T("vhs-restore") : _T("onnx-deint");
     if (!RGYOnnxRTDML::available()) {
         AddMessage(RGY_LOG_ERROR, _T("onnx-deint: this build was compiled without ONNX Runtime DirectML support.\n"));
         return RGY_ERR_UNSUPPORTED;
@@ -164,11 +174,19 @@ RGY_ERR RGYFilterOnnxDeint::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<R
     VppOnnxDeintArchitecture architecture;
     if (*modelEntry->onnxDeintArchitecture == _T("stdeint")) {
         architecture = VppOnnxDeintArchitecture::StDeint;
+    } else if (*modelEntry->onnxDeintArchitecture == _T("vhs_restore")) {
+        architecture = VppOnnxDeintArchitecture::VhsRestore;
     } else if (*modelEntry->onnxDeintArchitecture == _T("ddd")) {
         architecture = VppOnnxDeintArchitecture::DDD;
     } else {
-        AddMessage(RGY_LOG_ERROR, _T("onnx-deint: model \"%s\" has unknown architecture \"%s\" (expected stdeint or ddd).\n"),
+        AddMessage(RGY_LOG_ERROR, _T("onnx-deint: model \"%s\" has unknown architecture \"%s\" (expected stdeint, ddd or vhs_restore).\n"),
             prm->modelFile.c_str(), modelEntry->onnxDeintArchitecture->c_str());
+        return RGY_ERR_INVALID_PARAM;
+    }
+    if (prm->vhsRestore != (architecture == VppOnnxDeintArchitecture::VhsRestore)) {
+        AddMessage(RGY_LOG_ERROR, _T("%sではarchitecture=%sのモデルを使用できません。%sを指定してください。\n"),
+            m_name.c_str(), onnx_deint_architecture_name(architecture),
+            architecture == VppOnnxDeintArchitecture::VhsRestore ? _T("--vpp-vhs-restore") : _T("--vpp-onnx-deint"));
         return RGY_ERR_INVALID_PARAM;
     }
     m_modelName = prm->modelFile;
@@ -188,6 +206,10 @@ RGY_ERR RGYFilterOnnxDeint::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<R
     m_height = prm->frameIn.height;
     if (m_height < 4 || (m_height & 1) != 0) {
         AddMessage(RGY_LOG_ERROR, _T("onnx-deint: height must be an even value of at least 4 (got %d).\n"), m_height);
+        return RGY_ERR_UNSUPPORTED;
+    }
+    if (architecture == VppOnnxDeintArchitecture::VhsRestore && (m_height % 4) != 0) {
+        AddMessage(RGY_LOG_ERROR, _T("vhs-restore:の高さはBwdifに合わせ4の倍数にしてください。\n"));
         return RGY_ERR_UNSUPPORTED;
     }
     if (prm->mode != VppOnnxDeintMode::Bob && prm->mode != VppOnnxDeintMode::Normal) {
@@ -213,15 +235,21 @@ RGY_ERR RGYFilterOnnxDeint::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<R
     RGY_ERR err = RGY_ERR_NONE;
     //モデル方式はマニフェストのarchitectureで確定し、チャンネル数から推測しない。
     m_spec = onnxDeintModelSpec(architecture, m_width, m_height);
-    err = m_ov->init(m_modelPath, prm->adapterLuidLow, prm->adapterLuidHigh,
-        m_spec.modelHeight, m_spec.modelWidth, errorMessage);
+    if (prm->vhsRestore) {
+        // VHS修復ではGPU共有を必須とし、画像をCPUへ戻す既存経路へ切り替えない。
+        err = m_ov->initShared(m_modelPath, prm->adapterLuidLow, prm->adapterLuidHigh, m_cl,
+            m_spec.modelHeight, m_spec.modelWidth, errorMessage);
+    } else {
+        err = m_ov->init(m_modelPath, prm->adapterLuidLow, prm->adapterLuidHigh,
+            m_spec.modelHeight, m_spec.modelWidth, errorMessage);
+    }
     if (err != RGY_ERR_NONE) {
         AddMessage(RGY_LOG_ERROR, _T("onnx-deint: failed to load/compile model on DirectML: %s\n"), errorMessage.c_str());
         return err;
     }
     if (m_ov->inChannels() != m_spec.inputChannels || m_ov->outChannels() != m_spec.outputChannels) {
         AddMessage(RGY_LOG_ERROR, _T("onnx-deint: invalid %s model (expected %dch input / %dch output, got %dch / %dch).\n"),
-            m_spec.architecture == VppOnnxDeintArchitecture::DDD ? _T("DDD") : _T("ST-DeInt"), m_spec.inputChannels, m_spec.outputChannels,
+            onnx_deint_architecture_name(m_spec.architecture), m_spec.inputChannels, m_spec.outputChannels,
             m_ov->inChannels(), m_ov->outChannels());
         return RGY_ERR_UNSUPPORTED;
     }
@@ -268,8 +296,10 @@ RGY_ERR RGYFilterOnnxDeint::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<R
     }
     const size_t inputPlane = (size_t)m_spec.modelHeight * m_spec.modelWidth;
     const size_t outputPlane = (size_t)m_spec.outputHeight * m_spec.outputWidth;
-    m_inputBuf.resize((size_t)m_spec.inputChannels * inputPlane);
-    m_outputBuf.resize((size_t)m_spec.outputChannels * outputPlane);
+    if (!prm->vhsRestore) {
+        m_inputBuf.resize((size_t)m_spec.inputChannels * inputPlane);
+        m_outputBuf.resize((size_t)m_spec.outputChannels * outputPlane);
+    }
     if (m_spec.architecture == VppOnnxDeintArchitecture::DDD) {
         err = allocTemporalRing(inputCsp, prm->frameIn.bitdepth);
         if (err != RGY_ERR_NONE) {
@@ -300,12 +330,32 @@ RGY_ERR RGYFilterOnnxDeint::init(shared_ptr<RGYFilterParam> pParam, shared_ptr<R
     err = m_cropFromRgb->init(cropFromRgbParam, m_pLog);
     if (err != RGY_ERR_NONE) return err;
 
+    if (m_spec.architecture == VppOnnxDeintArchitecture::VhsRestore) {
+        // 修復後のフィールド補間と遅延・drain処理は既存のGPU版Bwdifへ委譲する。
+        auto bwdifPrm = std::make_shared<RGYFilterParamBwdif>();
+        bwdifPrm->frameIn = prm->frameIn;
+        // 子にはポインタを渡さず、入力フレームの形式だけを共有する。
+        for (auto& ptr : bwdifPrm->frameIn.ptr) ptr = nullptr;
+        bwdifPrm->frameOut = bwdifPrm->frameIn;
+        bwdifPrm->baseFps = prm->baseFps;
+        if (m_mode == VppOnnxDeintMode::Bob) bwdifPrm->baseFps /= 2;
+        bwdifPrm->timebase = prm->timebase;
+        bwdifPrm->bwdif.enable = true;
+        bwdifPrm->bwdif.mode = m_mode == VppOnnxDeintMode::Bob ? VppBwdifMode::Bob : VppBwdifMode::Frame;
+        bwdifPrm->bwdif.order = VppBwdifOrder::Auto;
+        bwdifPrm->bwdif.deint = VppBwdifDeint::Interlaced;
+        m_bwdif = std::make_unique<RGYFilterBwdif>(m_cl);
+        err = m_bwdif->init(bwdifPrm, m_pLog);
+        if (err != RGY_ERR_NONE) return err;
+        prm->frameOut = bwdifPrm->frameOut;
+    }
+
     m_param = prm;
-    setFilterInfo(prm->print() + strsprintf(_T(", resolved=%s, architecture=%s, backend=DirectML, execution=host"),
-        m_modelPath.c_str(), m_spec.architecture == VppOnnxDeintArchitecture::DDD ? _T("ddd") : _T("stdeint")));
-    AddMessage(RGY_LOG_DEBUG, _T("onnx-deint: model=%s, resolved=%s, architecture=%s, %dx%d, mode %s, backend=DirectML, execution=host, model %dch/%dch %dx%d.\n"),
-        m_modelName.c_str(), m_modelPath.c_str(), m_spec.architecture == VppOnnxDeintArchitecture::DDD ? _T("ddd") : _T("stdeint"), m_width, m_height,
-        get_cx_desc(list_vpp_onnx_deint_mode, (int)m_mode),
+    setFilterInfo(prm->print() + strsprintf(_T(", resolved=%s, architecture=%s, backend=DirectML, execution=%s"),
+        m_modelPath.c_str(), onnx_deint_architecture_name(m_spec.architecture), prm->vhsRestore ? _T("ocl-shared") : _T("host")));
+    AddMessage(RGY_LOG_DEBUG, _T("onnx-deint: model=%s, resolved=%s, architecture=%s, %dx%d, mode %s, backend=DirectML, execution=%s, model %dch/%dch %dx%d.\n"),
+        m_modelName.c_str(), m_modelPath.c_str(), onnx_deint_architecture_name(m_spec.architecture), m_width, m_height,
+        get_cx_desc(list_vpp_onnx_deint_mode, (int)m_mode), prm->vhsRestore ? _T("ocl-shared") : _T("host"),
         m_ov->inChannels(), m_ov->outChannels(), m_spec.modelWidth, m_spec.modelHeight);
     return RGY_ERR_NONE;
 }
@@ -408,6 +458,39 @@ RGY_ERR RGYFilterOnnxDeint::copyProgressiveOutputs(const RGYFrameInfo *input, RG
     *outputCount = count;
     if (bob) setBobTimestamp(input, outputs);
     return RGY_ERR_NONE;
+}
+
+// フィールド配置・推論・復元・Bwdifまで共有GPUバッファのまま処理する。
+RGY_ERR RGYFilterOnnxDeint::runVhsRestore(const RGYFrameInfo *input, RGYFrameInfo **outputs,
+    int *outputCount, RGYOpenCLQueue& queue, const std::vector<RGYOpenCLEvent>& wait_events,
+    RGYOpenCLEvent *event) {
+    auto source = *input;
+    if (input->ptr[0] && (input->picstruct & RGY_PICSTRUCT_INTERLACED) != 0) {
+        auto err = convertToRgb(input, queue, wait_events, nullptr);
+        if (err != RGY_ERR_NONE) return err;
+        const RGYWorkSize local(32, 8);
+        const RGYWorkSize global(m_width, m_height);
+        err = m_program->kernel("onnx_deint_reorder_fields").config(queue, local, global, {}, nullptr).launch(
+            m_inputBufCL->mem(), (cl_mem)m_ov->sharedInput(), m_width, m_height, 1);
+        if (err != RGY_ERR_NONE) return err;
+        tstring errorMessage;
+        err = m_ov->inferShared(queue, errorMessage);
+        if (err != RGY_ERR_NONE) {
+            AddMessage(RGY_LOG_ERROR, _T("vhs-restore:の共有GPU推論に失敗しました: %s\n"), errorMessage.c_str());
+            return err;
+        }
+        err = m_program->kernel("onnx_deint_reorder_fields").config(queue, local, global, {}, nullptr).launch(
+            (cl_mem)m_ov->sharedOutput(), m_weaveBufCL->mem(), m_width, m_height, 0);
+        if (err != RGY_ERR_NONE) return err;
+        auto restored = &m_frameBuf[0]->frame;
+        err = convertFromRgb(restored, queue, {}, nullptr);
+        if (err != RGY_ERR_NONE) return err;
+        // Bwdifの自動フィールド順判定と時刻処理へ元フレームの属性を引き継ぐ。
+        copyFramePropWithoutRes(restored, input);
+        source = *restored;
+        return m_bwdif->filter(&source, outputs, outputCount, queue, {}, event);
+    }
+    return m_bwdif->filter(&source, outputs, outputCount, queue, wait_events, event);
 }
 
 RGY_ERR RGYFilterOnnxDeint::allocTemporalRing(const RGY_CSP csp, const int bitdepth) {
@@ -617,6 +700,9 @@ RGY_ERR RGYFilterOnnxDeint::run_filter(const RGYFrameInfo *pInputFrame, RGYFrame
     ppOutputFrames[1] = nullptr;
     if (!pInputFrame) {
         return RGY_ERR_NONE;
+    }
+    if (m_spec.architecture == VppOnnxDeintArchitecture::VhsRestore) {
+        return runVhsRestore(pInputFrame, ppOutputFrames, pOutputFrameNum, queue, wait_events, event);
     }
     if (m_spec.architecture == VppOnnxDeintArchitecture::DDD) {
         return runTemporal(pInputFrame, ppOutputFrames, pOutputFrameNum, queue, wait_events, event);

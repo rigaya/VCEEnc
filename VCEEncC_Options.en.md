@@ -1676,6 +1676,7 @@ Vpp filters will be applied in fixed order, regardless of the order in the comma
   - [--vpp-anime4k-shader](#--vpp-anime4k-shader-param1value1param2value2)
   - [--vpp-onnx](#--vpp-onnx-param1value1param2value2)
   - [--vpp-onnx-deint](#--vpp-onnx-deint-param1value1param2value2)
+  - [--vpp-vhs-restore](#--vpp-vhs-restore-param1value1param2value2)
   - [--vpp-rife-ov](#--vpp-rife-ov-param1value1param2value2)
   - [--vpp-descale](#--vpp-descale-param1value1param2value2)
   - [--vpp-subburn](#--vpp-subburn-param1value1param2value2)
@@ -2895,12 +2896,36 @@ ONNX model based deinterlacing through ONNX Runtime DirectML. Select a registere
   - colorrange=&lt;string&gt; (default: auto)  
     auto / limited (tv) / full (pc).
 
-ST-DeInt and DDD models are not included in release archives. Verify their rights and licenses, then generate `onnx_deint_models.json` with `run_all.py` from [HWEnc-onnx-models](https://github.com/rigaya/HWEnc-onnx-models).
+DDDとVHS修復のモデル・ライセンス・マニフェストは[HWEnc-onnx-models](https://github.com/rigaya/HWEnc-onnx-models)のデインターレース用アーカイブに収録する。ST-DeIntはライセンス未確定のため標準配布に含めない。
 
 ```
 --vpp-onnx-model-dir C:\models\HWEnc-onnx-models
 --vpp-onnx-deint model=stdeint,mode=bob,precision=fp32
 --vpp-onnx-deint model=DDD,mode=normal,precision=auto
+```
+
+VHS修復モデルは[`--vpp-vhs-restore`](#--vpp-vhs-restore-param1value1param2value2)で指定する。
+
+### --vpp-vhs-restore [&lt;param1&gt;=&lt;value1&gt;][,&lt;param2&gt;=&lt;value2&gt;],...
+PAL/SECAM向けのVHS修復モデルを適用し、その後にGPU版Bwdifでデインターレースする。修復モデル自体は欠落フィールドを生成するデインターレースモデルではない。`--vpp-onnx-deint`および他のデインターレースフィルターとは併用できない。
+
+偶数行のフィールドを上段、奇数行を下段へ配置して推論し、元の行順へ戻してからBwdifを適用する。ノイズ除去は追加しない。映像の並べ替え・推論・補間はOpenCLとDirectMLの共有GPU経路で実行し、ホスト経路へフォールバックしない。
+
+WindowsのDirectML対応ビルドで有効。D3D11由来のOpenCLコンテキストと共有バッファの相互運用が必要で、共有できないGPU・ドライバーではエラーにする。
+
+入力は8bit YUV420、高さは4の倍数。TFF/BFFを維持し、Bwdifの前後フレーム参照により1フレーム遅延する。プログレッシブ入力は修復せず、bobでは2枚に複製して出力する。
+
+- model=&lt;string&gt;（必須）：`vhs_restore_pal`または`vhs_restore_secam`。モデル配置先は[`--vpp-onnx-model-dir`](#--vpp-onnx-model-dir-string)で指定する。
+- enable=&lt;bool&gt;：true（デフォルト）/ false。
+- mode=&lt;string&gt;：bob（デフォルト、倍フレームレート）/ normal（元のフレームレート）。
+- precision=&lt;string&gt;：fp32（デフォルト）/ auto。
+- colormatrix=&lt;string&gt;：auto（デフォルト）/ auto_res / bt709 / smpte170m / bt470bg / bt2020nc。
+- colorrange=&lt;string&gt;：auto（デフォルト）/ limited（tv）/ full（pc）。
+- device=&lt;string&gt;：互換用。エンコーダーと同じGPUを使用する。
+
+```
+--vpp-onnx-model-dir C:\models\HWEnc-onnx-models
+--vpp-vhs-restore model=vhs_restore_pal,mode=bob,precision=fp32
 ```
 
 ### --vpp-onnx-model-dir &lt;string&gt;

@@ -2294,6 +2294,7 @@ RGY_ERR VCECore::AddFilterOpenCL(std::vector<std::unique_ptr<RGYFilter>>&clfilte
         param->device = inputParam->vpp.onnxDeint.device;
         param->precision = inputParam->vpp.onnxDeint.precision;
         param->mode = inputParam->vpp.onnxDeint.mode;
+        param->vhsRestore = inputParam->vpp.onnxDeint.operation == VppOnnxDeintOperation::VhsRestore;
         param->colormatrix = inputParam->vpp.onnxDeint.colormatrix;
         param->colorrange = inputParam->vpp.onnxDeint.colorrange;
         const LUID devLuid = m_dev->luid();
