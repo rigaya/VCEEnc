@@ -55,6 +55,9 @@
 //
 // The whole ONNX Runtime / DirectML include surface is confined to the .cpp via
 // the pimpl below, so no other translation unit pulls in those headers.
+class RGYOpenCLContext;
+class RGYOpenCLQueue;
+
 class RGYOnnxRTDML {
 public:
     RGYOnnxRTDML();
@@ -74,6 +77,15 @@ public:
     // floats (CHW); out receives outChannels()*outHeight()*outWidth() floats
     // (CHW). Blocking; in only needs to stay valid for the call.
     RGY_ERR infer(const float *in, float *out);
+
+    // RGB・等倍モデル専用の共有GPU入出力。共有できない場合はホスト経路へ切り替えない。
+    RGY_ERR initShared(const tstring &modelPath, uint32_t luidLow, int32_t luidHigh,
+        std::shared_ptr<RGYOpenCLContext> context, int height, int width, tstring &errMessage);
+    // cl_memを返す。所有権はbackendが保持し、初期化完了時と推論完了時はOpenCLが使用できる。
+    void *sharedInput() const;
+    void *sharedOutput() const;
+    // 共有bufferへの読み書きも、この呼び出しへ渡すin-order queue上で行う。
+    RGY_ERR inferShared(RGYOpenCLQueue &queue, tstring &errMessage);
 
     int inChannels()  const;
     int inHeight()    const;
