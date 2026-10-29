@@ -1096,6 +1096,9 @@
     <None Include="rgy_filter_v360.cl">
       <Filter>ソース ファイル</Filter>
     </None>
+    <None Include="rgy_filter_onnx.cl">
+      <Filter>ソース ファイル</Filter>
+    </None>
     <None Include="rgy_filter_onnx_deint.cl">
       <Filter>ソース ファイル</Filter>
     </None>

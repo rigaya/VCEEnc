@@ -1103,6 +1103,7 @@
     <None Include="rgy_filter_denoise_pmd.cl" />
     <None Include="rgy_filter_cas.cl" />
     <None Include="rgy_filter_anime4k.cl" />
+    <None Include="rgy_filter_onnx.cl" />
     <None Include="rgy_filter_onnx_deint.cl" />
     <None Include="rgy_filter_detailsharpen.cl" />
     <None Include="rgy_filter_softlight.cl" />

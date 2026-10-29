@@ -35,6 +35,7 @@
 #include <vector>
 #include <memory>
 #include <deque>
+#include <array>
 
 class RGYFilterResize; // opt-in end-of-chain resize sub-filter (out_res=/resize=)
 
@@ -54,8 +55,8 @@ public:
 };
 
 // The pre/post a model needs, inferred from its input/output channel count.
-// ONNX Runtime DirectML runs the network with no per-model code; this enum only
-// selects how pixels are packed into / unpacked from the tensor.
+// OpenVINO runs the network for any architecture with no per-model code; this
+// enum only selects how pixels are packed into / unpacked from the tensor.
 enum class OnnxIO {
     LumaSR,     // in1  -> out1 : Y plane through the net, integer scale, chroma bilinear-resampled (ArtCNN, vgg7-Y)
     GrayNoise,  // in2  -> out1 : [Y, sigma] through the net, scale=1, chroma copied (DRUNet gray)
@@ -64,12 +65,7 @@ enum class OnnxIO {
     RGBNoise,   // in4  -> out3 : [R, G, B, sigma] -> RGB, integer scale (DPSR, DRUNet color)
 };
 
-// Standalone ONNX Runtime DirectML-backed CNN VPP filter. The network's I/O
-// convention is inferred from its channel count (OnnxIO), so the same
-// load-and-run covers every model family with no per-model code.
-//
-// The host-readback path (map input to host, build the input tensor, run the
-// network, write the result back) handles all I/O modes.
+// OpenCLで前後処理を行い、DirectMLへfloatテンソルを渡す。
 class RGYFilterOnnx : public RGYFilter {
 public:
     RGYFilterOnnx(shared_ptr<RGYOpenCLContext> context);
@@ -81,32 +77,50 @@ protected:
         RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event) override;
     virtual void close() override;
 
-    // host-readback path: map the input to the host, build the input tensor, run
-    // the network on DirectML, write the result back. Works for every OnnxIO mode
-    // and is the only path for the DirectML backend.
-    RGY_ERR runHost(const RGYFrameInfo *in, RGYFrameInfo *out,
+    RGY_ERR inferOcl(RGYOpenCLQueue &queue);
+    // 輝度モデルとGray+NoiseモデルのOpenCL前後処理経路。
+    RGY_ERR runOcl(const RGYFrameInfo *in, RGYFrameInfo *out,
         RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+    // RGBとRGB+NoiseモデルのOpenCL前後処理経路。
+    RGY_ERR runOclRGB(const RGYFrameInfo *in, RGYFrameInfo *out,
+        RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+    // ChromaとYCbCrモデルのOpenCL前後処理経路。
+    RGY_ERR runOclYuv444(const RGYFrameInfo *in, RGYFrameInfo *out,
+        RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+    RGY_ERR createFloatPlanes(RGYCLBuf *parent, int width, int height, int planeCount,
+        std::array<std::unique_ptr<RGYCLBuf>, 3>& planes);
+    RGY_ERR copyTensorPlanes(RGYOpenCLQueue &queue, RGYCLBuf *tensor,
+        const std::array<std::unique_ptr<RGYCLBuf>, 3>& planes, int width, int height, int count, bool toTensor);
+    RGY_ERR padTensorPlanes(RGYOpenCLQueue &queue, const std::array<std::unique_ptr<RGYCLBuf>, 3>& planes, int width, int height);
+    RGYFrameInfo yuv444Frame(const std::array<std::unique_ptr<RGYCLBuf>, 3>& planes,
+        int width, int height) const;
 
-    // host pre/post, dispatched on m_io. fillInputHost packs the mapped input
-    // frame into m_inBuf (inC*inW*inH, CHW); writeOutputHost unpacks m_outBuf
-    // (outC*outW*outH, CHW) into the mapped output frame.
-    void fillInputHost(const RGYFrameInfo &hin);
+    // マスクおよび複数フレーム経路のホスト出力変換。
     void writeOutputHost(const RGYFrameInfo &hout, const RGYFrameInfo &hin);
-    // compute the YUV<->RGB matrix + range coefficients.
+    template<typename TPix> void writeOutputHostT(const RGYFrameInfo &hout, const RGYFrameInfo &hin);
+    // compute the YUV<->RGB matrix + range coefficients (mirrors the native
+    // anime4k RGB bookend exactly).
     void setupColorCoeffs(int matrixSelIn, int matrixSelOut, bool rangeTV, int pixMax);
 
     // --- multi-frame temporal window (frames= > 1) ---------------------------
     // Pack one mapped input frame's YUV as planar RGB [0,1] CHW
-    // (3*inW*inH floats) into dst.
+    // (3*modelInW*modelInH floats) into dst; same maths as the RGB case of
+    // fillInputHost, but writing a single frame's worth to an arbitrary offset.
     void packFrameRGB(const RGYFrameInfo &hin, float *dst);
+    template<typename TPix> void packFrameRGBT(const RGYFrameInfo &hin, float *dst);
     // Temporal run path: buffer the last T RGB frames and emit a centred window
     // with edge replication (1-in-1-out with (T-1)/2 delay); flush drains the tail.
     RGY_ERR runTemporal(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
         RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
+    // Build the T-frame window centred on outIdx, run the network and write the
+    // result into m_frameBuf[0] (plus optional post-resize), stamped from the centre frame.
     RGY_ERR emitTemporalOutput(int64_t outIdx, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
         RGYOpenCLQueue &queue, RGYOpenCLEvent *event);
 
     // --- two-input inpainting mode (mask=) -----------------------------------
+    // The model receives the frame and a user mask as separate tensors and
+    // returns the frame with the masked region filled; only the masked pixels
+    // are composited back, everything else keeps the frame's own values.
     RGY_ERR initMask(std::shared_ptr<RGYFilterParamOnnx> prm, const int inW, const int inH, const RGY_CSP inCsp);
     RGY_ERR runMask(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
         RGYOpenCLQueue &queue, const std::vector<RGYOpenCLEvent> &wait_events, RGYOpenCLEvent *event);
@@ -115,7 +129,12 @@ protected:
     OnnxIO m_io;                          // I/O convention inferred from channel counts
     int   m_inC, m_outC;                        // model input / output channel counts
     int   m_scale;                              // integer upscale factor from the model (out/in)
+    int   m_modelInW, m_modelInH;               // tensor input size; can be padded from the frame size
+    int   m_padL, m_padT;                       // edge-replication padding before packing host input
     float m_maxval;                             // (1<<bitdepth)-1
+    int   m_bitdepth;                           // 8 (yv12/nv12) or 16 (yv12(16bit)/p010)
+    bool  m_sharedIO;
+    bool  m_useOcl;                             // 初期化時に選択したOpenCL前後処理経路を使用するか
     bool  m_ycbcr;                              // 3ch model fed as planar YCbCr instead of RGB
     float m_sigmaNorm;                          // noise sigma / 255 for the conditioning channel
 
@@ -131,32 +150,44 @@ protected:
     std::vector<float>           m_outBuf;      // network output tensor (outC*outW*outH, CHW)
     std::vector<float>           m_u444, m_v444;// normalised chroma at output luma res (for 4:2:0 downsample)
 
+    // OpenCL前後処理経路で使用するリソース
+    std::unique_ptr<RGYOpenCLProgram> m_program;  // pack / unpack / chroma kernels
+    std::unique_ptr<RGYCLBuf>         m_inBufCL;  // f32 network input  (inC*inW*inH)
+    std::unique_ptr<RGYCLBuf>         m_outBufCL; // f32 network output (outC*outW*outH)
+    bool m_inPlanesSeparate, m_outPlanesSeparate;
+    std::array<std::unique_ptr<RGYCLBuf>, 3> m_inYuvPlanes;
+    std::array<std::unique_ptr<RGYCLBuf>, 3> m_outYuvPlanes;
+    std::array<std::unique_ptr<RGYCLBuf>, 3> m_outChromaPlanes;
+    std::unique_ptr<RGYFilterCspCrop> m_cropToYuv444;
+    std::unique_ptr<RGYFilterCspCrop> m_cropFromYuv444;
+
     // --- multi-frame temporal window state (only used when m_temporalT > 1) ---
-    int m_temporalT;
+    int m_temporalT;                 // input frames per window (1 = single-frame path, disabled)
     struct RingFrame {
-        std::vector<float> rgb;
+        std::vector<float> rgb;      // one frame, planar RGB [0,1] CHW (3*modelInW*modelInH)
         int64_t         timestamp;
         int64_t         duration;
         RGY_PICSTRUCT   picstruct;
         RGY_FRAME_FLAGS flags;
         int             inputFrameId;
     };
-    std::deque<RingFrame> m_ring;
-    int64_t m_ringBaseIdx;
-    int64_t m_recvCount;
-    int64_t m_emitCount;
+    std::deque<RingFrame> m_ring;    // most recent up-to-T frames (oldest at front)
+    int64_t m_ringBaseIdx;           // global frame index of m_ring.front()
+    int64_t m_recvCount;             // real frames received so far
+    int64_t m_emitCount;             // outputs emitted so far
 
     // --- two-input inpainting mode state (only used when mask= is set) --------
-    std::unique_ptr<RGYOnnxRTDMLMultiIO> m_ovm;
-    int m_maskModelW, m_maskModelH;
+    std::unique_ptr<RGYOnnxRTDMLMultiIO> m_ovm; // multi-port backend (replaces m_ov)
+    std::unique_ptr<RGYCLBuf> m_maskFrameCL, m_maskModelCL, m_frameRGBCL, m_compositeCL, m_maskRangeCL;
     int m_maskFrameW, m_maskFrameH;
-    int m_imgPortIdx, m_mskPortIdx;
-    float m_outScale;
-    std::vector<float> m_maskFrame;
-    std::vector<float> m_maskModel;
-    std::vector<float> m_frameRGB;
-    std::vector<float> m_modelIn;
-    std::vector<float> m_modelOut;
+    int m_maskModelW, m_maskModelH;  // the model's own (static) spatial size
+    int m_imgPortIdx, m_mskPortIdx;  // input port order of the frame / mask tensors
+    float m_outScale;                // model output range: 1.0 = [0,1], 1/255 = [0,255] (settled on the first frame; 0 = not yet)
+    std::vector<float> m_maskFrame;  // mask at frame resolution, 0/1 (composite selector)
+    std::vector<float> m_maskModel;  // mask at model resolution, 0/1 (network input)
+    std::vector<float> m_frameRGB;   // current frame, planar RGB [0,1] CHW at frame resolution
+    std::vector<float> m_modelIn;    // network image input (3*maskModelW*maskModelH)
+    std::vector<float> m_modelOut;   // network output      (3*maskModelW*maskModelH)
 
     // opt-in end-of-chain resize (out_res=): runs after the network core, fitting
     // the integer-scaled output to the requested final resolution. Reuses the

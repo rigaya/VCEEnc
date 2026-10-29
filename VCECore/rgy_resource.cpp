@@ -135,9 +135,7 @@ _BINARY_VPP_FILTER_FILE(rgy_filter_kfm_ucf_cl);
 _BINARY_VPP_FILTER_FILE(rgy_filter_nnedi_cl);
 _BINARY_VPP_FILTER_FILE(rgy_filter_nnedi_upscale_cl);
 _BINARY_VPP_FILTER_FILE(rgy_filter_overlay_cl);
-#if ENCODER_QSV
 _BINARY_VPP_FILTER_FILE(rgy_filter_onnx_cl);
-#endif
 _BINARY_VPP_FILTER_FILE(rgy_filter_pad_cl);
 _BINARY_VPP_FILTER_FILE(rgy_filter_resize_cl);
 _BINARY_VPP_FILTER_FILE(rgy_filter_ssim_cl);
@@ -268,9 +266,7 @@ static const RGYResourceData RGY_RESOURCE_DATA[] = {
     { _T("EXE_DATA"), _T("RGY_FILTER_NNEDI_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_nnedi_cl) },
     { _T("EXE_DATA"), _T("RGY_FILTER_NNEDI_UPSCALE_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_nnedi_upscale_cl) },
     { _T("EXE_DATA"), _T("RGY_FILTER_OVERLAY_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_overlay_cl) },
-#if ENCODER_QSV
     { _T("EXE_DATA"), _T("RGY_FILTER_ONNX_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_onnx_cl) },
-#endif
     { _T("EXE_DATA"), _T("RGY_FILTER_PAD_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_pad_cl) },
     { _T("EXE_DATA"), _T("RGY_FILTER_RESIZE_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_resize_cl) },
     { _T("EXE_DATA"), _T("RGY_FILTER_SSIM_CL"), _BINARY_VPP_FILTER_FILE(rgy_filter_ssim_cl) },

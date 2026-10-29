@@ -85,6 +85,7 @@ resource_specs = [
   ['rgy_filter_nnedi_cl', '../VCECore/rgy_filter_nnedi.cl', 'VCECore_rgy_filter_nnedi_cl'],
   ['rgy_filter_nnedi_upscale_cl', '../VCECore/rgy_filter_nnedi_upscale.cl', 'VCECore_rgy_filter_nnedi_upscale_cl'],
   ['rgy_filter_overlay_cl', '../VCECore/rgy_filter_overlay.cl', 'VCECore_rgy_filter_overlay_cl'],
+  ['rgy_filter_onnx_cl', '../VCECore/rgy_filter_onnx.cl', 'VCECore_rgy_filter_onnx_cl'],
   ['rgy_filter_onnx_deint_cl', '../VCECore/rgy_filter_onnx_deint.cl', 'VCECore_rgy_filter_onnx_deint_cl'],
   ['rgy_filter_pad_cl', '../VCECore/rgy_filter_pad.cl', 'VCECore_rgy_filter_pad_cl'],
   ['rgy_filter_resize_cl', '../VCECore/rgy_filter_resize.cl', 'VCECore_rgy_filter_resize_cl'],
