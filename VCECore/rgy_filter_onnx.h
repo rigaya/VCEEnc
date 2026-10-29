@@ -54,9 +54,8 @@ public:
     virtual tstring print() const override;
 };
 
-// The pre/post a model needs, inferred from its input/output channel count.
-// OpenVINO runs the network for any architecture with no per-model code; this
-// enum only selects how pixels are packed into / unpacked from the tensor.
+// モデルの入出力チャンネル数から前後処理を選び、推論はDirectMLへ委譲する。
+// この列挙は画素とテンソルの相互変換だけを切り替える。
 enum class OnnxIO {
     LumaSR,     // in1  -> out1 : Y plane through the net, integer scale, chroma bilinear-resampled (ArtCNN, vgg7-Y)
     GrayNoise,  // in2  -> out1 : [Y, sigma] through the net, scale=1, chroma copied (DRUNet gray)
@@ -95,19 +94,11 @@ protected:
     RGYFrameInfo yuv444Frame(const std::array<std::unique_ptr<RGYCLBuf>, 3>& planes,
         int width, int height) const;
 
-    // マスクおよび複数フレーム経路のホスト出力変換。
-    void writeOutputHost(const RGYFrameInfo &hout, const RGYFrameInfo &hin);
-    template<typename TPix> void writeOutputHostT(const RGYFrameInfo &hout, const RGYFrameInfo &hin);
     // compute the YUV<->RGB matrix + range coefficients (mirrors the native
     // anime4k RGB bookend exactly).
     void setupColorCoeffs(int matrixSelIn, int matrixSelOut, bool rangeTV, int pixMax);
 
     // --- multi-frame temporal window (frames= > 1) ---------------------------
-    // Pack one mapped input frame's YUV as planar RGB [0,1] CHW
-    // (3*modelInW*modelInH floats) into dst; same maths as the RGB case of
-    // fillInputHost, but writing a single frame's worth to an arbitrary offset.
-    void packFrameRGB(const RGYFrameInfo &hin, float *dst);
-    template<typename TPix> void packFrameRGBT(const RGYFrameInfo &hin, float *dst);
     // Temporal run path: buffer the last T RGB frames and emit a centred window
     // with edge replication (1-in-1-out with (T-1)/2 delay); flush drains the tail.
     RGY_ERR runTemporal(const RGYFrameInfo *pInputFrame, RGYFrameInfo **ppOutputFrames, int *pOutputFrameNum,
@@ -134,7 +125,6 @@ protected:
     float m_maxval;                             // (1<<bitdepth)-1
     int   m_bitdepth;                           // 8 (yv12/nv12) or 16 (yv12(16bit)/p010)
     bool  m_sharedIO;
-    bool  m_useOcl;                             // 単一フレームのOpenCL前後処理を使用するか
     bool  m_ycbcr;                              // 3ch model fed as planar YCbCr instead of RGB
     float m_sigmaNorm;                          // noise sigma / 255 for the conditioning channel
 
@@ -144,11 +134,8 @@ protected:
     float m_matRY, m_matGY, m_matBY, m_matRU, m_matGU, m_matBU, m_matRV, m_matGV, m_matBV; // RGB -> YUV
 
     // host-readback path scratch
-    std::unique_ptr<RGYCLFrame>  m_inStaging;   // host-mappable copy of the input frame
-    std::unique_ptr<RGYCLFrame>  m_outStaging;  // host-mappable scratch for the output frame
     std::vector<float>           m_inBuf;       // network input tensor  (inC*inW*inH, CHW)
     std::vector<float>           m_outBuf;      // network output tensor (outC*outW*outH, CHW)
-    std::vector<float>           m_u444, m_v444;// normalised chroma at output luma res (for 4:2:0 downsample)
 
     // OpenCL前後処理経路で使用するリソース
     std::unique_ptr<RGYOpenCLProgram> m_program;  // pack / unpack / chroma kernels
@@ -164,7 +151,7 @@ protected:
     // --- multi-frame temporal window state (only used when m_temporalT > 1) ---
     int m_temporalT;                 // input frames per window (1 = single-frame path, disabled)
     struct RingFrame {
-        std::vector<float> rgb;      // one frame, planar RGB [0,1] CHW (3*modelInW*modelInH)
+        std::unique_ptr<RGYCLBuf> rgb; // フレームごとのデバイステンソル
         int64_t         timestamp;
         int64_t         duration;
         RGY_PICSTRUCT   picstruct;
