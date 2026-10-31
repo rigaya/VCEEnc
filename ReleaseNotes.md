@@ -1,5 +1,17 @@
 # VCEEnc Release Notes
 
+## 9.22
+
+- Speed up [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2), [--vpp-rtgmc](./VCEEncC_Options.en.md#--vpp-rtgmc-param1value1), and [--vpp-degrain](./VCEEncC_Options.en.md#--vpp-degrain-param1value1).
+- Reduce memory use of [--vpp-rtgmc](./VCEEncC_Options.en.md#--vpp-rtgmc-param1value1).
+- Fix [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) 24p with UCF and high bit depth stopping output.
+- Fix [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) `ucf=on` VFR/24p aborting during end-of-stream handling.
+- Fix [--ssim](./VCEEncC_Options.en.md#--ssim), [--psnr](./VCEEncC_Options.en.md#--psnr), and [--vmaf](./VCEEncC_Options.en.md#--vmaf-param1value1param2value2) aborting mid-encode.
+- Minor fixes for [--seek](./VCEEncC_Options.en.md#--seek-intintintint) and [--seekto](./VCEEncC_Options.en.md#--seekto-intintintint).
+- Fix a task error during flush dropping frames while still exiting successfully.
+- Add a PAL/SECAM VHS restoration filter ([--vpp-vhs-restore](./VCEEncC_Options.en.md#--vpp-vhs-restore-param1value1param2value2)). ( HWEnc-onnx-models#1 )
+- Fix error logging when IO statistics are unavailable on Linux. ( NVEnc#807 )
+
 ## 9.21
 
 - Speed up Linux AMF encoding with OpenCL filters, by copying filter output to a host surface and submitting it on a dedicated thread.
