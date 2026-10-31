@@ -203,6 +203,12 @@ jobs:
           if "${{ matrix.platform }}" == "Win32" set VCEENCC_EXE=VCEEncC_Release\VCEEncC.exe
           "%VCEENCC_EXE%" --check-cmd-parse
 
+      - name: Check VPP help schema
+        run: |
+          set VCEENCC_EXE=VCEEncC_Release\VCEEncC64.exe
+          if "${{ matrix.platform }}" == "Win32" set VCEENCC_EXE=VCEEncC_Release\VCEEncC.exe
+          "%VCEENCC_EXE%" --check-cmd-parse help
+
       - name: Check Version
         if: github.event_name == 'workflow_dispatch'
         id: check_ver

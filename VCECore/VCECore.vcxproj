@@ -954,6 +954,10 @@
     <ClInclude Include="rgy_bitstream.h" />
     <ClInclude Include="rgy_chapter.h" />
     <ClInclude Include="rgy_cmd.h" />
+    <ClInclude Include="rgy_cmd_selftest.h" />
+    <ClInclude Include="rgy_preview_server.h" />
+    <ClInclude Include="rgy_help_selftest_cases.h" />
+    <ClInclude Include="vce_help_codegen_cases.h" />
     <ClInclude Include="rgy_codepage.h" />
     <ClInclude Include="rgy_def.h" />
     <ClInclude Include="rgy_device.h" />

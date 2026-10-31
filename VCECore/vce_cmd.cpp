@@ -106,38 +106,33 @@ static tstring PrintMultipleListOptions(const TCHAR *option_name, const TCHAR *o
 
 tstring gen_cmd_help_vppamf() {
     tstring str;
-    str += strsprintf(_T("\n")
-        _T("   --vpp-scaler-sharpness <float>\n")
-        _T("                        (default: %.1f, range 0.0 - 2.0)\n")
+    str += strsprintf(_T("\n  [resize] Resize and geometry\n")
+        _T("   --vpp-scaler-sharpness <float> AMF HQ-scaler sharpness (default: %.1f, range: 0.0..2.0)\n"),
+        VCE_FILTER_HQ_SCALER_SHARPNESS_DEFAULT);
+    str += strsprintf(_T("\n  [denoise] Denoise\n")
         _T("   --vpp-preprocess [<param1>=<value>][,<param2>=<value>][...]\n")
-        _T("     JND based edge-adaptive denoising filter.\n")
-        _T("    params\n")
-        _T("      strength=<int>    (default: %d, range 0 - 10)\n")
-        _T("      sensitivity=<int> (default: %d, range 0 - 10)\n")
-        _T("      adapt-filter=<bool> (default: %s)\n"),
-        VCE_FILTER_HQ_SCALER_SHARPNESS_DEFAULT,
-        VCE_FILTER_PP_STRENGTH_DEFAULT,
-        VCE_FILTER_PP_SENSITIVITY_DEFAULT,
-        VCE_FILTER_PP_ADAPT_FILTER_DEFAULT ? _T("on") : _T("off")
-    );
-    str += strsprintf(_T("\n")
-        _T("   --vpp-enhance [<param1>=<value>][,<param2>=<value>][...]\n")
-        _T("    params\n")
-        _T("      attenuation=<float> (default: %.2f, range 0.02 - 0.4)\n")
-        _T("      radius=<int> (default: %d, range 1 - 4)\n"),
-        VE_FCR_DEFAULT_ATTENUATION,
-        VCE_FILTER_VQENHANCER_RADIUS_DEFAULT
-    );
-    str += strsprintf(_T("\n")
-        _T("   --vpp-frc [<param1>=<value>][,<param2>=<value>][...]\n")
-        _T("    params\n")
-        _T("      profile=<string> (default: %s, options: low, high, super)\n")
-        _T("      search=<string> (default: %s, options: native, performance)\n")
-        //_T("      blend=<bool> (default: %s)\n")
-        ,
-        get_cx_desc(list_frc_profile, VCE_FILTER_FRC_PROFILE_DEFAULT), get_cx_desc(list_frc_mv_search, VCE_FILTER_FRC_MV_SEARCH_DEFAULT),
-        VCE_FILTER_FRC_BLEND_DEFAULT ? _T("on") : _T("off")
-    );
+        _T("     JND-based edge-adaptive denoising.\n    params\n")
+        _T("      enable=<bool> Enable preprocessing (default: true)\n")
+        _T("      strength=<int> Denoising strength (default: %d, range: 0..10)\n")
+        _T("      sensitivity=<int> Edge sensitivity (default: %d, range: 0..10)\n")
+        _T("      adapt-filter=<bool> Adapt the filter to local detail (default: %s)\n"),
+        VCE_FILTER_PP_STRENGTH_DEFAULT, VCE_FILTER_PP_SENSITIVITY_DEFAULT,
+        VCE_FILTER_PP_ADAPT_FILTER_DEFAULT ? _T("true") : _T("false"));
+    str += strsprintf(_T("\n  [edge] Edge enhancement\n")
+        _T("   --vpp-enhance [<param1>=<value>][,<param2>=<value>][...]\n    params\n")
+        _T("      enable=<bool> Enable enhancement (default: true)\n")
+        _T("      attenuation=<float> False-contour reduction strength (default: %.2f, range: 0.02..0.4)\n")
+        _T("      fcr-radius=<int> False-contour reduction radius (default: %d, range: 1..4)\n"),
+        VE_FCR_DEFAULT_ATTENUATION, VppAMFVQEnhancer().fcrRadius);
+    str += strsprintf(_T("\n  [framerate] Frame rate and interpolation\n")
+        _T("   --vpp-frc [<param1>=<value>][,<param2>=<value>][...]\n    params\n")
+        _T("      enable=<bool> Enable frame-rate conversion (default: true)\n")
+        _T("      profile=<string> Conversion quality profile (default: %s)\n"),
+        get_cx_desc(list_frc_profile, VCE_FILTER_FRC_PROFILE_DEFAULT));
+    str += rgy_cmd_help_values(list_frc_profile);
+    str += strsprintf(_T("      search=<string> Motion-vector search mode (default: %s)\n"),
+        get_cx_desc(list_frc_mv_search, VCE_FILTER_FRC_MV_SEARCH_DEFAULT));
+    str += rgy_cmd_help_values(list_frc_mv_search);
     return str;
 }
 
@@ -300,8 +295,8 @@ tstring encoder_help() {
     str += _T("\n");
     str += gen_cmd_help_common();
     str += _T("\n");
-    str += gen_cmd_help_vpp();
-    str += gen_cmd_help_vppamf();
+    str += _T("\nVPP Options:\n");
+    str += rgy_cmd_help_vpp_sections(gen_cmd_help_vpp() + gen_cmd_help_vppamf());
     str += _T("\n");
     str += gen_cmd_help_ctrl();
     return str;

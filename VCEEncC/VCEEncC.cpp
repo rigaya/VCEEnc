@@ -41,6 +41,9 @@
 #include "vce_core.h"
 #include "vce_cmd.h"
 #include "rgy_cmd_selftest.h"
+#include "rgy_help_selftest_cases.h"
+#include "vce_help_codegen_cases.h"
+#include "rgy_preview_server.h"
 #include "rgy_util.h"
 #include "rgy_filesystem.h"
 #include "rgy_avutil.h"
@@ -364,13 +367,20 @@ int parse_print_options(const TCHAR *option_name, const TCHAR *arg1, const RGYPa
     }
     if (IS_OPTION("check-cmd-parse")) {
         // コマンドラインのパーサと生成の対応関係を自己診断する
+        const tstring filter = (arg1[0] != _T('-')) ? arg1 : _T("");
+        if (filter == _T("help-test")) return rgy_help_selftest_cases();
+        if (filter == _T("help-codegen-test")) return rgy_help_codegen_cases();
+        const bool helpMode = filter == _T("help") || filter.compare(0, 5, _T("help:")) == 0;
         RGYCmdSelfTest<VCEParam> selftest(
             [](VCEParam *prm, const std::vector<tstring>& args) {
                 auto argv = rgy_cmd_selftest_argv(args);
                 return parse_cmd(prm, (int)argv.size() - 1, argv.data());
             },
-            [](const VCEParam *prm) { return gen_cmd(prm, false); });
-        const tstring filter = (arg1[0] != _T('-')) ? arg1 : _T("");
+            // help診断では無効なフィルタの保存値も比較する。
+            [helpMode](const VCEParam *prm) { return gen_cmd(prm, helpMode); });
+        if (helpMode) {
+            return selftest.runHelpValidation(encoder_help(), filter == _T("help") ? tstring() : filter.substr(5));
+        }
         if (filter == _T("metric")) {
 #if ENABLE_VMAF && ENABLE_LIBVSHIP
             return selftest.runRoundTripCases({
@@ -620,7 +630,7 @@ static int run_on_os_codepage() {
 }
 #endif //#if defined(_WIN32) || defined(_WIN64)
 
-int vce_run(VCEParam *pParams) {
+static RGY_ERR run_encode_params(VCEParam *pParams, std::atomic<bool> *previewAbort = nullptr) {
     const auto clPerfDumpDir = pParams->ctrl.clPerfDumpDir;
     const auto clPerfDisasmTool = pParams->ctrl.clPerfDisasmTool;
     const auto clPerfOclocPath = pParams->ctrl.clPerfOclocPath;
@@ -628,20 +638,26 @@ int vce_run(VCEParam *pParams) {
     const auto pythonPath = pParams->ctrl.pythonPath;
     const bool clPerfGenerateReport = !pParams->ctrl.parallelEnc.isChild();
     unique_ptr<VCECore> vce(new VCECore());
-    if (vce->init(pParams) != RGY_ERR_NONE) {
-        return 1;
+    const auto initStatus = vce->init(pParams);
+    if (initStatus != RGY_ERR_NONE) {
+        return initStatus;
     }
     vce->PrintEncoderParam();
-    vce->SetAbortFlagPointer(&g_signal_abort);
-    set_signal_handler();
+    if (previewAbort) {
+        vce->SetPreviewAbortFlagPointer(previewAbort);
+    } else {
+        vce->SetAbortFlagPointer(&g_signal_abort);
+        set_signal_handler();
+    }
 
     try {
-        if (vce->run2() != RGY_ERR_NONE) {
+        const auto runStatus = vce->run2();
+        if (runStatus != RGY_ERR_NONE) {
             vce.reset();
             if (clPerfGenerateReport) {
                 cl_perf_generate_report(clPerfDumpDir, clPerfDisasmTool, clPerfOclocPath, clPerfRgaPath, pythonPath);
             }
-            return 1;
+            return runStatus;
         }
     } catch (...) {
         _ftprintf(stderr, _T("fatal error in encoding pipeline.\n"));
@@ -649,13 +665,17 @@ int vce_run(VCEParam *pParams) {
         if (clPerfGenerateReport) {
             cl_perf_generate_report(clPerfDumpDir, clPerfDisasmTool, clPerfOclocPath, clPerfRgaPath, pythonPath);
         }
-        return 1;
+        return RGY_ERR_UNKNOWN;
     }
     vce.reset();
     if (clPerfGenerateReport) {
         cl_perf_generate_report(clPerfDumpDir, clPerfDisasmTool, clPerfOclocPath, clPerfRgaPath, pythonPath);
     }
-    return 0;
+    return RGY_ERR_NONE;
+}
+
+int vce_run(VCEParam *pParams) {
+    return run_encode_params(pParams) == RGY_ERR_NONE ? 0 : 1;
 }
 
 int _tmain(int argc, TCHAR **argv) {
@@ -666,6 +686,35 @@ int _tmain(int argc, TCHAR **argv) {
     // VA-APIでOpenCLフィルタを使えるよう、利用者が指定していない場合に限り、OpenCLの初期化前に有効にしておく。
     setenv("RUSTICL_ENABLE", "radeonsi", 0);
 #endif //#if defined(_WIN32) || defined(_WIN64)
+
+    bool previewServer = false;
+    for (int iarg = 1; iarg < argc; iarg++) {
+        if (_tcscmp(argv[iarg], _T("--preview-server")) == 0) previewServer = true;
+    }
+    if (previewServer) {
+        std::vector<tstring> defaults;
+        for (int iarg = 1; iarg < argc; iarg++) {
+            if (_tcscmp(argv[iarg], _T("--preview-server")) == 0) continue;
+            if (_tcscmp(argv[iarg], _T("--log-level")) != 0 || iarg + 1 >= argc) {
+                _ftprintf(stderr, _T("--preview-server: Invalid startup arguments.\n"));
+                return 1;
+            }
+            defaults.push_back(argv[iarg]);
+            defaults.push_back(argv[++iarg]);
+        }
+        rgy_output_set_preview_server_mode(true);
+        auto callback = [defaults](const std::vector<tstring>& args, std::atomic<bool> *abort) -> RGY_ERR {
+            auto mergedArgs = defaults;
+            mergedArgs.insert(mergedArgs.end(), args.begin(), args.end());
+            auto previewArgv = rgy_cmd_selftest_argv(mergedArgs);
+            VCEParam params;
+            if (parse_cmd(&params, (int)previewArgv.size() - 1, previewArgv.data()) != 0) {
+                return RGY_ERR_INVALID_PARAM;
+            }
+            return run_encode_params(&params, abort);
+        };
+        return rgy_preview_server_main(callback, "VCEEnc", VER_STR_FILEVERSION);
+    }
 
     if (argc == 1) {
         show_version();

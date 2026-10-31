@@ -253,7 +253,8 @@ VCECore::VCECore() :
     m_thOutput(),
     m_params(),
     m_pipelineTasks(),
-    m_pAbortByUser(nullptr) {
+    m_pAbortByUser(nullptr),
+    m_pPreviewAbort(nullptr) {
 }
 
 VCECore::~VCECore() {
@@ -320,10 +321,15 @@ void VCECore::Terminate() {
     m_pLog.reset();
     m_encCodec = RGY_CODEC_UNKNOWN;
     m_pAbortByUser = nullptr;
+    m_pPreviewAbort = nullptr;
 }
 
 void VCECore::SetAbortFlagPointer(bool *abortFlag) {
     m_pAbortByUser = abortFlag;
+}
+
+void VCECore::SetPreviewAbortFlagPointer(std::atomic<bool> *abortFlag) {
+    m_pPreviewAbort = abortFlag;
 }
 
 RGY_ERR VCECore::readChapterFile(tstring chapfile) {
@@ -5674,9 +5680,9 @@ RGY_ERR VCECore::run2() {
     TCHAR handleEvent[256];
     _stprintf_s(handleEvent, VCEENCC_ABORT_EVENT, GetCurrentProcessId());
     auto heAbort = std::unique_ptr<std::remove_pointer<HANDLE>::type, handle_deleter>((HANDLE)CreateEvent(nullptr, TRUE, FALSE, handleEvent));
-    auto checkAbort = [pabort = m_pAbortByUser, &heAbort]() { return ((pabort != nullptr && *pabort) || WaitForSingleObject(heAbort.get(), 0) == WAIT_OBJECT_0) ? true : false; };
+    auto checkAbort = [pabort = m_pAbortByUser, previewAbort = m_pPreviewAbort, &heAbort]() { return ((previewAbort && previewAbort->load()) || (pabort != nullptr && *pabort) || WaitForSingleObject(heAbort.get(), 0) == WAIT_OBJECT_0) ? true : false; };
 #else
-    auto checkAbort = [pabort = m_pAbortByUser]() { return  (pabort != nullptr && *pabort); };
+    auto checkAbort = [pabort = m_pAbortByUser, previewAbort = m_pPreviewAbort]() { return (previewAbort && previewAbort->load()) || (pabort != nullptr && *pabort); };
 #endif
     m_pStatus->SetStart();
 
@@ -5717,8 +5723,9 @@ RGY_ERR VCECore::run2() {
     std::deque<PipelineTaskData> dataqueue;
     std::vector<char> firstSendFrame(m_pipelineTasks.size(), false);
     {
-        auto checkContinue = [&checkAbort](RGY_ERR& err) {
-            if (checkAbort() || stdInAbort()) { err = RGY_ERR_ABORTED; return false; }
+        auto checkContinue = [&checkAbort, this](RGY_ERR& err) {
+            // 常駐時の標準入力は要求受信スレッドだけが読む。
+            if (checkAbort() || (!m_pPreviewAbort && stdInAbort())) { err = RGY_ERR_ABORTED; return false; }
             return err >= RGY_ERR_NONE || err == RGY_ERR_MORE_DATA || err == RGY_ERR_MORE_SURFACE;
         };
         while (checkContinue(err)) {

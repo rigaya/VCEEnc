@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <thread>
 #include <future>
 #pragma warning(push)
@@ -104,6 +105,7 @@ public:
     VCEDevice *dev() { return m_dev.get(); };
 
     void SetAbortFlagPointer(bool *abortFlag);
+    void SetPreviewAbortFlagPointer(std::atomic<bool> *abortFlag);
 protected:
     RGY_ERR initBackend(VCEParam *prm);
 #if ENABLE_VAAPI
@@ -225,6 +227,7 @@ protected:
     std::vector<std::unique_ptr<PipelineTask>> m_pipelineTasks;
 
     bool *m_pAbortByUser;
+    std::atomic<bool> *m_pPreviewAbort;
 };
 
 class VCEFeatures {
