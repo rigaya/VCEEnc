@@ -5832,7 +5832,9 @@ RGY_ERR VCECore::run2() {
                     if (stopwatchOutput) stopwatchOutput->add(0, 0);
                 }
             }
-            if (flushFailed) {
+            // while条件での中断も外側へ伝え、次反復のerr初期化で中断を失わないようにする。
+            // 処理が進まないままflush作業を追加し続けると、待ち続けてメモリも増えてしまう。
+            if (flushFailed || err == RGY_ERR_ABORTED) {
                 break;
             }
             if (dataqueue.empty()) {
