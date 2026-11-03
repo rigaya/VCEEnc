@@ -1446,9 +1446,6 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     //VUI情報
     auto VuiFiltered = inputParam->input.vui;
 
-    m_encVUI = inputParam->common.out_vui;
-    m_encVUI.apply_auto(inputParam->input.vui, m_encHeight);
-    m_encVUI.setDescriptPreset();
 
     m_vpFilters.clear();
 
@@ -1594,6 +1591,10 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     m_encWidth  = inputFrame.width;
     m_encHeight = inputFrame.height;
     m_picStruct = inputFrame.picstruct;
+    // 色変換フィルタを通った後のVUIでautoを解決し、実際の出力画像と一致させる。
+    m_encVUI = inputParam->common.out_vui;
+    m_encVUI.apply_auto(VuiFiltered, m_encHeight);
+    m_encVUI.setDescriptPreset();
     return RGY_ERR_NONE;
 }
 
