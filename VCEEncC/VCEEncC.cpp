@@ -44,6 +44,7 @@
 #include "rgy_help_selftest_cases.h"
 #include "vce_help_codegen_cases.h"
 #include "rgy_preview_server.h"
+#include "rgy_preview_history.h"
 #include "rgy_util.h"
 #include "rgy_filesystem.h"
 #include "rgy_avutil.h"
@@ -713,7 +714,22 @@ int _tmain(int argc, TCHAR **argv) {
             }
             return run_encode_params(&params, abort);
         };
-        return rgy_preview_server_main(callback, "VCEEnc", VER_STR_FILEVERSION);
+        auto probe = [defaults](const std::vector<tstring>& args, bool& history) -> RGY_ERR {
+            history = true;
+            auto mergedArgs = defaults;
+            mergedArgs.insert(mergedArgs.end(), args.begin(), args.end());
+            auto previewArgv = rgy_cmd_selftest_argv(mergedArgs);
+            VCEParam params;
+            if (parse_cmd(&params, (int)previewArgv.size() - 1, previewArgv.data()) != 0) return RGY_ERR_INVALID_PARAM;
+            if (rgy_preview_external_history(params)) return RGY_ERR_NONE;
+            const auto filters = VCECore::CreateVppFilterOrder(&params, false, cropEnabled(params.input.crop), rgy_preview_resize_type(params.input, params.vpp));
+            for (const auto type : filters) {
+                if (rgy_preview_filter_depends_on_history(type, params.vpp)) return RGY_ERR_NONE;
+            }
+            history = false;
+            return RGY_ERR_NONE;
+        };
+        return rgy_preview_server_main(callback, "VCEEnc", VER_STR_FILEVERSION, probe);
     }
 
     if (argc == 1) {

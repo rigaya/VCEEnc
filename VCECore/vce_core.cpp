@@ -1598,7 +1598,8 @@ RGY_ERR VCECore::initFilters(VCEParam *inputParam) {
     return RGY_ERR_NONE;
 }
 
-std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputParam, const bool cspConvRequired, const bool cropRequired, const RGY_VPP_RESIZE_TYPE resizeRequired) {
+// デバイスに依存する置換より前の列挙を、通常経路とpreviewの履歴判定で共有する。
+std::vector<VppType> VCECore::CreateVppFilterOrder(const VCEParam *inputParam, const bool cspConvRequired, const bool cropRequired, const RGY_VPP_RESIZE_TYPE resizeRequired) {
     std::vector<VppType> filterPipeline;
     filterPipeline.reserve((size_t)VppType::CL_MAX);
     const bool useInputCspForDeint = inputParam->vpp.deintCsp == VppDeintCsp::Input && hasVppDeinterlacer(inputParam, true);
@@ -1733,6 +1734,12 @@ std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputPara
     if (inputParam->vpp.pad.enable)        filterPipeline.push_back(VppType::CL_PAD);
     if (inputParam->vppamf.frc.enable)     filterPipeline.push_back(VppType::AMF_FRC);
     if (inputParam->vpp.overlay.size() > 0)  filterPipeline.push_back(VppType::CL_OVERLAY);
+
+    return filterPipeline;
+}
+
+std::vector<VppType> VCECore::InitFiltersCreateVppList(const VCEParam *inputParam, const bool cspConvRequired, const bool cropRequired, const RGY_VPP_RESIZE_TYPE resizeRequired) {
+    auto filterPipeline = CreateVppFilterOrder(inputParam, cspConvRequired, cropRequired, resizeRequired);
 
     // AviUtlの共有メモリ入力は開始時に解像度が固定されるため、待機用OpenCLブロックを追加する必要はない。
     if (filterPipeline.size() == 0 && inputParam->input.type != RGY_INPUT_FMT_SM) {

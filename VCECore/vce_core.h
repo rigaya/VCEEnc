@@ -85,6 +85,8 @@ protected:
 
 class VCECore : public VCEAMF {
 public:
+    // GPU初期化なしで有効処理の列挙だけを取得する。
+    static std::vector<VppType> CreateVppFilterOrder(const VCEParam *inputParam, const bool cspConvRequired, const bool cropRequired, const RGY_VPP_RESIZE_TYPE resizeRequired);
     VCECore();
     virtual ~VCECore();
 
