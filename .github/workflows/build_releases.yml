@@ -179,6 +179,18 @@ jobs:
           set ONNXRUNTIME_DIR=${{ github.workspace }}\..\onnxruntime
           msbuild VCEEnc.sln /t:build /p:configuration=RelStatic /p:Platform=${{ matrix.platform }} -maxcpucount
 
+      # 本体と同じフォルダにあるエンコーダをビューワーが自動で見つけるので、CLI版のx64パッケージにexeを並べて入れる。
+      # AviUtl向けのパッケージは、x64パッケージを展開するときに-x!HWEncVppPreview.exeで除いている。
+      - name: Download HWEncVppPreview
+        if: matrix.platform == 'x64'
+        env:
+          # 同梱するビューワーの版。ビューワーを更新したらここを書き換える。
+          HWENCVPPPREVIEW_VERSION: "0.01"
+        run: |
+          curl -s -f -o HWEncVppPreview.zip -L https://github.com/rigaya/HWEncVppPreview/releases/download/%HWENCVPPPREVIEW_VERSION%/HWEncVppPreview_%HWENCVPPPREVIEW_VERSION%_win-x64.zip || exit /b 1
+          7z x -oHWEncVppPreviewBin -y HWEncVppPreview.zip || exit /b 1
+          if not exist HWEncVppPreviewBin\HWEncVppPreview.exe exit /b 1
+
       - name: Create Archieve
         id: archieve
         run: |
@@ -187,6 +199,8 @@ jobs:
            copy _build\${{ matrix.platform }}\RelStatic\*.dll VCEEncC_Release
            copy resource\nnedi3_weight\nnedi3_weights.bin VCEEncC_Release
            if "${{ matrix.platform }}" == "x64" (
+             copy HWEncVppPreviewBin\HWEncVppPreview.exe VCEEncC_Release
+             if not exist VCEEncC_Release\HWEncVppPreview.exe exit /b 1
              if not exist VCEEncC_Release\libvmaf.dll exit /b 1
            )
            7z a -mx9 VCEEncC_${{ needs.prepare.outputs.version_name }}_${{ matrix.platform }}.7z .\VCEEncC_Release\*
@@ -324,7 +338,7 @@ jobs:
            mkdir Aviutl_VCEEnc_release\exe_files\VCEEncC\x86
            mkdir Aviutl_VCEEnc_release\exe_files\VCEEncC\x64
            7z x -oAviutl_VCEEnc_release\exe_files\VCEEncC\x86\ VCEEncC_${{ needs.prepare.outputs.version_name }}_Win32.7z
-           7z x -oAviutl_VCEEnc_release\exe_files\VCEEncC\x64\ VCEEncC_${{ needs.prepare.outputs.version_name }}_x64.7z
+           7z x -oAviutl_VCEEnc_release\exe_files\VCEEncC\x64\ VCEEncC_${{ needs.prepare.outputs.version_name }}_x64.7z -x!HWEncVppPreview.exe
            copy /y _build\Win32\Release\VCEEnc.auo Aviutl_VCEEnc_release\plugins\
            copy /y VCEEnc\VCEEnc.ini Aviutl_VCEEnc_release\plugins\
            copy /y VCEEnc\VCEEnc.en.ini Aviutl_VCEEnc_release\plugins\
@@ -344,7 +358,7 @@ jobs:
           7z x -oAviutl_VCEEnc_release\ auo_setup.zip
           mkdir Aviutl_VCEEnc_release\Plugin\exe_files\VCEEncC
           mkdir Aviutl_VCEEnc_release\Plugin\exe_files\VCEEncC\x64
-          7z x -oAviutl_VCEEnc_release\Plugin\exe_files\VCEEncC\x64\ VCEEncC_${{ needs.prepare.outputs.version_name }}_x64.7z
+          7z x -oAviutl_VCEEnc_release\Plugin\exe_files\VCEEncC\x64\ VCEEncC_${{ needs.prepare.outputs.version_name }}_x64.7z -x!HWEncVppPreview.exe
           copy /y _build\x64\Release\VCEEnc.auo2 Aviutl_VCEEnc_release\Plugin\
           copy /y VCEEnc\VCEEnc.ini Aviutl_VCEEnc_release\Plugin\
           copy /y VCEEnc\VCEEnc.en.ini Aviutl_VCEEnc_release\Plugin\
