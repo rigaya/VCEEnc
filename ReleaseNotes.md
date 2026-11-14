@@ -4,9 +4,6 @@
 
 - Add VPP filter preview. ( With [HWEncVppPreview](https://github.com/rigaya/HWEncVppPreview) )
 - Add [--seek](./QSVEncC_Options.en.md#--seek-intintintint) support for avi/avs/vpy input.
-- Speed up [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2).
-- Speed up the search prefilter of [--vpp-rtgmc](./VCEEncC_Options.en.md#--vpp-rtgmc-param1value1).
-- Speed up [--vpp-degrain](./VCEEncC_Options.en.md#--vpp-degrain-param1value1).
 - Speed up y4m/raw output writes.
 - Accept `auto` for `--vpp-onnx-cache-dir`, matching the documented default cache location.
 - Fix [--vpp-colorspace](./VCEEncC_Options.en.md#--vpp-colorspace-param1value1param2value2) failing with no path when range and matrix (or similar) change in the same stage.

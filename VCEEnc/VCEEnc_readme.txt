@@ -192,7 +192,6 @@ Radeon RX7900XT
 [VCEEncC]
 - VPPフィルタのプレビューを可能に。(HWEncVppPreview)
 - - --seekをavi/avs/vpy読み込みに対応。
-- --vpp-kfm、--vpp-rtgmc、--vpp-degrainを高速化。
 - y4m/raw出力の書き出しを高速化。
 - --vpp-onnx-cache-dirで既定値autoを指定できるようにした。
 - --vpp-colorspaceで、1段のうちにrangeと行列などを同時に変えるとno pathになる問題を修正。
