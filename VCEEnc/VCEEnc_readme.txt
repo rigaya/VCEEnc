@@ -188,6 +188,21 @@ Radeon RX7900XT
 今後の更新で設定ファイルの互換性がなくなるかもしれません。
 
 【どうでもいいメモ】
+2026.11.14 (9.23)
+[VCEEncC]
+- VPPフィルタのプレビューを可能に。(HWEncVppPreview)
+- - --seekをavi/avs/vpy読み込みに対応。
+- --vpp-kfm、--vpp-rtgmc、--vpp-degrainを高速化。
+- y4m/raw出力の書き出しを高速化。
+- --vpp-onnx-cache-dirで既定値autoを指定できるようにした。
+- --vpp-colorspaceで、1段のうちにrangeと行列などを同時に変えるとno pathになる問題を修正。
+- --vpp-colorspaceで未指定の項目を入口または直前の結果から引き継ぎ、出力VUIも変換後の値にするようにした。
+- --vpp-colorspaceを複数並べると異常終了する問題を修正。
+- --vpp-afsと--vpp-kfm mode=24でのtimestamp出力を改善。
+- --vpp-afsで--avsync vfrや独自の--timebaseで時刻がずれる問題を修正。
+- flush中に中断すると終了せずメモリが増え続ける問題を修正。
+- GPUカウンタのスレッド強制終了をdetachより前に行うよう修正。
+
 2026.10.31 (9.22)
 [VCEEncC]
 - --vpp-kfm、--vpp-rtgmc、--vpp-degrainを高速化。

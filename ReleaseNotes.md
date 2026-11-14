@@ -1,5 +1,22 @@
 # VCEEnc Release Notes
 
+## 9.23
+
+- Add VPP filter preview. ( With [HWEncVppPreview](https://github.com/rigaya/HWEncVppPreview) )
+- Add [--seek](./QSVEncC_Options.en.md#--seek-intintintint) support for avi/avs/vpy input.
+- Speed up [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2).
+- Speed up the search prefilter of [--vpp-rtgmc](./VCEEncC_Options.en.md#--vpp-rtgmc-param1value1).
+- Speed up [--vpp-degrain](./VCEEncC_Options.en.md#--vpp-degrain-param1value1).
+- Speed up y4m/raw output writes.
+- Accept `auto` for `--vpp-onnx-cache-dir`, matching the documented default cache location.
+- Fix [--vpp-colorspace](./VCEEncC_Options.en.md#--vpp-colorspace-param1value1param2value2) failing with no path when range and matrix (or similar) change in the same stage.
+- [--vpp-colorspace](./VCEEncC_Options.en.md#--vpp-colorspace-param1value1param2value2) inherits unspecified parameters from the input or the previous stage, and the output VUI follows the conversion. HDR2SDR and LUT keep their default output.
+- Fix a crash when multiple [--vpp-colorspace](./VCEEncC_Options.en.md#--vpp-colorspace-param1value1param2value2) conversions are chained.
+- Improve timestamp output of [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2) and [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2) `mode=24`.
+- Fix [--vpp-afs](./VCEEncC_Options.en.md#--vpp-afs-param1value1param2value2) timestamps drifting with [--avsync](./VCEEncC_Options.en.md#--avsync-string) `vfr` or a custom [--timebase](./VCEEncC_Options.en.md#--timebase-intint).
+- Fix an abort during flush that kept queuing empty work, so the process never exited and memory use kept growing.
+- Fix GPU performance counter thread force-termination running after detach, seen with [--perf-monitor](./VCEEncC_Options.en.md#--perf-monitor-stringstring). ( NVEnc#809 )
+
 ## 9.22
 
 - Speed up [--vpp-kfm](./VCEEncC_Options.en.md#--vpp-kfm-param1value1param2value2), [--vpp-rtgmc](./VCEEncC_Options.en.md#--vpp-rtgmc-param1value1), and [--vpp-degrain](./VCEEncC_Options.en.md#--vpp-degrain-param1value1).
